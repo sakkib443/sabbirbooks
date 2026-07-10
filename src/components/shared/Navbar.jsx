@@ -44,7 +44,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     try {
-      ["sb_token", "sb_refresh", "sb_user"].forEach((k) => localStorage.removeItem(k));
+      ["sb_token", "sb_refresh", "sb_user", "token", "user"].forEach((k) => localStorage.removeItem(k));
     } catch {
       /* ignore */
     }
@@ -53,6 +53,11 @@ const Navbar = () => {
   };
 
   const isAdmin = user && (user.role === "admin" || user.role === "superAdmin");
+  const dashHref = isAdmin
+    ? "/dashboard/admin"
+    : user?.role === "mentor"
+      ? "/dashboard/mentor"
+      : "/dashboard/user";
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
   const bn = language === "bn" ? "hind-siliguri" : "";
 
@@ -133,7 +138,7 @@ const Navbar = () => {
           {user ? (
             <div className="space-y-2">
               <Link
-                href={isAdmin ? "/admin" : "/dashboard"}
+                href={dashHref}
                 onClick={closeMobileMenu}
                 className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full", bn)}
               >
@@ -214,7 +219,7 @@ const Navbar = () => {
             {user ? (
               <div className="hidden items-center gap-2 lg:flex">
                 <Link
-                  href={isAdmin ? "/admin" : "/dashboard"}
+                  href={dashHref}
                   className={cn(buttonVariants({ variant: "outline", size: "sm" }), bn)}
                 >
                   <HiOutlineUserCircle className="text-lg" />

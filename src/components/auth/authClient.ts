@@ -49,6 +49,23 @@ export function persistSession(data: LoginData): void {
   if (data.user) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(data.user));
   // Persist the deviceId the server echoed back so it stays in sync with ours.
   if (data.deviceId) localStorage.setItem(STORAGE_KEYS.deviceId, data.deviceId);
+
+  // The ported Aptech dashboards + protectedRoutes read the LEGACY keys
+  // `localStorage.token` (raw JWT) and `localStorage.user` (JSON user). Mirror
+  // the session into those keys so both auth systems stay in sync.
+  if (accessToken) localStorage.setItem("token", accessToken);
+  if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
+}
+
+// Clears every auth key — both the sb_* keys and the legacy token/user keys the
+// Aptech dashboards use. Leaves sb_device_id in place (stable per-device id).
+export function clearSession(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEYS.token);
+  localStorage.removeItem(STORAGE_KEYS.refresh);
+  localStorage.removeItem(STORAGE_KEYS.user);
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 }
 
 // ── API result shape ─────────────────────────────────────────────────────────

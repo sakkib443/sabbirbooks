@@ -1,14 +1,19 @@
 import { configureStore } from "@reduxjs/toolkit";
 import categoriesReducer from "./categorySlice";
 import coursesReducer from "./CourseSlice";
+import mentorsReducer from "./mentorSlice";
+import blogsReducer from "./blogSlice";
 
-// Feature slices ported from the Aptech Learning client. Home/About course
-// carousels read `state.categories` and `state.courses`; both start empty and
-// render loading/empty states until the backend lands.
+// Feature slices. The public home/about/courses pages read `state.categories`
+// and `state.courses`; the ported Aptech dashboards additionally read
+// `state.mentors` and `state.blogs`. All four start empty and render
+// loading/empty states until the backend responds.
 export const store = configureStore({
   reducer: {
     categories: categoriesReducer,
     courses: coursesReducer,
+    mentors: mentorsReducer,
+    blogs: blogsReducer,
   },
 });
 

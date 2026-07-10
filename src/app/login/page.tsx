@@ -125,7 +125,15 @@ export default function LoginPage() {
       });
       if (result.ok && result.success && result.data) {
         persistSession(result.data);
-        router.push("/");
+        // Redirect by role into the matching dashboard shell.
+        const role = (result.data.user as { role?: string } | undefined)?.role;
+        const dest =
+          role === "admin" || role === "superAdmin"
+            ? "/dashboard/admin"
+            : role === "mentor"
+            ? "/dashboard/mentor"
+            : "/dashboard/user";
+        router.push(dest);
         router.refresh();
         return;
       }
