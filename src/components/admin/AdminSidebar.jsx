@@ -256,12 +256,17 @@ const AdminSidebar = () => {
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-4 h-16 border-b border-gray-100`}>
             {!collapsed ? (
               <Link href="/dashboard/admin" className="flex items-center gap-2.5 group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/aptech-learning-logo.svg" alt="Aptech Learning" className="h-8 w-auto" />
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/25">
+                  <span className="text-white font-black text-xs">SB</span>
+                </div>
+                <div className="leading-tight">
+                  <p className="text-base font-bold text-slate-800">Sabbir Book</p>
+                  <p className="text-[10px] text-[#c9871a] font-semibold -mt-0.5">Admin Panel</p>
+                </div>
               </Link>
             ) : (
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/25">
-                <span className="text-white font-black text-xs">AL</span>
+                <span className="text-white font-black text-xs">SB</span>
               </div>
             )}
             <button

@@ -90,17 +90,17 @@ const UserSidebar = () => {
                         {!collapsed && (
                             <Link href="/" className="flex items-center gap-2.5 group">
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/20">
-                                    <span className="text-white font-black text-xs">AL</span>
+                                    <span className="text-white font-black text-xs">SB</span>
                                 </div>
                                 <div className="leading-tight">
-                                    <p className="text-base font-bold text-slate-800">Aptech Learning</p>
+                                    <p className="text-base font-bold text-slate-800">Sabbir Book</p>
                                     <p className="text-[11px] text-slate-400 -mt-0.5">Academy</p>
                                 </div>
                             </Link>
                         )}
                         {collapsed && (
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/20">
-                                <span className="text-white font-black text-xs">AL</span>
+                                <span className="text-white font-black text-xs">SB</span>
                             </div>
                         )}
                         <button

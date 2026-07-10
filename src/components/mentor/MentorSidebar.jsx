@@ -115,17 +115,17 @@ const MentorSidebar = () => {
             {!collapsed && (
               <Link href="/" className="flex items-center gap-2.5 group">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0d9488] to-[#14b8a6] flex items-center justify-center shadow-md shadow-teal-500/20">
-                  <span className="text-white font-black text-xs">AL</span>
+                  <span className="text-white font-black text-xs">SB</span>
                 </div>
                 <div className="leading-tight">
-                  <p className="text-base font-bold text-slate-800">Aptech Learning</p>
+                  <p className="text-base font-bold text-slate-800">Sabbir Book</p>
                   <p className="text-[10px] text-teal-600 font-semibold -mt-0.5">Mentor Panel</p>
                 </div>
               </Link>
             )}
             {collapsed && (
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0d9488] to-[#14b8a6] flex items-center justify-center shadow-md shadow-teal-500/20">
-                <span className="text-white font-black text-xs">AL</span>
+                <span className="text-white font-black text-xs">SB</span>
               </div>
             )}
             <button
