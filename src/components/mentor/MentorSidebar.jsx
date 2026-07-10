@@ -34,7 +34,7 @@ const MentorSidebar = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+        const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
         const res = await fetch(`${API}/mentors/me`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         if (data.success && data.data) {

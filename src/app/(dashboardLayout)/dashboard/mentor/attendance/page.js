@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiLoader, FiUsers, FiCalendar, FiArrowRight, FiClock, FiCheckSquare } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 export default function AttendancePage() {
   const [loading, setLoading] = useState(true);

@@ -10,7 +10,7 @@ import {
   FiSearch, FiBell, FiHelpCircle,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 const MentorLayout = ({ children }) => {
   const [user, setUser] = useState(null);

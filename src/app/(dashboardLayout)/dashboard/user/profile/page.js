@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const authHdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 
 export default function UserProfilePage() {

@@ -20,7 +20,7 @@ import {
   LuUser, LuBriefcase, LuFileText, LuAward, LuGlobe, LuKeyRound, LuCopy,
 } from 'react-icons/lu';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => {
   if (typeof window === 'undefined') return '';
   try { return localStorage.getItem('token') || ''; } catch { return ''; }

@@ -5,7 +5,7 @@ import { FiSettings, FiSave, FiRefreshCw, FiUser, FiLock, FiGlobe, FiEye, FiEyeO
 import { LuGlobe, LuPhone, LuMail, LuMapPin, LuFacebook, LuYoutube, LuLinkedin } from 'react-icons/lu';
 import { useToast } from '@/components/shared/Toast';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '');
 const stored = () => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } };
 const authHdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 const roleLabel = (r) => ({ superAdmin: 'Super Admin', trainingManager: 'Manager' }[r] || (r ? r.charAt(0).toUpperCase() + r.slice(1) : 'User'));

@@ -17,7 +17,7 @@ const CategoryPage = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/categories');
+      const res = await fetch(((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api/categories');
       const result = await res.json();
       setCategories(result.data || result);
     } catch (err) {
@@ -33,7 +33,7 @@ const CategoryPage = () => {
     const ok = await confirm({ title: 'Delete this category?', message: 'This action cannot be undone.', confirmText: 'Delete' });
     if (!ok) return;
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/api/categories/${mongoId}`, {
+      const res = await fetch(`${((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, ''))}/api/categories/${mongoId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
       });
@@ -50,7 +50,7 @@ const CategoryPage = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/api/categories/${editData._id}`, {
+      const res = await fetch(`${((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, ''))}/api/categories/${editData._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
         body: JSON.stringify({ name: editData.name }),

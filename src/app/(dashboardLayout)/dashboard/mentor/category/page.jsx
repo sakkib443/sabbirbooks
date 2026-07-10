@@ -13,7 +13,7 @@ const MentorCategoryPage = () => {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-            const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/categories');
+            const res = await fetch(((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api/categories');
             const result = await res.json();
             setCategories(result.data || result);
         } catch (err) {
@@ -28,7 +28,7 @@ const MentorCategoryPage = () => {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/api/categories/${editData._id}`, {
+            const res = await fetch(`${((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, ''))}/api/categories/${editData._id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: Number(editData.id), name: editData.name }),

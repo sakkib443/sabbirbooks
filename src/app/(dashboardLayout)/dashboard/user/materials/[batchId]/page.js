@@ -8,7 +8,7 @@ import {
   FiMapPin, FiPlay, FiArrowRight,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 // Extract the class number from a title like "Class 03 - Intro" -> "03".
 // Falls back to position-based numbering if title has no digits.

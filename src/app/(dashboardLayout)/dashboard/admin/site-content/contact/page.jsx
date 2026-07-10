@@ -8,7 +8,7 @@ import {
 import { useToast } from '@/components/shared/Toast';
 import { CONTACT_DEFAULTS } from '@/lib/siteContent/contactContent';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const jhdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 
 // deep-merge fetched content over defaults so new fields always exist

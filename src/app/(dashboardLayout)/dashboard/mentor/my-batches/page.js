@@ -6,7 +6,7 @@ import {
   FiMail, FiPhone, FiMapPin, FiUser, FiCheckCircle, FiSearch, FiX,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getHeaders = () => {
   const token = localStorage.getItem('token');
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };

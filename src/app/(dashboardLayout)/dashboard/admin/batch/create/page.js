@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { BRANCHES, WEEKDAYS, TimeRangePicker } from '@/components/admin/batch/batchShared';
 import { useToast } from '@/components/shared/Toast';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const hdrs = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 
 const inputClass =

@@ -11,7 +11,7 @@ import {
 } from 'react-icons/fi';
 import { MdOutlineQuiz, MdOutlineAssignment } from 'react-icons/md';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
 
 // Helper: Convert YouTube URL to embed URL

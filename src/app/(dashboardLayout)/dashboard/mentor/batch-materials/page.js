@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiBook, FiFolder, FiArrowRight, FiLoader, FiCalendar, FiClock, FiUsers } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 export default function BatchMaterialsPage() {
   const [loading, setLoading] = useState(true);

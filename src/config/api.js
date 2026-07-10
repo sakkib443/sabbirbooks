@@ -5,7 +5,7 @@
 // and the ported Aptech dashboards (which inline the same expression) resolve
 // to the identical base URL.
 const API_BASE_URL =
-  (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api";
+  ((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/i, '')) + "/api";
 
 export { API_BASE_URL };
 export default API_BASE_URL;

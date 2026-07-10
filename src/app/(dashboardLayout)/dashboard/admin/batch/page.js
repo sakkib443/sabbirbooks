@@ -10,7 +10,7 @@ import { BRANCHES, WEEKDAYS, TimeRangePicker } from '@/components/admin/batch/ba
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 const inputClass =
   'w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 ' +

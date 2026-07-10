@@ -8,7 +8,7 @@ import {
   FiFileText, FiPlus, FiTrash2, FiExternalLink, FiUpload, FiMapPin,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 /**
  * Convert a human-readable time string to 24h HH:MM for <input type="time">.

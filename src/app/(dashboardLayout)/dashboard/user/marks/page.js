@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiLoader, FiAward, FiBook, FiBarChart2 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => localStorage.getItem('token') || '';
 
 export default function StudentMarksPage() {

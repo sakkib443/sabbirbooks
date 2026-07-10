@@ -24,7 +24,7 @@ export default function MentorCoursePage() {
     const loadCourses = async () => {
         setLoading(true);
         try {
-            const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/courses');
+            const res = await fetch(((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api/courses');
             const data = await res.json();
             setCourses(Array.isArray(data) ? data : data.data || []);
         } catch (error) {

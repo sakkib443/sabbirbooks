@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiBell, FiCheckCircle, FiTrash2, FiX, FiExternalLink } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => localStorage.getItem('token') || '';
 const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` });
 

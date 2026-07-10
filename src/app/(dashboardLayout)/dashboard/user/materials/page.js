@@ -7,7 +7,7 @@ import {
   FiUser, FiVideo, FiFileText, FiArrowRight, FiHash,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 export default function CourseMaterialsPage() {
   const [loading, setLoading] = useState(true);

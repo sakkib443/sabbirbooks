@@ -12,7 +12,7 @@ import {
 
 const CertificateViewer = dynamic(() => import('@/components/certificate/CertificateViewer'), { ssr: false });
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
 const hdrs = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` });
 

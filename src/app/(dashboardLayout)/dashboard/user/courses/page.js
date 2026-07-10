@@ -8,7 +8,7 @@ import {
     FiAlertCircle, FiFolder, FiLayers, FiFileText, FiUser,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 /* ─── Central navigation logic (shared behaviour with dashboard home) ─── */
 const courseDest = (enr) => {

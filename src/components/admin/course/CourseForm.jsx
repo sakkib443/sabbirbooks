@@ -27,7 +27,7 @@ import { MdOutlineAssignment, MdOutlineQuiz } from 'react-icons/md';
 import { FaCheckCircle } from 'react-icons/fa';
 import ModuleLessonManager from './ModuleLessonManager';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 // New course defaults (shown on the public details page as e.g. "260+ students enrolled · 4.7 (28 ratings)")
 const DEFAULT_RATING = 4.7;

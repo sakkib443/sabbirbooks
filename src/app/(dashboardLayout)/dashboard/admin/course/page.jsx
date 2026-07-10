@@ -27,7 +27,7 @@ export default function CoursesPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token') || '';
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/courses?status=all', {
+      const res = await fetch(((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api/courses?status=all', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -47,7 +47,7 @@ export default function CoursesPage() {
     if (!confirm('Are you sure you want to delete this course?')) return;
     try {
       const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/api/courses/${id}`, {
+      const res = await fetch(`${((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, ''))}/api/courses/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -62,7 +62,7 @@ export default function CoursesPage() {
   const handleStatusToggle = async (courseId, newStatus) => {
     try {
       const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/api/courses/${courseId}`, {
+      const res = await fetch(`${((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, ''))}/api/courses/${courseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus }),

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { FiLoader, FiClipboard, FiPaperclip, FiFileText, FiDownload, FiUsers, FiGlobe } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 const fmtDate = (d) => {
   if (!d) return '';

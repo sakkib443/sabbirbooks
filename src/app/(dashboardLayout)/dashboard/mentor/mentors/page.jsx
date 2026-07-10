@@ -23,7 +23,7 @@ export default function MentorMentorsPage() {
         const load = async () => {
             setLoading(true);
             try {
-                const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/mentors');
+                const res = await fetch(((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api/mentors');
                 const data = await res.json();
                 setMentors(Array.isArray(data) ? data : data.data || []);
             } catch (error) {

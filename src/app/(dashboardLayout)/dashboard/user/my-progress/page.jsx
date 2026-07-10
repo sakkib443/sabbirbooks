@@ -6,7 +6,7 @@ import {
   FiAward, FiCalendar, FiChevronDown,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 const cid = (v) => String(v?._id || v || '');
 

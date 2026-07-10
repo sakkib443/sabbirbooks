@@ -7,7 +7,7 @@ import {
   FiArrowLeft, FiPlay, FiSearch, FiX, FiChevronRight, FiFolder,
 } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const hdrs = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 

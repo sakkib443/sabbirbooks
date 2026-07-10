@@ -8,7 +8,7 @@ import {
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const hdrs = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 const nameOf = (s) => s?.name || [s?.firstName, s?.lastName].filter(Boolean).join(' ').trim() || s?.email || 'Student';

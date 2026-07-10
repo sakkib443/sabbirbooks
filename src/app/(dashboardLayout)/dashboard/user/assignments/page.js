@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiLoader, FiUpload, FiCalendar, FiAward, FiCheckCircle, FiClock, FiAlertCircle, FiX } from 'react-icons/fi';
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api';
+const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => localStorage.getItem('token') || '';
 
 export default function StudentAssignmentsPage() {

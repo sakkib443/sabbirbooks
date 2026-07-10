@@ -63,9 +63,9 @@ const MentorEditCourse = () => {
                 setFetching(true);
 
                 const [catRes, mentorRes, courseRes] = await Promise.all([
-                    fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/categories'),
-                    fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/mentors'),
-                    fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/api/courses/${id}`)
+                    fetch(((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api/categories'),
+                    fetch(((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api/mentors'),
+                    fetch(`${((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, ''))}/api/courses/${id}`)
                 ]);
 
                 const catData = await catRes.json();
@@ -101,7 +101,7 @@ const MentorEditCourse = () => {
     const onSubmit = async (data) => {
         setLoading(true);
         try {
-            const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/api/courses/${id}`, {
+            const response = await fetch(`${((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, ''))}/api/courses/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
