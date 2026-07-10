@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+/* ============================================================
+   SABBIR BOOK — MEDICAL DESIGN SYSTEM
+   A clean, trustworthy medical theme: teal primary, mint accent,
+   deep-slate text on airy backgrounds. Light + dark (system) aware.
+   ============================================================ */
+
+:root {
+  /* Surfaces & text */
+  --background: #ffffff;
+  --surface-soft: #f1fafb; /* very light teal wash for alt sections */
+  --surface-mint: #f1fbf6; /* very light mint wash */
+  --foreground: #0e2a33; /* deep slate / teal-navy */
+  --card: #ffffff;
+  --card-foreground: #0e2a33;
+  --muted: #f3f7f8;
+  --muted-foreground: #5a7581; /* calm slate */
+  --border: #e2ecef;
+  --input: #e2ecef;
+
+  /* Brand — medical teal */
+  --primary: #0e9aa7;
+  --primary-foreground: #ffffff;
+  --primary-hover: #0c828d;
+  --primary-strong: #0e7c7b;
+  --primary-soft: #e3f5f6; /* tint background */
+
+  /* Supporting medical blue */
+  --secondary: #1e73be;
+  --secondary-foreground: #ffffff;
+
+  /* Accent — vital mint/emerald (CTAs, "health") */
+  --accent: #12b886;
+  --accent-foreground: #ffffff;
+  --accent-soft: #e3f7ef;
+
+  /* Coral — heart-pulse highlight, used sparingly */
+  --coral: #ff6b6b;
+
+  --ring: #0e9aa7;
+
+  /* Radius */
+  --radius: 0.875rem;
+
+  /* Soft, teal-tinted shadows */
+  --shadow-soft: 0 1px 2px rgba(14, 42, 51, 0.04), 0 4px 16px rgba(14, 42, 51, 0.05);
+  --shadow-card: 0 2px 6px rgba(14, 42, 51, 0.05), 0 12px 32px rgba(14, 42, 51, 0.08);
+  --shadow-glow: 0 12px 40px rgba(14, 154, 167, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #07191f;
+    --surface-soft: #0b232a;
+    --surface-mint: #0a2621;
+    --foreground: #e7f2f4;
+    --card: #0d242b;
+    --card-foreground: #e7f2f4;
+    --muted: #0f272e;
+    --muted-foreground: #90aab2;
+    --border: #1b3a43;
+    --input: #1b3a43;
+
+    --primary: #22b8c4;
+    --primary-foreground: #04141a;
+    --primary-hover: #3fc7d1;
+    --primary-strong: #1aa0aa;
+    --primary-soft: #0e3138;
+
+    --secondary: #4a96d8;
+    --secondary-foreground: #04141a;
+
+    --accent: #1fd09b;
+    --accent-foreground: #04141a;
+    --accent-soft: #0e3630;
+
+    --coral: #ff8080;
+
+    --ring: #22b8c4;
+
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.45);
+    --shadow-glow: 0 12px 40px rgba(34, 184, 196, 0.28);
+  }
+}
+
+/* Expose tokens to Tailwind utilities (bg-primary, text-foreground, …).
+   `inline` keeps the utilities referencing the live CSS vars so they follow
+   the light/dark override automatically. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-mint: var(--surface-mint);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-coral: var(--coral);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-poppins);
+  --font-heading: var(--font-outfit);
+  --font-bengali: var(--font-hind-siliguri);
+
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+  --radius-2xl: calc(var(--radius) + 0.5rem);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-glow: var(--shadow-glow);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-poppins), system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+  }
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-outfit), var(--font-poppins), sans-serif;
+    letter-spacing: -0.01em;
+  }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* Slim, themed scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--primary) 45%, transparent);
+    border-radius: 9999px;
+    border: 2px solid var(--background);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+  }
+}
+
+/* ============================================================
+   FONT UTILITY CLASSES
+   Preserved so the (interim) About/Contact pages keep rendering.
+   ============================================================ */
+.font-heading { font-family: var(--font-outfit), sans-serif; }
+.font-poppins, .poppins { font-family: var(--font-poppins), "Poppins", sans-serif; }
+.font-roboto { font-family: var(--font-roboto), "Roboto", sans-serif; }
+.outfit { font-family: var(--font-outfit), "Outfit", sans-serif; font-weight: 800; }
+.outfit-semibold { font-family: var(--font-outfit), "Outfit", sans-serif; font-weight: 600; }
+.work { font-family: var(--font-work), "Work Sans", sans-serif; }
+.lobster-regular { font-family: var(--font-lobster), "Lobster", cursive; }
+.caveat { font-family: var(--font-caveat), "Caveat", cursive; }
+
+/* Hind Siliguri for Bengali text — font-weight inherits so headings stay bold */
+.hind-siliguri {
+  font-family: var(--font-hind-siliguri), "Hind Siliguri", sans-serif;
+}
+
+/* ============================================================
+   MEDICAL UTILITIES & GRADIENTS
+   ============================================================ */
+.text-gradient-medical {
+  background: linear-gradient(100deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-medical-mesh {
+  background-color: var(--surface-soft);
+  background-image:
+    radial-gradient(at 12% 18%, color-mix(in oklab, var(--primary) 14%, transparent) 0px, transparent 55%),
+    radial-gradient(at 88% 12%, color-mix(in oklab, var(--accent) 12%, transparent) 0px, transparent 50%),
+    radial-gradient(at 70% 90%, color-mix(in oklab, var(--secondary) 10%, transparent) 0px, transparent 55%);
+}
+
+.bg-medical-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--primary) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--primary) 7%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.bg-medical-dots {
+  background-image: radial-gradient(color-mix(in oklab, var(--primary) 22%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* ============================================================
+   ANIMATIONS — subtle, clinical
+   ============================================================ */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.7; }
+  80%, 100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes ecg-dash {
+  from { stroke-dashoffset: 600; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-up { animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-float-soft { animation: float-soft 6s ease-in-out infinite; }
+.animate-pulse-ring { animation: pulse-ring 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-ecg { stroke-dasharray: 600; animation: ecg-dash 3.2s linear infinite; }
+.animate-spin-slow { animation: spin-slow 18s linear infinite; }
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-700 { animation-delay: 0.7s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
