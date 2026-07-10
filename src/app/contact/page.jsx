@@ -11,8 +11,8 @@ import API_BASE_URL from "@/config/api";
 // Static contact defaults — a later agent can wire these to the settings API.
 const INFO = {
   email: "info@sabbirbook.com",
-  phone: "+880 1611-661666",
-  whatsapp: "8801611661666",
+  phone: "+880 1838-150832",
+  whatsapp: "8801838150832",
   mapEmbed: "https://www.google.com/maps?q=Dhaka,Bangladesh&z=12&output=embed",
 };
 

@@ -148,12 +148,12 @@ const Footer = () => {
             </h4>
             <ul className="space-y-3.5 text-sm">
               <li>
-                <a href="tel:+8801611661666" className="group flex items-center gap-3">
+                <a href="tel:+8801838150832" className="group flex items-center gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
                     <LuPhone className="text-sm text-primary" />
                   </span>
                   <span className="text-white/60 transition-colors group-hover:text-primary">
-                    +880 1611-661666
+                    +880 1838-150832
                   </span>
                 </a>
               </li>
