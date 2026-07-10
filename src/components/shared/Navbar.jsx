@@ -132,22 +132,13 @@ const Navbar = () => {
           </nav>
           {user ? (
             <div className="space-y-2">
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={closeMobileMenu}
-                  className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full", bn)}
-                >
-                  Admin Panel
-                </Link>
-              )}
               <Link
-                href="/dashboard"
+                href={isAdmin ? "/admin" : "/dashboard"}
                 onClick={closeMobileMenu}
                 className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full", bn)}
               >
                 <HiOutlineUserCircle className="text-xl" />
-                {t("navbar.dashboard", "Dashboard")}
+                {isAdmin ? t("navbar.admin", "Admin Panel") : t("navbar.dashboard", "Dashboard")}
               </Link>
               <button
                 type="button"
@@ -222,20 +213,12 @@ const Navbar = () => {
 
             {user ? (
               <div className="hidden items-center gap-2 lg:flex">
-                {isAdmin && (
-                  <Link
-                    href="/admin"
-                    className={cn(buttonVariants({ variant: "ghost", size: "sm" }), bn)}
-                  >
-                    Admin
-                  </Link>
-                )}
                 <Link
-                  href="/dashboard"
+                  href={isAdmin ? "/admin" : "/dashboard"}
                   className={cn(buttonVariants({ variant: "outline", size: "sm" }), bn)}
                 >
                   <HiOutlineUserCircle className="text-lg" />
-                  {t("navbar.dashboard", "Dashboard")}
+                  {isAdmin ? t("navbar.admin", "Admin Panel") : t("navbar.dashboard", "Dashboard")}
                 </Link>
                 <button
                   type="button"

@@ -87,7 +87,14 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
       router.replace("/login");
       return;
     }
-    setUser(getStoredUser());
+    const u = getStoredUser();
+    // Admins belong in the admin panel, not the student dashboard.
+    if (u && (u.role === "admin" || u.role === "superAdmin")) {
+      setState("denied");
+      router.replace("/admin");
+      return;
+    }
+    setUser(u);
     setState("ok");
   }, [router]);
 
