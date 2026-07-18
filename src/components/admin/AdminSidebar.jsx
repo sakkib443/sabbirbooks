@@ -8,6 +8,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiSettings, FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiBell, FiChevronLeft, FiHeadphones, FiTag, FiGlobe, FiClipboard, FiLink,
+  FiBook, FiShoppingBag,
 } from 'react-icons/fi';
 
 const AdminSidebar = () => {
@@ -124,6 +125,14 @@ const AdminSidebar = () => {
           ],
         },
         { title: 'Certifications', href: '/dashboard/admin/certification', icon: FiAward },
+      ],
+    },
+    {
+      label: 'Book Store',
+      items: [
+        { title: 'All Books', href: '/dashboard/admin/books', icon: FiBook, exact: true },
+        { title: 'Add Book', href: '/dashboard/admin/books/create', icon: FiPlus },
+        { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag },
       ],
     },
     {

@@ -25,21 +25,27 @@ import ShippingForm, { type ShippingFormValues } from "./ShippingForm";
 import PaymentMethod from "./PaymentMethod";
 import CheckoutSuccess from "./CheckoutSuccess";
 import {
-  checkoutBook,
   fetchBook,
   fetchCourse,
+  fetchPaymentSettings,
   getStoredUser,
   getToken,
   payForCourse,
+  submitBookManual,
+  submitCourseManual,
 } from "./checkoutApi";
+import ManualPaymentDetails from "./ManualPaymentDetails";
 import {
   CheckoutBook,
   CheckoutCourse,
   CheckoutStep,
   CheckoutType,
-  PaymentMethod as Method,
+  ManualChannel,
+  ManualDetails,
+  PaymentSettings,
   ShippingAddress,
   SuccessResult,
+  effectiveCoursePrice,
 } from "./types";
 
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
@@ -58,12 +64,41 @@ export default function CheckoutView() {
   const [course, setCourse] = useState<CheckoutCourse | null>(null);
   const [book, setBook] = useState<CheckoutBook | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [method, setMethod] = useState<Method>("bkash");
   const [step, setStep] = useState<CheckoutStep>("idle");
   const [submitError, setSubmitError] = useState("");
   const [result, setResult] = useState<SuccessResult | null>(null);
 
+  // ── Manual payment (bKash/Rocket/Nagad) state ─────────────────────────────
+  const [settings, setSettings] = useState<PaymentSettings | null>(null);
+  const [details, setDetails] = useState<ManualDetails>({
+    channel: "bkash",
+    transactionId: "",
+    senderNumber: "",
+    sentAt: "",
+    note: "",
+  });
+  const [manualErrors, setManualErrors] = useState<
+    Partial<Record<"transactionId" | "senderNumber" | "sentAt", string>>
+  >({});
+  const channel = details.channel;
+  const setChannel = (c: ManualChannel) => setDetails((d) => ({ ...d, channel: c }));
+  const patchDetails = (patch: Partial<ManualDetails>) => {
+    setDetails((d) => ({ ...d, ...patch }));
+    setManualErrors({});
+  };
+
   const S = useMemo(() => (isBengali ? BN : EN), [isBengali]);
+
+  // Channels the admin has configured a receiving number for.
+  const availableChannels = useMemo<ManualChannel[]>(() => {
+    if (!settings) return [];
+    const out: ManualChannel[] = [];
+    if (settings.bkash) out.push("bkash");
+    if (settings.rocket) out.push("rocket");
+    if (settings.nagad) out.push("nagad");
+    return out;
+  }, [settings]);
+  const receivingNumber = settings ? settings[channel] : "";
 
   // ── Derived flags ─────────────────────────────────────────────────────────
   const isBook = type === "book";
@@ -71,6 +106,9 @@ export default function CheckoutView() {
   const isPrinted = isBook && book?.format === "printed";
   const stock = book?.stock ?? 0;
   const outOfStock = isPrinted && stock <= 0;
+  // Free courses skip payment entirely (instant enroll); everything else is manual.
+  const isFreeCourse = isCourse && !!course && effectiveCoursePrice(course) <= 0;
+  const needsPayment = !outOfStock && !isFreeCourse;
 
   // ── Shipping form (only enforced for printed books) ───────────────────────
   const shippingSchema = useMemo(
@@ -133,6 +171,21 @@ export default function CheckoutView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, id, slug]);
 
+  // Load the admin-configured receiving numbers once; default to the first
+  // configured wallet.
+  useEffect(() => {
+    fetchPaymentSettings().then((s) => {
+      setSettings(s);
+      const avail: ManualChannel[] = [];
+      if (s.bkash) avail.push("bkash");
+      if (s.rocket) avail.push("rocket");
+      if (s.nagad) avail.push("nagad");
+      if (avail.length) {
+        setDetails((d) => (avail.includes(d.channel) ? d : { ...d, channel: avail[0] }));
+      }
+    });
+  }, []);
+
   // Prefill shipping name/phone from the stored user once we know it's a printed book.
   useEffect(() => {
     if (!isPrinted) return;
@@ -148,6 +201,15 @@ export default function CheckoutView() {
   }, [isPrinted, reset]);
 
   // ── Run the end-to-end flow (A: course, B: book) ──────────────────────────
+  const validateManual = (): boolean => {
+    const e: typeof manualErrors = {};
+    if (!details.transactionId.trim()) e.transactionId = S.manualErrTxn;
+    if (!details.senderNumber.trim()) e.senderNumber = S.manualErrSender;
+    if (!details.sentAt) e.sentAt = S.manualErrSentAt;
+    setManualErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
   const runCheckout = async (shipping?: ShippingAddress) => {
     if (!getToken()) return router.replace("/login");
     setSubmitError("");
@@ -155,29 +217,55 @@ export default function CheckoutView() {
     setPhase("processing");
     try {
       if (type === "course" && course) {
-        const r = await payForCourse({
-          course,
-          method,
-          onProgress: setStep,
-          genericErr: S.genericErr,
-        });
-        setResult({
-          kind: "course",
-          courseTitle: course.title,
-          reference: r.reference,
-          method: r.method,
-          amount: r.amount,
-        });
+        if (isFreeCourse) {
+          // Free course → instant enrollment, no manual payment.
+          const r = await payForCourse({
+            course,
+            method: "bkash",
+            onProgress: setStep,
+            genericErr: S.genericErr,
+          });
+          setResult({
+            kind: "course",
+            courseTitle: course.title,
+            reference: r.reference,
+            method: r.method,
+            amount: r.amount,
+          });
+        } else {
+          const r = await submitCourseManual({
+            course,
+            details,
+            onProgress: setStep,
+            genericErr: S.genericErr,
+          });
+          setResult({
+            kind: "manual",
+            itemKind: "course",
+            title: course.title,
+            reference: r.reference,
+            amount: r.amount,
+            channel: details.channel,
+          });
+        }
       } else if (type === "book" && book) {
-        const order = await checkoutBook({
+        const order = await submitBookManual({
           book,
           quantity,
-          method,
+          details,
           shippingAddress: shipping,
           onProgress: setStep,
           genericErr: S.genericErr,
         });
-        setResult({ kind: "book", order });
+        setResult({
+          kind: "manual",
+          itemKind: "book",
+          title: book.title,
+          reference: order.orderNumber,
+          amount: order.total,
+          channel: details.channel,
+          isPrintedBook: order.deliveryType !== "digital",
+        });
       } else {
         throw new Error(S.genericErr);
       }
@@ -194,6 +282,13 @@ export default function CheckoutView() {
 
   const onConfirm = () => {
     if (outOfStock) return;
+    if (needsPayment) {
+      if (availableChannels.length === 0) {
+        setSubmitError(S.manualNotConfigured);
+        return;
+      }
+      if (!validateManual()) return;
+    }
     if (isPrinted) {
       // Gate the flow behind a valid shipping address.
       void handleSubmit((vals) => runCheckout(vals))();
@@ -315,15 +410,45 @@ export default function CheckoutView() {
               </div>
             )}
 
-            {/* Payment method */}
-            {!outOfStock && (
-              <PaymentMethod
-                value={method}
-                onChange={setMethod}
-                disabled={processing}
-                bn={bn}
-                S={paymentLabels(S)}
-              />
+            {/* Manual payment (bKash / Rocket / Nagad) */}
+            {needsPayment && availableChannels.length > 0 && (
+              <>
+                <PaymentMethod
+                  value={channel}
+                  onChange={setChannel}
+                  available={availableChannels}
+                  disabled={processing}
+                  bn={bn}
+                  S={paymentSelLabels(S)}
+                />
+                <ManualPaymentDetails
+                  channel={channel}
+                  receivingNumber={receivingNumber}
+                  instructions={settings?.instructions}
+                  details={details}
+                  onChange={patchDetails}
+                  errors={manualErrors}
+                  disabled={processing}
+                  bn={bn}
+                  S={manualLabels(S)}
+                />
+              </>
+            )}
+
+            {/* Manual payment not configured by admin yet */}
+            {needsPayment && settings && availableChannels.length === 0 && (
+              <div className={cn("flex items-start gap-3 rounded-2xl border border-coral/30 bg-coral/10 p-5", bn)}>
+                <LuTriangleAlert className="mt-0.5 shrink-0 text-coral" />
+                <p className="text-sm text-coral">{S.manualNotConfigured}</p>
+              </div>
+            )}
+
+            {/* Free course — no payment needed */}
+            {isFreeCourse && (
+              <div className={cn("flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent-soft/50 p-5", bn)}>
+                <LuShieldCheck className="mt-0.5 shrink-0 text-accent" />
+                <p className="text-sm text-foreground">{S.freeCourseNote}</p>
+              </div>
             )}
           </div>
 
@@ -355,7 +480,7 @@ export default function CheckoutView() {
                     size="lg"
                     variant="accent"
                     className={cn("w-full", bn)}
-                    disabled={processing}
+                    disabled={processing || (needsPayment && availableChannels.length === 0)}
                     onClick={onConfirm}
                   >
                     {processing ? (
@@ -364,13 +489,13 @@ export default function CheckoutView() {
                       </>
                     ) : (
                       <>
-                        <LuLock className="text-base" /> {S.confirmPay}
+                        <LuLock className="text-base" /> {isFreeCourse ? S.enrollFree : S.submitPay}
                       </>
                     )}
                   </Button>
 
                   <p className={cn("flex items-center justify-center gap-1.5 text-xs text-muted-foreground", bn)}>
-                    <LuShieldCheck className="text-accent" /> {S.secureNote}
+                    <LuShieldCheck className="text-accent" /> {isFreeCourse ? S.secureNote : S.verifyNote}
                   </p>
                 </>
               )}
@@ -481,12 +606,15 @@ const EN = {
   title: "Complete your purchase",
   back: "Back",
   confirmPay: "Confirm & Pay",
-  secureNote: "Payments are processed securely. Gateways run in demo mode.",
+  submitPay: "Submit Payment",
+  enrollFree: "Enroll for Free",
+  secureNote: "Your enrollment is processed securely.",
+  verifyNote: "Your payment will be verified by our team, usually within 24 hours.",
   stepProcessing: "Processing…",
-  stepCreating: "Creating order…",
-  stepInitiating: "Initiating payment…",
-  stepPaying: "Contacting gateway…",
-  stepConfirming: "Confirming payment…",
+  stepCreating: "Placing order…",
+  stepInitiating: "Submitting…",
+  stepPaying: "Submitting…",
+  stepConfirming: "Submitting details…",
   genericErr: "Something went wrong. Please try again.",
   network: "Could not reach the server. Check your connection.",
   // not found
@@ -532,14 +660,42 @@ const EN = {
   shipErrPhone: "Enter a valid phone number",
   shipErrAddress: "Address is required",
   shipErrCity: "City is required",
-  // payment
+  // payment — manual (bKash / Rocket / Nagad)
   payHeading: "Payment method",
-  paySubtitle: "Choose how you'd like to pay. Both gateways are in demo mode.",
-  payBkash: "bKash",
-  payBkashDesc: "Mobile wallet payment",
-  paySsl: "SSLCommerz",
-  paySslDesc: "Card / net banking",
-  payDemo: "Demo",
+  paySubtitle: "Choose the wallet you'll send money from.",
+  manualHeading: "Payment details",
+  manualSubtitle: "After sending the money, fill in the details below so we can verify it.",
+  manualSendTo: (c: string) => `Send Money to this ${c} number`,
+  manualCopy: "Copy",
+  manualCopied: "Copied",
+  manualTxn: "Transaction ID (TrxID)",
+  manualTxnPh: "e.g. 9F3AB7C2D1",
+  manualSender: "Sender number",
+  manualSenderPh: "The number you sent from",
+  manualSentAt: "Date & time sent",
+  manualNote: "Note",
+  manualNotePh: "Anything we should know",
+  manualErrTxn: "Transaction ID is required",
+  manualErrSender: "Sender number is required",
+  manualErrSentAt: "Please select when you sent the payment",
+  manualNotConfigured: "Online payment is being set up. Please contact us to complete your purchase.",
+  freeCourseNote: "This course is free — click below to enroll instantly.",
+  chBkash: "bKash",
+  chRocket: "Rocket",
+  chNagad: "Nagad",
+  // manual pending success
+  pendingTitle: "Payment submitted!",
+  pendingCourseSub:
+    "Your payment is now awaiting verification. You'll get course access once an admin approves it (usually within 24 hours).",
+  pendingBookDigitalSub:
+    "Your order is placed. Your download unlocks once your payment is verified (usually within 24 hours).",
+  pendingBookPrintedSub:
+    "Your order is placed. We'll prepare it for delivery once your payment is verified (usually within 24 hours).",
+  pendingRefLabel: "Reference",
+  pendingChannelLabel: "Paid via",
+  pendingStatusLabel: "Status",
+  pendingStatusValue: "Awaiting verification",
+  viewMyOrders: "View my orders",
   // success
   successTitle: "Payment successful!",
   successCourseSub: "Your enrollment is confirmed. You now have access to the course.",
@@ -574,12 +730,15 @@ const BN: Copy = {
   title: "আপনার ক্রয় সম্পন্ন করুন",
   back: "ফিরে যান",
   confirmPay: "নিশ্চিত করুন ও পেমেন্ট দিন",
-  secureNote: "পেমেন্ট নিরাপদভাবে প্রক্রিয়া করা হয়। গেটওয়ে ডেমো মোডে চলছে।",
+  submitPay: "পেমেন্ট সাবমিট করুন",
+  enrollFree: "ফ্রিতে এনরোল করুন",
+  secureNote: "আপনার এনরোলমেন্ট নিরাপদভাবে প্রক্রিয়া করা হয়।",
+  verifyNote: "আপনার পেমেন্ট আমাদের টিম যাচাই করবে, সাধারণত ২৪ ঘণ্টার মধ্যে।",
   stepProcessing: "প্রসেস হচ্ছে…",
   stepCreating: "অর্ডার তৈরি হচ্ছে…",
-  stepInitiating: "পেমেন্ট শুরু হচ্ছে…",
-  stepPaying: "গেটওয়ের সাথে সংযোগ হচ্ছে…",
-  stepConfirming: "পেমেন্ট নিশ্চিত হচ্ছে…",
+  stepInitiating: "সাবমিট হচ্ছে…",
+  stepPaying: "সাবমিট হচ্ছে…",
+  stepConfirming: "তথ্য সাবমিট হচ্ছে…",
   genericErr: "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।",
   network: "সার্ভারে সংযোগ করা যায়নি। ইন্টারনেট চেক করুন।",
   notFoundTitle: "এই আইটেমটি লোড করা যায়নি",
@@ -622,12 +781,39 @@ const BN: Copy = {
   shipErrAddress: "ঠিকানা দিন",
   shipErrCity: "শহর দিন",
   payHeading: "পেমেন্ট পদ্ধতি",
-  paySubtitle: "কীভাবে পেমেন্ট করবেন বেছে নিন। দুটি গেটওয়েই ডেমো মোডে।",
-  payBkash: "বিকাশ",
-  payBkashDesc: "মোবাইল ওয়ালেট পেমেন্ট",
-  paySsl: "SSLCommerz",
-  paySslDesc: "কার্ড / নেট ব্যাংকিং",
-  payDemo: "ডেমো",
+  paySubtitle: "যে ওয়ালেট থেকে টাকা পাঠাবেন সেটি বেছে নিন।",
+  manualHeading: "পেমেন্টের তথ্য",
+  manualSubtitle: "টাকা পাঠানোর পর নিচের তথ্যগুলো দিন, যাতে আমরা যাচাই করতে পারি।",
+  manualSendTo: (c: string) => `এই ${c} নাম্বারে Send Money করুন`,
+  manualCopy: "কপি",
+  manualCopied: "কপি হয়েছে",
+  manualTxn: "ট্রানজেকশন আইডি (TrxID)",
+  manualTxnPh: "যেমন: 9F3AB7C2D1",
+  manualSender: "যে নাম্বার থেকে পাঠিয়েছেন",
+  manualSenderPh: "যে নাম্বার থেকে পাঠিয়েছেন",
+  manualSentAt: "কখন পাঠিয়েছেন (তারিখ ও সময়)",
+  manualNote: "নোট",
+  manualNotePh: "অতিরিক্ত কিছু জানানোর থাকলে",
+  manualErrTxn: "ট্রানজেকশন আইডি দিন",
+  manualErrSender: "সেন্ডার নাম্বার দিন",
+  manualErrSentAt: "কখন পাঠিয়েছেন তা নির্বাচন করুন",
+  manualNotConfigured: "অনলাইন পেমেন্ট সেটআপ করা হচ্ছে। অর্ডার সম্পন্ন করতে আমাদের সাথে যোগাযোগ করুন।",
+  freeCourseNote: "এই কোর্সটি ফ্রি — নিচে ক্লিক করে সাথে সাথে এনরোল করুন।",
+  chBkash: "বিকাশ",
+  chRocket: "রকেট",
+  chNagad: "নগদ",
+  pendingTitle: "পেমেন্ট সাবমিট হয়েছে!",
+  pendingCourseSub:
+    "আপনার পেমেন্ট এখন যাচাইয়ের অপেক্ষায়। অ্যাডমিন অনুমোদন করলে (সাধারণত ২৪ ঘণ্টার মধ্যে) কোর্স অ্যাক্সেস পাবেন।",
+  pendingBookDigitalSub:
+    "আপনার অর্ডার নেওয়া হয়েছে। পেমেন্ট যাচাই হলে (সাধারণত ২৪ ঘণ্টার মধ্যে) ডাউনলোড আনলক হবে।",
+  pendingBookPrintedSub:
+    "আপনার অর্ডার নেওয়া হয়েছে। পেমেন্ট যাচাই হলে (সাধারণত ২৪ ঘণ্টার মধ্যে) ডেলিভারির জন্য প্রস্তুত করা হবে।",
+  pendingRefLabel: "রেফারেন্স",
+  pendingChannelLabel: "পেমেন্ট মাধ্যম",
+  pendingStatusLabel: "স্ট্যাটাস",
+  pendingStatusValue: "যাচাইয়ের অপেক্ষায়",
+  viewMyOrders: "আমার অর্ডার দেখুন",
   successTitle: "পেমেন্ট সফল হয়েছে!",
   successCourseSub: "আপনার এনরোলমেন্ট নিশ্চিত হয়েছে। এখন আপনি কোর্সটি অ্যাক্সেস করতে পারবেন।",
   successBookDigitalSub: "আপনার অর্ডার সম্পন্ন হয়েছে। নিচে থেকে ডিজিটাল বই ডাউনলোড করুন।",
@@ -691,15 +877,34 @@ function shippingLabels(S: Copy) {
   };
 }
 
-function paymentLabels(S: Copy) {
+function channelName(S: Copy, id: ManualChannel): string {
+  return id === "bkash" ? S.chBkash : id === "rocket" ? S.chRocket : S.chNagad;
+}
+
+function paymentSelLabels(S: Copy) {
   return {
     heading: S.payHeading,
     subtitle: S.paySubtitle,
-    bkash: S.payBkash,
-    bkashDesc: S.payBkashDesc,
-    sslcommerz: S.paySsl,
-    sslDesc: S.paySslDesc,
-    demo: S.payDemo,
+    channelName: (id: ManualChannel) => channelName(S, id),
+  };
+}
+
+function manualLabels(S: Copy) {
+  return {
+    heading: S.manualHeading,
+    subtitle: S.manualSubtitle,
+    sendTo: S.manualSendTo,
+    copy: S.manualCopy,
+    copied: S.manualCopied,
+    txnId: S.manualTxn,
+    txnIdPh: S.manualTxnPh,
+    senderNumber: S.manualSender,
+    senderNumberPh: S.manualSenderPh,
+    sentAt: S.manualSentAt,
+    note: S.manualNote,
+    notePh: S.manualNotePh,
+    optional: S.shipOptional,
+    channelName: (id: ManualChannel) => channelName(S, id),
   };
 }
 
@@ -724,9 +929,23 @@ function successLabels(S: Copy, bn: string) {
     continueBooks: S.successContinueBooks,
     downloadErr: S.successDownloadErr,
     network: S.network,
+    // Pending (manual payment awaiting verification)
+    pendingTitle: S.pendingTitle,
+    pendingCourseSub: S.pendingCourseSub,
+    pendingBookDigitalSub: S.pendingBookDigitalSub,
+    pendingBookPrintedSub: S.pendingBookPrintedSub,
+    pendingRefLabel: S.pendingRefLabel,
+    pendingChannelLabel: S.pendingChannelLabel,
+    pendingStatusLabel: S.pendingStatusLabel,
+    pendingStatusValue: S.pendingStatusValue,
+    viewMyOrders: S.viewMyOrders,
+    amountLabel: S.successPaid,
+    channelName: (id: ManualChannel) => channelName(S, id),
     methodNames: {
-      bkash: S.payBkash,
-      sslcommerz: S.paySsl,
+      bkash: S.chBkash,
+      rocket: S.chRocket,
+      nagad: S.chNagad,
+      sslcommerz: "SSLCommerz",
       manual: S.successMethod,
       free: S.sumFree,
       status_processing: S.status_processing,

@@ -3,8 +3,8 @@
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import {
-  FiArrowLeft, FiLoader, FiClock, FiBookOpen, FiTarget,
-  FiAward, FiCpu, FiBriefcase, FiUser, FiCalendar, FiStar,
+  FiArrowLeft, FiLoader, FiClock, FiBookOpen,
+  FiAward, FiUser, FiCalendar, FiStar,
   FiUsers, FiCheckCircle, FiVideo,
 } from 'react-icons/fi';
 
@@ -80,8 +80,6 @@ export default function CourseDetailsPage({ params }) {
   const c = course;
   const m = typeof c.mentor === 'object' ? c.mentor : null;
   const curriculum = Array.isArray(c.curriculum) ? c.curriculum : [];
-  const software = Array.isArray(c.softwareYoullLearn) ? c.softwareYoullLearn : [];
-  const jobs = Array.isArray(c.jobPositions) ? c.jobPositions : [];
   const includes = Array.isArray(c.courseIncludes) ? c.courseIncludes : [];
 
   return (
@@ -127,11 +125,6 @@ export default function CourseDetailsPage({ params }) {
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                 {c.title}
               </h1>
-              {c.technology && (
-                <p className="text-sm sm:text-base text-slate-500 mt-2 max-w-3xl line-clamp-2">
-                  {c.technology}
-                </p>
-              )}
             </div>
           </div>
 
@@ -145,11 +138,6 @@ export default function CourseDetailsPage({ params }) {
             {c.lectures ? (
               <span className="flex items-center gap-1.5">
                 <FiBookOpen size={14} className="text-[#F3A522]" /> {c.lectures} lectures
-              </span>
-            ) : null}
-            {c.totalProject ? (
-              <span className="flex items-center gap-1.5">
-                <FiTarget size={14} className="text-[#F3A522]" /> {c.totalProject} projects
               </span>
             ) : null}
             {c.totalExam ? (
@@ -190,15 +178,6 @@ export default function CourseDetailsPage({ params }) {
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Lectures</p>
               </div>
             ) : null}
-            {c.totalProject ? (
-              <div className="rounded-2xl bg-white border border-slate-200/60 shadow-sm p-4">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 mb-2">
-                  <FiTarget size={16} />
-                </div>
-                <p className="text-lg font-bold text-slate-800">{c.totalProject}</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Projects</p>
-              </div>
-            ) : null}
             {c.totalExam ? (
               <div className="rounded-2xl bg-white border border-slate-200/60 shadow-sm p-4">
                 <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 mb-2">
@@ -232,17 +211,6 @@ export default function CourseDetailsPage({ params }) {
             </section>
           )}
 
-          {/* Technology */}
-          {c.technology && (
-            <section className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <FiCpu className="text-violet-500" size={16} />
-                Technology
-              </h2>
-              <p className="text-sm text-slate-700">{c.technology}</p>
-            </section>
-          )}
-
           {/* Curriculum */}
           {curriculum.length > 0 && (
             <section className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
@@ -261,40 +229,6 @@ export default function CourseDetailsPage({ params }) {
                   </li>
                 ))}
               </ul>
-            </section>
-          )}
-
-          {/* Software / You'll learn */}
-          {software.length > 0 && (
-            <section className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <FiCheckCircle className="text-blue-500" size={16} />
-                You&apos;ll Learn
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {software.map((s, i) => (
-                  <span key={i} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">
-                    {s}
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Career */}
-          {jobs.length > 0 && (
-            <section className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <FiBriefcase className="text-emerald-500" size={16} />
-                Career Opportunities
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {jobs.map((j, i) => (
-                  <span key={i} className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
-                    {j}
-                  </span>
-                ))}
-              </div>
             </section>
           )}
 

@@ -44,18 +44,14 @@ export interface Course {
   rating?: number;
   totalRating?: number;
   totalStudentsEnroll?: number;
-  technology?: string;
   courseStart?: string;
   durationMonth?: number;
   curriculum?: string[];
   lectures?: number;
   totalExam?: number;
-  totalProject?: number;
   details?: string;
   courseOverview?: string;
   courseIncludes?: CourseInclude[];
-  softwareYoullLearn?: string[];
-  jobPositions?: string[];
 }
 
 // Format a numeric-ish string/number as Bangladeshi Taka, or null when

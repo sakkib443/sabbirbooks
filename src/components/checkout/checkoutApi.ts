@@ -17,8 +17,10 @@ import {
   CheckoutBook,
   CheckoutCourse,
   CheckoutStep,
+  ManualDetails,
   OrderResult,
   PaymentMethod,
+  PaymentSettings,
   ShippingAddress,
   effectiveCoursePrice,
 } from "./types";
@@ -211,6 +213,90 @@ export async function checkoutBook(opts: {
     genericErr
   );
   return finalized;
+}
+
+// ── Manual payment: receiving numbers (public settings) ────────────────────
+export async function fetchPaymentSettings(): Promise<PaymentSettings> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/settings`, { cache: "no-store" });
+    const json = await readJson(res);
+    const s = (json.data ?? json) as Record<string, string>;
+    return {
+      bkash: s?.paymentBkashNumber || "",
+      rocket: s?.paymentRocketNumber || "",
+      nagad: s?.paymentNagadNumber || "",
+      instructions: s?.paymentInstructions || "",
+    };
+  } catch {
+    return { bkash: "", rocket: "", nagad: "", instructions: "" };
+  }
+}
+
+// ── COURSE manual payment: submit Send-Money details (stays pending) ────────
+export async function submitCourseManual(opts: {
+  course: CheckoutCourse;
+  details: ManualDetails;
+  onProgress?: (s: CheckoutStep) => void;
+  genericErr: string;
+}): Promise<{ reference: string; amount: number }> {
+  const { course, details, onProgress, genericErr } = opts;
+  const amount = effectiveCoursePrice(course);
+  onProgress?.("confirming");
+  const data = await post<{ _id?: string }>(
+    "/payment/manual/submit",
+    {
+      courseId: course._id,
+      amount,
+      totalFee: amount,
+      paymentType: details.channel,
+      transactionId: details.transactionId,
+      senderNumber: details.senderNumber,
+      sentAt: details.sentAt || undefined,
+      notes: details.note || undefined,
+    },
+    genericErr
+  );
+  const ref = data?._id ? `ENR-${String(data._id).slice(-8).toUpperCase()}` : "MANUAL";
+  return { reference: ref, amount };
+}
+
+// ── BOOK manual payment: create order → submit Send-Money details (pending) ─
+export async function submitBookManual(opts: {
+  book: CheckoutBook;
+  quantity: number;
+  details: ManualDetails;
+  shippingAddress?: ShippingAddress;
+  onProgress?: (s: CheckoutStep) => void;
+  genericErr: string;
+}): Promise<OrderResult> {
+  const { book, quantity, details, shippingAddress, onProgress, genericErr } = opts;
+
+  // 1) Create the pending order (server computes prices/total).
+  onProgress?.("creating");
+  const order = await post<OrderResult>(
+    "/orders",
+    {
+      items: [{ bookSlugOrId: book.slug, quantity }],
+      ...(shippingAddress ? { shippingAddress } : {}),
+    },
+    genericErr
+  );
+  if (!order?._id) throw new Error(genericErr);
+
+  // 2) Attach the manual Send-Money details — order stays pending for admin review.
+  onProgress?.("confirming");
+  const updated = await post<OrderResult>(
+    `/orders/${order._id}/pay/manual`,
+    {
+      channel: details.channel,
+      transactionId: details.transactionId,
+      senderNumber: details.senderNumber,
+      sentAt: details.sentAt || undefined,
+      note: details.note || undefined,
+    },
+    genericErr
+  );
+  return updated;
 }
 
 // ── Digital download (owner, paid order) ───────────────────────────────────

@@ -360,12 +360,6 @@ export default function UserCoursesPage() {
                                                             </p>
                                                         </div>
                                                     ) : null}
-                                                    {course.totalProject ? (
-                                                        <div className="rounded-lg bg-slate-50/70 border border-slate-100 p-2.5">
-                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Projects</p>
-                                                            <p className="text-xs font-bold text-slate-700 mt-0.5">{course.totalProject}</p>
-                                                        </div>
-                                                    ) : null}
                                                     {course.totalExam ? (
                                                         <div className="rounded-lg bg-slate-50/70 border border-slate-100 p-2.5">
                                                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Exams</p>
@@ -392,13 +386,6 @@ export default function UserCoursesPage() {
                                                             <p className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">Mentor</p>
                                                             <p className="text-[11px] font-bold text-slate-700 truncate">{mentor.name}</p>
                                                         </div>
-                                                    </div>
-                                                )}
-
-                                                {course.technology && (
-                                                    <div className="mb-3">
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Technology</p>
-                                                        <p className="text-[11px] text-slate-600 line-clamp-1">{course.technology}</p>
                                                     </div>
                                                 )}
 

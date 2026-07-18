@@ -8,29 +8,26 @@ import { useRouter, useParams } from 'next/navigation';
 import { FiPlus, FiTrash2, FiSave, FiArrowLeft, FiLoader } from 'react-icons/fi';
 import Link from 'next/link';
 
-// Zod Schema
+// Zod Schema — simplified: only `title` required, everything else optional.
 const courseValidationSchema = z.object({
-    id: z.coerce.number(),
+    id: z.coerce.number().optional(),
     title: z.string().min(1, "Title is required"),
-    slug: z.string().min(1, "Slug is required"),
-    category: z.string().min(1, "Category is required"),
-    type: z.string().min(1, "Type is required"),
-    image: z.string().min(1, "Image URL is required"),
-    fee: z.string().min(1, "Fee is required"),
-    rating: z.coerce.number().default(5),
-    totalRating: z.coerce.number().default(0),
-    totalStudentsEnroll: z.coerce.number().default(0),
-    mentor: z.string().min(1, "Mentor ID is required"),
-    technology: z.string().min(1, "Technology is required"),
-    courseStart: z.string().min(1, "Start date is required"),
-    durationMonth: z.coerce.number().min(1),
-    lectures: z.coerce.number().min(1),
-    totalExam: z.coerce.number().default(0),
-    totalProject: z.coerce.number().default(0),
-    details: z.string().min(1, "Details are required"),
-    courseOverview: z.string().min(1, "Course overview is required"),
+    slug: z.string().optional().or(z.literal("")),
+    category: z.string().optional().or(z.literal("")),
+    type: z.string().optional().or(z.literal("")),
+    image: z.string().optional().or(z.literal("")),
+    fee: z.string().optional().or(z.literal("")),
+    rating: z.coerce.number().optional(),
+    totalRating: z.coerce.number().optional(),
+    totalStudentsEnroll: z.coerce.number().optional(),
+    mentor: z.string().optional().or(z.literal("")),
+    courseStart: z.string().optional().or(z.literal("")),
+    durationMonth: z.coerce.number().optional(),
+    lectures: z.coerce.number().optional(),
+    totalExam: z.coerce.number().optional(),
+    details: z.string().optional().or(z.literal("")),
+    courseOverview: z.string().optional().or(z.literal("")),
     curriculum: z.array(z.string()).optional(),
-    jobPositions: z.array(z.string()).optional(),
 });
 
 const MentorEditCourse = () => {
@@ -48,13 +45,11 @@ const MentorEditCourse = () => {
     const { register, control, handleSubmit, reset, formState: { errors } } = useForm({
         resolver: zodResolver(courseValidationSchema),
         defaultValues: {
-            curriculum: [],
-            jobPositions: []
+            curriculum: []
         }
     });
 
     const curriculums = useFieldArray({ control, name: 'curriculum' });
-    const jobs = useFieldArray({ control, name: 'jobPositions' });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -83,7 +78,6 @@ const MentorEditCourse = () => {
                         category: fetchedCourse.category?._id || fetchedCourse.category,
                         mentor: fetchedCourse.mentor?._id || fetchedCourse.mentor,
                         curriculum: fetchedCourse.curriculum || [],
-                        jobPositions: fetchedCourse.jobPositions || [],
                     };
 
                     reset(formattedData);
@@ -211,26 +205,11 @@ const MentorEditCourse = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-2xl border shadow-sm">
-                            <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-[#41bfb8]">Job Positions</label>
-                                <button type="button" onClick={() => jobs.append('')} className="text-[10px] font-black text-[#9AA0A8] underline">+ ADD POSITION</button>
-                            </div>
-                            <div className="space-y-2">
-                                {jobs.fields.map((f, i) => (
-                                    <div key={f.id} className="flex gap-2">
-                                        <input {...register(`jobPositions.${i}`)} className={inputClass} />
-                                        <button onClick={() => jobs.remove(i)} className="text-red-400 p-2"><FiTrash2 /></button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
 
                     {/* Section 4 - Narratives */}
                     <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
                         <h2 className="text-[10px] font-black uppercase border-b pb-2 tracking-[2px] text-[#41bfb8]">3. Narratives</h2>
-                        <div><label className={labelClass}>Target Technology</label><input {...register('technology')} className={inputClass} /></div>
                         <div><label className={labelClass}>Course Overview</label><textarea {...register('courseOverview')} rows={2} className={inputClass} /></div>
                         <div><label className={labelClass}>Detailed Info</label><textarea {...register('details')} rows={4} className={inputClass} /></div>
                     </div>

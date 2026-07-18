@@ -311,7 +311,6 @@ export default function CoursesBrowser() {
       const cat = categoryName(c.category, categoryLookup) || "";
       return (
         c.title?.toLowerCase().includes(q) ||
-        (c.technology || "").toLowerCase().includes(q) ||
         cat.toLowerCase().includes(q)
       );
     });

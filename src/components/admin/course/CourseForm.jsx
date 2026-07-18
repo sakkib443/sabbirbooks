@@ -9,7 +9,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ import {
 } from 'react-icons/fi';
 import {
   LuMonitor, LuMapPin, LuVideo, LuFileText, LuLayers, LuInfo,
-  LuBookOpen, LuTag, LuListChecks, LuBriefcase, LuSettings2, LuSparkles,
+  LuBookOpen, LuTag, LuListChecks, LuSettings2, LuSparkles,
 } from 'react-icons/lu';
 import { RiLiveLine } from 'react-icons/ri';
 import { MdOutlineAssignment, MdOutlineQuiz } from 'react-icons/md';
@@ -64,45 +64,31 @@ const slugify = (str = '') =>
     .replace(/^-|-$/g, '');
 
 // ─── Validation (mirrors backend course.validation.ts) ───────
+// Simplified for medical courses: only `title` is required — everything else is
+// optional so a course can be uploaded quickly and completed later.
 const courseSchema = z.object({
-  id: z.coerce.number().min(1, 'ID is required'),
+  id: z.coerce.number().optional(),
   title: z.string().min(1, 'Title is required'),
-  slug: z.string().min(1, 'Slug is required'),
-  category: z.string().min(1, 'Select a category'),
-  mentor: z.string().min(1, 'Select a mentor'),
-  type: z.enum(['Online', 'Offline', 'Recorded']),
-  status: z.enum(['draft', 'published', 'archived']),
-  image: z.string().url('Upload an image or paste a valid image URL'),
-  fee: z.string().min(1, 'Course fee is required'),
+  slug: z.string().optional().or(z.literal('')),
+  category: z.string().optional().or(z.literal('')),
+  mentor: z.string().optional().or(z.literal('')),
+  type: z.enum(['Online', 'Offline', 'Recorded']).optional(),
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+  image: z.string().url('Paste a valid image URL').optional().or(z.literal('')),
+  fee: z.string().optional().or(z.literal('')),
   offerPrice: z.string().optional().or(z.literal('')),
   admissionFee: z.coerce.number().min(0).optional(),
-  technology: z.string().min(1, 'Add at least one technology'),
   courseStart: z.string().optional().or(z.literal('')),
   durationMonth: z.coerce.number().optional(),
-  lectures: z.coerce.number().min(0),
-  totalExam: z.coerce.number().min(0),
-  totalProject: z.coerce.number().min(0),
-  courseOverview: z.string().min(1, 'A short overview is required'),
-  details: z.string().min(1, 'Full details are required'),
+  lectures: z.coerce.number().min(0).optional(),
+  totalExam: z.coerce.number().min(0).optional(),
+  courseOverview: z.string().optional().or(z.literal('')),
+  details: z.string().optional().or(z.literal('')),
   curriculum: z.array(z.string()).optional(),
   courseIncludes: z.array(z.object({
-    icon: z.string().min(1),
-    text: z.string().min(1, 'Benefit text is required'),
-  })).min(1, 'Add at least one item'),
-  softwareYoullLearn: z.array(z.string().min(1)).min(1, 'Add at least one software / tool'),
-  jobPositions: z.array(z.string().min(1)).min(1, 'Add at least one job position'),
-}).superRefine((d, ctx) => {
-  if (d.type !== 'Recorded') {
-    if (!d.courseStart || !d.courseStart.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['courseStart'], message: 'Start date is required for Online/Offline courses' });
-    }
-    if (!d.durationMonth || d.durationMonth < 1) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['durationMonth'], message: 'Duration (months) is required for Online/Offline courses' });
-    }
-    if (!(d.curriculum || []).filter(c => c && c.trim()).length) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['curriculum'], message: 'Add at least one curriculum topic for Online/Offline courses' });
-    }
-  }
+    icon: z.string().optional().or(z.literal('')),
+    text: z.string().optional().or(z.literal('')),
+  })).optional(),
 });
 
 // ─── Small UI helpers ────────────────────────────────────────
@@ -130,48 +116,6 @@ const SectionTitle = ({ icon: Icon, title, hint }) => (
 const Card = ({ children, className = '' }) => (
   <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 ${className}`}>{children}</div>
 );
-
-// Tag-style input for string arrays (type + Enter to add)
-const ChipsInput = ({ value = [], onChange, placeholder, invalid }) => {
-  const [draft, setDraft] = useState('');
-  const add = () => {
-    const v = draft.trim();
-    if (!v) return;
-    if (!value.includes(v)) onChange([...value, v]);
-    setDraft('');
-  };
-  return (
-    <div
-      className={`flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg border bg-white min-h-[46px] transition-all
-        focus-within:border-[#F3A522] focus-within:ring-2 focus-within:ring-[#F3A522]/15
-        ${invalid ? 'border-red-300' : 'border-gray-200'}`}
-    >
-      {value.map(chip => (
-        <span key={chip} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 bg-[#FEF6E7] border border-[#F0DFB4] rounded-md text-xs font-semibold text-[#a5680f]">
-          {chip}
-          <button
-            type="button"
-            onClick={() => onChange(value.filter(c => c !== chip))}
-            className="w-4 h-4 flex items-center justify-center rounded hover:bg-[#F3A522]/20 text-[#c9871a]"
-          >
-            <FiX size={11} />
-          </button>
-        </span>
-      ))}
-      <input
-        value={draft}
-        onChange={e => setDraft(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(); }
-          if (e.key === 'Backspace' && !draft && value.length) onChange(value.slice(0, -1));
-        }}
-        onBlur={add}
-        placeholder={value.length ? '' : placeholder}
-        className="flex-1 min-w-[120px] py-1 text-sm outline-none placeholder:text-gray-300 bg-transparent"
-      />
-    </div>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN FORM
@@ -207,13 +151,12 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
     defaultValues: {
       id: '', title: '', slug: '', category: '', mentor: '',
       type: 'Online', status: 'published',
-      image: '', fee: '', offerPrice: '', admissionFee: '', technology: '',
+      image: '', fee: '', offerPrice: '', admissionFee: '',
       courseStart: '', durationMonth: '', lectures: '',
-      totalExam: 0, totalProject: 0,
+      totalExam: 0,
       courseOverview: '', details: '',
       curriculum: [''],
       courseIncludes: [{ icon: 'RiLiveLine', text: '' }],
-      softwareYoullLearn: [], jobPositions: [],
     },
   });
 
@@ -273,18 +216,15 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
             image: c.image || '', fee: c.fee || '',
             offerPrice: c.offerPrice || '',
             admissionFee: c.admissionFee ?? '',
-            technology: c.technology || '',
             courseStart: c.courseStart || '',
             durationMonth: c.durationMonth ?? '',
             lectures: c.lectures ?? 0,
-            totalExam: c.totalExam ?? 0, totalProject: c.totalProject ?? 0,
+            totalExam: c.totalExam ?? 0,
             courseOverview: c.courseOverview || '', details: c.details || '',
             curriculum: c.curriculum?.length ? c.curriculum : [''],
             courseIncludes: c.courseIncludes?.length
               ? c.courseIncludes.map(({ icon, text }) => ({ icon, text }))
               : [{ icon: 'RiLiveLine', text: '' }],
-            softwareYoullLearn: c.softwareYoullLearn || [],
-            jobPositions: c.jobPositions || [],
           });
           slugTouched.current = true;
         } else {
@@ -340,32 +280,38 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
   // ─── Submit ────────────────────────────────────────────────
   const buildPayload = (data) => {
     const rec = data.type === 'Recorded';
+    // Only `title` is guaranteed. Plain-text fields are always sent (so they can
+    // be cleared on edit); ObjectId refs (category/mentor) and empty numbers are
+    // OMITTED when blank to avoid cast errors — the backend fills id/slug in.
     const payload = {
-      id: data.id,
+      id: data.id || undefined,
       title: data.title.trim(),
-      slug: data.slug.trim(),
-      category: data.category,
-      mentor: data.mentor,
-      type: data.type,
-      status: data.status,
-      image: data.image.trim(),
-      fee: String(data.fee).trim(),
-      technology: data.technology.trim(),
-      lectures: data.lectures || 0,
-      totalExam: data.totalExam || 0,
-      totalProject: data.totalProject || 0,
-      details: data.details.trim(),
-      courseOverview: data.courseOverview.trim(),
-      courseIncludes: data.courseIncludes.map(({ icon, text }) => ({ icon, text: text.trim() })),
-      softwareYoullLearn: data.softwareYoullLearn,
-      jobPositions: data.jobPositions,
-      curriculum: rec ? [] : (data.curriculum || []).map(c => c.trim()).filter(Boolean),
+      type: data.type || 'Online',
+      status: data.status || 'published',
+      image: (data.image || '').trim(),
+      fee: String(data.fee ?? '').trim(),
+      details: (data.details || '').trim(),
+      courseOverview: (data.courseOverview || '').trim(),
+      totalExam: Number(data.totalExam) || 0,
+      lectures: Number(data.lectures) || 0,
+      admissionFee: Number(data.admissionFee) || 0,
+      courseIncludes: (data.courseIncludes || [])
+        .filter((ci) => ci && ci.text && ci.text.trim())
+        .map(({ icon, text }) => ({ icon: icon || 'RiLiveLine', text: text.trim() })),
+      curriculum: rec ? [] : (data.curriculum || []).map((c) => (c || '').trim()).filter(Boolean),
     };
+    // Auto-slug is handled server-side when blank; send it only when present.
+    const slug = (data.slug || '').trim();
+    if (slug) payload.slug = slug;
+    if (data.category) payload.category = data.category;
+    if (data.mentor) payload.mentor = data.mentor;
     if (data.offerPrice && data.offerPrice.trim()) payload.offerPrice = data.offerPrice.trim();
-    payload.admissionFee = Number(data.admissionFee) || 0;
     if (!rec) {
-      payload.courseStart = data.courseStart.trim();
-      payload.durationMonth = data.durationMonth;
+      const cs = (data.courseStart || '').trim();
+      if (cs) payload.courseStart = cs;
+      if (data.durationMonth !== '' && data.durationMonth != null) {
+        payload.durationMonth = Number(data.durationMonth);
+      }
     }
     if (!isEdit) {
       payload.rating = DEFAULT_RATING;
@@ -618,7 +564,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                       <input {...register('id')} readOnly className={`${inputClass} bg-gray-50 text-gray-400 cursor-not-allowed`} />
                     </div>
                     <div>
-                      <label className={labelClass}>Category *</label>
+                      <label className={labelClass}>Category</label>
                       <select {...register('category')} className={inputClass}>
                         <option value="">Select category</option>
                         {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
@@ -626,7 +572,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                       <FieldError msg={errors.category?.message} />
                     </div>
                     <div>
-                      <label className={labelClass}>Mentor *</label>
+                      <label className={labelClass}>Mentor</label>
                       <select {...register('mentor')} className={inputClass}>
                         <option value="">Select mentor</option>
                         {mentors.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
@@ -641,12 +587,12 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                   <SectionTitle icon={LuFileText} title="Description" hint="Shown on the public course page" />
                   <div className="space-y-4">
                     <div>
-                      <label className={labelClass}>Short Overview *</label>
+                      <label className={labelClass}>Short Overview</label>
                       <textarea {...register('courseOverview')} rows={2} className={inputClass} placeholder="One or two lines shown at the top of the course page..." />
                       <FieldError msg={errors.courseOverview?.message} />
                     </div>
                     <div>
-                      <label className={labelClass}>Full Details *</label>
+                      <label className={labelClass}>Full Details</label>
                       <textarea {...register('details')} rows={5} className={inputClass} placeholder="Full course description — what students will learn, who this is for..." />
                       <FieldError msg={errors.details?.message} />
                     </div>
@@ -736,60 +682,6 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                   </button>
                 </Card>
 
-                {/* Skills & Career */}
-                <Card>
-                  <SectionTitle icon={LuBriefcase} title="Skills & Career" hint="Type a value and press Enter to add it as a tag" />
-                  <div className="space-y-4">
-                    <div>
-                      <label className={labelClass}>Technologies *</label>
-                      <Controller
-                        control={control}
-                        name="technology"
-                        render={({ field }) => (
-                          <ChipsInput
-                            value={field.value ? field.value.split(',').map(s => s.trim()).filter(Boolean) : []}
-                            onChange={arr => field.onChange(arr.join(', '))}
-                            placeholder="e.g. Photoshop — press Enter"
-                            invalid={!!errors.technology}
-                          />
-                        )}
-                      />
-                      <FieldError msg={errors.technology?.message} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Software You Will Learn *</label>
-                      <Controller
-                        control={control}
-                        name="softwareYoullLearn"
-                        render={({ field }) => (
-                          <ChipsInput
-                            value={field.value || []}
-                            onChange={field.onChange}
-                            placeholder="e.g. Adobe Illustrator — press Enter"
-                            invalid={!!errors.softwareYoullLearn}
-                          />
-                        )}
-                      />
-                      <FieldError msg={errors.softwareYoullLearn?.message} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Job Positions *</label>
-                      <Controller
-                        control={control}
-                        name="jobPositions"
-                        render={({ field }) => (
-                          <ChipsInput
-                            value={field.value || []}
-                            onChange={field.onChange}
-                            placeholder="e.g. UI Designer — press Enter"
-                            invalid={!!errors.jobPositions}
-                          />
-                        )}
-                      />
-                      <FieldError msg={errors.jobPositions?.message} />
-                    </div>
-                  </div>
-                </Card>
               </div>
 
               {/* ══ RIGHT (sidebar) ══ */}
@@ -874,7 +766,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                   <SectionTitle icon={LuTag} title="Pricing" hint="Offer price shows a discount badge on the course page" />
                   <div className="space-y-4">
                     <div>
-                      <label className={labelClass}>Regular Fee (BDT) *</label>
+                      <label className={labelClass}>Regular Fee (BDT)</label>
                       <input {...register('fee')} className={inputClass} placeholder="e.g. 12000" />
                       <FieldError msg={errors.fee?.message} />
                     </div>
@@ -905,12 +797,12 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                     {!isRecorded && (
                       <>
                         <div className="col-span-2">
-                          <label className={labelClass}>Course Start *</label>
+                          <label className={labelClass}>Course Start</label>
                           <input {...register('courseStart')} className={inputClass} placeholder="e.g. 15 March 2026" />
                           <FieldError msg={errors.courseStart?.message} />
                         </div>
                         <div>
-                          <label className={labelClass}>Duration (Months) *</label>
+                          <label className={labelClass}>Duration (Months)</label>
                           <input type="number" min="0" {...register('durationMonth')} className={inputClass} placeholder="6" />
                           <FieldError msg={errors.durationMonth?.message} />
                         </div>
@@ -924,10 +816,6 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                     <div>
                       <label className={labelClass}>Total Exams</label>
                       <input type="number" min="0" {...register('totalExam')} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Total Projects</label>
-                      <input type="number" min="0" {...register('totalProject')} className={inputClass} />
                     </div>
                   </div>
                 </Card>

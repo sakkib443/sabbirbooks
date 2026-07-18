@@ -3,7 +3,35 @@
 // book (GET /api/books/:slug), plus the Order returned by /api/orders.
 
 export type CheckoutType = "course" | "book";
+// Demo gateways (kept for later re-enable; SSLCommerz is deferred for now).
 export type PaymentMethod = "bkash" | "sslcommerz";
+
+// Manual payment — the mobile wallet the buyer used to Send Money.
+export type ManualChannel = "bkash" | "rocket" | "nagad";
+
+// The Send-Money details the buyer submits at checkout for admin verification.
+export interface ManualDetails {
+  channel: ManualChannel;
+  transactionId: string;
+  senderNumber: string;
+  sentAt: string; // datetime-local string ("when did you send it?")
+  note?: string;
+}
+
+// Receiving numbers configured by the admin (GET /api/settings), shown on checkout.
+export interface PaymentSettings {
+  bkash: string;
+  rocket: string;
+  nagad: string;
+  instructions: string;
+}
+
+// Human labels + icons for the three manual channels.
+export const MANUAL_CHANNELS: { id: ManualChannel; en: string; bn: string }[] = [
+  { id: "bkash", en: "bKash", bn: "বিকাশ" },
+  { id: "rocket", en: "Rocket", bn: "রকেট" },
+  { id: "nagad", en: "Nagad", bn: "নগদ" },
+];
 
 // ── Course (GET /api/courses/:id → { success, data }) ──────────────────────
 // fee / offerPrice come back as numeric-ish strings on the course model.
@@ -80,6 +108,16 @@ export type SuccessResult =
   | {
       kind: "book";
       order: OrderResult;
+    }
+  | {
+      // Manual payment submitted — pending admin verification (course OR book).
+      kind: "manual";
+      itemKind: CheckoutType;
+      title: string;
+      reference: string; // order number / enrollment ref
+      amount: number;
+      channel: ManualChannel;
+      isPrintedBook?: boolean;
     };
 
 // Progress steps surfaced on the "Confirm & Pay" button while a flow runs.

@@ -11,10 +11,12 @@ import {
   LuLoaderCircle,
   LuTriangleAlert,
   LuReceipt,
+  LuClock,
+  LuHash,
 } from "react-icons/lu";
 import { Button, buttonVariants, cn } from "@/components/ui";
 import { fetchDownloadUrl } from "./checkoutApi";
-import { OrderResult, SuccessResult, formatTk } from "./types";
+import { ManualChannel, OrderResult, SuccessResult, formatTk } from "./types";
 
 interface Labels {
   bn: string;
@@ -36,11 +38,28 @@ interface Labels {
   continueBooks: string;
   downloadErr: string;
   network: string;
+  // Pending (manual payment awaiting verification)
+  pendingTitle: string;
+  pendingCourseSub: string;
+  pendingBookDigitalSub: string;
+  pendingBookPrintedSub: string;
+  pendingRefLabel: string;
+  pendingChannelLabel: string;
+  pendingStatusLabel: string;
+  pendingStatusValue: string;
+  viewMyOrders: string;
+  amountLabel: string;
+  channelName: (id: ManualChannel) => string;
   methodNames: Record<string, string>;
 }
 
 export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Labels }) {
   const bn = L.bn;
+
+  // Manual payment → pending verification screen (distinct from the paid flow).
+  if (result.kind === "manual") {
+    return <PendingBody result={result} L={L} />;
+  }
 
   const subtitle =
     result.kind === "course"
@@ -65,6 +84,65 @@ export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Label
         ) : (
           <BookBody order={result.order} L={L} />
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Pending body (manual payment awaiting admin verification) ────────────────
+function PendingBody({
+  result,
+  L,
+}: {
+  result: Extract<SuccessResult, { kind: "manual" }>;
+  L: Labels;
+}) {
+  const bn = L.bn;
+  const subtitle =
+    result.itemKind === "course"
+      ? L.pendingCourseSub
+      : result.isPrintedBook
+        ? L.pendingBookPrintedSub
+        : L.pendingBookDigitalSub;
+  const continueHref = result.itemKind === "course" ? "/courses" : "/books";
+  const continueLabel = result.itemKind === "course" ? L.continueCourses : L.continueBooks;
+  const myHref = result.itemKind === "course" ? "/dashboard/user/payments" : "/dashboard/user";
+
+  return (
+    <div className="mx-auto max-w-xl">
+      <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-card sm:p-8">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+          <LuClock className="text-3xl" />
+        </div>
+        <h1 className={cn("font-heading text-2xl font-bold text-foreground sm:text-3xl", bn)}>
+          {L.pendingTitle}
+        </h1>
+        <p className={cn("mx-auto mt-2 max-w-md text-muted-foreground", bn)}>{subtitle}</p>
+
+        <div className="mt-6 rounded-xl border border-border bg-surface-soft p-4 text-left">
+          <Row bn={bn} icon={<LuHash />} label={result.title} value="" isTitle />
+          <div className="mt-3 space-y-2 border-t border-border pt-3">
+            <Row bn={bn} icon={<LuReceipt />} label={L.pendingRefLabel} value={result.reference} mono />
+            <Row bn={bn} label={L.pendingChannelLabel} value={L.channelName(result.channel)} />
+            <Row bn={bn} label={L.amountLabel} value={formatTk(result.amount)} strong />
+            <Row bn={bn} label={L.pendingStatusLabel} value={L.pendingStatusValue} />
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href={myHref}
+            className={cn(buttonVariants({ variant: "accent", size: "lg" }), "flex-1", bn)}
+          >
+            <LuReceipt /> {L.viewMyOrders}
+          </Link>
+          <Link
+            href={continueHref}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "flex-1", bn)}
+          >
+            {continueLabel} <LuArrowRight />
+          </Link>
+        </div>
       </div>
     </div>
   );

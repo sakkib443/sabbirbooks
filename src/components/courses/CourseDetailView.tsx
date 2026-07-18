@@ -14,7 +14,6 @@ import {
   LuLayers,
   LuGraduationCap,
   LuStethoscope,
-  LuBriefcase,
   LuMonitor,
   LuShieldCheck,
   LuBookOpen,
@@ -24,7 +23,6 @@ import {
   LuClipboardCheck,
   LuMessageCircle,
   LuCheck,
-  LuSparkles,
   LuBadgeCheck,
 } from "react-icons/lu";
 import type { IconType } from "react-icons";
@@ -374,46 +372,6 @@ export default function CourseDetailView() {
                     </li>
                   ))}
                 </ol>
-              </section>
-            )}
-
-            {/* What you'll learn (tools / resources) */}
-            {course.softwareYoullLearn && course.softwareYoullLearn.length > 0 && (
-              <section>
-                <SectionTitle icon={LuSparkles} title={S.learn} bn={bn} />
-                <div className="mt-4 flex flex-wrap gap-2.5">
-                  {course.softwareYoullLearn.map((item, i) => (
-                    <span
-                      key={i}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-soft px-3.5 py-1.5 text-sm text-foreground/80",
-                        bn
-                      )}
-                    >
-                      <LuCheck className="text-primary" /> {item}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Career opportunities */}
-            {course.jobPositions && course.jobPositions.length > 0 && (
-              <section>
-                <SectionTitle icon={LuBriefcase} title={S.career} bn={bn} />
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {course.jobPositions.map((job, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-soft"
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
-                        <LuBriefcase className="text-lg" />
-                      </span>
-                      <span className={cn("text-sm font-medium text-foreground", bn)}>{job}</span>
-                    </div>
-                  ))}
-                </div>
               </section>
             )}
 

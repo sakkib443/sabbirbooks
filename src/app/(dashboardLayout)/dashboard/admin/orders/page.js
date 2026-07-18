@@ -108,6 +108,7 @@ export default function OrdersPage() {
       transactionId: p.transactionId || '',
       senderNumber: gw.senderNumber || '',
       paymentType: gw.paymentType || '',
+      sentAt: gw.sentAt ? new Date(gw.sentAt).toISOString().slice(0, 16) : '',
       notes: gw.notes || '',
     });
     setEditMode(true);
@@ -129,6 +130,7 @@ export default function OrdersPage() {
             gatewayData: {
               senderNumber: editForm.senderNumber,
               paymentType: editForm.paymentType,
+              sentAt: editForm.sentAt ? new Date(editForm.sentAt).toISOString() : undefined,
               notes: editForm.notes,
             },
           },
@@ -147,7 +149,7 @@ export default function OrdersPage() {
             status: editForm.status,
             transactionId: editForm.transactionId,
             paidAt: editForm.status === 'paid' ? (prev.payment?.paidAt || new Date().toISOString()) : prev.payment?.paidAt,
-            gatewayData: { ...(prev.payment?.gatewayData || {}), senderNumber: editForm.senderNumber, paymentType: editForm.paymentType, notes: editForm.notes },
+            gatewayData: { ...(prev.payment?.gatewayData || {}), senderNumber: editForm.senderNumber, paymentType: editForm.paymentType, sentAt: editForm.sentAt ? new Date(editForm.sentAt).toISOString() : prev.payment?.gatewayData?.sentAt, notes: editForm.notes },
           },
         } : prev);
         setEditMode(false);
@@ -744,6 +746,12 @@ export default function OrdersPage() {
                           <option value="rocket">Rocket</option>
                           <option value="cash">Hand Cash</option>
                         </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Sent At</label>
+                        <input type="datetime-local" value={editForm.sentAt}
+                          onChange={e => setEditForm({ ...editForm, sentAt: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none" />
                       </div>
                       <div>
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Notes</label>

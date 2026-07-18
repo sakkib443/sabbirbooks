@@ -215,6 +215,7 @@ const SiteSettingsTab = ({ showToast }) => {
     heroBadgeBn: '', heroHeading1Bn: '', heroHeading2Bn: '', heroHeadingWithBn: '', heroAcademyNameBn: '', heroDescriptionBn: '',
     phoneNumber: '', whatsappNumber: '', email: '', address: '', addressBn: '',
     facebookUrl: '', youtubeUrl: '', linkedinUrl: '',
+    paymentBkashNumber: '', paymentRocketNumber: '', paymentNagadNumber: '', paymentInstructions: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -486,6 +487,36 @@ const SiteSettingsTab = ({ showToast }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1"><LuLinkedin className="inline mr-1 text-blue-700" /> LinkedIn URL</label>
               <input type="url" name="linkedinUrl" value={settings.linkedinUrl} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Manual Payment — receiving numbers shown on checkout */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <LuPhone className="text-[#F3A522]" />
+          <h2 className="text-lg font-semibold text-gray-800">Manual Payment Numbers</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Customers see these on the checkout page and Send Money to them. Leave a field
+          empty to hide that wallet.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">bKash number</label>
+            <input type="text" name="paymentBkashNumber" value={settings.paymentBkashNumber || ''} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm font-mono" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rocket number</label>
+            <input type="text" name="paymentRocketNumber" value={settings.paymentRocketNumber || ''} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm font-mono" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nagad number</label>
+            <input type="text" name="paymentNagadNumber" value={settings.paymentNagadNumber || ''} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm font-mono" />
+          </div>
+          <div className="sm:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Instructions (optional)</label>
+            <input type="text" name="paymentInstructions" value={settings.paymentInstructions || ''} onChange={handleChange} placeholder='e.g. "Use Send Money, not Payment. Keep the TrxID."' className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm" />
           </div>
         </div>
       </div>
