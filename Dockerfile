@@ -5,7 +5,10 @@ FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# --include=dev is load-bearing: build platforms inject NODE_ENV=production,
+# which makes npm skip devDependencies — and typescript, tailwind and the
+# @types packages next build needs all live there.
+RUN npm ci --include=dev
 
 COPY . .
 
