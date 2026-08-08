@@ -127,12 +127,22 @@ export default function LoginPage() {
         persistSession(result.data);
         // Redirect by role into the matching dashboard shell.
         const role = (result.data.user as { role?: string } | undefined)?.role;
-        const dest =
+        const roleDest =
           role === "admin" || role === "superAdmin"
             ? "/dashboard/admin"
             : role === "mentor"
             ? "/dashboard/mentor"
             : "/dashboard/user";
+        // A reader who scanned a book QR while logged out is sent here with
+        // ?redirect=/b/<code> and must land back on that topic, not on their
+        // dashboard. Read at submit time from window rather than through
+        // useSearchParams, which would force this page behind a Suspense
+        // boundary and break static prerendering.
+        // Only same-origin paths are honoured: "//evil.com" is a
+        // protocol-relative URL, so a leading "/" alone is not enough.
+        const wanted = new URLSearchParams(window.location.search).get("redirect");
+        const dest =
+          wanted && wanted.startsWith("/") && !wanted.startsWith("//") ? wanted : roleDest;
         router.push(dest);
         router.refresh();
         return;
