@@ -27,7 +27,9 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     NEXT_TELEMETRY_DISABLED=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends dumb-init \
+# curl is here for the orchestrator's health check — the slim base ships
+# neither curl nor wget, so without it every health probe fails.
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init curl \
  && rm -rf /var/lib/apt/lists/*
 
 # `output: "standalone"` emits a minimal server plus only the node_modules it
