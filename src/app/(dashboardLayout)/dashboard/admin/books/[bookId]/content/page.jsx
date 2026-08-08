@@ -11,9 +11,10 @@
  * feasible — they are not decoration.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   FiChevronDown,
   FiChevronRight,
@@ -22,7 +23,24 @@ import {
   FiTrash2,
   FiGrid,
   FiSkipForward,
+  FiUpload,
+  FiLoader,
+  FiFileText,
+  FiVideo,
+  FiYoutube,
+  FiExternalLink,
 } from 'react-icons/fi';
+
+// The editor touches window/document on mount, so it must not be part of the
+// server bundle.
+const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-lg border border-slate-300 min-h-[300px] flex items-center justify-center text-sm text-slate-400">
+      এডিটর লোড হচ্ছে…
+    </div>
+  ),
+});
 
 const API =
   (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '') + '/api';
@@ -33,7 +51,57 @@ const hdrs = () => ({
 });
 
 const EMPTY_VIDEO = { title: '', url: '', provider: 'youtube' };
-const EMPTY_ATTACHMENT = { title: '', fileUrl: '', fileType: 'pdf' };
+
+const formatSize = bytes => {
+  if (!bytes) return '';
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+};
+
+/**
+ * Uploads a PDF or answer video to our own server.
+ *
+ * XHR rather than fetch because a 50MB video needs a progress bar, and fetch
+ * still cannot report upload progress.
+ */
+function uploadToServer(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API}/book-content/upload`);
+    xhr.setRequestHeader(
+      'Authorization',
+      `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''}`
+    );
+
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onerror = () => reject(new Error('নেটওয়ার্ক সমস্যা — আপলোড হয়নি'));
+    xhr.onload = () => {
+      let body;
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        // Nginx/Traefik rejects an oversized body before Express sees it, and
+        // answers with HTML rather than JSON.
+        return reject(
+          new Error(
+            xhr.status === 413
+              ? 'ফাইলটি সার্ভারের সীমার চেয়ে বড়'
+              : `আপলোড ব্যর্থ (HTTP ${xhr.status})`
+          )
+        );
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && body.success) resolve(body.data);
+      else reject(new Error(body.message || 'আপলোড ব্যর্থ হয়েছে'));
+    };
+
+    xhr.send(fd);
+  });
+}
 
 export default function BookContentEditorPage() {
   const { bookId } = useParams();
@@ -50,6 +118,78 @@ export default function BookContentEditorPage() {
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState('');
+
+  const videoInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [busyUpload, setBusyUpload] = useState(null); // 'video' | 'file' | null
+  const [uploadPct, setUploadPct] = useState(null);
+
+  // Videos sit on the VPS disk alongside everything else, so a soft cap keeps
+  // one careless 500MB lecture recording from filling the volume. Long videos
+  // belong on YouTube; this is for short clips.
+  const VIDEO_SOFT_LIMIT_MB = 100;
+
+  const handleVideoUpload = async file => {
+    if (!file) return;
+    const mb = file.size / (1024 * 1024);
+    if (mb > VIDEO_SOFT_LIMIT_MB) {
+      setFlash(
+        `ভিডিওটি ${mb.toFixed(0)}MB — ${VIDEO_SOFT_LIMIT_MB}MB পর্যন্ত সার্ভারে রাখা ভালো। বড় ভিডিও ইউটিউবে দিয়ে লিংক বসান।`
+      );
+      return;
+    }
+    setBusyUpload('video');
+    setUploadPct(0);
+    setFlash('');
+    try {
+      const data = await uploadToServer(file, setUploadPct);
+      setDraft(d => ({
+        ...d,
+        videos: [
+          ...d.videos,
+          {
+            title: data.fileName?.replace(/\.[^.]+$/, '') || 'ভিডিও',
+            url: data.fileUrl,
+            provider: 'upload',
+            fileName: data.fileName,
+            fileSize: data.size,
+          },
+        ],
+      }));
+      setFlash('ভিডিও আপলোড হয়েছে — সংরক্ষণ করতে ভুলবেন না');
+    } catch (err) {
+      setFlash(err.message);
+    } finally {
+      setBusyUpload(null);
+      setUploadPct(null);
+    }
+  };
+
+  const handleFileUpload = async file => {
+    if (!file) return;
+    setBusyUpload('file');
+    setFlash('');
+    try {
+      const data = await uploadToServer(file);
+      setDraft(d => ({
+        ...d,
+        attachments: [
+          ...d.attachments,
+          {
+            title: data.fileName?.replace(/\.[^.]+$/, '') || 'ফাইল',
+            fileUrl: data.fileUrl,
+            fileType: data.fileType,
+            fileSize: data.size,
+          },
+        ],
+      }));
+      setFlash('ফাইল আপলোড হয়েছে — সংরক্ষণ করতে ভুলবেন না');
+    } catch (err) {
+      setFlash(err.message);
+    } finally {
+      setBusyUpload(null);
+    }
+  };
 
   // ─── Load tree ────────────────────────────────────────────
   const loadTree = useCallback(async () => {
@@ -405,31 +545,74 @@ export default function BookContentEditorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">
-                      উত্তর <span className="text-slate-400">(HTML চলবে)</span>
-                    </label>
-                    <textarea
+                    <label className="block text-xs font-medium text-slate-600 mb-1">উত্তর</label>
+                    {/* Remounted per question: the editor keeps its own document
+                        state, so without the key it would keep showing the
+                        previous question's answer. */}
+                    <RichTextEditor
+                      key={activeQuestionId}
                       value={draft.answerHtml}
-                      onChange={e => setDraft(d => ({ ...d, answerHtml: e.target.value }))}
-                      rows={10}
-                      placeholder="<p>উত্তর…</p>"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono"
+                      onChange={html => setDraft(d => ({ ...d, answerHtml: html }))}
                     />
                   </div>
 
-                  {/* Videos */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-medium text-slate-600">ভিডিও</label>
-                      <button
-                        onClick={() => setDraft(d => ({ ...d, videos: [...d.videos, { ...EMPTY_VIDEO }] }))}
-                        className="text-xs text-blue-600 hover:underline"
-                      >
-                        + যোগ করুন
-                      </button>
+                  {/* Videos — a YouTube link, or a file that lands on our server */}
+                  <div className="rounded-lg border border-slate-200 p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                        <FiVideo className="w-3.5 h-3.5" /> ভিডিও
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() =>
+                            setDraft(d => ({ ...d, videos: [...d.videos, { ...EMPTY_VIDEO }] }))
+                          }
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <FiYoutube className="w-3.5 h-3.5" /> ইউটিউব লিংক
+                        </button>
+                        <button
+                          onClick={() => videoInputRef.current?.click()}
+                          disabled={busyUpload === 'video'}
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {busyUpload === 'video' ? (
+                            <FiLoader className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <FiUpload className="w-3.5 h-3.5" />
+                          )}
+                          ভিডিও আপলোড
+                        </button>
+                      </div>
                     </div>
+
+                    {uploadPct !== null && busyUpload === 'video' && (
+                      <div className="mb-3">
+                        <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                          <div
+                            className="h-full bg-blue-600 transition-all"
+                            style={{ width: `${uploadPct}%` }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">আপলোড হচ্ছে {uploadPct}%</p>
+                      </div>
+                    )}
+
+                    {draft.videos.length === 0 && (
+                      <p className="text-xs text-slate-400">কোনো ভিডিও যোগ করা হয়নি।</p>
+                    )}
+
                     {draft.videos.map((v, i) => (
-                      <div key={i} className="flex gap-2 mb-2">
+                      <div key={i} className="flex flex-wrap gap-2 mb-2 items-center">
+                        <span
+                          className={`text-[10px] px-2 py-1 rounded font-medium shrink-0 ${
+                            v.provider === 'upload'
+                              ? 'bg-violet-100 text-violet-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {v.provider === 'upload' ? 'সার্ভারে' : 'ইউটিউব'}
+                        </span>
                         <input
                           value={v.title || ''}
                           onChange={e =>
@@ -442,18 +625,33 @@ export default function BookContentEditorPage() {
                           placeholder="শিরোনাম"
                           className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm"
                         />
-                        <input
-                          value={v.url}
-                          onChange={e =>
-                            setDraft(d => {
-                              const videos = [...d.videos];
-                              videos[i] = { ...videos[i], url: e.target.value };
-                              return { ...d, videos };
-                            })
-                          }
-                          placeholder="https://youtube.com/watch?v=…"
-                          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                        {v.provider === 'upload' ? (
+                          <a
+                            href={v.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 min-w-0 text-sm text-slate-600 truncate hover:text-blue-600 flex items-center gap-1.5"
+                          >
+                            <FiExternalLink className="w-3.5 h-3.5 shrink-0" />
+                            {v.fileName || v.url}
+                            {v.fileSize ? (
+                              <span className="text-slate-400">({formatSize(v.fileSize)})</span>
+                            ) : null}
+                          </a>
+                        ) : (
+                          <input
+                            value={v.url}
+                            onChange={e =>
+                              setDraft(d => {
+                                const videos = [...d.videos];
+                                videos[i] = { ...videos[i], url: e.target.value };
+                                return { ...d, videos };
+                              })
+                            }
+                            placeholder="https://youtube.com/watch?v=…"
+                            className="flex-1 min-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        )}
                         <button
                           onClick={() =>
                             setDraft(d => ({ ...d, videos: d.videos.filter((_, j) => j !== i) }))
@@ -466,24 +664,35 @@ export default function BookContentEditorPage() {
                     ))}
                   </div>
 
-                  {/* Attachments */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-medium text-slate-600">PDF / ফাইল</label>
+                  {/* PDFs / files — uploaded, not pasted */}
+                  <div className="rounded-lg border border-slate-200 p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                        <FiFileText className="w-3.5 h-3.5" /> PDF / ফাইল
+                      </label>
                       <button
-                        onClick={() =>
-                          setDraft(d => ({
-                            ...d,
-                            attachments: [...d.attachments, { ...EMPTY_ATTACHMENT }],
-                          }))
-                        }
-                        className="text-xs text-blue-600 hover:underline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={busyUpload === 'file'}
+                        className="text-xs text-blue-600 hover:underline flex items-center gap-1 disabled:opacity-50"
                       >
-                        + যোগ করুন
+                        {busyUpload === 'file' ? (
+                          <FiLoader className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <FiUpload className="w-3.5 h-3.5" />
+                        )}
+                        ফাইল আপলোড
                       </button>
                     </div>
+
+                    {draft.attachments.length === 0 && (
+                      <p className="text-xs text-slate-400">কোনো ফাইল যোগ করা হয়নি।</p>
+                    )}
+
                     {draft.attachments.map((a, i) => (
-                      <div key={i} className="flex gap-2 mb-2">
+                      <div key={i} className="flex flex-wrap gap-2 mb-2 items-center">
+                        <span className="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-600 font-medium uppercase shrink-0">
+                          {a.fileType}
+                        </span>
                         <input
                           value={a.title}
                           onChange={e =>
@@ -494,20 +703,20 @@ export default function BookContentEditorPage() {
                             })
                           }
                           placeholder="শিরোনাম"
-                          className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm"
                         />
-                        <input
-                          value={a.fileUrl}
-                          onChange={e =>
-                            setDraft(d => {
-                              const attachments = [...d.attachments];
-                              attachments[i] = { ...attachments[i], fileUrl: e.target.value };
-                              return { ...d, attachments };
-                            })
-                          }
-                          placeholder="https://…/file.pdf"
-                          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                        <a
+                          href={a.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 min-w-0 text-sm text-slate-500 truncate hover:text-blue-600 flex items-center gap-1.5"
+                        >
+                          <FiExternalLink className="w-3.5 h-3.5 shrink-0" />
+                          {a.fileUrl.split('/').pop()}
+                          {a.fileSize ? (
+                            <span className="text-slate-400">({formatSize(a.fileSize)})</span>
+                          ) : null}
+                        </a>
                         <button
                           onClick={() =>
                             setDraft(d => ({
@@ -522,6 +731,29 @@ export default function BookContentEditorPage() {
                       </div>
                     ))}
                   </div>
+
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
+                    hidden
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      handleVideoUpload(f);
+                    }}
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,image/*"
+                    hidden
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      handleFileUpload(f);
+                    }}
+                  />
 
                   <div className="flex items-center gap-3 pt-2">
                     <button

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Powers the `prose` classes used by the answer editor and the QR reader page.
+   Without it Tailwind's preflight leaves headings, lists and blockquotes
+   looking like plain paragraphs, so formatted answers render as flat text. */
+@plugin "@tailwindcss/typography";
+
 /* ============================================================
    SABBIR BOOK — MEDICAL DESIGN SYSTEM
    A clean, trustworthy medical theme: teal primary, mint accent,

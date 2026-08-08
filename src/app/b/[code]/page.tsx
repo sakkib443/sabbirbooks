@@ -19,6 +19,7 @@ import Image from "next/image";
 import {
   LuBookOpen,
   LuChevronLeft,
+  LuDownload,
   LuFileText,
   LuLoaderCircle,
   LuLock,
@@ -26,8 +27,21 @@ import {
 } from "react-icons/lu";
 import API_BASE_URL from "@/config/api";
 
-type Video = { _id?: string; title?: string; url: string; provider: string };
-type Attachment = { _id?: string; title: string; fileUrl: string; fileType: string };
+type Video = {
+  _id?: string;
+  title?: string;
+  url: string;
+  provider: string;
+  fileName?: string;
+  fileSize?: number;
+};
+type Attachment = {
+  _id?: string;
+  title: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize?: number;
+};
 
 type Question = {
   _id: string;
@@ -300,18 +314,38 @@ export default function BookTopicScanPage() {
 
                 {active.videos?.map((v, i) => (
                   <div key={v._id ?? i} className="mb-5">
-                    {v.title && (
-                      <p className="text-sm text-slate-400 mb-2">{v.title}</p>
+                    {v.title && <p className="text-sm text-slate-400 mb-2">{v.title}</p>}
+
+                    {v.provider === "upload" ? (
+                      <>
+                        {/* Served from our own /uploads by express.static, which
+                            honours Range requests — so seeking works. */}
+                        <video
+                          src={v.url}
+                          controls
+                          preload="metadata"
+                          playsInline
+                          className="w-full rounded-lg bg-black"
+                        />
+                        <a
+                          href={v.url}
+                          download
+                          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 mt-2 transition"
+                        >
+                          <LuDownload className="w-3.5 h-3.5" /> ভিডিওটি ডাউনলোড করুন
+                        </a>
+                      </>
+                    ) : (
+                      <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
+                        <iframe
+                          src={toEmbedUrl(v.url)}
+                          title={v.title || `video-${i}`}
+                          className="absolute inset-0 w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
                     )}
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
-                      <iframe
-                        src={toEmbedUrl(v.url)}
-                        title={v.title || `video-${i}`}
-                        className="absolute inset-0 w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
                   </div>
                 ))}
 
