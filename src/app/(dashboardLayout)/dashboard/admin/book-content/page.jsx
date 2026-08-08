@@ -27,7 +27,9 @@ export default function BookContentPickerPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/books`);
+      // status=all is required: the public default hides drafts, and a book is
+      // normally still a draft while its QR content is being written.
+      const res = await fetch(`${API}/books?status=all`);
       const body = await res.json();
       const list = body.data || [];
       setBooks(list);
