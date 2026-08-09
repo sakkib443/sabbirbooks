@@ -29,6 +29,8 @@ import {
   FiVideo,
   FiYoutube,
   FiExternalLink,
+  FiEdit2,
+  FiX,
 } from 'react-icons/fi';
 
 // The editor touches window/document on mount, so it must not be part of the
@@ -123,6 +125,12 @@ export default function BookContentEditorPage() {
   const fileInputRef = useRef(null);
   const [busyUpload, setBusyUpload] = useState(null); // 'video' | 'file' | null
   const [uploadPct, setUploadPct] = useState(null);
+
+  // { level: 'part'|'chapter'|'topic', mode: 'create'|'edit',
+  //   parent?: { partId?, chapterId? }, node?, values }
+  const [nodeModal, setNodeModal] = useState(null);
+  const [nodeSaving, setNodeSaving] = useState(false);
+  const [nodeError, setNodeError] = useState('');
 
   // Videos sit on the VPS disk alongside everything else, so a soft cap keeps
   // one careless 500MB lecture recording from filling the volume. Long videos
@@ -341,6 +349,166 @@ export default function BookContentEditorPage() {
 
   const toggle = id => setExpanded(e => ({ ...e, [id]: !e[id] }));
 
+  // ─── Tree CRUD (part / chapter / topic) ───────────────────
+  const openCreate = (level, parent = {}) => {
+    setNodeError('');
+    setNodeModal({
+      level,
+      mode: 'create',
+      parent,
+      values:
+        level === 'part'
+          ? { title: '', titleBn: '', order: '' }
+          : level === 'chapter'
+          ? { chapterNo: '', title: '', titleBn: '', order: '' }
+          : { topicNo: '', title: '', titleBn: '', order: '' },
+    });
+  };
+
+  const openEdit = (level, node) => {
+    setNodeError('');
+    setNodeModal({
+      level,
+      mode: 'edit',
+      node,
+      values: {
+        chapterNo: node.chapterNo || '',
+        topicNo: node.topicNo || '',
+        title: node.title || '',
+        titleBn: node.titleBn || '',
+        order: node.order ?? '',
+      },
+    });
+  };
+
+  const closeNodeModal = () => {
+    setNodeModal(null);
+    setNodeError('');
+    setNodeSaving(false);
+  };
+
+  const submitNodeModal = async () => {
+    if (!nodeModal) return;
+    const { level, mode, parent, node, values } = nodeModal;
+    if (!values.title?.trim()) {
+      setNodeError('শিরোনাম দিতে হবে');
+      return;
+    }
+    setNodeSaving(true);
+    setNodeError('');
+    try {
+      const url =
+        mode === 'create'
+          ? `${API}/book-content/${level}s`
+          : `${API}/book-content/${level}s/${node._id}`;
+
+      const payload = {
+        title: values.title.trim(),
+        titleBn: values.titleBn?.trim() || undefined,
+        ...(level !== 'part' && {
+          [level === 'chapter' ? 'chapterNo' : 'topicNo']:
+            (level === 'chapter' ? values.chapterNo : values.topicNo)?.trim() || undefined,
+        }),
+        ...(values.order !== '' && values.order !== undefined
+          ? { order: Number(values.order) }
+          : {}),
+      };
+
+      if (mode === 'create') {
+        payload.bookId = bookId;
+        if (level === 'chapter') payload.partId = parent.partId;
+        if (level === 'topic') {
+          payload.partId = parent.partId;
+          payload.chapterId = parent.chapterId;
+        }
+        if (payload.order === undefined) {
+          // Default: place at end
+          const siblings =
+            level === 'part'
+              ? tree.parts
+              : level === 'chapter'
+              ? tree.parts.find(p => String(p._id) === String(parent.partId))?.chapters || []
+              : tree.parts
+                  .flatMap(p => p.chapters)
+                  .find(c => String(c._id) === String(parent.chapterId))?.topics || [];
+          payload.order = siblings.length + 1;
+        }
+      }
+
+      const res = await fetch(url, {
+        method: mode === 'create' ? 'POST' : 'PATCH',
+        headers: hdrs(),
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) throw new Error(body.message || 'সংরক্ষণ ব্যর্থ');
+
+      // Auto-open the parent so the new row is visible
+      if (mode === 'create') {
+        if (level === 'chapter' && parent.partId) {
+          setExpanded(e => ({ ...e, [parent.partId]: true }));
+        }
+        if (level === 'topic' && parent.chapterId) {
+          setExpanded(e => ({
+            ...e,
+            [parent.partId]: true,
+            [parent.chapterId]: true,
+          }));
+        }
+      }
+
+      await loadTree();
+      closeNodeModal();
+    } catch (err) {
+      setNodeError(err.message);
+    } finally {
+      setNodeSaving(false);
+    }
+  };
+
+  const deleteNode = async (level, node) => {
+    const label = level === 'part' ? 'বোর্ড' : level === 'chapter' ? 'অধ্যায়' : 'টপিক';
+    const warn =
+      level === 'topic'
+        ? `"${node.title}" টপিকটি মুছে ফেলবেন? ছাপা QR কোডটি আর কাজ করবে না।`
+        : `"${node.title}" ${label} এবং এর ভেতরের সবকিছু মুছে ফেলবেন?`;
+    if (!window.confirm(warn)) return;
+    try {
+      const res = await fetch(`${API}/book-content/${level}s/${node._id}`, {
+        method: 'DELETE',
+        headers: hdrs(),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) throw new Error(body.message || 'ডিলিট ব্যর্থ');
+
+      // Clear editor if the currently-open topic was deleted (directly or by
+      // deleting its ancestor chapter/part).
+      if (level === 'topic' && activeTopic?._id === node._id) {
+        setActiveTopic(null);
+        setQuestions([]);
+        setDraft(null);
+        setActiveQuestionId(null);
+      }
+      if (level === 'chapter' && activeTopic?.chapterId === node._id) {
+        setActiveTopic(null);
+        setQuestions([]);
+        setDraft(null);
+        setActiveQuestionId(null);
+      }
+      if (level === 'part' && activeTopic?.partId === node._id) {
+        setActiveTopic(null);
+        setQuestions([]);
+        setDraft(null);
+        setActiveQuestionId(null);
+      }
+
+      await loadTree();
+    } catch (err) {
+      setFlash(err.message);
+      setTimeout(() => setFlash(''), 3000);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-slate-500">লোড হচ্ছে…</div>;
   }
@@ -395,69 +563,174 @@ export default function BookContentEditorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5">
         {/* ─── Tree ──────────────────────────────────────── */}
         <aside className="rounded-xl border border-slate-200 bg-white overflow-hidden self-start">
-          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               বইয়ের কাঠামো
             </p>
+            <button
+              onClick={() => openCreate('part')}
+              title="নতুন বোর্ড যোগ করুন"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700"
+            >
+              <FiPlus className="w-3.5 h-3.5" /> বোর্ড
+            </button>
           </div>
           <div className="max-h-[70vh] overflow-y-auto py-1">
+            {tree?.parts?.length === 0 && (
+              <p className="px-4 py-6 text-xs text-slate-400 text-center">
+                এখনো কোনো বোর্ড নেই। উপরে থেকে যোগ করুন।
+              </p>
+            )}
             {tree?.parts?.map(part => (
               <div key={part._id}>
-                <button
-                  onClick={() => toggle(part._id)}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-left"
-                >
-                  {expanded[part._id] ? (
-                    <FiChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                  ) : (
-                    <FiChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                  )}
-                  <span className="text-sm font-semibold text-slate-800">{part.title}</span>
-                </button>
+                <div className="group relative flex items-center hover:bg-slate-50">
+                  <button
+                    onClick={() => toggle(part._id)}
+                    className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 text-left"
+                  >
+                    {expanded[part._id] ? (
+                      <FiChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                    ) : (
+                      <FiChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                    )}
+                    <span className="text-sm font-semibold text-slate-800 truncate">
+                      {part.title}
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={() => openCreate('chapter', { partId: part._id })}
+                      title="নতুন অধ্যায় যোগ"
+                      className="p-1.5 rounded hover:bg-blue-100 text-slate-500 hover:text-blue-700"
+                    >
+                      <FiPlus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => openEdit('part', part)}
+                      title="বোর্ড এডিট"
+                      className="p-1.5 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800"
+                    >
+                      <FiEdit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => deleteNode('part', part)}
+                      title="বোর্ড ডিলিট"
+                      className="p-1.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-700"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {expanded[part._id] && part.chapters.length === 0 && (
+                  <p className="pl-10 pr-3 py-2 text-[11px] text-slate-400">
+                    কোনো অধ্যায় নেই।
+                  </p>
+                )}
 
                 {expanded[part._id] &&
                   part.chapters.map(chapter => (
                     <div key={chapter._id}>
-                      <button
-                        onClick={() => toggle(chapter._id)}
-                        className="w-full flex items-center gap-2 pl-7 pr-3 py-2 hover:bg-slate-50 text-left"
-                      >
-                        {expanded[chapter._id] ? (
-                          <FiChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        ) : (
-                          <FiChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        )}
-                        <span className="text-sm text-slate-700 truncate">
-                          {chapter.chapterNo}. {chapter.title}
-                        </span>
-                      </button>
+                      <div className="group relative flex items-center hover:bg-slate-50">
+                        <button
+                          onClick={() => toggle(chapter._id)}
+                          className="flex-1 min-w-0 flex items-center gap-2 pl-7 pr-3 py-2 text-left"
+                        >
+                          {expanded[chapter._id] ? (
+                            <FiChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          ) : (
+                            <FiChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          )}
+                          <span className="text-sm text-slate-700 truncate">
+                            {chapter.chapterNo ? `${chapter.chapterNo}. ` : ''}
+                            {chapter.title}
+                          </span>
+                        </button>
+                        <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition">
+                          <button
+                            onClick={() =>
+                              openCreate('topic', {
+                                partId: part._id,
+                                chapterId: chapter._id,
+                              })
+                            }
+                            title="নতুন টপিক যোগ"
+                            className="p-1.5 rounded hover:bg-blue-100 text-slate-500 hover:text-blue-700"
+                          >
+                            <FiPlus className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => openEdit('chapter', chapter)}
+                            title="অধ্যায় এডিট"
+                            className="p-1.5 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800"
+                          >
+                            <FiEdit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteNode('chapter', chapter)}
+                            title="অধ্যায় ডিলিট"
+                            className="p-1.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-700"
+                          >
+                            <FiTrash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {expanded[chapter._id] && chapter.topics.length === 0 && (
+                        <p className="pl-14 pr-3 py-1.5 text-[11px] text-slate-400">
+                          কোনো টপিক নেই।
+                        </p>
+                      )}
 
                       {expanded[chapter._id] &&
                         chapter.topics.map(topic => {
                           const done =
                             topic.totalQuestions > 0 &&
                             topic.answeredQuestions === topic.totalQuestions;
+                          const isActive = activeTopic?._id === topic._id;
                           return (
-                            <button
+                            <div
                               key={topic._id}
-                              onClick={() => openTopic(topic)}
-                              className={`w-full flex items-center justify-between gap-2 pl-12 pr-3 py-1.5 text-left transition ${
-                                activeTopic?._id === topic._id
+                              className={`group relative flex items-center transition ${
+                                isActive
                                   ? 'bg-blue-50 border-l-2 border-blue-500'
                                   : 'hover:bg-slate-50 border-l-2 border-transparent'
                               }`}
                             >
-                              <span className="text-[13px] text-slate-600 truncate">
-                                {topic.isImplicit ? '(সরাসরি প্রশ্ন)' : `${topic.topicNo} ${topic.title}`}
-                              </span>
-                              <span
-                                className={`text-[11px] tabular-nums shrink-0 ${
-                                  done ? 'text-emerald-600' : 'text-slate-400'
-                                }`}
+                              <button
+                                onClick={() => openTopic(topic)}
+                                className="flex-1 min-w-0 flex items-center justify-between gap-2 pl-12 pr-2 py-1.5 text-left"
                               >
-                                {topic.answeredQuestions}/{topic.totalQuestions}
-                              </span>
-                            </button>
+                                <span className="text-[13px] text-slate-600 truncate">
+                                  {topic.isImplicit
+                                    ? '(সরাসরি প্রশ্ন)'
+                                    : `${topic.topicNo || ''} ${topic.title}`}
+                                </span>
+                                <span
+                                  className={`text-[11px] tabular-nums shrink-0 ${
+                                    done ? 'text-emerald-600' : 'text-slate-400'
+                                  }`}
+                                >
+                                  {topic.answeredQuestions}/{topic.totalQuestions}
+                                </span>
+                              </button>
+                              <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition">
+                                <button
+                                  onClick={() => openEdit('topic', topic)}
+                                  title="টপিক এডিট"
+                                  className="p-1.5 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800"
+                                >
+                                  <FiEdit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => deleteNode('topic', topic)}
+                                  title="টপিক ডিলিট"
+                                  className="p-1.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-700"
+                                >
+                                  <FiTrash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
                           );
                         })}
                     </div>
@@ -776,6 +1049,155 @@ export default function BookContentEditorPage() {
           )}
         </section>
       </div>
+
+      {/* ─── Add / Edit modal for part / chapter / topic ─── */}
+      {nodeModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          onClick={closeNodeModal}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-xl border border-slate-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200">
+              <h3 className="text-sm font-semibold text-slate-800">
+                {nodeModal.mode === 'create' ? 'নতুন ' : ''}
+                {nodeModal.level === 'part'
+                  ? 'বোর্ড'
+                  : nodeModal.level === 'chapter'
+                  ? 'অধ্যায়'
+                  : 'টপিক'}
+                {nodeModal.mode === 'edit' ? ' এডিট' : ' যোগ'}
+              </h3>
+              <button
+                onClick={closeNodeModal}
+                className="p-1 text-slate-400 hover:text-slate-700"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              {nodeModal.level === 'chapter' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    অধ্যায় নম্বর
+                  </label>
+                  <input
+                    value={nodeModal.values.chapterNo}
+                    onChange={e =>
+                      setNodeModal(m => ({
+                        ...m,
+                        values: { ...m.values, chapterNo: e.target.value },
+                      }))
+                    }
+                    placeholder="যেমন: ১, ২.১"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              )}
+
+              {nodeModal.level === 'topic' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    টপিক নম্বর
+                  </label>
+                  <input
+                    value={nodeModal.values.topicNo}
+                    onChange={e =>
+                      setNodeModal(m => ({
+                        ...m,
+                        values: { ...m.values, topicNo: e.target.value },
+                      }))
+                    }
+                    placeholder="যেমন: ১.১"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  শিরোনাম <span className="text-red-500">*</span>
+                </label>
+                <input
+                  autoFocus
+                  value={nodeModal.values.title}
+                  onChange={e =>
+                    setNodeModal(m => ({
+                      ...m,
+                      values: { ...m.values, title: e.target.value },
+                    }))
+                  }
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !nodeSaving) submitNodeModal();
+                  }}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  বাংলা শিরোনাম
+                </label>
+                <input
+                  value={nodeModal.values.titleBn}
+                  onChange={e =>
+                    setNodeModal(m => ({
+                      ...m,
+                      values: { ...m.values, titleBn: e.target.value },
+                    }))
+                  }
+                  placeholder="ঐচ্ছিক"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  ক্রম (order)
+                </label>
+                <input
+                  type="number"
+                  value={nodeModal.values.order}
+                  onChange={e =>
+                    setNodeModal(m => ({
+                      ...m,
+                      values: { ...m.values, order: e.target.value },
+                    }))
+                  }
+                  placeholder="খালি রাখলে শেষে যোগ হবে"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              {nodeError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  {nodeError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+              <button
+                onClick={closeNodeModal}
+                className="text-sm px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={submitNodeModal}
+                disabled={nodeSaving}
+                className="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                <FiSave className="w-3.5 h-3.5" />
+                {nodeSaving ? 'সংরক্ষণ হচ্ছে…' : 'সংরক্ষণ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
