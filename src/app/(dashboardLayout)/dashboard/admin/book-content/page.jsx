@@ -105,7 +105,7 @@ export default function BookContentPickerPage() {
                   <FiEdit3 className="w-4 h-4" /> কনটেন্ট
                 </Link>
                 <Link
-                  href={`/dashboard/admin/book-preview/${book._id}`}
+                  href={`/book-preview/${book._id}`}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 text-violet-700 bg-violet-50 text-sm px-4 py-2 hover:bg-violet-100 transition"
                 >
                   <FiEye className="w-4 h-4" /> প্রিভিউ

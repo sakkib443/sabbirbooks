@@ -6,7 +6,7 @@ import Footer from "./Footer";
 
 // Routes that render their own shell (admin panel, student dashboard, learn player)
 // should NOT get the public Navbar/Footer.
-const BARE_PREFIXES = ["/admin", "/dashboard", "/learn"];
+const BARE_PREFIXES = ["/admin", "/dashboard", "/learn", "/book-preview"];
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";

@@ -58,7 +58,7 @@ export default function BookPreviewPickerPage() {
     <div>
       <h1 className="text-xl font-semibold text-slate-900">বুক প্রিভিউ</h1>
       <p className="text-sm text-slate-500 mt-1 mb-6">
-        আপলোড করা পুরো বইয়ের কনটেন্ট — পার্ট, অধ্যায়, টপিক ও প্রশ্ন — একসাথে দেখুন।
+        প্রিভিউ আলাদা ফুল-স্ক্রিন প্লেয়ারে খুলবে — রেকর্ডেড কোর্সের মতো ডানপাশে কনটেন্ট ট্রি থাকবে।
       </p>
 
       {books.length === 0 && (
@@ -97,7 +97,7 @@ export default function BookPreviewPickerPage() {
 
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/dashboard/admin/book-preview/${book._id}`}
+                  href={`/book-preview/${book._id}`}
                   className={`inline-flex items-center gap-1.5 rounded-lg text-sm px-4 py-2 transition ${
                     hasContent
                       ? 'bg-violet-600 text-white hover:bg-violet-700'
