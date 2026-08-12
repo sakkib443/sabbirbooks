@@ -18,7 +18,7 @@ interface AuthShellProps {
 // Centered, medical-themed layout used by both the login and register pages.
 export function AuthShell({
   bengali,
-  brand = "Sabbir Book",
+  brand = "Magic Viva",
   eyebrow,
   title,
   subtitle,

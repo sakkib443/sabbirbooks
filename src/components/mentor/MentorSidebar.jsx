@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useBrand } from '@/components/shared/Brand';
 import {
   FiHome, FiBook, FiUsers, FiCalendar, FiUser,
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
@@ -11,6 +12,8 @@ import {
 } from 'react-icons/fi';
 
 const MentorSidebar = () => {
+  // Site name comes from admin settings, not a hardcoded string.
+  const { name: brandName, initials: brandInitials } = useBrand();
   const [isOpen, setIsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
@@ -115,17 +118,17 @@ const MentorSidebar = () => {
             {!collapsed && (
               <Link href="/" className="flex items-center gap-2.5 group">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0d9488] to-[#14b8a6] flex items-center justify-center shadow-md shadow-teal-500/20">
-                  <span className="text-white font-black text-xs">SB</span>
+                  <span className="text-white font-black text-xs">{brandInitials}</span>
                 </div>
                 <div className="leading-tight">
-                  <p className="text-base font-bold text-slate-800">Sabbir Book</p>
+                  <p className="text-base font-bold text-slate-800">{brandName}</p>
                   <p className="text-[10px] text-teal-600 font-semibold -mt-0.5">Mentor Panel</p>
                 </div>
               </Link>
             )}
             {collapsed && (
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0d9488] to-[#14b8a6] flex items-center justify-center shadow-md shadow-teal-500/20">
-                <span className="text-white font-black text-xs">SB</span>
+                <span className="text-white font-black text-xs">{brandInitials}</span>
               </div>
             )}
             <button

@@ -23,14 +23,17 @@ import { Container, Button, buttonVariants, cn } from "@/components/ui";
 import OrderSummary from "./OrderSummary";
 import ShippingForm, { type ShippingFormValues } from "./ShippingForm";
 import PaymentMethod from "./PaymentMethod";
+import PayModeSelector from "./PayModeSelector";
 import CheckoutSuccess from "./CheckoutSuccess";
 import {
   fetchBook,
+  fetchCheckoutOptions,
   fetchCourse,
   fetchPaymentSettings,
   getStoredUser,
   getToken,
   payForCourse,
+  submitBookCod,
   submitBookManual,
   submitCourseManual,
 } from "./checkoutApi";
@@ -38,13 +41,17 @@ import ManualPaymentDetails from "./ManualPaymentDetails";
 import {
   CheckoutBook,
   CheckoutCourse,
+  CheckoutOptions,
   CheckoutStep,
   CheckoutType,
+  DeliveryArea,
   ManualChannel,
   ManualDetails,
+  PayMode,
   PaymentSettings,
   ShippingAddress,
   SuccessResult,
+  effectiveBookPrice,
   effectiveCoursePrice,
 } from "./types";
 
@@ -67,6 +74,11 @@ export default function CheckoutView() {
   const [step, setStep] = useState<CheckoutStep>("idle");
   const [submitError, setSubmitError] = useState("");
   const [result, setResult] = useState<SuccessResult | null>(null);
+
+  // ── Pay now vs pay the courier, and where the parcel is going ─────────────
+  const [payMode, setPayMode] = useState<PayMode>("cod");
+  const [area, setArea] = useState<DeliveryArea>("inside-dhaka");
+  const [options, setOptions] = useState<CheckoutOptions | null>(null);
 
   // ── Manual payment (bKash/Rocket/Nagad) state ─────────────────────────────
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
@@ -109,6 +121,27 @@ export default function CheckoutView() {
   // Free courses skip payment entirely (instant enroll); everything else is manual.
   const isFreeCourse = isCourse && !!course && effectiveCoursePrice(course) <= 0;
   const needsPayment = !outOfStock && !isFreeCourse;
+
+  // Cash on delivery only makes sense when something is physically delivered:
+  // there is no parcel to hand over for a course or a PDF download.
+  const codAllowed = Boolean(isPrinted && !outOfStock && options?.codEnabled !== false);
+  const onlineAllowed = options?.onlinePaymentEnabled !== false;
+  // The chosen mode, forced back to whatever is actually available.
+  const effectivePayMode: PayMode = codAllowed && payMode === "cod" ? "cod" : "online";
+  const isCod = needsPayment && effectivePayMode === "cod";
+
+  const bookSubtotal = isBook && book ? effectiveBookPrice(book) * quantity : 0;
+
+  // Delivery charge for the selected zone, mirroring the server's rule so the
+  // buyer is never surprised by a different number on the confirmation. The
+  // server recomputes it regardless — this is display, not the source of truth.
+  const deliveryCharge = useMemo(() => {
+    if (!isPrinted || !options) return 0;
+    const freeAbove = options.freeDeliveryAbove || 0;
+    if (freeAbove > 0 && bookSubtotal >= freeAbove) return 0;
+    const base = options.deliveryCharge?.[area] ?? 0;
+    return base + (effectivePayMode === "cod" ? options.codExtraCharge || 0 : 0);
+  }, [isPrinted, options, area, bookSubtotal, effectivePayMode]);
 
   // ── Shipping form (only enforced for printed books) ───────────────────────
   const shippingSchema = useMemo(
@@ -186,6 +219,22 @@ export default function CheckoutView() {
     });
   }, []);
 
+  // Delivery rates and which payment methods the shop accepts.
+  useEffect(() => {
+    fetchCheckoutOptions().then((o) => {
+      if (!o) return;
+      setOptions(o);
+      // Land on whichever method is actually on, preferring COD — it is what
+      // most buyers here expect, and it needs no wallet setup to work.
+      if (o.codEnabled === false) setPayMode("online");
+    });
+  }, []);
+
+  // A digital book or a course can only be paid for online.
+  useEffect(() => {
+    if (!isPrinted && payMode === "cod") setPayMode("online");
+  }, [isPrinted, payMode]);
+
   // Prefill shipping name/phone from the stored user once we know it's a printed book.
   useEffect(() => {
     if (!isPrinted) return;
@@ -249,23 +298,43 @@ export default function CheckoutView() {
           });
         }
       } else if (type === "book" && book) {
-        const order = await submitBookManual({
-          book,
-          quantity,
-          details,
-          shippingAddress: shipping,
-          onProgress: setStep,
-          genericErr: S.genericErr,
-        });
-        setResult({
-          kind: "manual",
-          itemKind: "book",
-          title: book.title,
-          reference: order.orderNumber,
-          amount: order.total,
-          channel: details.channel,
-          isPrintedBook: order.deliveryType !== "digital",
-        });
+        if (isCod) {
+          // Nothing is paid now — the order is placed and the courier collects.
+          const order = await submitBookCod({
+            book,
+            quantity,
+            shippingAddress: shipping as ShippingAddress,
+            onProgress: setStep,
+            genericErr: S.genericErr,
+          });
+          setResult({
+            kind: "cod",
+            title: book.title,
+            reference: order.orderNumber,
+            amount: order.total,
+            deliveryCharge: order.deliveryCharge ?? 0,
+            supportPhone: options?.supportPhone,
+            deliveryNote: options?.deliveryNote,
+          });
+        } else {
+          const order = await submitBookManual({
+            book,
+            quantity,
+            details,
+            shippingAddress: shipping,
+            onProgress: setStep,
+            genericErr: S.genericErr,
+          });
+          setResult({
+            kind: "manual",
+            itemKind: "book",
+            title: book.title,
+            reference: order.orderNumber,
+            amount: order.total,
+            channel: details.channel,
+            isPrintedBook: order.deliveryType !== "digital",
+          });
+        }
       } else {
         throw new Error(S.genericErr);
       }
@@ -282,7 +351,10 @@ export default function CheckoutView() {
 
   const onConfirm = () => {
     if (outOfStock) return;
-    if (needsPayment) {
+    // Wallet details are only required when paying now — a cash-on-delivery
+    // buyer has no transaction id to give, and demanding one was what made COD
+    // impossible to actually complete.
+    if (needsPayment && !isCod) {
       if (availableChannels.length === 0) {
         setSubmitError(S.manualNotConfigured);
         return;
@@ -290,8 +362,9 @@ export default function CheckoutView() {
       if (!validateManual()) return;
     }
     if (isPrinted) {
-      // Gate the flow behind a valid shipping address.
-      void handleSubmit((vals) => runCheckout(vals))();
+      // Gate the flow behind a valid shipping address, and carry the zone the
+      // delivery charge was quoted for.
+      void handleSubmit((vals) => runCheckout({ ...vals, area }))();
     } else {
       void runCheckout();
     }
@@ -394,7 +467,15 @@ export default function CheckoutView() {
 
             {/* Shipping (printed books only) */}
             {isPrinted && !outOfStock && (
-              <ShippingForm register={register} errors={errors} bn={bn} S={shippingLabels(S)} />
+              <ShippingForm
+                register={register}
+                errors={errors}
+                bn={bn}
+                S={shippingLabels(S)}
+                area={area}
+                onAreaChange={setArea}
+                areaCharges={options?.deliveryCharge}
+              />
             )}
 
             {/* Out of stock notice */}
@@ -410,8 +491,42 @@ export default function CheckoutView() {
               </div>
             )}
 
-            {/* Manual payment (bKash / Rocket / Nagad) */}
-            {needsPayment && availableChannels.length > 0 && (
+            {/* Pay now, or pay the courier */}
+            {needsPayment && (
+              <PayModeSelector
+                value={effectivePayMode}
+                onChange={setPayMode}
+                codAllowed={codAllowed}
+                onlineAllowed={onlineAllowed}
+                codReason={isBook && !isPrinted ? S.codDigitalOnly : undefined}
+                disabled={processing}
+                bn={bn}
+                S={payModeLabels(S)}
+              />
+            )}
+
+            {/* Cash on delivery — what actually happens next */}
+            {isCod && (
+              <div className={cn("rounded-2xl border border-accent/30 bg-accent-soft/40 p-5", bn)}>
+                <div className="flex items-start gap-3">
+                  <LuShieldCheck className="mt-0.5 shrink-0 text-accent" />
+                  <div className="text-sm text-foreground">
+                    <p className="font-semibold">{S.codHowTitle}</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
+                      <li>{S.codStep1}</li>
+                      <li>{S.codStep2}</li>
+                      <li>{S.codStep3}</li>
+                    </ol>
+                    {options?.deliveryNote && (
+                      <p className="mt-3 text-xs text-muted-foreground">{options.deliveryNote}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Manual payment (bKash / Rocket / Nagad) — only when paying now */}
+            {needsPayment && !isCod && availableChannels.length > 0 && (
               <>
                 <PaymentMethod
                   value={channel}
@@ -436,10 +551,12 @@ export default function CheckoutView() {
             )}
 
             {/* Manual payment not configured by admin yet */}
-            {needsPayment && settings && availableChannels.length === 0 && (
+            {needsPayment && !isCod && settings && availableChannels.length === 0 && (
               <div className={cn("flex items-start gap-3 rounded-2xl border border-coral/30 bg-coral/10 p-5", bn)}>
                 <LuTriangleAlert className="mt-0.5 shrink-0 text-coral" />
-                <p className="text-sm text-coral">{S.manualNotConfigured}</p>
+                <p className="text-sm text-coral">
+                  {codAllowed ? S.manualNotConfiguredUseCod : S.manualNotConfigured}
+                </p>
               </div>
             )}
 
@@ -462,6 +579,9 @@ export default function CheckoutView() {
                 quantity={quantity}
                 bn={bn}
                 S={summaryLabels(S)}
+                showDelivery={Boolean(isPrinted && !outOfStock)}
+                deliveryCharge={deliveryCharge}
+                isCod={isCod}
               />
 
               {!outOfStock && (
@@ -480,7 +600,10 @@ export default function CheckoutView() {
                     size="lg"
                     variant="accent"
                     className={cn("w-full", bn)}
-                    disabled={processing || (needsPayment && availableChannels.length === 0)}
+                    disabled={
+                      processing ||
+                      (needsPayment && !isCod && availableChannels.length === 0)
+                    }
                     onClick={onConfirm}
                   >
                     {processing ? (
@@ -489,13 +612,15 @@ export default function CheckoutView() {
                       </>
                     ) : (
                       <>
-                        <LuLock className="text-base" /> {isFreeCourse ? S.enrollFree : S.submitPay}
+                        <LuLock className="text-base" />{" "}
+                        {isFreeCourse ? S.enrollFree : isCod ? S.placeCodOrder : S.submitPay}
                       </>
                     )}
                   </Button>
 
                   <p className={cn("flex items-center justify-center gap-1.5 text-xs text-muted-foreground", bn)}>
-                    <LuShieldCheck className="text-accent" /> {isFreeCourse ? S.secureNote : S.verifyNote}
+                    <LuShieldCheck className="text-accent" />{" "}
+                    {isFreeCourse ? S.secureNote : isCod ? S.codConfirmNote : S.verifyNote}
                   </p>
                 </>
               )}
@@ -607,9 +732,44 @@ const EN = {
   back: "Back",
   confirmPay: "Confirm & Pay",
   submitPay: "Submit Payment",
+  placeCodOrder: "Place Order",
   enrollFree: "Enroll for Free",
   secureNote: "Your enrollment is processed securely.",
   verifyNote: "Your payment will be verified by our team, usually within 24 hours.",
+  codConfirmNote: "No payment now — pay the courier when your book arrives.",
+
+  // Pay-now vs cash-on-delivery
+  payModeHeading: "How would you like to pay?",
+  payModeSubtitle: "Choose one — you can pay now, or when the book reaches you.",
+  codTitle: "Cash on Delivery",
+  codText: "Pay the courier in cash when your book arrives.",
+  onlineTitle: "Pay now (bKash / Rocket / Nagad)",
+  onlineText: "Send Money to our number and enter the transaction ID.",
+  codUnavailable: "Cash on delivery is unavailable right now.",
+  codDigitalOnly: "Cash on delivery is only for printed books.",
+  codHowTitle: "How cash on delivery works",
+  codStep1: "Place the order — nothing is charged now.",
+  codStep2: "We confirm the order by phone and hand it to the courier.",
+  codStep3: "Pay the courier in cash when the book reaches you.",
+  manualNotConfiguredUseCod:
+    "Online payment is not set up yet — please choose Cash on Delivery.",
+
+  // Delivery
+  areaLabel: "Delivery area",
+  insideDhaka: "Inside Dhaka",
+  outsideDhaka: "Outside Dhaka",
+  deliveryCharge: "Delivery charge",
+  freeDelivery: "Free",
+
+  // Cash-on-delivery confirmation screen
+  codSuccessTitle: "Order placed!",
+  codSuccessSub: "We will call you shortly to confirm, then send the book to your address.",
+  codCollectLabel: "Pay on delivery",
+  codNextTitle: "What happens next",
+  codNext1: "We call you to confirm the order and your address.",
+  codNext2: "The book is handed to the courier and sent to you.",
+  codNext3: "Pay the courier in cash and receive your book.",
+  codSupport: "Any problem? Call",
   stepProcessing: "Processing…",
   stepCreating: "Placing order…",
   stepInitiating: "Submitting…",
@@ -731,9 +891,44 @@ const BN: Copy = {
   back: "ফিরে যান",
   confirmPay: "নিশ্চিত করুন ও পেমেন্ট দিন",
   submitPay: "পেমেন্ট সাবমিট করুন",
+  placeCodOrder: "অর্ডার কনফার্ম করুন",
   enrollFree: "ফ্রিতে এনরোল করুন",
   secureNote: "আপনার এনরোলমেন্ট নিরাপদভাবে প্রক্রিয়া করা হয়।",
   verifyNote: "আপনার পেমেন্ট আমাদের টিম যাচাই করবে, সাধারণত ২৪ ঘণ্টার মধ্যে।",
+  codConfirmNote: "এখন কোনো টাকা লাগবে না — বই হাতে পেয়ে কুরিয়ারকে দেবেন।",
+
+  // Pay-now vs cash-on-delivery
+  payModeHeading: "টাকা কীভাবে দিতে চান?",
+  payModeSubtitle: "একটি বেছে নিন — এখনই দিতে পারেন, অথবা বই হাতে পেয়ে দিতে পারেন।",
+  codTitle: "ক্যাশ অন ডেলিভারি",
+  codText: "বই হাতে পাওয়ার সময় কুরিয়ারকে নগদ টাকা দেবেন।",
+  onlineTitle: "এখনই পেমেন্ট (বিকাশ / রকেট / নগদ)",
+  onlineText: "আমাদের নম্বরে Send Money করে ট্রানজেকশন আইডি দিন।",
+  codUnavailable: "ক্যাশ অন ডেলিভারি এখন বন্ধ আছে।",
+  codDigitalOnly: "ক্যাশ অন ডেলিভারি শুধু ছাপা বইয়ের জন্য।",
+  codHowTitle: "ক্যাশ অন ডেলিভারি যেভাবে কাজ করে",
+  codStep1: "অর্ডার দিন — এখন কোনো টাকা কাটা হবে না।",
+  codStep2: "আমরা ফোনে অর্ডারটি নিশ্চিত করে কুরিয়ারে পাঠিয়ে দেব।",
+  codStep3: "বই হাতে পাওয়ার সময় কুরিয়ারকে নগদ টাকা দেবেন।",
+  manualNotConfiguredUseCod:
+    "অনলাইন পেমেন্ট এখনো চালু হয়নি — ক্যাশ অন ডেলিভারি বেছে নিন।",
+
+  // Delivery
+  areaLabel: "ডেলিভারি এলাকা",
+  insideDhaka: "ঢাকার ভেতরে",
+  outsideDhaka: "ঢাকার বাইরে",
+  deliveryCharge: "ডেলিভারি চার্জ",
+  freeDelivery: "ফ্রি",
+
+  // Cash-on-delivery confirmation screen
+  codSuccessTitle: "অর্ডার হয়ে গেছে!",
+  codSuccessSub: "আমরা একটু পরেই ফোন করে অর্ডারটি নিশ্চিত করব, তারপর আপনার ঠিকানায় বই পাঠিয়ে দেব।",
+  codCollectLabel: "ডেলিভারির সময় দিতে হবে",
+  codNextTitle: "এরপর যা হবে",
+  codNext1: "আমরা ফোন করে অর্ডার ও ঠিকানা নিশ্চিত করব।",
+  codNext2: "বইটি কুরিয়ারে দিয়ে আপনার ঠিকানায় পাঠানো হবে।",
+  codNext3: "বই হাতে পেয়ে কুরিয়ারকে নগদ টাকা দেবেন।",
+  codSupport: "কোনো সমস্যা হলে কল করুন",
   stepProcessing: "প্রসেস হচ্ছে…",
   stepCreating: "অর্ডার তৈরি হচ্ছে…",
   stepInitiating: "সাবমিট হচ্ছে…",
@@ -855,6 +1050,8 @@ function summaryLabels(S: Copy) {
     total: S.sumTotal,
     free: S.sumFree,
     save: S.sumSave,
+    delivery: S.deliveryCharge,
+    codNote: S.codConfirmNote,
     duration: S.sumDuration,
   };
 }
@@ -874,6 +1071,22 @@ function shippingLabels(S: Copy) {
     note: S.shipNote,
     notePh: S.shipNotePh,
     optional: S.shipOptional,
+    areaLabel: S.areaLabel,
+    insideDhaka: S.insideDhaka,
+    outsideDhaka: S.outsideDhaka,
+    free: S.freeDelivery,
+  };
+}
+
+function payModeLabels(S: Copy) {
+  return {
+    heading: S.payModeHeading,
+    subtitle: S.payModeSubtitle,
+    codTitle: S.codTitle,
+    codText: S.codText,
+    onlineTitle: S.onlineTitle,
+    onlineText: S.onlineText,
+    codUnavailable: S.codUnavailable,
   };
 }
 
@@ -940,6 +1153,16 @@ function successLabels(S: Copy, bn: string) {
     pendingStatusValue: S.pendingStatusValue,
     viewMyOrders: S.viewMyOrders,
     amountLabel: S.successPaid,
+    // Cash on delivery
+    codTitle: S.codSuccessTitle,
+    codSub: S.codSuccessSub,
+    codCollectLabel: S.codCollectLabel,
+    codDeliveryLabel: S.deliveryCharge,
+    codNextTitle: S.codNextTitle,
+    codNext1: S.codNext1,
+    codNext2: S.codNext2,
+    codNext3: S.codNext3,
+    codSupport: S.codSupport,
     channelName: (id: ManualChannel) => channelName(S, id),
     methodNames: {
       bkash: S.chBkash,
@@ -947,6 +1170,7 @@ function successLabels(S: Copy, bn: string) {
       nagad: S.chNagad,
       sslcommerz: "SSLCommerz",
       manual: S.successMethod,
+      cod: S.codTitle,
       free: S.sumFree,
       status_processing: S.status_processing,
       "status_access-granted": S.status_access_granted,

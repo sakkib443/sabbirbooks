@@ -197,7 +197,7 @@ const ContactPage = () => {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Sabbir Book location"
+                title="Magic Viva location"
               />
             </div>
 

@@ -9,6 +9,26 @@ export type PaymentMethod = "bkash" | "sslcommerz";
 // Manual payment — the mobile wallet the buyer used to Send Money.
 export type ManualChannel = "bkash" | "rocket" | "nagad";
 
+// How the buyer pays.
+//   online → Send Money now, submit the TrxID, admin verifies
+//   cod    → hand cash to the courier when the parcel arrives
+export type PayMode = "online" | "cod";
+
+// Courier zone; drives the delivery charge.
+export type DeliveryArea = "inside-dhaka" | "outside-dhaka";
+
+// GET /api/orders/checkout-options — what the shop currently accepts and charges.
+export interface CheckoutOptions {
+  codEnabled: boolean;
+  onlinePaymentEnabled: boolean;
+  deliveryCharge: Record<DeliveryArea, number>;
+  codExtraCharge: number;
+  freeDeliveryAbove: number;
+  deliveryNote: string;
+  supportPhone: string;
+  wallets: { bkash: string; rocket: string; nagad: string; instructions: string };
+}
+
 // The Send-Money details the buyer submits at checkout for admin verification.
 export interface ManualDetails {
   channel: ManualChannel;
@@ -71,6 +91,7 @@ export interface ShippingAddress {
   phone: string;
   address: string;
   city: string;
+  area?: DeliveryArea;
   note?: string;
 }
 
@@ -90,6 +111,7 @@ export interface OrderResult {
   deliveryType: "printed" | "digital" | "mixed";
   subtotal: number;
   discount?: number;
+  deliveryCharge?: number;
   total: number;
   status: string;
   payment: { status: string; method?: string; transactionId?: string };
@@ -118,6 +140,16 @@ export type SuccessResult =
       amount: number;
       channel: ManualChannel;
       isPrintedBook?: boolean;
+    }
+  | {
+      // Cash on delivery — nothing has been paid yet; the courier collects.
+      kind: "cod";
+      title: string;
+      reference: string; // order number
+      amount: number; // what the courier will collect
+      deliveryCharge: number;
+      supportPhone?: string;
+      deliveryNote?: string;
     };
 
 // Progress steps surfaced on the "Confirm & Pay" button while a flow runs.

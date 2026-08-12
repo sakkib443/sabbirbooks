@@ -1,8 +1,10 @@
 "use client";
 
 import type { FieldErrors, UseFormRegister } from "react-hook-form";
-import { LuTruck, LuUser, LuPhone, LuMapPin, LuBuilding2, LuNotebookPen } from "react-icons/lu";
+import { LuTruck, LuUser, LuPhone, LuMapPin, LuBuilding2, LuNotebookPen, LuCheck } from "react-icons/lu";
 import { Input, cn } from "@/components/ui";
+import type { DeliveryArea } from "./types";
+import { formatTk } from "./types";
 
 // Shape of the shipping fields — kept in sync with the zod schema in CheckoutView.
 export interface ShippingFormValues {
@@ -27,6 +29,10 @@ interface Labels {
   note: string;
   notePh: string;
   optional: string;
+  areaLabel: string;
+  insideDhaka: string;
+  outsideDhaka: string;
+  free: string;
 }
 
 // Presentational: the react-hook-form instance lives in CheckoutView so the
@@ -36,11 +42,19 @@ export function ShippingForm({
   errors,
   bn,
   S,
+  area,
+  onAreaChange,
+  areaCharges,
 }: {
   register: UseFormRegister<ShippingFormValues>;
   errors: FieldErrors<ShippingFormValues>;
   bn: string;
   S: Labels;
+  // Courier zone lives outside the form because the price shown in the order
+  // summary depends on it, and react-hook-form does not re-render the summary.
+  area: DeliveryArea;
+  onAreaChange: (a: DeliveryArea) => void;
+  areaCharges?: Record<DeliveryArea, number>;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
@@ -51,6 +65,60 @@ export function ShippingForm({
         <div>
           <h2 className={cn("font-heading text-lg font-bold text-foreground", bn)}>{S.heading}</h2>
           <p className={cn("text-sm text-muted-foreground", bn)}>{S.subtitle}</p>
+        </div>
+      </div>
+
+      {/* Courier zone first — it changes the delivery charge, so the buyer
+          should set it before reading the total. */}
+      <div className="mt-5">
+        <span className={cn("mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground", bn)}>
+          <span className="text-primary">
+            <LuTruck />
+          </span>
+          {S.areaLabel}
+        </span>
+        <div className="grid gap-2.5 sm:grid-cols-2" role="radiogroup" aria-label={S.areaLabel}>
+          {(
+            [
+              { id: "inside-dhaka" as DeliveryArea, label: S.insideDhaka },
+              { id: "outside-dhaka" as DeliveryArea, label: S.outsideDhaka },
+            ]
+          ).map((opt) => {
+            const active = area === opt.id;
+            const charge = areaCharges?.[opt.id];
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onAreaChange(opt.id)}
+                className={cn(
+                  "flex items-center justify-between gap-3 rounded-xl border p-3.5 text-left transition-all",
+                  active
+                    ? "border-primary bg-primary-soft/60 ring-2 ring-primary/25"
+                    : "border-border bg-background hover:border-primary/40"
+                )}
+              >
+                <span className={cn("font-medium text-foreground", bn)}>{opt.label}</span>
+                <span className="flex items-center gap-2">
+                  {typeof charge === "number" && (
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {charge === 0 ? S.free : formatTk(charge)}
+                    </span>
+                  )}
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all",
+                      active ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                    )}
+                  >
+                    {active && <LuCheck className="text-xs" />}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

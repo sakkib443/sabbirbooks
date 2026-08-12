@@ -71,7 +71,7 @@ export default function RegisterPage() {
     : {
         eyebrow: "New account",
         title: "Create your account",
-        subtitle: "Join Sabbir Book — courses, books and QR resources in one place.",
+        subtitle: "Join Magic Viva — courses, books and QR resources in one place.",
         firstName: "First name",
         lastName: "Last name",
         firstNamePh: "Sabbir",

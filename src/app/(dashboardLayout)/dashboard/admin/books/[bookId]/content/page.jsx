@@ -31,6 +31,9 @@ import {
   FiExternalLink,
   FiEdit2,
   FiX,
+  FiImage,
+  FiChevronLeft,
+  FiEye,
 } from 'react-icons/fi';
 
 // The editor touches window/document on mount, so it must not be part of the
@@ -59,6 +62,20 @@ const formatSize = bytes => {
   const mb = bytes / (1024 * 1024);
   return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
 };
+
+/** Progress for the file currently going up, plus its place in the queue. */
+function UploadBar({ pct, queue }) {
+  return (
+    <div className="mb-3">
+      <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+        <div className="h-full bg-blue-600 transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-[11px] text-slate-500 mt-1">
+        {queue ? `${queue.index}/${queue.total} — ` : ''}আপলোড হচ্ছে {pct}%
+      </p>
+    </div>
+  );
+}
 
 /**
  * Uploads a PDF or answer video to our own server.
@@ -123,8 +140,12 @@ export default function BookContentEditorPage() {
 
   const videoInputRef = useRef(null);
   const fileInputRef = useRef(null);
-  const [busyUpload, setBusyUpload] = useState(null); // 'video' | 'file' | null
+  const imageInputRef = useRef(null);
+  const [busyUpload, setBusyUpload] = useState(null); // 'video' | 'file' | 'image' | null
   const [uploadPct, setUploadPct] = useState(null);
+  // "3 of 7" while a multi-file selection uploads.
+  const [uploadQueue, setUploadQueue] = useState(null);
+  const [imageDragging, setImageDragging] = useState(false);
 
   // { level: 'part'|'chapter'|'topic', mode: 'create'|'edit',
   //   parent?: { partId?, chapterId? }, node?, values }
@@ -137,67 +158,116 @@ export default function BookContentEditorPage() {
   // belong on YouTube; this is for short clips.
   const VIDEO_SOFT_LIMIT_MB = 100;
 
-  const handleVideoUpload = async file => {
-    if (!file) return;
-    const mb = file.size / (1024 * 1024);
-    if (mb > VIDEO_SOFT_LIMIT_MB) {
-      setFlash(
-        `ভিডিওটি ${mb.toFixed(0)}MB — ${VIDEO_SOFT_LIMIT_MB}MB পর্যন্ত সার্ভারে রাখা ভালো। বড় ভিডিও ইউটিউবে দিয়ে লিংক বসান।`
-      );
-      return;
-    }
-    setBusyUpload('video');
-    setUploadPct(0);
+  /**
+   * Upload a whole selection, one file at a time, appending each result to the
+   * draft as it lands.
+   *
+   * Sequential rather than parallel on purpose: these are 50MB videos going up a
+   * home broadband connection, and six at once means six that all crawl and one
+   * useless progress bar. One at a time gives an honest "3 of 7 · 62%", and a
+   * failure half way through keeps everything already uploaded.
+   */
+  const uploadMany = async (files, kind, toEntry) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+
+    setBusyUpload(kind);
     setFlash('');
-    try {
-      const data = await uploadToServer(file, setUploadPct);
-      setDraft(d => ({
-        ...d,
-        videos: [
-          ...d.videos,
-          {
-            title: data.fileName?.replace(/\.[^.]+$/, '') || 'ভিডিও',
-            url: data.fileUrl,
-            provider: 'upload',
-            fileName: data.fileName,
-            fileSize: data.size,
-          },
-        ],
-      }));
-      setFlash('ভিডিও আপলোড হয়েছে — সংরক্ষণ করতে ভুলবেন না');
-    } catch (err) {
-      setFlash(err.message);
-    } finally {
-      setBusyUpload(null);
-      setUploadPct(null);
+    const failures = [];
+    let done = 0;
+
+    for (const [index, file] of list.entries()) {
+      setUploadQueue(list.length > 1 ? { index: index + 1, total: list.length } : null);
+      setUploadPct(0);
+      try {
+        const data = await uploadToServer(file, setUploadPct);
+        // The admin can click away to another question mid-upload, which nulls
+        // the draft — dropping the result beats throwing on `d.videos`.
+        setDraft(d => (d ? toEntry(d, data) : d));
+        done++;
+      } catch (err) {
+        failures.push(`${file.name}: ${err.message}`);
+      }
+    }
+
+    setBusyUpload(null);
+    setUploadPct(null);
+    setUploadQueue(null);
+
+    if (failures.length) {
+      setFlash(
+        `${done}টি আপলোড হয়েছে, ${failures.length}টি হয়নি — ${failures[0]}`
+      );
+    } else {
+      setFlash(`${done}টি ফাইল আপলোড হয়েছে — সংরক্ষণ করতে ভুলবেন না`);
+      setTimeout(() => setFlash(''), 4000);
     }
   };
 
-  const handleFileUpload = async file => {
-    if (!file) return;
-    setBusyUpload('file');
-    setFlash('');
-    try {
-      const data = await uploadToServer(file);
-      setDraft(d => ({
-        ...d,
-        attachments: [
-          ...d.attachments,
-          {
-            title: data.fileName?.replace(/\.[^.]+$/, '') || 'ফাইল',
-            fileUrl: data.fileUrl,
-            fileType: data.fileType,
-            fileSize: data.size,
-          },
-        ],
-      }));
-      setFlash('ফাইল আপলোড হয়েছে — সংরক্ষণ করতে ভুলবেন না');
-    } catch (err) {
-      setFlash(err.message);
-    } finally {
-      setBusyUpload(null);
+  const handleVideoUpload = async files => {
+    const list = Array.from(files || []);
+    const tooBig = list.filter(f => f.size / (1024 * 1024) > VIDEO_SOFT_LIMIT_MB);
+    const ok = list.filter(f => f.size / (1024 * 1024) <= VIDEO_SOFT_LIMIT_MB);
+
+    if (tooBig.length) {
+      setFlash(
+        `${tooBig.length}টি ভিডিও ${VIDEO_SOFT_LIMIT_MB}MB-এর চেয়ে বড় বলে বাদ গেছে (${tooBig[0].name})। বড় ভিডিও ইউটিউবে দিয়ে লিংক বসান।`
+      );
     }
+    if (!ok.length) return;
+
+    await uploadMany(ok, 'video', (d, data) => ({
+      ...d,
+      videos: [
+        ...d.videos,
+        {
+          title: data.fileName?.replace(/\.[^.]+$/, '') || 'ভিডিও',
+          url: data.fileUrl,
+          provider: 'upload',
+          fileName: data.fileName,
+          fileSize: data.size,
+        },
+      ],
+    }));
   };
+
+  const handleFileUpload = files =>
+    uploadMany(files, 'file', (d, data) => ({
+      ...d,
+      attachments: [
+        ...d.attachments,
+        {
+          title: data.fileName?.replace(/\.[^.]+$/, '') || 'ফাইল',
+          fileUrl: data.fileUrl,
+          fileType: data.fileType,
+          fileSize: data.size,
+        },
+      ],
+    }));
+
+  const handleImageUpload = files => {
+    const images = Array.from(files || []).filter(
+      f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name)
+    );
+    if (!images.length) {
+      setFlash('শুধু ছবি ফাইল (JPG, PNG, WebP) দেওয়া যাবে');
+      return;
+    }
+    return uploadMany(images, 'image', (d, data) => ({
+      ...d,
+      images: [...(d.images || []), data.fileUrl],
+    }));
+  };
+
+  /** Move an image one slot left/right — reader sees them in this order. */
+  const moveImage = (from, to) =>
+    setDraft(d => {
+      const images = [...(d.images || [])];
+      if (to < 0 || to >= images.length) return d;
+      const [moved] = images.splice(from, 1);
+      images.splice(to, 0, moved);
+      return { ...d, images };
+    });
 
   // ─── Load tree ────────────────────────────────────────────
   const loadTree = useCallback(async () => {
@@ -246,6 +316,10 @@ export default function BookContentEditorPage() {
       answerHtml: q.answerHtml || '',
       videos: q.videos?.length ? q.videos : [],
       attachments: q.attachments?.length ? q.attachments : [],
+      // The model has always had an images array and the reader has always
+      // rendered it; this form simply never filled it in, so the gallery was
+      // permanently empty no matter what the admin uploaded.
+      images: q.images?.length ? q.images : [],
     });
   };
 
@@ -262,6 +336,7 @@ export default function BookContentEditorPage() {
           // Drop half-filled rows rather than storing blank urls.
           videos: draft.videos.filter(v => v.url?.trim()),
           attachments: draft.attachments.filter(a => a.fileUrl?.trim()),
+          images: (draft.images || []).filter(src => String(src || '').trim()),
         }),
       });
       const body = await res.json();
@@ -829,11 +904,126 @@ export default function BookContentEditorPage() {
                     />
                   </div>
 
+                  {/* Images — the reader shows these right after the answer text */}
+                  <div
+                    className={`rounded-lg border p-3 transition ${
+                      imageDragging
+                        ? 'border-blue-400 bg-blue-50/60'
+                        : 'border-slate-200'
+                    }`}
+                    onDragOver={e => {
+                      e.preventDefault();
+                      setImageDragging(true);
+                    }}
+                    onDragLeave={() => setImageDragging(false)}
+                    onDrop={e => {
+                      e.preventDefault();
+                      setImageDragging(false);
+                      if (e.dataTransfer?.files?.length) handleImageUpload(e.dataTransfer.files);
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                        <FiImage className="w-3.5 h-3.5" /> ছবি
+                        {draft.images?.length > 0 && (
+                          <span className="text-slate-400">({draft.images.length}টি)</span>
+                        )}
+                      </label>
+                      <button
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={busyUpload === 'image'}
+                        className="text-xs text-blue-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {busyUpload === 'image' ? (
+                          <FiLoader className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <FiUpload className="w-3.5 h-3.5" />
+                        )}
+                        ছবি আপলোড
+                      </button>
+                    </div>
+
+                    {busyUpload === 'image' && uploadPct !== null && (
+                      <UploadBar pct={uploadPct} queue={uploadQueue} />
+                    )}
+
+                    {draft.images?.length ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                        {draft.images.map((src, i) => (
+                          <div
+                            key={`${src}-${i}`}
+                            className="group relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={src}
+                              alt={`ছবি ${i + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={e => {
+                                e.currentTarget.style.opacity = 0.25;
+                              }}
+                            />
+                            <span className="absolute top-1 left-1 text-[10px] bg-slate-900/70 text-white rounded px-1.5 py-0.5">
+                              {i + 1}
+                            </span>
+                            <div className="absolute inset-x-0 bottom-0 flex justify-between bg-slate-900/70 opacity-0 group-hover:opacity-100 transition">
+                              <button
+                                title="আগে সরান"
+                                disabled={i === 0}
+                                onClick={() => moveImage(i, i - 1)}
+                                className="p-1 text-white disabled:opacity-30 hover:bg-white/20"
+                              >
+                                <FiChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+                              <a
+                                href={src}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="বড় করে দেখুন"
+                                className="p-1 text-white hover:bg-white/20"
+                              >
+                                <FiEye className="w-3.5 h-3.5" />
+                              </a>
+                              <button
+                                title="মুছে ফেলুন"
+                                onClick={() =>
+                                  setDraft(d => ({
+                                    ...d,
+                                    images: d.images.filter((_, j) => j !== i),
+                                  }))
+                                }
+                                className="p-1 text-white hover:bg-red-500/70"
+                              >
+                                <FiTrash2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                title="পরে সরান"
+                                disabled={i === draft.images.length - 1}
+                                onClick={() => moveImage(i, i + 1)}
+                                className="p-1 text-white disabled:opacity-30 hover:bg-white/20 rotate-180"
+                              >
+                                <FiChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400">
+                        কোনো ছবি যোগ করা হয়নি। একসাথে কয়েকটা ছবি বাছাই করতে পারেন, বা এখানে
+                        টেনে এনে ছাড়তে পারেন।
+                      </p>
+                    )}
+                  </div>
+
                   {/* Videos — a YouTube link, or a file that lands on our server */}
                   <div className="rounded-lg border border-slate-200 p-3">
                     <div className="flex items-center justify-between mb-3">
                       <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
                         <FiVideo className="w-3.5 h-3.5" /> ভিডিও
+                        {draft.videos?.length > 0 && (
+                          <span className="text-slate-400">({draft.videos.length}টি)</span>
+                        )}
                       </label>
                       <div className="flex items-center gap-3">
                         <button
@@ -860,15 +1050,7 @@ export default function BookContentEditorPage() {
                     </div>
 
                     {uploadPct !== null && busyUpload === 'video' && (
-                      <div className="mb-3">
-                        <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                          <div
-                            className="h-full bg-blue-600 transition-all"
-                            style={{ width: `${uploadPct}%` }}
-                          />
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-1">আপলোড হচ্ছে {uploadPct}%</p>
-                      </div>
+                      <UploadBar pct={uploadPct} queue={uploadQueue} />
                     )}
 
                     {draft.videos.length === 0 && (
@@ -957,6 +1139,10 @@ export default function BookContentEditorPage() {
                       </button>
                     </div>
 
+                    {uploadPct !== null && busyUpload === 'file' && (
+                      <UploadBar pct={uploadPct} queue={uploadQueue} />
+                    )}
+
                     {draft.attachments.length === 0 && (
                       <p className="text-xs text-slate-400">কোনো ফাইল যোগ করা হয়নি।</p>
                     )}
@@ -1005,26 +1191,42 @@ export default function BookContentEditorPage() {
                     ))}
                   </div>
 
+                  {/* All three accept a whole selection — `multiple` is the fix
+                      for "একাধিক ছবি বা ভিডিও আপলোড দেওয়ার অপশন". */}
                   <input
                     ref={videoInputRef}
                     type="file"
                     accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
+                    multiple
                     hidden
                     onChange={e => {
-                      const f = e.target.files?.[0];
+                      const files = e.target.files;
+                      handleVideoUpload(files);
                       e.target.value = '';
-                      handleVideoUpload(f);
                     }}
                   />
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,image/*"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"
+                    multiple
                     hidden
                     onChange={e => {
-                      const f = e.target.files?.[0];
+                      const files = e.target.files;
+                      handleFileUpload(files);
                       e.target.value = '';
-                      handleFileUpload(f);
+                    }}
+                  />
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    onChange={e => {
+                      const files = e.target.files;
+                      handleImageUpload(files);
+                      e.target.value = '';
                     }}
                   />
 

@@ -26,6 +26,8 @@ interface Labels {
   total: string;
   free: string;
   save: string;
+  delivery: string;
+  codNote: string;
   duration: (m: number) => string;
 }
 
@@ -36,6 +38,9 @@ export function OrderSummary({
   quantity,
   bn,
   S,
+  deliveryCharge = 0,
+  showDelivery = false,
+  isCod = false,
 }: {
   type: CheckoutType;
   course?: CheckoutCourse | null;
@@ -43,6 +48,10 @@ export function OrderSummary({
   quantity: number;
   bn: string;
   S: Labels;
+  // Printed books only — a course or a download ships nothing.
+  deliveryCharge?: number;
+  showDelivery?: boolean;
+  isCod?: boolean;
 }) {
   // Derive the line item + pricing for whichever product type we're buying.
   const isCourse = type === "course" && !!course;
@@ -66,6 +75,7 @@ export function OrderSummary({
   const qty = isBook ? quantity : 1;
   const subtotal = unit * qty;
   const isFree = unit <= 0;
+  const total = subtotal + (showDelivery ? deliveryCharge : 0);
 
   const kindBadge = isCourse ? (
     <Badge variant="primary" className={bn}>
@@ -146,12 +156,37 @@ export function OrderSummary({
           </div>
         )}
 
+        {showDelivery && (
+          <>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <dt className={cn("text-muted-foreground", bn)}>{S.subtotal}</dt>
+              <dd className="font-medium text-foreground">{formatTk(subtotal)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className={cn("text-muted-foreground", bn)}>{S.delivery}</dt>
+              <dd className="font-medium text-foreground">
+                {deliveryCharge === 0 ? (
+                  <span className="text-accent">{S.free}</span>
+                ) : (
+                  formatTk(deliveryCharge)
+                )}
+              </dd>
+            </div>
+          </>
+        )}
+
         <div className="flex items-center justify-between border-t border-border pt-3">
           <dt className={cn("font-heading text-base font-bold text-foreground", bn)}>{S.total}</dt>
           <dd className="font-heading text-xl font-bold text-primary">
-            {isFree ? S.free : formatTk(subtotal)}
+            {isFree && !showDelivery ? S.free : formatTk(total)}
           </dd>
         </div>
+
+        {isCod && (
+          <p className={cn("rounded-lg bg-accent-soft/50 px-3 py-2 text-xs text-foreground", bn)}>
+            {S.codNote}
+          </p>
+        )}
       </dl>
     </div>
   );

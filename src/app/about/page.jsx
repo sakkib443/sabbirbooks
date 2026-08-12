@@ -105,7 +105,7 @@ const AboutPage = () => {
                     <LuHeartPulse className="text-2xl" />
                   </span>
                   <div>
-                    <p className="font-heading text-lg font-bold text-foreground">Sabbir Book</p>
+                    <p className="font-heading text-lg font-bold text-foreground">Magic Viva</p>
                     <p className={cn("text-xs text-muted-foreground", bn)}>{t("home.tagline")}</p>
                   </div>
                 </div>

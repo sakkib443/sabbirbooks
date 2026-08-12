@@ -32,6 +32,22 @@ const fmtDate = (d) =>
 // 'pending' / 'paid' / 'access-granted' are set by the payment flow, not here).
 const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
 
+// The raw enum values read like database jargon on a button. These say what the
+// click actually does — which matters most for `delivered`, since on a COD order
+// it is also the moment the money is recorded.
+const FULFILLMENT_LABEL = {
+  processing: 'Confirmed',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+const FULFILLMENT_HELP = {
+  processing: 'Order confirmed — stock reserved and the buyer can open this book’s QR content',
+  shipped: 'Handed to the courier',
+  delivered: 'Book received by the buyer — cash-on-delivery orders are marked paid here',
+  cancelled: 'Order cancelled — reserved stock goes back on the shelf',
+};
+
 const STATUS_META = {
   pending: { cls: 'bg-amber-50 text-amber-600 border-amber-200', icon: FiClock },
   paid: { cls: 'bg-emerald-50 text-emerald-600 border-emerald-200', icon: FiCheckCircle },
@@ -51,6 +67,8 @@ const buyerName = (u) =>
   u && typeof u === 'object'
     ? [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '—'
     : '—';
+
+const isCod = (order) => order?.payment?.method === 'cod';
 
 function StatusBadge({ status }) {
   const meta = STATUS_META[status] || STATUS_META.pending;
@@ -129,7 +147,12 @@ export default function BookOrdersPage() {
     revenue: orders
       .filter((o) => o.payment?.status === 'paid')
       .reduce((s, o) => s + (o.total || 0), 0),
+    // Orders waiting on a decision — the actual work queue.
     pending: orders.filter((o) => o.status === 'pending').length,
+    // Cash still out with couriers: confirmed COD orders not yet collected.
+    codOutstanding: orders
+      .filter((o) => isCod(o) && o.payment?.status !== 'paid' && o.status !== 'cancelled')
+      .reduce((s, o) => s + (o.total || 0), 0),
     delivered: orders.filter((o) => o.status === 'delivered').length,
   }), [orders]);
 
@@ -143,8 +166,18 @@ export default function BookOrdersPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) throw new Error(json.message || 'Update failed');
-      setOrders((prev) => prev.map((o) => (o._id === order._id ? { ...o, status } : o)));
-      showToast('success', `Order marked as ${status}`);
+      // Take the server's copy rather than patching `status` locally: marking a
+      // COD order delivered also flips payment.status to paid and stamps the
+      // timestamps, and a local patch would leave the row showing "pending".
+      setOrders((prev) =>
+        prev.map((o) => (o._id === order._id ? { ...o, ...(json.data || { status }) } : o))
+      );
+      showToast(
+        'success',
+        status === 'delivered' && isCod(order)
+          ? `Delivered — ${bdt(order.total)} recorded as paid`
+          : `Order marked as ${status}`
+      );
     } catch (err) {
       showToast('error', err.message || 'Update failed');
     } finally {
@@ -179,6 +212,19 @@ export default function BookOrdersPage() {
 
   const approvePayment = (order) =>
     runAction(order, '/approve', 'POST', null, 'Payment approved — order confirmed');
+
+  // Confirming a COD order is a fulfillment move, not a payment one: it reserves
+  // stock and opens the buyer's QR content, but books no money.
+  const confirmCodOrder = async (order) => {
+    const ok = await confirm({
+      title: 'Confirm this cash-on-delivery order?',
+      message:
+        'Stock will be reserved and the buyer gets access to this book’s QR content. Payment is recorded when you mark it delivered.',
+      confirmText: 'Confirm order',
+    });
+    if (!ok) return;
+    updateStatus(order, 'processing');
+  };
 
   const rejectPayment = async (order) => {
     const ok = await confirm({
@@ -238,7 +284,7 @@ export default function BookOrdersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xl font-bold text-slate-800">{stats.total}</p>
           <p className="text-xs text-slate-400 mt-1">Total orders</p>
@@ -249,7 +295,11 @@ export default function BookOrdersPage() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
-          <p className="text-xs text-slate-400 mt-1">Pending</p>
+          <p className="text-xs text-slate-400 mt-1">Awaiting confirmation</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <p className="text-xl font-bold text-orange-600">{bdt(stats.codOutstanding)}</p>
+          <p className="text-xs text-slate-400 mt-1">COD to collect</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xl font-bold text-sky-600">{stats.delivered}</p>
@@ -324,6 +374,11 @@ export default function BookOrdersPage() {
                     {o.items?.length || 0} item{(o.items?.length || 0) === 1 ? '' : 's'}
                   </div>
                   <div className="font-bold text-slate-800 min-w-[70px] text-right">{bdt(o.total)}</div>
+                  {isCod(o) && (
+                    <span className="px-2 py-0.5 rounded-md text-xs font-bold border bg-amber-50 text-amber-700 border-amber-200">
+                      COD
+                    </span>
+                  )}
                   <span className={`px-2 py-0.5 rounded-md text-xs font-medium border capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
                     {o.payment?.status || 'pending'}
                   </span>
@@ -348,10 +403,13 @@ export default function BookOrdersPage() {
                           </div>
                         ))}
                       </div>
-                      <div className="flex justify-end gap-6 mt-2 text-sm px-1">
+                      <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 mt-2 text-sm px-1">
                         <span className="text-slate-400">Subtotal: <span className="text-slate-600">{bdt(o.subtotal)}</span></span>
                         {o.discount > 0 && (
                           <span className="text-slate-400">Discount: <span className="text-emerald-600">−{bdt(o.discount)}</span></span>
+                        )}
+                        {o.deliveryCharge > 0 && (
+                          <span className="text-slate-400">Delivery: <span className="text-slate-600">{bdt(o.deliveryCharge)}</span></span>
                         )}
                         <span className="font-semibold text-slate-700">Total: {bdt(o.total)}</span>
                       </div>
@@ -370,7 +428,13 @@ export default function BookOrdersPage() {
                         {o.shippingAddress ? (
                           <>
                             <DetailRow icon={FiUser} label="Recipient" value={o.shippingAddress.name} />
+                            <DetailRow icon={FiPhone} label="Phone" value={o.shippingAddress.phone} mono />
                             <DetailRow icon={FiMapPin} label="Address" value={`${o.shippingAddress.address || ''}${o.shippingAddress.city ? ', ' + o.shippingAddress.city : ''}`} />
+                            <DetailRow
+                              icon={FiTruck}
+                              label="Zone"
+                              value={o.shippingAddress.area === 'inside-dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'}
+                            />
                             {o.shippingAddress.note && <DetailRow icon={FiPackage} label="Note" value={o.shippingAddress.note} />}
                           </>
                         ) : (
@@ -384,7 +448,9 @@ export default function BookOrdersPage() {
                           label="Method"
                           value={o.payment?.method === 'manual'
                             ? `Manual · ${CHANNEL_LABEL[o.payment?.channel] || o.payment?.channel || '—'}`
-                            : o.payment?.method}
+                            : o.payment?.method === 'cod'
+                              ? 'Cash on delivery'
+                              : o.payment?.method}
                         />
                         <DetailRow icon={FiHash} label="Transaction ID" value={o.payment?.transactionId} mono />
                         {o.payment?.method === 'manual' && (
@@ -400,17 +466,25 @@ export default function BookOrdersPage() {
                       </div>
                     </div>
 
-                    {/* Payment verification — approve / reject / edit manual payments */}
+                    {/* Payment verification.
+                        Cash-on-delivery has no transaction to verify — the money
+                        arrives with the courier — so it gets its own action:
+                        CONFIRM the order (which reserves stock and opens the
+                        book's QR content), and it becomes paid when marked
+                        delivered. Approving it here would book revenue for a
+                        parcel still in a van. */}
                     <div className="rounded-lg border border-slate-200 bg-white p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Payment verification</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            {isCod(o) ? 'Cash on delivery' : 'Payment verification'}
+                          </span>
                           <span className={`px-2 py-0.5 rounded-md text-xs font-medium border capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
                             {o.payment?.status || 'pending'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          {editingId !== o._id && (
+                          {!isCod(o) && editingId !== o._id && (
                             <button
                               onClick={() => startEdit(o)}
                               disabled={busyId === o._id}
@@ -419,26 +493,67 @@ export default function BookOrdersPage() {
                               <FiEdit2 size={12} /> Edit
                             </button>
                           )}
-                          {o.payment?.status !== 'paid' && (
-                            <>
-                              <button
-                                onClick={() => rejectPayment(o)}
-                                disabled={busyId === o._id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 text-red-500 hover:bg-red-50 transition disabled:opacity-50"
-                              >
-                                <FiX size={12} /> Reject
-                              </button>
-                              <button
-                                onClick={() => approvePayment(o)}
-                                disabled={busyId === o._id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition disabled:opacity-50"
-                              >
-                                {busyId === o._id ? <FiLoader className="animate-spin" size={12} /> : <FiCheck size={12} />} Approve
-                              </button>
-                            </>
+
+                          {isCod(o) ? (
+                            o.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => rejectPayment(o)}
+                                  disabled={busyId === o._id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                                >
+                                  <FiX size={12} /> Cancel order
+                                </button>
+                                <button
+                                  onClick={() => confirmCodOrder(o)}
+                                  disabled={updatingId === o._id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition disabled:opacity-50"
+                                >
+                                  {updatingId === o._id ? <FiLoader className="animate-spin" size={12} /> : <FiCheck size={12} />} Confirm order
+                                </button>
+                              </>
+                            )
+                          ) : (
+                            o.payment?.status !== 'paid' && (
+                              <>
+                                <button
+                                  onClick={() => rejectPayment(o)}
+                                  disabled={busyId === o._id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                                >
+                                  <FiX size={12} /> Reject
+                                </button>
+                                <button
+                                  onClick={() => approvePayment(o)}
+                                  disabled={busyId === o._id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition disabled:opacity-50"
+                                >
+                                  {busyId === o._id ? <FiLoader className="animate-spin" size={12} /> : <FiCheck size={12} />} Approve
+                                </button>
+                              </>
+                            )
                           )}
                         </div>
                       </div>
+
+                      {isCod(o) && (
+                        <p className="mt-3 text-xs text-slate-500 leading-relaxed bg-amber-50/70 border border-amber-100 rounded-lg px-3 py-2">
+                          {o.status === 'pending' ? (
+                            <>
+                              কল করে অর্ডারটি নিশ্চিত করে <b>Confirm order</b> চাপুন — তখনই স্টক
+                              কমবে আর ক্রেতা বইয়ের QR কনটেন্ট দেখতে পাবে। বই পৌঁছে দেওয়ার পর{' '}
+                              <b>delivered</b> চাপলে <b>{bdt(o.total)}</b> পেমেন্ট হিসেবে বসে যাবে।
+                            </>
+                          ) : o.payment?.status === 'paid' ? (
+                            <>ডেলিভারিতে <b>{bdt(o.total)}</b> নেওয়া হয়েছে।</>
+                          ) : (
+                            <>
+                              কুরিয়ার ক্রেতার কাছ থেকে <b>{bdt(o.total)}</b> নেবে। বই পৌঁছে গেলে{' '}
+                              <b>delivered</b> চাপুন — তখনই টাকা বুঝে পাওয়া হিসেবে লেখা হবে।
+                            </>
+                          )}
+                        </p>
+                      )}
 
                       {editingId === o._id && (
                         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -515,16 +630,31 @@ export default function BookOrdersPage() {
                             key={s}
                             onClick={() => updateStatus(o, s)}
                             disabled={updatingId === o._id || o.status === s}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize border transition disabled:opacity-40 disabled:cursor-not-allowed
+                            title={FULFILLMENT_HELP[s]}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition disabled:opacity-40 disabled:cursor-not-allowed
                               ${o.status === s
                                 ? 'bg-[#F3A522] text-white border-[#F3A522]'
                                 : 'bg-white text-slate-600 border-slate-200 hover:border-[#F3A522] hover:text-[#c9871a]'}`}
                           >
-                            {updatingId === o._id ? <FiLoader className="animate-spin" size={12} /> : s}
+                            {updatingId === o._id ? (
+                              <FiLoader className="animate-spin" size={12} />
+                            ) : (
+                              FULFILLMENT_LABEL[s]
+                            )}
                           </button>
                         ))}
                       </div>
                     </div>
+
+                    {/* Fulfillment trail — when each step actually happened */}
+                    {(o.confirmedAt || o.shippedAt || o.deliveredAt || o.cancelledAt) && (
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-slate-400">
+                        {o.confirmedAt && <span>Confirmed: {fmtDate(o.confirmedAt)}</span>}
+                        {o.shippedAt && <span>Shipped: {fmtDate(o.shippedAt)}</span>}
+                        {o.deliveredAt && <span>Delivered: {fmtDate(o.deliveredAt)}</span>}
+                        {o.cancelledAt && <span>Cancelled: {fmtDate(o.cancelledAt)}</span>}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

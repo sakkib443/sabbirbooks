@@ -4,7 +4,6 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { FaFacebookF, FaYoutube, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
 import {
-  LuStethoscope,
   LuMail,
   LuPhone,
   LuMapPin,
@@ -13,11 +12,13 @@ import {
 } from "react-icons/lu";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/components/ui";
+import { BrandMark, useBrand } from "./Brand";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
   const { t, language } = useLanguage();
   const bn = language === "bn" ? "hind-siliguri" : "";
+  const { name: brandName } = useBrand();
 
   const explore = [
     { to: "/", label: t("navbar.home") },
@@ -53,13 +54,11 @@ const Footer = () => {
         <div className="grid grid-cols-2 gap-10 md:grid-cols-4 lg:grid-cols-12">
           {/* Brand + newsletter */}
           <div className="col-span-2 md:col-span-4 lg:col-span-5">
+            {/* Name/logo come from site settings — the footer sits on a dark
+                slab, so the wordmark is forced white here. */}
             <Link href="/" className="inline-flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-strong">
-                <LuStethoscope className="text-[22px] text-white" />
-              </span>
-              <span className="text-xl font-bold tracking-tight text-white">
-                Sabbir <span className="text-primary">Book</span>
-              </span>
+              <BrandMark />
+              <span className="text-xl font-bold tracking-tight text-white">{brandName}</span>
             </Link>
             <p className={cn("mt-4 max-w-sm text-sm leading-relaxed text-white/55", bn)}>
               {t("footer.brandDescription")}

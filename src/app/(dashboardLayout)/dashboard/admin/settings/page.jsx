@@ -210,21 +210,28 @@ const PasswordTab = ({ showToast }) => {
 /* ───────────────────────── Site Settings (existing) ───────────────────────── */
 const SiteSettingsTab = ({ showToast }) => {
   const [settings, setSettings] = useState({
-    brandName: '', brandNameBn: '', websiteUrl: '',
+    brandName: '', brandNameBn: '', brandTagline: '', brandTaglineBn: '',
+    websiteUrl: '', logo: '', favicon: '',
     heroBadge: '', heroHeading1: '', heroHeading2: '', heroHeadingWith: '', heroAcademyName: '', heroDescription: '',
     heroBadgeBn: '', heroHeading1Bn: '', heroHeading2Bn: '', heroHeadingWithBn: '', heroAcademyNameBn: '', heroDescriptionBn: '',
     phoneNumber: '', whatsappNumber: '', email: '', address: '', addressBn: '',
     facebookUrl: '', youtubeUrl: '', linkedinUrl: '',
     paymentBkashNumber: '', paymentRocketNumber: '', paymentNagadNumber: '', paymentInstructions: '',
+    // Ordering & delivery
+    codEnabled: true, onlinePaymentEnabled: true,
+    deliveryChargeInsideDhaka: 120, deliveryChargeOutsideDhaka: 120,
+    freeDeliveryAbove: 0, codExtraCharge: 0,
+    deliveryNote: '', orderSupportPhone: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  // null | 'logo' | 'favicon' — which brand image is currently uploading.
+  const [uploadingLogo, setUploadingLogo] = useState(null);
 
-  const uploadLogo = async (e) => {
+  const uploadBrandImage = async (e, field) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadingLogo(true);
+    setUploadingLogo(field);
     try {
       const fd = new FormData();
       fd.append('logo', file);
@@ -235,11 +242,11 @@ const SiteSettingsTab = ({ showToast }) => {
       });
       const data = await res.json();
       if (data.success) {
-        setSettings(prev => ({ ...prev, logo: data.data.url }));
-        showToast('success', 'Logo uploaded — নিচে Save চাপুন');
+        setSettings(prev => ({ ...prev, [field]: data.data.url }));
+        showToast('success', 'আপলোড হয়েছে — নিচে Save Settings চাপুন');
       } else showToast('error', data.message || 'Upload failed');
     } catch { showToast('error', 'Upload failed'); }
-    finally { setUploadingLogo(false); e.target.value = ''; }
+    finally { setUploadingLogo(null); e.target.value = ''; }
   };
 
   const fetchSettings = async () => {
@@ -296,46 +303,89 @@ const SiteSettingsTab = ({ showToast }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name (English)</label>
-              <input type="text" name="brandName" value={settings.brandName} onChange={handleChange} placeholder="Aptech Learning" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
+              <input type="text" name="brandName" value={settings.brandName || ''} onChange={handleChange} placeholder="Magic Viva" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
+              <p className="text-[11px] text-gray-400 mt-1">সাইটের হেডার, ফুটার, ব্রাউজার ট্যাব — সব জায়গায় এই নামটাই দেখাবে।</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ব্র্যান্ডের নাম (বাংলা)</label>
-              <input type="text" name="brandNameBn" value={settings.brandNameBn} onChange={handleChange} placeholder="অ্যাপটেক লার্নিং" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
+              <input type="text" name="brandNameBn" value={settings.brandNameBn || ''} onChange={handleChange} placeholder="ম্যাজিক ভাইভা" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
-              <input type="url" name="websiteUrl" value={settings.websiteUrl} onChange={handleChange} placeholder="https://aptechlearning.com" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
+              <input type="url" name="websiteUrl" value={settings.websiteUrl || ''} onChange={handleChange} placeholder="https://magicviva.com" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tagline (English)</label>
+              <input type="text" name="brandTagline" value={settings.brandTagline || ''} onChange={handleChange} placeholder="Medical Learning Platform" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ট্যাগলাইন (বাংলা)</label>
+              <input type="text" name="brandTaglineBn" value={settings.brandTaglineBn || ''} onChange={handleChange} placeholder="মেডিকেল শিক্ষার প্ল্যাটফর্ম" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8] focus:border-[#41bfb8] outline-none text-sm" />
             </div>
           </div>
 
-          {/* Site Logo — admin can change the website logo anytime */}
-          <div className="mt-5 pt-5 border-t border-gray-100">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Site Logo</label>
-            <div className="flex items-center gap-4 flex-wrap">
-              {/* Preview on a dark strip (site header is dark) */}
-              <div className="h-14 px-4 rounded-lg bg-slate-800 flex items-center justify-center min-w-[150px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={settings.logo || '/images/aptech-learning-logo.svg'}
-                  alt="Logo preview"
-                  className={`h-9 w-auto ${settings.logo ? '' : 'brightness-0 invert'}`}
-                />
+          {/* Site Logo + favicon — changed from here, no redeploy needed */}
+          <div className="mt-5 pt-5 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Site Logo</label>
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Shown on both a dark and a light strip: the logo appears on
+                    the dark footer and the light admin chrome, and a mark that
+                    only works on one of them is a mark that will look broken. */}
+                <div className="flex gap-2">
+                  <div className="h-14 px-4 rounded-lg bg-slate-800 flex items-center justify-center min-w-[110px]">
+                    {settings.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={settings.logo} alt="Logo preview" className="h-9 w-auto object-contain" />
+                    ) : (
+                      <span className="text-white text-sm font-bold">{settings.brandName || 'Magic Viva'}</span>
+                    )}
+                  </div>
+                  <div className="h-14 px-4 rounded-lg bg-white border border-gray-200 flex items-center justify-center min-w-[110px]">
+                    {settings.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={settings.logo} alt="Logo preview" className="h-9 w-auto object-contain" />
+                    ) : (
+                      <span className="text-slate-800 text-sm font-bold">{settings.brandName || 'Magic Viva'}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#41bfb8] text-white text-sm font-semibold cursor-pointer hover:bg-[#38a89d] transition ${uploadingLogo === 'logo' ? 'opacity-60 pointer-events-none' : ''}`}>
+                    {uploadingLogo === 'logo' ? <FiLoader className="animate-spin" size={15} /> : <FiUploadCloud size={15} />}
+                    {uploadingLogo === 'logo' ? 'Uploading...' : 'Upload Logo'}
+                    <input type="file" accept="image/*" onChange={e => uploadBrandImage(e, 'logo')} className="hidden" disabled={Boolean(uploadingLogo)} />
+                  </label>
+                  {settings.logo && (
+                    <button type="button" onClick={() => setSettings(prev => ({ ...prev, logo: '' }))}
+                      className="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 text-sm font-medium hover:bg-gray-50 transition">
+                      সরান
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#41bfb8] text-white text-sm font-semibold cursor-pointer hover:bg-[#38a89d] transition ${uploadingLogo ? 'opacity-60 pointer-events-none' : ''}`}>
-                  {uploadingLogo ? <FiLoader className="animate-spin" size={15} /> : <FiUploadCloud size={15} />}
-                  {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
-                  <input type="file" accept="image/*" onChange={uploadLogo} className="hidden" disabled={uploadingLogo} />
-                </label>
-                {settings.logo && (
-                  <button type="button" onClick={() => setSettings(prev => ({ ...prev, logo: '' }))}
-                    className="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 text-sm font-medium hover:bg-gray-50 transition">
-                    Reset to default
-                  </button>
-                )}
-              </div>
+              <p className="text-xs text-gray-400 mt-2">PNG / SVG সুপারিশ করা হয় (transparent background)। আপলোডের পর নিচে <b>Save Settings</b> চাপুন। খালি রাখলে নামটাই লেখা হিসেবে দেখাবে।</p>
             </div>
-            <p className="text-xs text-gray-400 mt-2">PNG / SVG সুপারিশ করা হয় (transparent background)। আপলোডের পর নিচে <b>Save Settings</b> চাপুন। খালি রাখলে ডিফল্ট লোগো দেখাবে।</p>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Favicon (ব্রাউজার ট্যাবের আইকন)</label>
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="h-14 w-14 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                  {settings.favicon || settings.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={settings.favicon || settings.logo} alt="Favicon preview" className="h-8 w-8 object-contain" />
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
+                </div>
+                <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-semibold cursor-pointer hover:bg-gray-50 transition ${uploadingLogo === 'favicon' ? 'opacity-60 pointer-events-none' : ''}`}>
+                  {uploadingLogo === 'favicon' ? <FiLoader className="animate-spin" size={15} /> : <FiUploadCloud size={15} />}
+                  Upload
+                  <input type="file" accept="image/*" onChange={e => uploadBrandImage(e, 'favicon')} className="hidden" disabled={Boolean(uploadingLogo)} />
+                </label>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">চারকোনা (square) ছবি দিন — ৫১২×৫১২ পিক্সেল ভালো। খালি রাখলে লোগোটাই ব্যবহার হবে।</p>
+            </div>
           </div>
         </div>
 
@@ -517,6 +567,77 @@ const SiteSettingsTab = ({ showToast }) => {
           <div className="sm:col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-1">Instructions (optional)</label>
             <input type="text" name="paymentInstructions" value={settings.paymentInstructions || ''} onChange={handleChange} placeholder='e.g. "Use Send Money, not Payment. Keep the TrxID."' className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm" />
+          </div>
+        </div>
+      </div>
+
+      {/* Ordering & delivery — what the checkout page offers and charges */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <FiSettings className="text-[#F3A522]" />
+          <h2 className="text-lg font-semibold text-gray-800">Ordering &amp; Delivery</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          ক্রেতা চেকআউট পেজে কোন পদ্ধতিতে টাকা দিতে পারবে এবং ডেলিভারি চার্জ কত হবে।
+          অর্ডার করার সময়ের চার্জটাই ওই অর্ডারে বসে থাকে — পরে রেট বদলালে পুরোনো অর্ডার বদলায় না।
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={settings.codEnabled !== false}
+              onChange={e => setSettings(p => ({ ...p, codEnabled: e.target.checked }))}
+              className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#F3A522] focus:ring-[#F3A522]"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-gray-800">ক্যাশ অন ডেলিভারি</span>
+              <span className="block text-xs text-gray-500">
+                বই হাতে পেয়ে কুরিয়ারকে টাকা দেবে। শুধু ছাপা বইয়ের জন্য।
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={settings.onlinePaymentEnabled !== false}
+              onChange={e => setSettings(p => ({ ...p, onlinePaymentEnabled: e.target.checked }))}
+              className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#F3A522] focus:ring-[#F3A522]"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-gray-800">বিকাশ / রকেট / নগদ (আগে পেমেন্ট)</span>
+              <span className="block text-xs text-gray-500">
+                Send Money করে TrxID জমা দেবে, আপনি মিলিয়ে অ্যাপ্রুভ করবেন।
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ঢাকার ভেতরে (৳)</label>
+            <input type="number" min="0" name="deliveryChargeInsideDhaka" value={settings.deliveryChargeInsideDhaka ?? 120} onChange={e => setSettings(p => ({ ...p, deliveryChargeInsideDhaka: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ঢাকার বাইরে (৳)</label>
+            <input type="number" min="0" name="deliveryChargeOutsideDhaka" value={settings.deliveryChargeOutsideDhaka ?? 120} onChange={e => setSettings(p => ({ ...p, deliveryChargeOutsideDhaka: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ফ্রি ডেলিভারি — এর বেশি হলে (৳)</label>
+            <input type="number" min="0" name="freeDeliveryAbove" value={settings.freeDeliveryAbove ?? 0} onChange={e => setSettings(p => ({ ...p, freeDeliveryAbove: Number(e.target.value) }))} placeholder="0 = কখনো ফ্রি নয়" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">COD বাড়তি চার্জ (৳)</label>
+            <input type="number" min="0" name="codExtraCharge" value={settings.codExtraCharge ?? 0} onChange={e => setSettings(p => ({ ...p, codExtraCharge: Number(e.target.value) }))} placeholder="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm" />
+          </div>
+          <div className="sm:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">ডেলিভারি সম্পর্কে বার্তা</label>
+            <input type="text" name="deliveryNote" value={settings.deliveryNote || ''} onChange={handleChange} placeholder="ঢাকার ভেতরে ১-২ দিন, বাইরে ২-৪ কর্মদিবস" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">অর্ডার হেল্পলাইন</label>
+            <input type="text" name="orderSupportPhone" value={settings.orderSupportPhone || ''} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F3A522] focus:border-[#F3A522] outline-none text-sm font-mono" />
           </div>
         </div>
       </div>

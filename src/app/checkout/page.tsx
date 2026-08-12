@@ -4,7 +4,7 @@ import { Container } from "@/components/ui";
 import CheckoutView from "@/components/checkout/CheckoutView";
 
 export const metadata: Metadata = {
-  title: "Checkout · Sabbir Book",
+  title: "Checkout · Magic Viva",
   description: "Securely enroll in a course or order a book.",
 };
 

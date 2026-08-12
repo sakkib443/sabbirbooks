@@ -3,18 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { LuStethoscope, LuMenu, LuX, LuArrowRight } from "react-icons/lu";
+import { LuMenu, LuX, LuArrowRight } from "react-icons/lu";
 import { HiOutlineUserCircle } from "react-icons/hi2";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn, buttonVariants } from "@/components/ui";
-
-const BrandMark = () => (
-  <span className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-strong shadow-glow">
-    <LuStethoscope className="text-[22px] text-white" />
-    <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-card" />
-  </span>
-);
+// Name and logo come from site settings so they can be changed from the admin
+// panel — see components/shared/Brand.
+import { BrandMark, Wordmark } from "./Brand";
 
 const Navbar = () => {
   const [isSticky, setIsSticky] = useState(false);
@@ -70,12 +66,6 @@ const Navbar = () => {
   ];
 
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
-
-  const Wordmark = () => (
-    <span className="text-xl font-bold tracking-tight text-foreground">
-      Sabbir <span className="text-gradient-medical">Book</span>
-    </span>
-  );
 
   return (
     <>

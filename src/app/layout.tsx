@@ -50,10 +50,38 @@ const hindSiliguri = Hind_Siliguri({
   variable: "--font-hind-siliguri",
 });
 
-export const metadata: Metadata = {
-  title: "Sabbir Book",
-  description: "A medical course and book platform.",
-};
+// Tab title, share previews and the favicon all follow the brand configured in
+// the admin panel, so renaming the site does not leave the old name in the
+// browser tab. Cached for five minutes — this runs on every page render, and the
+// name changes about once in the life of the site.
+export async function generateMetadata(): Promise<Metadata> {
+  const fallback: Metadata = {
+    title: "Magic Viva",
+    description: "A medical course and book platform.",
+  };
+
+  const api = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/?$/i, "");
+  if (!api) return fallback;
+
+  try {
+    const res = await fetch(`${api}/api/settings`, { next: { revalidate: 300 } });
+    if (!res.ok) return fallback;
+    const body = await res.json();
+    const s = body?.data;
+    if (!s?.brandName) return fallback;
+
+    const icon = s.favicon || s.logo;
+    return {
+      title: { default: s.brandName, template: `%s · ${s.brandName}` },
+      description:
+        s.heroDescription || `${s.brandName} — medical courses, books and QR resources.`,
+      ...(icon ? { icons: { icon } } : {}),
+    };
+  } catch {
+    // The site must still render when the API is down.
+    return fallback;
+  }
+}
 
 export default function RootLayout({
   children,

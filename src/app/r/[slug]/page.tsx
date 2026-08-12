@@ -66,7 +66,7 @@ export default function QrLandingPage() {
         by: "by",
         home: "Back to Home",
         brand: "Scan Resource",
-        poweredBy: "Powered by Sabbir Book",
+        poweredBy: "Powered by Magic Viva",
         nfTitle: "Resource not found",
         nfMsg: "The resource for this QR code could not be found, or it hasn't been published yet. Try scanning the code in your book again.",
         errTitle: "Something went wrong",
@@ -266,7 +266,7 @@ function Frame({ children }: { children: React.ReactNode }) {
 }
 
 // ------------------------------------------------------------------
-// Small "Sabbir Book" brand bar shown at the top of the reading page.
+// Small "Magic Viva" brand bar shown at the top of the reading page.
 // ------------------------------------------------------------------
 function BrandBar({ label, bn }: { label: string; bn: string }) {
   return (
@@ -278,7 +278,7 @@ function BrandBar({ label, bn }: { label: string; bn: string }) {
         <LuHeartPulse className="text-base" />
       </span>
       <span className="flex flex-col leading-tight">
-        <span className="font-heading text-[15px] font-bold text-foreground">Sabbir Book</span>
+        <span className="font-heading text-[15px] font-bold text-foreground">Magic Viva</span>
         <span className={cn("text-[11px] font-medium text-muted-foreground", bn)}>{label}</span>
       </span>
     </Link>

@@ -1,8 +1,8 @@
 {
     "home": {
-        "title": "Sabbir Book",
+        "title": "Magic Viva",
         "tagline": "Medical Courses & Curated Books",
-        "welcome": "Welcome to Sabbir Book",
+        "welcome": "Welcome to Magic Viva",
         "description": "Learn from expert-led medical courses and trusted reference books — all in one place."
     },
     "navbar": {
@@ -19,7 +19,7 @@
         "badge": "Trusted by medical students across Bangladesh",
         "headingLine1": "Master Medicine with Expert-Led",
         "headingAccent": "Courses & Curated Books",
-        "subtitle": "Sabbir Book brings you exam-focused video courses and hand-picked reference books — for MBBS, admission prep, and beyond. Learn in Bangla or English, on any device.",
+        "subtitle": "Magic Viva brings you exam-focused video courses and hand-picked reference books — for MBBS, admission prep, and beyond. Learn in Bangla or English, on any device.",
         "ctaCourses": "Browse Courses",
         "ctaBooks": "Explore Books",
         "statCourses": "Medical Courses",
@@ -84,7 +84,7 @@
         "browse": "Browse all books"
     },
     "whyChoose": {
-        "eyebrow": "Why Sabbir Book",
+        "eyebrow": "Why Magic Viva",
         "title": "Built for Medical Learners",
         "subtitle": "Everything you need to study smart, pass exams, and grow into a confident clinician.",
         "items": {
@@ -125,7 +125,7 @@
         "note": "We respect your privacy. Unsubscribe anytime."
     },
     "footer": {
-        "brandDescription": "Sabbir Book is a medical learning platform offering expert-led courses and curated medical books — helping students and professionals master their field with confidence.",
+        "brandDescription": "Magic Viva is a medical learning platform offering expert-led courses and curated medical books — helping students and professionals master their field with confidence.",
         "explore": "Explore",
         "subjects": "Subjects",
         "contactUs": "Contact Us",
@@ -134,7 +134,7 @@
         "enterEmail": "Enter your email",
         "subscribe": "Subscribe",
         "addressValue": "Dhaka, Bangladesh",
-        "copyright": "© 2026 Sabbir Book. All rights reserved.",
+        "copyright": "© 2026 Magic Viva. All rights reserved.",
         "madeWith": "Made with",
         "inBangladesh": "in Bangladesh for medical learners"
     },
@@ -144,7 +144,7 @@
         "title2": "Your Medical Future",
         "subtitle": "A dedicated medical learning platform. We are committed to helping every student and professional master medicine with confidence.",
         "description1": "Our courses span the full medical curriculum — Anatomy, Physiology, Biochemistry, Pharmacology, Pathology, Microbiology, Community Medicine, and Forensic Medicine — taught by experienced doctors and educators.",
-        "description2": "At Sabbir Book we believe in exam-focused learning, trusted reference material, and a supportive community. Our mission is to make quality medical education accessible, bilingual, and available on any device.",
+        "description2": "At Magic Viva we believe in exam-focused learning, trusted reference material, and a supportive community. Our mission is to make quality medical education accessible, bilingual, and available on any device.",
         "practicalTraining": "Exam-Focused",
         "expertMentors": "Expert Doctors",
         "careerGrowth": "Career Ready",
@@ -153,7 +153,7 @@
         "leadershipTitle1": "Message from ",
         "leadershipTitle2": "Our Faculty",
         "active": "Active",
-        "ceoMessage": "Great doctors are built on strong foundations. At Sabbir Book, we don't just teach the syllabus — we prepare you to think, diagnose, and care with confidence.",
+        "ceoMessage": "Great doctors are built on strong foundations. At Magic Viva, we don't just teach the syllabus — we prepare you to think, diagnose, and care with confidence.",
         "missionBadge": "What We Stand For",
         "missionTitle1": "Our Mission ",
         "missionTitle2": "& Vision",

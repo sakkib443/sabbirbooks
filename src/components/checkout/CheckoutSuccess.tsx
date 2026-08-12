@@ -51,10 +51,26 @@ interface Labels {
   amountLabel: string;
   channelName: (id: ManualChannel) => string;
   methodNames: Record<string, string>;
+  // Cash on delivery
+  codTitle: string;
+  codSub: string;
+  codCollectLabel: string;
+  codDeliveryLabel: string;
+  codNextTitle: string;
+  codNext1: string;
+  codNext2: string;
+  codNext3: string;
+  codSupport: string;
 }
 
 export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Labels }) {
   const bn = L.bn;
+
+  // Cash on delivery → nothing has been paid; the screen has to say what is
+  // owed and when, or the buyer assumes the purchase is finished.
+  if (result.kind === "cod") {
+    return <CodBody result={result} L={L} />;
+  }
 
   // Manual payment → pending verification screen (distinct from the paid flow).
   if (result.kind === "manual") {
@@ -84,6 +100,85 @@ export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Label
         ) : (
           <BookBody order={result.order} L={L} />
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Cash on delivery: order placed, nothing paid yet ────────────────────────
+function CodBody({
+  result,
+  L,
+}: {
+  result: Extract<SuccessResult, { kind: "cod" }>;
+  L: Labels;
+}) {
+  const bn = L.bn;
+
+  return (
+    <div className="mx-auto max-w-xl">
+      <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-card sm:p-8">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+          <LuTruck className="text-3xl" />
+        </div>
+        <h1 className={cn("font-heading text-2xl font-bold text-foreground sm:text-3xl", bn)}>
+          {L.codTitle}
+        </h1>
+        <p className={cn("mx-auto mt-2 max-w-md text-muted-foreground", bn)}>{L.codSub}</p>
+
+        <div className="mt-6 rounded-xl border border-border bg-surface-soft p-4 text-left">
+          <Row bn={bn} icon={<LuHash />} label={result.title} value="" isTitle />
+          <div className="mt-3 space-y-2 border-t border-border pt-3">
+            <Row bn={bn} icon={<LuReceipt />} label={L.orderLabel} value={result.reference} mono />
+            {result.deliveryCharge > 0 && (
+              <Row bn={bn} label={L.codDeliveryLabel} value={formatTk(result.deliveryCharge)} />
+            )}
+            {/* The one number that matters: what to have ready in cash. */}
+            <Row bn={bn} label={L.codCollectLabel} value={formatTk(result.amount)} strong />
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            "mt-5 rounded-xl border border-primary/25 bg-primary-soft/40 p-4 text-left",
+            bn
+          )}
+        >
+          <p className="text-sm font-semibold text-foreground">{L.codNextTitle}</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-muted-foreground">
+            <li>{L.codNext1}</li>
+            <li>{L.codNext2}</li>
+            <li>{L.codNext3}</li>
+          </ol>
+          {result.deliveryNote && (
+            <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+              <LuClock className="mt-0.5 shrink-0" /> {result.deliveryNote}
+            </p>
+          )}
+          {result.supportPhone && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {L.codSupport}{" "}
+              <a href={`tel:${result.supportPhone}`} className="font-semibold text-primary">
+                {result.supportPhone}
+              </a>
+            </p>
+          )}
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href="/dashboard/user"
+            className={cn(buttonVariants({ variant: "accent", size: "lg" }), "flex-1", bn)}
+          >
+            <LuReceipt /> {L.viewMyOrders}
+          </Link>
+          <Link
+            href="/books"
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "flex-1", bn)}
+          >
+            {L.continueBooks} <LuArrowRight />
+          </Link>
+        </div>
       </div>
     </div>
   );

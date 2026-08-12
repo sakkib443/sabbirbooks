@@ -16,6 +16,7 @@ import { STORAGE_KEYS } from "@/components/auth/authClient";
 import {
   CheckoutBook,
   CheckoutCourse,
+  CheckoutOptions,
   CheckoutStep,
   ManualDetails,
   OrderResult,
@@ -213,6 +214,47 @@ export async function checkoutBook(opts: {
     genericErr
   );
   return finalized;
+}
+
+// ── Cash on delivery: create the order and stop ─────────────────────────────
+// No payment step at all. The order sits `pending` until an admin confirms it,
+// which is what starts fulfillment and opens the book's QR content — otherwise
+// a fake address would be enough to read the whole book for free.
+export async function submitBookCod(opts: {
+  book: CheckoutBook;
+  quantity: number;
+  shippingAddress: ShippingAddress;
+  onProgress?: (s: CheckoutStep) => void;
+  genericErr: string;
+}): Promise<OrderResult> {
+  const { book, quantity, shippingAddress, onProgress, genericErr } = opts;
+
+  onProgress?.("creating");
+  const order = await post<OrderResult>(
+    "/orders",
+    {
+      items: [{ bookSlugOrId: book.slug, quantity }],
+      shippingAddress,
+      paymentMethod: "cod",
+    },
+    genericErr
+  );
+  if (!order?._id) throw new Error(genericErr);
+  return order;
+}
+
+// ── Checkout options: enabled methods + delivery charges (public) ───────────
+export async function fetchCheckoutOptions(subtotal = 0): Promise<CheckoutOptions | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders/checkout-options?subtotal=${subtotal}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await readJson(res);
+    return (json.data as CheckoutOptions) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Manual payment: receiving numbers (public settings) ────────────────────

@@ -14,10 +14,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   FiArrowLeft, FiSave, FiImage, FiType, FiUser, FiTag, FiAlignLeft,
-  FiDollarSign, FiGlobe, FiBook, FiBox, FiLock, FiX, FiPlus, FiStar,
+  FiDollarSign, FiGlobe, FiBook, FiBox, FiLock, FiPlus, FiStar,
   FiFileText,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
+import ImagePicker, { MultiImagePicker } from '@/components/shared/ImagePicker';
 
 const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -97,9 +98,6 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
     }
     setPreviewInput('');
   };
-  const removePreview = (url) =>
-    set('previewImages', form.previewImages.filter((u) => u !== url));
-
   const isUrl = (v) => /^https?:\/\/.+/i.test((v || '').trim());
 
   // Only `title` is required. URL fields are validated only when a value is given;
@@ -350,13 +348,21 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
           <Card>
             <Label icon={FiFileText}>Preview Material (optional)</Label>
             <span className="text-xs font-medium text-slate-500">Preview images</span>
-            <div className="flex gap-2 mt-1">
+            <div className="mt-1.5">
+              <MultiImagePicker
+                value={form.previewImages}
+                onChange={(list) => set('previewImages', list)}
+                onError={(msg) => showToast('error', msg)}
+                label="নমুনা পাতার ছবি"
+              />
+            </div>
+            <div className="flex gap-2 mt-2">
               <input
                 type="text" value={previewInput}
                 onChange={(e) => setPreviewInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addPreview())}
-                placeholder="https://.../sample-page.jpg"
-                className={`${inputCls} border-slate-200`}
+                placeholder="অথবা লিংক বসান: https://.../sample-page.jpg"
+                className={`${inputCls} border-slate-200 text-sm`}
               />
               <button
                 type="button" onClick={addPreview}
@@ -365,22 +371,6 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 <FiPlus />
               </button>
             </div>
-            {form.previewImages.length > 0 && (
-              <div className="flex flex-wrap gap-3 mt-3">
-                {form.previewImages.map((url) => (
-                  <div key={url} className="relative group">
-                    <img src={url} alt="" className="w-16 h-20 object-cover rounded-md border border-slate-200"
-                      onError={(e) => (e.target.style.opacity = 0.3)} />
-                    <button
-                      type="button" onClick={() => removePreview(url)}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow"
-                    >
-                      <FiX size={11} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
             <div className="mt-4">
               <span className="text-xs font-medium text-slate-500">Preview PDF URL</span>
               <input
@@ -397,20 +387,14 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
         <div className="space-y-6">
           <Card>
             <Label icon={FiImage}>Cover Image</Label>
-            <input
-              type="text" name="coverImage" value={form.coverImage} onChange={handleChange}
-              placeholder="https://example.com/cover.jpg"
-              className={`${inputCls} ${errors.coverImage ? 'border-red-400' : 'border-slate-200'}`}
+            <ImagePicker
+              value={form.coverImage}
+              onChange={(url) => set('coverImage', url)}
+              onError={(msg) => showToast('error', msg)}
+              label="কভার"
+              hint="সেরা ফল পেতে খাড়া (portrait) ছবি দিন — যেমন ৬০০×৮০০ পিক্সেল।"
             />
             {err('coverImage')}
-            {form.coverImage && (
-              <img
-                src={form.coverImage} alt="Cover preview"
-                className="mt-4 w-full h-52 object-contain rounded-lg border border-slate-200 bg-slate-50"
-                onError={(e) => (e.target.style.display = 'none')}
-                onLoad={(e) => (e.target.style.display = 'block')}
-              />
-            )}
           </Card>
 
           <Card>

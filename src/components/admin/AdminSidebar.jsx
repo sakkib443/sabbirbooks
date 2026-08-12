@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useBrand } from '@/components/shared/Brand';
 import {
   FiHome, FiUsers, FiAward, FiMessageSquare,
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
@@ -12,6 +13,8 @@ import {
 } from 'react-icons/fi';
 
 const AdminSidebar = () => {
+  // Site name comes from admin settings, not a hardcoded string.
+  const { name: brandName, initials: brandInitials } = useBrand();
   const [isOpen, setIsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState(() => new Set(['Create New']));
@@ -268,16 +271,16 @@ const AdminSidebar = () => {
             {!collapsed ? (
               <Link href="/dashboard/admin" className="flex items-center gap-2.5 group">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/25">
-                  <span className="text-white font-black text-xs">SB</span>
+                  <span className="text-white font-black text-xs">{brandInitials}</span>
                 </div>
                 <div className="leading-tight">
-                  <p className="text-base font-bold text-slate-800">Sabbir Book</p>
+                  <p className="text-base font-bold text-slate-800">{brandName}</p>
                   <p className="text-[10px] text-[#c9871a] font-semibold -mt-0.5">Admin Panel</p>
                 </div>
               </Link>
             ) : (
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/25">
-                <span className="text-white font-black text-xs">SB</span>
+                <span className="text-white font-black text-xs">{brandInitials}</span>
               </div>
             )}
             <button

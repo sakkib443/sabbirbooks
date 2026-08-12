@@ -11,7 +11,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   FiArrowLeft,
   FiBook,
@@ -22,13 +21,17 @@ import {
   FiDownload,
   FiEdit3,
   FiFileText,
+  FiImage,
   FiList,
   FiLoader,
   FiPlus,
   FiMinus,
   FiSearch,
+  FiVideo,
   FiX,
 } from 'react-icons/fi';
+import AnswerStyles from '@/components/books/AnswerStyles';
+import Lightbox from '@/components/books/Lightbox';
 
 const API =
   (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '') + '/api';
@@ -61,6 +64,19 @@ function matchesQuery(text, q) {
   return (text || '').toLowerCase().includes(q.toLowerCase());
 }
 
+/** Divider that names each block of the answer card. */
+function SectionLabel({ icon, children }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-violet-500">{icon}</span>
+      <h3 className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+        {children}
+      </h3>
+      <span className="flex-1 h-px bg-slate-200" />
+    </div>
+  );
+}
+
 export default function BookPreviewPlayerPage() {
   const { bookId } = useParams();
   const router = useRouter();
@@ -82,6 +98,7 @@ export default function BookPreviewPlayerPage() {
   const [qLoading, setQLoading] = useState(false);
   const [activeQIndex, setActiveQIndex] = useState(0);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
 
   const openTopic = useCallback(async (part, chapter, topic, questionIndex = 0) => {
     setActivePart(part);
@@ -321,6 +338,15 @@ export default function BookPreviewPlayerPage() {
 
   return (
     <div className="min-h-screen h-screen overflow-hidden bg-[#f4f5f8] flex flex-col">
+      <AnswerStyles />
+      {lightbox && (
+        <Lightbox
+          images={lightbox.images}
+          index={lightbox.index}
+          onIndexChange={i => setLightbox(l => (l ? { ...l, index: i } : l))}
+          onClose={() => setLightbox(null)}
+        />
+      )}
       {/* Top bar — same role as course learn header */}
       <header className="bg-white border-b border-slate-200 h-14 flex items-center px-4 gap-3 shrink-0 z-30">
         <Link
@@ -438,47 +464,14 @@ export default function BookPreviewPlayerPage() {
                     Question {activeQIndex + 1} of {questions.length}
                   </p>
 
+                  {/* Answer → figures → video → downloads. This is the order a
+                      reader wants and the order the printed book implies; the
+                      video used to open the card, before the answer itself. */}
                   <div className="rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50 overflow-hidden">
-                    <div className="px-5 lg:px-7 py-6 space-y-5">
-                      {activeQuestion.videos?.map((v, i) => (
-                        <div key={v._id ?? i}>
-                          {v.title && (
-                            <p className="text-sm text-slate-500 mb-2">{v.title}</p>
-                          )}
-                          {v.provider === 'upload' ? (
-                            <>
-                              <video
-                                src={v.url}
-                                controls
-                                preload="metadata"
-                                playsInline
-                                className="w-full rounded-xl bg-slate-900"
-                              />
-                              <a
-                                href={v.url}
-                                download
-                                className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-violet-600 mt-2 transition"
-                              >
-                                <FiDownload className="w-3.5 h-3.5" /> ভিডিও ডাউনলোড
-                              </a>
-                            </>
-                          ) : (
-                            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-900">
-                              <iframe
-                                src={toEmbedUrl(v.url)}
-                                title={v.title || `video-${i}`}
-                                className="absolute inset-0 w-full h-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-
+                    <div className="px-5 lg:px-7 py-6 space-y-6">
                       {activeQuestion.answerHtml?.trim() ? (
                         <div
-                          className="prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed"
+                          className="sb-answer prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed"
                           dangerouslySetInnerHTML={{ __html: activeQuestion.answerHtml }}
                         />
                       ) : (
@@ -488,38 +481,110 @@ export default function BookPreviewPlayerPage() {
                       )}
 
                       {activeQuestion.images?.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {activeQuestion.images.map((src, i) => (
-                            <div
-                              key={i}
-                              className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-slate-100 bg-slate-50"
-                            >
-                              <Image
-                                src={src}
-                                alt={`figure ${i + 1}`}
-                                fill
-                                className="object-contain"
-                              />
-                            </div>
-                          ))}
-                        </div>
+                        <section>
+                          <SectionLabel icon={<FiImage size={13} />}>
+                            ছবি ({activeQuestion.images.length})
+                          </SectionLabel>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {activeQuestion.images.map((src, i) => (
+                              <button
+                                key={`${src}-${i}`}
+                                type="button"
+                                onClick={() =>
+                                  setLightbox({ images: activeQuestion.images, index: i })
+                                }
+                                className="group relative w-full aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 hover:border-violet-300 transition"
+                              >
+                                {/* Plain <img> rather than next/image: the URL host
+                                    is whatever the API is deployed on, and one
+                                    missing remotePatterns entry would break the
+                                    whole gallery instead of one picture. */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={src}
+                                  alt={`ছবি ${i + 1}`}
+                                  loading="lazy"
+                                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                                />
+                                <span className="absolute top-1.5 left-1.5 text-[10px] font-medium bg-slate-900/60 text-white rounded px-1.5 py-0.5">
+                                  {i + 1}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {activeQuestion.videos?.length > 0 && (
+                        <section>
+                          <SectionLabel icon={<FiVideo size={13} />}>
+                            ভিডিও ({activeQuestion.videos.length})
+                          </SectionLabel>
+                          <div className="space-y-4">
+                            {activeQuestion.videos.map((v, i) => (
+                              <div key={v._id ?? i}>
+                                {v.title && (
+                                  <p className="text-sm text-slate-600 font-medium mb-2">
+                                    {v.title}
+                                  </p>
+                                )}
+                                {v.provider === 'upload' ? (
+                                  <>
+                                    <video
+                                      src={v.url}
+                                      controls
+                                      preload="metadata"
+                                      playsInline
+                                      className="w-full rounded-xl bg-slate-900 aspect-video"
+                                    />
+                                    <a
+                                      href={v.url}
+                                      download
+                                      className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-violet-600 mt-2 transition"
+                                    >
+                                      <FiDownload className="w-3.5 h-3.5" /> ভিডিও ডাউনলোড
+                                    </a>
+                                  </>
+                                ) : (
+                                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-900">
+                                    <iframe
+                                      src={toEmbedUrl(v.url)}
+                                      title={v.title || `video-${i}`}
+                                      className="absolute inset-0 w-full h-full"
+                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                      allowFullScreen
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </section>
                       )}
 
                       {activeQuestion.attachments?.length > 0 && (
-                        <div className="space-y-2">
-                          {activeQuestion.attachments.map((a, i) => (
-                            <a
-                              key={a._id ?? i}
-                              href={a.fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-violet-50 hover:border-violet-200 px-4 py-3 transition"
-                            >
-                              <FiFileText className="w-4 h-4 text-violet-500 shrink-0" />
-                              <span className="text-sm text-slate-700 truncate">{a.title}</span>
-                            </a>
-                          ))}
-                        </div>
+                        <section>
+                          <SectionLabel icon={<FiFileText size={13} />}>
+                            ফাইল ({activeQuestion.attachments.length})
+                          </SectionLabel>
+                          <div className="space-y-2">
+                            {activeQuestion.attachments.map((a, i) => (
+                              <a
+                                key={a._id ?? i}
+                                href={a.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-violet-50 hover:border-violet-200 px-4 py-3 transition"
+                              >
+                                <FiFileText className="w-4 h-4 text-violet-500 shrink-0" />
+                                <span className="text-sm text-slate-700 truncate flex-1">
+                                  {a.title}
+                                </span>
+                                <FiDownload className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              </a>
+                            ))}
+                          </div>
+                        </section>
                       )}
                     </div>
                   </div>
