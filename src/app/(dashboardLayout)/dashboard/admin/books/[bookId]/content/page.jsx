@@ -35,6 +35,7 @@ import {
   FiChevronLeft,
   FiEye,
 } from 'react-icons/fi';
+import FileDropZone from '@/components/shared/FileDropZone';
 
 // The editor touches window/document on mount, so it must not be part of the
 // server bundle.
@@ -56,6 +57,15 @@ const hdrs = () => ({
 });
 
 const EMPTY_VIDEO = { title: '', url: '', provider: 'youtube' };
+
+// Both halves matter: a file dragged off the desktop sometimes arrives with an
+// empty `type` (Windows does this for less common extensions), and a file
+// picked through the dialog sometimes has a type but a name we do not know.
+const isImage = f =>
+  f.type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|avif|bmp)$/i.test(f.name || '');
+
+const isVideo = f =>
+  f.type?.startsWith('video/') || /\.(mp4|webm|mov|mkv|avi|m4v)$/i.test(f.name || '');
 
 const formatSize = bytes => {
   if (!bytes) return '';
@@ -246,9 +256,7 @@ export default function BookContentEditorPage() {
     }));
 
   const handleImageUpload = files => {
-    const images = Array.from(files || []).filter(
-      f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name)
-    );
+    const images = Array.from(files || []).filter(isImage);
     if (!images.length) {
       setFlash('শুধু ছবি ফাইল (JPG, PNG, WebP) দেওয়া যাবে');
       return;
@@ -257,6 +265,28 @@ export default function BookContentEditorPage() {
       ...d,
       images: [...(d.images || []), data.fileUrl],
     }));
+  };
+
+  /**
+   * A drop anywhere on the page, sorted into the three buckets by file type —
+   * so a mixed selection of scans, a clip and a PDF lands where each belongs
+   * without the admin aiming at three separate boxes.
+   *
+   * Sequential because uploadMany owns a single progress bar and a single
+   * busyUpload flag; running the buckets concurrently would have them
+   * overwrite each other's percentage.
+   */
+  const handleDroppedFiles = async files => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+
+    const images = list.filter(isImage);
+    const videos = list.filter(isVideo);
+    const rest = list.filter(f => !isImage(f) && !isVideo(f));
+
+    if (images.length) await handleImageUpload(images);
+    if (videos.length) await handleVideoUpload(videos);
+    if (rest.length) await handleFileUpload(rest);
   };
 
   /** Move an image one slot left/right — reader sees them in this order. */
@@ -600,6 +630,19 @@ export default function BookContentEditorPage() {
 
   return (
     <div className="p-4 lg:p-6">
+      {/* Drop files anywhere on the page — sorted into ছবি / ভিডিও / ফাইল by
+          type. Dropping onto the answer editor still inlines the image into
+          the text instead, because that handler runs first. */}
+      <FileDropZone
+        onFiles={handleDroppedFiles}
+        disabled={!draft || Boolean(busyUpload)}
+        disabledMessage={
+          busyUpload ? 'আগের আপলোড শেষ হলে দিন' : 'আগে বাঁ পাশ থেকে একটি প্রশ্ন বেছে নিন'
+        }
+        title="ছেড়ে দিলেই আপলোড শুরু"
+        hint="ছবি → ছবির ঘরে, ভিডিও → ভিডিওতে, বাকি ফাইল → অ্যাটাচমেন্টে যাবে"
+      />
+
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>

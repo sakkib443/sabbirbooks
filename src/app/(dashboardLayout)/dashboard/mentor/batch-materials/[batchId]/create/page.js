@@ -7,6 +7,7 @@ import {
   FiArrowLeft, FiSave, FiLoader, FiFolder, FiClock, FiLink, FiVideo,
   FiFileText, FiPlus, FiTrash2, FiExternalLink, FiUpload, FiMapPin,
 } from 'react-icons/fi';
+import FileDropZone from '@/components/shared/FileDropZone';
 
 const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
@@ -99,35 +100,53 @@ export default function CreateClassPage({ params }) {
     fetchBatch();
   }, [batchId]);
 
-  // File upload to Cloudinary
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Upload materials to Cloudinary.
+  //
+  // Takes a list rather than a single file, because a drag off the desktop is
+  // normally the whole class's handouts at once. Sequential, so a failure half
+  // way through keeps everything already uploaded and can name what did not
+  // make it.
+  const uploadMaterials = async (files) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
     setUploading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch(`${API}/classes/upload-material`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      const data = await res.json();
-      if (data.success) {
-        setForm(prev => ({
-          ...prev,
-          materials: [...prev.materials, {
+    const token = localStorage.getItem('token');
+    const added = [];
+    const failed = [];
+
+    for (const file of list) {
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(`${API}/classes/upload-material`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        const data = await res.json();
+        if (data.success) {
+          added.push({
             title: file.name.replace(/\.[^/.]+$/, ''),
             fileUrl: data.data.fileUrl,
             fileType: data.data.fileType || 'pdf',
-          }],
-        }));
-      } else {
-        alert('Upload failed: ' + (data.message || ''));
+          });
+        } else {
+          failed.push(`${file.name}: ${data.message || 'Error'}`);
+        }
+      } catch (err) {
+        failed.push(`${file.name}: upload error`);
       }
-    } catch (err) { alert('Upload error'); }
+    }
+
+    if (added.length) setForm(prev => ({ ...prev, materials: [...prev.materials, ...added] }));
     setUploading(false);
+    if (failed.length) {
+      alert(`${added.length}টি আপলোড হয়েছে, ${failed.length}টি হয়নি —\n${failed.join('\n')}`);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    await uploadMaterials(e.target.files);
     e.target.value = '';
   };
 
@@ -207,6 +226,15 @@ export default function CreateClassPage({ params }) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Drop handouts anywhere on the page instead of aiming at the box. */}
+      <FileDropZone
+        onFiles={uploadMaterials}
+        disabled={uploading}
+        disabledMessage="আগের আপলোড শেষ হলে দিন"
+        title="ছেড়ে দিলেই মেটেরিয়ালে যোগ হবে"
+        hint="PDF, PPT, DOC, ZIP — একসাথে কয়েকটাও দেওয়া যাবে"
+      />
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href={`/dashboard/mentor/batch-materials/${batchId}`}
@@ -386,7 +414,7 @@ export default function CreateClassPage({ params }) {
               <label className={`flex items-center justify-center gap-2 px-4 py-4 border-2 border-dashed rounded-xl cursor-pointer transition ${
                 uploading ? 'border-amber-300 bg-amber-50' : 'border-teal-300 bg-teal-50/30 hover:bg-teal-50 hover:border-teal-400'
               }`}>
-                <input type="file" className="hidden" onChange={handleFileUpload}
+                <input type="file" className="hidden" multiple onChange={handleFileUpload}
                   accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.xlsx" disabled={uploading} />
                 {uploading ? (
                   <><FiLoader className="animate-spin text-amber-500" size={18} /> <span className="text-sm font-medium text-amber-600">Uploading to Cloudinary...</span></>

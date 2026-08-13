@@ -8,6 +8,7 @@ import {
   FiArrowLeft, FiFolder, FiCalendar, FiMapPin,
   FiPlay, FiEye, FiMaximize2, FiMinimize2, FiDownload,
 } from 'react-icons/fi';
+import FileDropZone from '@/components/shared/FileDropZone';
 
 /* ─── URL helpers for inline embedding ─── */
 const getDriveEmbedUrl = (url) => {
@@ -181,36 +182,54 @@ export default function BatchMaterialDetailPage({ params }) {
     setForm({ ...form, materials: arr });
   };
 
-  // Upload file to Cloudinary
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Upload materials to Cloudinary.
+  //
+  // Takes a list rather than a single file: a drag off the desktop is normally
+  // the whole class's handouts at once, and one-at-a-time meant re-opening the
+  // picker for every one of them. Sequential, so a failure half way through
+  // keeps everything already uploaded and can name what did not make it.
+  const uploadMaterials = async (files) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
     setUploading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch(`${API}/classes/upload-material`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success) {
-        const mat = {
-          title: file.name.replace(/\.[^/.]+$/, ''),
-          fileUrl: data.data.fileUrl,
-          fileType: data.data.fileType || 'pdf',
-        };
-        setForm(prev => ({ ...prev, materials: [...prev.materials, mat] }));
-      } else {
-        alert('Upload failed: ' + (data.message || 'Error'));
+    const token = localStorage.getItem('token');
+    const added = [];
+    const failed = [];
+
+    for (const file of list) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`${API}/classes/upload-material`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.success) {
+          added.push({
+            title: file.name.replace(/\.[^/.]+$/, ''),
+            fileUrl: data.data.fileUrl,
+            fileType: data.data.fileType || 'pdf',
+          });
+        } else {
+          failed.push(`${file.name}: ${data.message || 'Error'}`);
+        }
+      } catch (err) {
+        console.error(err);
+        failed.push(`${file.name}: upload error`);
       }
-    } catch (err) {
-      console.error(err);
-      alert('Upload error');
     }
+
+    if (added.length) setForm(prev => ({ ...prev, materials: [...prev.materials, ...added] }));
     setUploading(false);
+    if (failed.length) {
+      alert(`${added.length}টি আপলোড হয়েছে, ${failed.length}টি হয়নি —\n${failed.join('\n')}`);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    await uploadMaterials(e.target.files);
     e.target.value = ''; // reset input
   };
 
@@ -353,6 +372,18 @@ export default function BatchMaterialDetailPage({ params }) {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Drop handouts anywhere while the class form is open, instead of
+          aiming at the upload box. */}
+      <FileDropZone
+        onFiles={uploadMaterials}
+        disabled={!showModal || uploading}
+        disabledMessage={
+          uploading ? 'আগের আপলোড শেষ হলে দিন' : 'আগে একটি ক্লাস খুলুন বা নতুন ক্লাস যোগ করুন'
+        }
+        title="ছেড়ে দিলেই মেটেরিয়ালে যোগ হবে"
+        hint="PDF, PPT, DOC, ZIP — একসাথে কয়েকটাও দেওয়া যাবে"
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -717,7 +748,7 @@ export default function BatchMaterialDetailPage({ params }) {
                   <div>
                     <label className="text-[10px] font-bold text-teal-600 uppercase mb-2 block">📤 Upload File (PDF, PPT, DOC, ZIP)</label>
                     <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition ${uploading ? 'border-amber-300 bg-amber-50' : 'border-teal-300 bg-white hover:bg-teal-50 hover:border-teal-400'}`}>
-                      <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.xlsx" disabled={uploading} />
+                      <input type="file" className="hidden" multiple onChange={handleFileUpload} accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.xlsx" disabled={uploading} />
                       {uploading ? (
                         <><FiLoader className="animate-spin text-amber-500" size={16} /> <span className="text-xs font-medium text-amber-600">Uploading to Cloudinary...</span></>
                       ) : (

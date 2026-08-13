@@ -60,6 +60,7 @@ import {
   LuHighlighter,
 } from 'react-icons/lu';
 import { cleanWordHtml, rehostPastedImages } from './wordPaste';
+import { isImageFile } from '@/components/shared/uploadMedia';
 
 const API =
   (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '') + '/api';
@@ -244,7 +245,7 @@ export default function RichTextEditor({ value, onChange, placeholder = 'উত�
 
   const uploadImages = useCallback(
     async files => {
-      const list = Array.from(files || []).filter(f => f.type.startsWith('image/'));
+      const list = Array.from(files || []).filter(isImageFile);
       if (!list.length || !editor) return;
       setUploading(true);
       try {
@@ -563,9 +564,17 @@ export default function RichTextEditor({ value, onChange, placeholder = 'উত�
         className="relative"
         onDragOver={e => e.preventDefault()}
         onDrop={e => {
-          if (!e.dataTransfer?.files?.length) return;
+          const files = Array.from(e.dataTransfer?.files || []);
+          if (!files.length) return;
+          // Claim the drop only when every file is an image we can actually
+          // inline. A PDF or a video landing on the editor belongs in the
+          // page's attachment / video list, and a preventDefault here would
+          // swallow it — the page-wide drop zone never sees an event that was
+          // already handled, so the file would vanish with no error at all.
+          // Leaving it unhandled lets it bubble up and get sorted properly.
+          if (!files.every(isImageFile)) return;
           e.preventDefault();
-          uploadImages(e.dataTransfer.files);
+          uploadImages(files);
         }}
       >
         <EditorContent editor={editor} />
