@@ -12,9 +12,22 @@ import {
   FiAward, FiActivity, FiLayers, FiHeadphones,
 } from 'react-icons/fi';
 
+import { can, getStoredUser } from '@/lib/permissions';
+
 const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => localStorage.getItem('token') || '';
 const headers = () => ({ Authorization: `Bearer ${getToken()}` });
+
+// Where a content-only manager actually works. Shown instead of the business
+// dashboard, which would otherwise render a wall of zeros built from 403s.
+const CONTENT_SHORTCUTS = [
+  { label: 'All Books', href: '/dashboard/admin/books', icon: FiBook },
+  { label: 'Add Book', href: '/dashboard/admin/books/create', icon: FiPlus },
+  { label: 'Book Content (QR)', href: '/dashboard/admin/book-content', icon: FiGrid },
+  { label: 'Courses', href: '/dashboard/admin/course', icon: FiLayers },
+  { label: 'Blog', href: '/dashboard/admin/blog', icon: FiActivity },
+  { label: 'Notice Board', href: '/dashboard/admin/notice-board', icon: FiClock },
+];
 
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -46,7 +59,14 @@ export default function AdminDashboard() {
     else setSelectedMonth(m => m + 1);
   };
 
+  // Every panel below is sales/enrollment data. An account without
+  // `analytics.read` gets the content workspace instead — and, just as
+  // importantly, never fires the requests, so the network tab holds no
+  // half-answered business questions either.
+  const showBusinessDashboard = can(getStoredUser(), 'analytics.read');
+
   const fetchData = useCallback(async () => {
+    if (!showBusinessDashboard) { setLoading(false); return; }
     setLoading(true);
     try {
       const [monthlyRes, dailyRes, typeRes, coursesRes, ieltsRes, enrollRes, incomeRes] = await Promise.all([
@@ -72,7 +92,7 @@ export default function AdminDashboard() {
       setPendingOrders(enrollments.filter(e => e.status === 'pending').slice(0, 5));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, showBusinessDashboard]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -312,38 +332,82 @@ export default function AdminDashboard() {
     },
   ];
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white rounded-xl border border-slate-200/60 px-4 py-3 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center text-white shadow-md shadow-[#F3A522]/20">
+  // ─── Content workspace (no analytics.read) ───────────────────
+  if (!showBusinessDashboard) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 bg-dash-card rounded-xl border border-dash-line/60 px-4 py-3 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center text-white shadow-md shadow-brand/20">
             <FiGrid size={18} />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-900 outfit">Dashboard Overview</h1>
-            <p className="text-xs text-slate-400">{dateStr}</p>
+            <h1 className="text-base font-bold text-dash-ink outfit">
+              স্বাগতম, {userName}
+            </h1>
+            <p className="text-xs text-dash-mute2">{dateStr}</p>
+          </div>
+        </div>
+
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-dash-ink2 mb-1">Content workspace</h2>
+          <p className="text-xs text-dash-mute2 mb-4">
+            কনটেন্ট আপলোড ও ডিলিট করার জায়গাগুলো এখানে। বিক্রি, অর্ডার বা ব্যক্তিগত তথ্য এই
+            অ্যাকাউন্টে দেখা যায় না।
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {CONTENT_SHORTCUTS.map(({ label, href, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-3 rounded-xl border border-dash-line px-4 py-3 hover:border-brand hover:bg-brand-soft/50 transition group"
+              >
+                <span className="w-9 h-9 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center shrink-0">
+                  <Icon size={16} />
+                </span>
+                <span className="text-sm font-semibold text-dash-ink3 group-hover:text-brand-deep">
+                  {label}
+                </span>
+                <FiArrowRight size={14} className="ml-auto text-dash-faint group-hover:text-brand" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-dash-card rounded-xl border border-dash-line/60 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center text-white shadow-md shadow-brand/20">
+            <FiGrid size={18} />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-dash-ink outfit">Dashboard Overview</h1>
+            <p className="text-xs text-dash-mute2">{dateStr}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {/* Month Picker */}
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
-            <button onClick={goToPrevMonth} className="p-0.5 hover:bg-slate-200 rounded transition">
-              <FiChevronLeft size={14} className="text-slate-500" />
+          <div className="flex items-center gap-1 bg-dash-soft border border-dash-line rounded-lg px-2 py-1.5">
+            <button onClick={goToPrevMonth} className="p-0.5 hover:bg-dash-soft3 rounded transition">
+              <FiChevronLeft size={14} className="text-dash-mute" />
             </button>
             <div className="flex items-center gap-1.5 px-2 min-w-[100px] justify-center">
-              <FiCalendar size={12} className="text-slate-400" />
-              <span className="text-xs font-medium text-slate-600">{MONTHS_SHORT[selectedMonth]} {selectedYear}</span>
+              <FiCalendar size={12} className="text-dash-mute2" />
+              <span className="text-xs font-medium text-dash-ink4">{MONTHS_SHORT[selectedMonth]} {selectedYear}</span>
             </div>
             <button onClick={goToNextMonth} disabled={isCurrentMonth}
-              className={`p-0.5 rounded transition ${isCurrentMonth ? 'opacity-30' : 'hover:bg-slate-200'}`}>
-              <FiChevronRight size={14} className="text-slate-500" />
+              className={`p-0.5 rounded transition ${isCurrentMonth ? 'opacity-30' : 'hover:bg-dash-soft3'}`}>
+              <FiChevronRight size={14} className="text-dash-mute" />
             </button>
           </div>
-          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition">
+          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-ink4 bg-dash-soft border border-dash-line rounded-lg hover:bg-dash-soft2 transition">
             <FiRefreshCw size={12} /> Reload
           </button>
-          <Link href="/dashboard/admin/analytics" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-[#F3A522] to-[#d88f13] rounded-lg hover:shadow-md hover:shadow-[#F3A522]/30 transition shadow-sm">
+          <Link href="/dashboard/admin/analytics" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-brand to-brand-hover rounded-lg hover:shadow-md hover:shadow-brand/30 transition shadow-sm">
             <FiTrendingUp size={12} /> Analytics
           </Link>
         </div>
@@ -356,13 +420,13 @@ export default function AdminDashboard() {
           const isPositive = stat.change >= 0;
           const hasChange = !loading && stat.change !== null && stat.change !== undefined;
           return (
-            <div key={stat.title} className="bg-white rounded-xl border border-slate-200/60 px-4 py-3 shadow-sm hover:shadow-md transition-all group">
+            <div key={stat.title} className="bg-dash-card rounded-xl border border-dash-line/60 px-4 py-3 shadow-sm hover:shadow-md transition-all group">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase truncate">{stat.title}</p>
+                  <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider uppercase truncate">{stat.title}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <p className="text-xl font-bold text-slate-900 outfit leading-none">
-                      {loading ? <span className="inline-block w-12 h-6 bg-slate-100 animate-pulse rounded-md" /> : stat.value}
+                    <p className="text-xl font-bold text-dash-ink outfit leading-none">
+                      {loading ? <span className="inline-block w-12 h-6 bg-dash-soft2 animate-pulse rounded-md" /> : stat.value}
                     </p>
                     {hasChange && (
                       <span className={`flex items-center gap-0.5 text-[10px] font-semibold px-1 py-0.5 rounded ${isPositive ? 'text-emerald-600 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
@@ -373,7 +437,7 @@ export default function AdminDashboard() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1 truncate">{stat.subtitle}</p>
+                  <p className="text-[11px] text-dash-mute2 mt-1 truncate">{stat.subtitle}</p>
                 </div>
                 <div className={`w-9 h-9 rounded-lg ${stat.iconBg} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0`}>
                   <Icon size={17} />
@@ -387,18 +451,18 @@ export default function AdminDashboard() {
       {/* Chart Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Daily Sales Overview - Left (2/3) */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/60 shadow-sm">
+        <div className="lg:col-span-2 bg-dash-card rounded-xl border border-dash-line/60 shadow-sm">
           <div className="flex items-center justify-between px-5 pt-5 pb-2">
             <div>
-              <h2 className="text-base font-semibold text-slate-800 outfit-semibold">Sales Overview</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Daily Course vs IELTS — {MONTHS_FULL[selectedMonth]} {selectedYear}</p>
+              <h2 className="text-base font-semibold text-dash-ink2 outfit-semibold">Sales Overview</h2>
+              <p className="text-xs text-dash-mute2 mt-0.5">Daily Course vs IELTS — {MONTHS_FULL[selectedMonth]} {selectedYear}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5 text-xs text-dash-mute">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" /> Course
               </span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#F3A522]" /> IELTS
+              <span className="flex items-center gap-1.5 text-xs text-dash-mute">
+                <span className="w-2.5 h-2.5 rounded-full bg-brand" /> IELTS
               </span>
             </div>
           </div>
@@ -406,7 +470,7 @@ export default function AdminDashboard() {
           {/* SVG Smooth Line Chart — Daily */}
           <div className="px-2 pb-1">
             {loading ? (
-              <div className="h-[230px] bg-slate-50 rounded-lg animate-pulse mx-3 my-2" />
+              <div className="h-[230px] bg-dash-soft rounded-lg animate-pulse mx-3 my-2" />
             ) : (
               <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
                 <defs>
@@ -418,21 +482,21 @@ export default function AdminDashboard() {
                 {/* Grid */}
                 {gridLines.map((line, i) => (
                   <g key={i}>
-                    <line x1={PX} y1={line.y} x2={PX + usableW} y2={line.y} stroke="#f1f5f9" strokeWidth="1" />
-                    <text x={PX - 8} y={line.y + 3.5} fontSize="9" fill="#94a3b8" textAnchor="end" fontFamily="Inter, sans-serif">{line.label}</text>
+                    <line x1={PX} y1={line.y} x2={PX + usableW} y2={line.y} stroke="var(--dash-line-soft)" strokeWidth="1" />
+                    <text x={PX - 8} y={line.y + 3.5} fontSize="9" fill="var(--dash-mute2)" textAnchor="end" fontFamily="Inter, sans-serif">{line.label}</text>
                   </g>
                 ))}
-                <line x1={PX} y1={PY + usableH} x2={PX + usableW} y2={PY + usableH} stroke="#e2e8f0" strokeWidth="1" />
+                <line x1={PX} y1={PY + usableH} x2={PX + usableW} y2={PY + usableH} stroke="var(--dash-line)" strokeWidth="1" />
                 {/* Day labels */}
                 {dayLabels.map((dl, i) => (
-                  <text key={i} x={dl.x} y={H - 8} fontSize="9" fill="#94a3b8" textAnchor="middle" fontFamily="Inter, sans-serif">{dl.label}</text>
+                  <text key={i} x={dl.x} y={H - 8} fontSize="9" fill="var(--dash-mute2)" textAnchor="middle" fontFamily="Inter, sans-serif">{dl.label}</text>
                 ))}
                 {/* Area fill (Course) */}
                 {areaPath && <path d={areaPath} fill="url(#salesGrad)" />}
                 {/* Course line */}
                 {linePath && <path d={linePath} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
                 {/* IELTS line */}
-                {ieltsLinePath && <path d={ieltsLinePath} fill="none" stroke="#F3A522" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                {ieltsLinePath && <path d={ieltsLinePath} fill="none" stroke="var(--brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
                 {/* Course dots on hover */}
                 {chartPts.map(([x, y], i) => (
                   <g key={`c${i}`} className="group/dot">
@@ -452,7 +516,7 @@ export default function AdminDashboard() {
                 {ieltsPts.map(([x, y], i) => (
                   <g key={`i${i}`} className="group/idot">
                     <circle cx={x} cy={y} r="12" fill="transparent" className="cursor-pointer" />
-                    <circle cx={x} cy={y} r="3.5" fill="#F3A522" stroke="white" strokeWidth="2" className="opacity-0 group-hover/idot:opacity-100 transition-opacity" />
+                    <circle cx={x} cy={y} r="3.5" fill="var(--brand)" stroke="white" strokeWidth="2" className="opacity-0 group-hover/idot:opacity-100 transition-opacity" />
                     {ielts.daily[i]?.count > 0 && (
                       <>
                         <rect x={x - 20} y={y - 26} width="40" height="18" rx="4" fill="#a5680f" className="opacity-0 group-hover/idot:opacity-100 transition-opacity" />
@@ -468,39 +532,39 @@ export default function AdminDashboard() {
           </div>
 
           {/* Bottom Stats */}
-          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/30 rounded-b-xl">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-dash-line-soft bg-dash-soft/30 rounded-b-xl">
             <div className="flex items-center gap-8">
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 tracking-wider">THIS MONTH REVENUE</p>
-                <p className="text-xl font-bold text-slate-900 outfit">৳{combinedRevMonth.toLocaleString()}</p>
+                <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider">THIS MONTH REVENUE</p>
+                <p className="text-xl font-bold text-dash-ink outfit">৳{combinedRevMonth.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 tracking-wider">COURSE SALES</p>
+                <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider">COURSE SALES</p>
                 <p className="text-xl font-bold text-indigo-600 outfit">{totalMonthSales}</p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 tracking-wider">IELTS ORDERS</p>
-                <p className="text-xl font-bold text-[#c9871a] outfit">{ielts.ordersMonth}</p>
+                <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider">IELTS ORDERS</p>
+                <p className="text-xl font-bold text-brand-ink outfit">{ielts.ordersMonth}</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-semibold text-slate-400 tracking-wider">TODAY</p>
-              <p className="text-xl font-bold text-slate-900 outfit">{(dailySales[now.getDate() - 1]?.count ?? 0) + (ielts.daily[now.getDate() - 1]?.count ?? 0)}</p>
+              <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider">TODAY</p>
+              <p className="text-xl font-bold text-dash-ink outfit">{(dailySales[now.getDate() - 1]?.count ?? 0) + (ielts.daily[now.getDate() - 1]?.count ?? 0)}</p>
             </div>
           </div>
         </div>
 
         {/* Platform Distribution - Right (1/3) */}
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-5 flex flex-col">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm p-5 flex flex-col">
           <div className="mb-3">
-            <h2 className="text-base font-semibold text-slate-800 outfit-semibold">Course vs IELTS</h2>
-            <p className="text-xs text-slate-400 mt-0.5">This month by type</p>
+            <h2 className="text-base font-semibold text-dash-ink2 outfit-semibold">Course vs IELTS</h2>
+            <p className="text-xs text-dash-mute2 mt-0.5">This month by type</p>
           </div>
 
           {/* Donut Chart */}
           <div className="flex-1 flex items-center justify-center py-1">
             {loading ? (
-              <div className="w-[160px] h-[160px] bg-slate-100 rounded-full animate-pulse" />
+              <div className="w-[160px] h-[160px] bg-dash-soft2 rounded-full animate-pulse" />
             ) : (
               <div className="relative" style={{ width: 180, height: 180 }}>
                 <svg viewBox="0 0 180 180" className="w-full h-full">
@@ -508,7 +572,7 @@ export default function AdminDashboard() {
                     const cx = 90, cy = 90, r = 72, innerR = 50;
                     let accAngle = -90;
                     if (combinedTotal === 0) {
-                      return <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f1f5f9" strokeWidth="22" />;
+                      return <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--dash-line-soft)" strokeWidth="22" />;
                     }
                     return combinedDist.map((item, i) => {
                       const angle = (item.count / combinedTotal) * 360;
@@ -529,8 +593,8 @@ export default function AdminDashboard() {
                   })()}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold text-slate-800 outfit">{combinedTotal}</span>
-                  <span className="text-[11px] text-[#c9871a] font-medium">Total</span>
+                  <span className="text-3xl font-bold text-dash-ink2 outfit">{combinedTotal}</span>
+                  <span className="text-[11px] text-brand-ink font-medium">Total</span>
                 </div>
               </div>
             )}
@@ -539,7 +603,7 @@ export default function AdminDashboard() {
           {/* Legend */}
           <div className="space-y-2.5 mt-3">
             {!loading && combinedDist.length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-2">No data this month</p>
+              <p className="text-xs text-dash-mute2 text-center py-2">No data this month</p>
             )}
             {combinedDist.map((item, i) => {
               const pct = combinedTotal > 0 ? Math.round((item.count / combinedTotal) * 100) : 0;
@@ -547,11 +611,11 @@ export default function AdminDashboard() {
                 <div key={i} className="flex items-center justify-between group cursor-default">
                   <div className="flex items-center gap-2.5">
                     <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: donutColor(item, i) }} />
-                    <span className="text-sm text-slate-600 group-hover:text-slate-900 transition">{item.type}</span>
+                    <span className="text-sm text-dash-ink4 group-hover:text-dash-ink transition">{item.type}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-slate-800">{item.count}</span>
-                    <span className="text-xs text-slate-400 w-8 text-right">{pct}%</span>
+                    <span className="text-sm font-bold text-dash-ink2">{item.count}</span>
+                    <span className="text-xs text-dash-mute2 w-8 text-right">{pct}%</span>
                   </div>
                 </div>
               );
@@ -563,23 +627,23 @@ export default function AdminDashboard() {
       {/* ═══ Quick Actions ═══ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { title: 'Create Course', desc: 'Add new course', href: '/dashboard/admin/course/create', icon: FiBook, color: '#9AA0A8', bg: 'from-orange-400 to-orange-600' },
-          { title: 'Add Mentor', desc: 'Invite mentor', href: '/dashboard/admin/mentor/create', icon: FiUsers, color: '#41bfb8', bg: 'from-teal-400 to-teal-600' },
+          { title: 'Create Course', desc: 'Add new course', href: '/dashboard/admin/course/create', icon: FiBook, color: 'var(--dash-steel)', bg: 'from-orange-400 to-orange-600' },
+          { title: 'Add Mentor', desc: 'Invite mentor', href: '/dashboard/admin/mentor/create', icon: FiUsers, color: 'var(--aqua)', bg: 'from-teal-400 to-teal-600' },
           { title: 'New Category', desc: 'Add category', href: '/dashboard/admin/category/create', icon: FiGrid, color: '#8B5CF6', bg: 'from-purple-400 to-purple-600' },
           { title: 'Create Batch', desc: 'New student batch', href: '/dashboard/admin/batch/create', icon: FiCalendar, color: '#3B82F6', bg: 'from-blue-400 to-blue-600' },
         ].map((action) => {
           const Icon = action.icon;
           return (
             <Link key={action.title} href={action.href}
-              className="bg-white rounded-xl border border-slate-200/60 p-4 shadow-sm hover:shadow-md transition-all group flex items-center gap-3">
+              className="bg-dash-card rounded-xl border border-dash-line/60 p-4 shadow-sm hover:shadow-md transition-all group flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.bg} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform shrink-0`}>
                 <Icon size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 transition">{action.title}</p>
-                <p className="text-[11px] text-slate-400">{action.desc}</p>
+                <p className="text-sm font-semibold text-dash-ink3 group-hover:text-dash-ink transition">{action.title}</p>
+                <p className="text-[11px] text-dash-mute2">{action.desc}</p>
               </div>
-              <FiPlus className="text-slate-300 group-hover:text-slate-500 transition shrink-0" size={16} />
+              <FiPlus className="text-dash-faint group-hover:text-dash-mute transition shrink-0" size={16} />
             </Link>
           );
         })}
@@ -589,25 +653,25 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* Recent Courses */}
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-dash-line-soft">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white">
                 <FiBook size={14} />
               </div>
-              <h2 className="text-sm font-semibold text-slate-800">Recent Courses</h2>
+              <h2 className="text-sm font-semibold text-dash-ink2">Recent Courses</h2>
             </div>
-            <Link href="/dashboard/admin/course" className="flex items-center gap-1 text-xs text-[#c9871a] hover:text-[#a5680f] font-medium transition">
+            <Link href="/dashboard/admin/course" className="flex items-center gap-1 text-xs text-brand-ink hover:text-brand-deep font-medium transition">
               View All <FiArrowRight size={12} />
             </Link>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-dash-soft">
             {recentCourses.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs">No courses found</div>
+              <div className="p-8 text-center text-dash-mute2 text-xs">No courses found</div>
             ) : (
               recentCourses.map((course, idx) => (
-                <div key={course._id || idx} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 transition">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                <div key={course._id || idx} className="flex items-center gap-3 px-5 py-3 hover:bg-dash-soft/50 transition">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-dash-soft2 shrink-0">
                     {course.image ? (
                       <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
                     ) : (
@@ -617,10 +681,10 @@ export default function AdminDashboard() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm text-slate-700 truncate">{course.title}</h3>
-                    <p className="text-[11px] text-slate-400">{course.type || 'Online'} • {course.durationMonth || '3'}m</p>
+                    <h3 className="text-sm text-dash-ink3 truncate">{course.title}</h3>
+                    <p className="text-[11px] text-dash-mute2">{course.type || 'Online'} • {course.durationMonth || '3'}m</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-600 shrink-0">৳{course.fee || '0'}</p>
+                  <p className="text-xs font-semibold text-dash-ink4 shrink-0">৳{course.fee || '0'}</p>
                 </div>
               ))
             )}
@@ -628,21 +692,21 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent IELTS Orders */}
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-dash-line-soft">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white">
                 <FiHeadphones size={14} />
               </div>
-              <h2 className="text-sm font-semibold text-slate-800">Recent IELTS Orders</h2>
+              <h2 className="text-sm font-semibold text-dash-ink2">Recent IELTS Orders</h2>
             </div>
-            <Link href="/dashboard/admin/ielts/orders" className="flex items-center gap-1 text-xs text-[#c9871a] hover:text-[#a5680f] font-medium transition">
+            <Link href="/dashboard/admin/ielts/orders" className="flex items-center gap-1 text-xs text-brand-ink hover:text-brand-deep font-medium transition">
               View All <FiArrowRight size={12} />
             </Link>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-dash-soft">
             {ielts.recent.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs">No IELTS orders yet</div>
+              <div className="p-8 text-center text-dash-mute2 text-xs">No IELTS orders yet</div>
             ) : (
               ielts.recent.map((order, idx) => {
                 const s = order.studentId || {};
@@ -651,15 +715,15 @@ export default function AdminDashboard() {
                   ? 'text-emerald-600 bg-emerald-50'
                   : order.status === 'pending'
                     ? 'text-amber-600 bg-amber-50'
-                    : 'text-slate-500 bg-slate-100';
+                    : 'text-dash-mute bg-dash-soft2';
                 return (
-                  <div key={order._id || idx} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 transition">
+                  <div key={order._id || idx} className="flex items-center gap-3 px-5 py-3 hover:bg-dash-soft/50 transition">
                     <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
                       <FiHeadphones size={14} className="text-violet-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm text-slate-700 truncate">{order.packageTitle || 'IELTS Mock'}</h3>
-                      <p className="text-[11px] text-slate-400 truncate">{name} • {new Date(order.createdAt).toLocaleDateString()}</p>
+                      <h3 className="text-sm text-dash-ink3 truncate">{order.packageTitle || 'IELTS Mock'}</h3>
+                      <p className="text-[11px] text-dash-mute2 truncate">{name} • {new Date(order.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 capitalize ${badge}`}>{order.status}</span>
                   </div>
@@ -670,33 +734,33 @@ export default function AdminDashboard() {
         </div>
 
         {/* Pending Orders */}
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-dash-line-soft">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white">
                 <FiClock size={14} />
               </div>
-              <h2 className="text-sm font-semibold text-slate-800">Pending Orders</h2>
+              <h2 className="text-sm font-semibold text-dash-ink2">Pending Orders</h2>
             </div>
-            <Link href="/dashboard/admin/orders" className="flex items-center gap-1 text-xs text-[#c9871a] hover:text-[#a5680f] font-medium transition">
+            <Link href="/dashboard/admin/orders" className="flex items-center gap-1 text-xs text-brand-ink hover:text-brand-deep font-medium transition">
               View All <FiArrowRight size={12} />
             </Link>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-dash-soft">
             {pendingOrders.length === 0 ? (
               <div className="p-8 text-center">
                 <FiCheckCircle size={24} className="text-emerald-400 mx-auto mb-2" />
-                <p className="text-xs text-slate-400">No pending orders!</p>
+                <p className="text-xs text-dash-mute2">No pending orders!</p>
               </div>
             ) : (
               pendingOrders.map((order, idx) => (
-                <div key={order._id || idx} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 transition">
+                <div key={order._id || idx} className="flex items-center gap-3 px-5 py-3 hover:bg-dash-soft/50 transition">
                   <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
                     <FiAlertCircle size={14} className="text-amber-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm text-slate-700 truncate">{order.courseId?.title || 'Course'}</h3>
-                    <p className="text-[11px] text-slate-400">{order.studentId?.firstName || 'Student'} • {new Date(order.createdAt).toLocaleDateString()}</p>
+                    <h3 className="text-sm text-dash-ink3 truncate">{order.courseId?.title || 'Course'}</h3>
+                    <p className="text-[11px] text-dash-mute2">{order.studentId?.firstName || 'Student'} • {new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
                   <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full shrink-0">Pending</span>
                 </div>

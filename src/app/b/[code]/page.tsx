@@ -22,6 +22,7 @@ import {
   LuDownload,
   LuFileText,
   LuImage,
+  LuInfo,
   LuLoaderCircle,
   LuLock,
   LuTriangleAlert,
@@ -105,7 +106,7 @@ function toEmbedUrl(url: string): string {
   return url;
 }
 
-/** Small heading that separates answer / figures / video / downloads. */
+/** Small heading that separates figures / video / extra info / downloads. */
 function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 mb-3">
@@ -264,6 +265,14 @@ export default function BookTopicScanPage() {
   const { topic, chapter, part, questions } = data;
   const active = questions[activeIndex];
 
+  // Each block renders only when it has something in it, so the question can
+  // carry any combination of the four without leaving an orphan heading.
+  const hasImages = (active?.images?.length ?? 0) > 0;
+  const hasVideos = (active?.videos?.length ?? 0) > 0;
+  const hasFiles = (active?.attachments?.length ?? 0) > 0;
+  const hasExtra = Boolean(active?.answerHtml?.trim());
+  const hasAnything = hasImages || hasVideos || hasExtra || hasFiles;
+
   const crumb = [part?.title, chapter && `${chapter.chapterNo ?? ""} ${chapter.title}`.trim()]
     .filter(Boolean)
     .join(" › ");
@@ -340,125 +349,147 @@ export default function BookTopicScanPage() {
                   </p>
                 )}
 
-                {/* Reading order, deliberately: answer → figures → video →
-                    downloads. The video used to sit above the answer, so the
-                    first thing a reader met after the question was a player,
-                    with the actual answer pushed below the fold. */}
-                {active.answerHtml?.trim() ? (
-                  <div
-                    className="sb-answer prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: active.answerHtml }}
-                  />
-                ) : (
-                  <div className="rounded-lg border border-dashed border-[#333] px-4 py-6 text-center">
-                    <p className="text-sm text-slate-500">উত্তরটি শীঘ্রই যোগ করা হবে।</p>
-                  </div>
-                )}
+                {/* Reading order, deliberately: figures → video → extra info →
+                    downloads. The reader is holding the printed book, which
+                    already carries the real answer; the text here is only
+                    supplementary, so the material paper cannot show — pictures,
+                    then video — goes first. This block used to lead with that
+                    text back when it was treated as THE answer. Don't move it
+                    back up without first changing what it is. */}
+                <div className="space-y-7">
+                  {hasImages && (
+                    <section>
+                      <SectionLabel icon={<LuImage className="w-3.5 h-3.5" />}>
+                        ছবি ({active.images.length})
+                      </SectionLabel>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        {active.images.map((src, i) => (
+                          <button
+                            key={`${src}-${i}`}
+                            type="button"
+                            onClick={() => setLightbox({ images: active.images, index: i })}
+                            className="group relative w-full aspect-square rounded-lg overflow-hidden bg-[#1c1c1c] border border-[#282828] hover:border-emerald-500/60 transition"
+                          >
+                            {/* Plain <img>, not next/image: these URLs point at
+                                whatever host the API is deployed on, and a missing
+                                remotePatterns entry would turn the whole gallery
+                                into an error instead of a picture. */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={src}
+                              alt={`ছবি ${i + 1}`}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                            />
+                            <span className="absolute top-1.5 left-1.5 text-[10px] font-medium bg-black/60 text-white rounded px-1.5 py-0.5">
+                              {i + 1}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
 
-                {active.images?.length > 0 && (
-                  <section className="mt-7">
-                    <SectionLabel icon={<LuImage className="w-3.5 h-3.5" />}>
-                      ছবি ({active.images.length})
-                    </SectionLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {active.images.map((src, i) => (
-                        <button
-                          key={`${src}-${i}`}
-                          type="button"
-                          onClick={() => setLightbox({ images: active.images, index: i })}
-                          className="group relative w-full aspect-square rounded-lg overflow-hidden bg-[#1c1c1c] border border-[#282828] hover:border-emerald-500/60 transition"
-                        >
-                          {/* Plain <img>, not next/image: these URLs point at
-                              whatever host the API is deployed on, and a missing
-                              remotePatterns entry would turn the whole gallery
-                              into an error instead of a picture. */}
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={src}
-                            alt={`ছবি ${i + 1}`}
-                            loading="lazy"
-                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-                          />
-                          <span className="absolute top-1.5 left-1.5 text-[10px] font-medium bg-black/60 text-white rounded px-1.5 py-0.5">
-                            {i + 1}
-                          </span>
-                        </button>
-                      ))}
+                  {hasVideos && (
+                    <section>
+                      <SectionLabel icon={<LuVideo className="w-3.5 h-3.5" />}>
+                        ভিডিও ({active.videos.length})
+                      </SectionLabel>
+                      <div className="space-y-4">
+                        {active.videos.map((v, i) => (
+                          <div key={v._id ?? i}>
+                            {v.title && (
+                              <p className="text-sm text-slate-300 mb-2 font-medium">{v.title}</p>
+                            )}
+
+                            {v.provider === "upload" ? (
+                              <>
+                                {/* Served from our own /uploads by express.static,
+                                    which honours Range requests — so seeking works. */}
+                                <video
+                                  src={v.url}
+                                  controls
+                                  preload="metadata"
+                                  playsInline
+                                  controlsList="nodownload"
+                                  className="w-full rounded-lg bg-black aspect-video"
+                                />
+                                <a
+                                  href={v.url}
+                                  download
+                                  className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 mt-2 transition"
+                                >
+                                  <LuDownload className="w-3.5 h-3.5" /> ভিডিওটি ডাউনলোড করুন
+                                </a>
+                              </>
+                            ) : (
+                              <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
+                                <iframe
+                                  src={toEmbedUrl(v.url)}
+                                  title={v.title || `video-${i}`}
+                                  className="absolute inset-0 w-full h-full"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Deliberately not labelled "উত্তর" — the answer is on the
+                      paper page in the reader's hands. This is what did not fit
+                      there. */}
+                  {hasExtra && (
+                    <section>
+                      <SectionLabel icon={<LuInfo className="w-3.5 h-3.5" />}>
+                        অতিরিক্ত তথ্য
+                      </SectionLabel>
+                      <p className="text-xs text-slate-500 mb-3">
+                        মূল উত্তরটি বইয়ের পাতাতেই আছে — এখানে বাড়তি ব্যাখ্যা ও তথ্য।
+                      </p>
+                      <div
+                        className="sb-answer prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: active.answerHtml ?? "" }}
+                      />
+                    </section>
+                  )}
+
+                  {hasFiles && (
+                    <section>
+                      <SectionLabel icon={<LuFileText className="w-3.5 h-3.5" />}>
+                        ফাইল ({active.attachments.length})
+                      </SectionLabel>
+                      <div className="space-y-2">
+                        {active.attachments.map((a, i) => (
+                          <a
+                            key={a._id ?? i}
+                            href={a.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 rounded-lg bg-[#1c1c1c] hover:bg-[#282828] px-4 py-3 transition"
+                          >
+                            <LuFileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-sm truncate flex-1">{a.title}</span>
+                            <LuDownload className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          </a>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Nothing attached at all — one line, so the question isn't
+                      followed by bare padding. */}
+                  {!hasAnything && (
+                    <div className="rounded-lg border border-dashed border-[#333] px-4 py-6 text-center">
+                      <p className="text-sm text-slate-500">
+                        এই প্রশ্নে এখনো ছবি, ভিডিও বা অতিরিক্ত তথ্য যোগ করা হয়নি।
+                      </p>
                     </div>
-                  </section>
-                )}
-
-                {active.videos?.length > 0 && (
-                  <section className="mt-7">
-                    <SectionLabel icon={<LuVideo className="w-3.5 h-3.5" />}>
-                      ভিডিও ({active.videos.length})
-                    </SectionLabel>
-                    <div className="space-y-4">
-                      {active.videos.map((v, i) => (
-                        <div key={v._id ?? i}>
-                          {v.title && (
-                            <p className="text-sm text-slate-300 mb-2 font-medium">{v.title}</p>
-                          )}
-
-                          {v.provider === "upload" ? (
-                            <>
-                              {/* Served from our own /uploads by express.static,
-                                  which honours Range requests — so seeking works. */}
-                              <video
-                                src={v.url}
-                                controls
-                                preload="metadata"
-                                playsInline
-                                controlsList="nodownload"
-                                className="w-full rounded-lg bg-black aspect-video"
-                              />
-                              <a
-                                href={v.url}
-                                download
-                                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 mt-2 transition"
-                              >
-                                <LuDownload className="w-3.5 h-3.5" /> ভিডিওটি ডাউনলোড করুন
-                              </a>
-                            </>
-                          ) : (
-                            <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
-                              <iframe
-                                src={toEmbedUrl(v.url)}
-                                title={v.title || `video-${i}`}
-                                className="absolute inset-0 w-full h-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {active.attachments?.length > 0 && (
-                  <section className="mt-7">
-                    <SectionLabel icon={<LuFileText className="w-3.5 h-3.5" />}>
-                      ফাইল ({active.attachments.length})
-                    </SectionLabel>
-                    <div className="space-y-2">
-                      {active.attachments.map((a, i) => (
-                        <a
-                          key={a._id ?? i}
-                          href={a.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 rounded-lg bg-[#1c1c1c] hover:bg-[#282828] px-4 py-3 transition"
-                        >
-                          <LuFileText className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span className="text-sm truncate flex-1">{a.title}</span>
-                          <LuDownload className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        </a>
-                      ))}
-                    </div>
-                  </section>
-                )}
+                  )}
+                </div>
 
                 {/* Prev / next — easier than aiming at a small chip on a phone. */}
                 <div className="flex items-center justify-between gap-3 mt-8 pt-5 border-t border-[#282828]">

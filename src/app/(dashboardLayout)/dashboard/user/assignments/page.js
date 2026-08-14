@@ -73,42 +73,42 @@ export default function StudentAssignmentsPage() {
   const submittedIds = submissions.map(s => s.assignmentId?._id);
   const pending = assignments.filter(a => !submittedIds.includes(a._id));
 
-  if (loading) return <div className="p-6 min-h-screen bg-slate-50 flex items-center justify-center"><FiLoader className="animate-spin text-[#F3A522]" size={30} /></div>;
+  if (loading) return <div className="p-6 min-h-screen bg-dash-soft flex items-center justify-center"><FiLoader className="animate-spin text-brand" size={30} /></div>;
 
   return (
     <div className="space-y-6">
-      <div className="mb-2"><h1 className="text-2xl font-bold text-slate-900">My Assignments</h1></div>
+      <div className="mb-2"><h1 className="text-2xl font-bold text-dash-ink">My Assignments</h1></div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm text-center">
-          <p className="text-3xl font-bold text-[#F3A522]">{assignments.length}</p>
-          <p className="text-xs text-slate-500">Total</p>
+        <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-5 shadow-sm text-center">
+          <p className="text-3xl font-bold text-brand">{assignments.length}</p>
+          <p className="text-xs text-dash-mute">Total</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm text-center">
+        <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-5 shadow-sm text-center">
           <p className="text-3xl font-bold text-emerald-600">{submissions.length}</p>
-          <p className="text-xs text-slate-500">Submitted</p>
+          <p className="text-xs text-dash-mute">Submitted</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm text-center">
+        <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-5 shadow-sm text-center">
           <p className="text-3xl font-bold text-amber-600">{pending.length}</p>
-          <p className="text-xs text-slate-500">Pending</p>
+          <p className="text-xs text-dash-mute">Pending</p>
         </div>
       </div>
 
       {/* Pending */}
       {pending.length > 0 && (
         <div className="mb-8">
-          <h2 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><FiAlertCircle className="text-amber-500" /> Pending Assignments</h2>
+          <h2 className="font-bold text-dash-ink2 mb-3 flex items-center gap-2"><FiAlertCircle className="text-amber-500" /> Pending Assignments</h2>
           <div className="space-y-2">
             {pending.map(a => {
               const tr = getTimeRemaining(a.deadline);
               return (
-                <div key={a._id} className={`bg-white rounded-xl border p-4 ${tr.overdue ? 'border-red-200 bg-red-50/30' : 'border-slate-200/60'}`}>
+                <div key={a._id} className={`bg-dash-card rounded-xl border p-4 ${tr.overdue ? 'border-red-200 bg-red-50/30' : 'border-dash-line/60'}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-sm">{a.title}</h3>
-                      <p className="text-xs text-slate-500">{a.courseId?.title}</p>
-                      <div className="flex gap-3 mt-1 text-xs text-slate-400">
+                      <h3 className="font-bold text-dash-ink2 text-sm">{a.title}</h3>
+                      <p className="text-xs text-dash-mute">{a.courseId?.title}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-dash-mute2">
                         <span><FiAward className="inline mr-1" />{a.totalMarks} marks</span>
                         <span className={tr.overdue ? 'text-red-600 font-bold' : 'text-amber-600'}>
                           <FiClock className="inline mr-1" />{tr.text}
@@ -117,7 +117,7 @@ export default function StudentAssignmentsPage() {
                     </div>
                     <button onClick={() => { setSubmitModal(a); setSubmitForm({ text: '', fileUrl: '' }); }}
                       disabled={tr.overdue}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 ${tr.overdue ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#F3A522] text-white hover:shadow-lg'}`}>
+                      className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 ${tr.overdue ? 'bg-dash-soft2 text-dash-mute2 cursor-not-allowed' : 'bg-brand text-white hover:shadow-lg'}`}>
                       <FiUpload size={14} /> Submit
                     </button>
                   </div>
@@ -129,17 +129,17 @@ export default function StudentAssignmentsPage() {
       )}
 
       {/* Submitted */}
-      <h2 className="font-bold text-slate-800 mb-3">📝 Submitted Assignments</h2>
+      <h2 className="font-bold text-dash-ink2 mb-3">📝 Submitted Assignments</h2>
       <div className="space-y-2">
         {submissions.length === 0 ? (
-          <p className="text-slate-500 text-sm">No submissions yet.</p>
+          <p className="text-dash-mute text-sm">No submissions yet.</p>
         ) : submissions.map(s => (
-          <div key={s._id} className="bg-white rounded-xl border border-slate-200/60 p-4 flex items-center justify-between shadow-sm hover:shadow-md transition">
+          <div key={s._id} className="bg-dash-card rounded-xl border border-dash-line/60 p-4 flex items-center justify-between shadow-sm hover:shadow-md transition">
             <div>
-              <p className="font-bold text-slate-800 text-sm">{s.assignmentId?.title}</p>
-              <p className="text-xs text-slate-500">{s.assignmentId?.courseId?.title} • {new Date(s.submittedAt).toLocaleDateString()}</p>
+              <p className="font-bold text-dash-ink2 text-sm">{s.assignmentId?.title}</p>
+              <p className="text-xs text-dash-mute">{s.assignmentId?.courseId?.title} • {new Date(s.submittedAt).toLocaleDateString()}</p>
               {s.status === 'graded' && s.feedback && (
-                <p className="text-xs text-slate-500 mt-1">💬 {s.feedback}</p>
+                <p className="text-xs text-dash-mute mt-1">💬 {s.feedback}</p>
               )}
             </div>
             <div className="text-right">
@@ -159,27 +159,27 @@ export default function StudentAssignmentsPage() {
       {/* Submit Modal */}
       {submitModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6">
+          <div className="bg-dash-card rounded-2xl w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-slate-800">Submit: {submitModal.title}</h2>
+              <h2 className="font-bold text-dash-ink2">Submit: {submitModal.title}</h2>
               <button onClick={() => setSubmitModal(null)}><FiX /></button>
             </div>
-            {submitModal.description && <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg mb-4">{submitModal.description}</p>}
+            {submitModal.description && <p className="text-sm text-dash-ink4 bg-dash-soft p-3 rounded-lg mb-4">{submitModal.description}</p>}
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">Your Answer</label>
+                <label className="block text-xs font-bold text-dash-ink4 mb-1">Your Answer</label>
                 <textarea value={submitForm.text} onChange={e => setSubmitForm({...submitForm, text: e.target.value})}
-                  rows={5} placeholder="Write your answer here..." className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:border-[#F3A522] outline-none" />
+                  rows={5} placeholder="Write your answer here..." className="w-full px-3 py-2 border border-dash-line rounded-lg text-sm resize-none focus:border-brand outline-none" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">File URL (optional)</label>
+                <label className="block text-xs font-bold text-dash-ink4 mb-1">File URL (optional)</label>
                 <input value={submitForm.fileUrl} onChange={e => setSubmitForm({...submitForm, fileUrl: e.target.value})}
-                  placeholder="Google Drive / Cloudinary link" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-[#F3A522] outline-none" />
+                  placeholder="Google Drive / Cloudinary link" className="w-full px-3 py-2 border border-dash-line rounded-lg text-sm focus:border-brand outline-none" />
               </div>
             </div>
             <div className="flex gap-3 mt-4">
-              <button onClick={() => setSubmitModal(null)} className="flex-1 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
-              <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-2 bg-[#F3A522] text-white rounded-xl text-sm font-bold disabled:opacity-50">
+              <button onClick={() => setSubmitModal(null)} className="flex-1 py-2 border border-dash-line rounded-xl text-sm font-bold text-dash-ink4 hover:bg-dash-soft transition">Cancel</button>
+              <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-2 bg-brand text-white rounded-xl text-sm font-bold disabled:opacity-50">
                 {submitting ? 'Submitting...' : 'Submit'}
               </button>
             </div>

@@ -53,21 +53,21 @@ export default function MyBookPage() {
     load();
   }, [load]);
 
-  if (loading) return <div className="p-8 text-slate-500">লোড হচ্ছে…</div>;
+  if (loading) return <div className="p-8 text-dash-mute">লোড হচ্ছে…</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
   return (
     <div className="p-4 lg:p-6">
-      <h1 className="text-xl font-semibold text-slate-900">আমার বই</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">
+      <h1 className="text-xl font-semibold text-dash-ink">আমার বই</h1>
+      <p className="text-sm text-dash-mute mt-1 mb-6">
         যে টপিকগুলো আপনি স্ক্যান করেছেন। নতুন টপিক দেখতে বইয়ের সেই পাতার QR কোড স্ক্যান করুন।
       </p>
 
       {scans.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-16 text-center">
-          <FiBookOpen className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600 font-medium">এখনো কোনো টপিক স্ক্যান করেননি</p>
-          <p className="text-sm text-slate-500 mt-1">
+        <div className="rounded-xl border border-dashed border-dash-line-strong py-16 text-center">
+          <FiBookOpen className="w-8 h-8 text-dash-faint mx-auto mb-3" />
+          <p className="text-dash-ink4 font-medium">এখনো কোনো টপিক স্ক্যান করেননি</p>
+          <p className="text-sm text-dash-mute mt-1">
             বইয়ের যেকোনো টপিকের পাশের QR কোড ফোন দিয়ে স্ক্যান করুন।
           </p>
         </div>
@@ -80,15 +80,15 @@ export default function MyBookPage() {
               <Link
                 key={scan._id}
                 href={`/b/${topic.qrCode}`}
-                className="rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-300 hover:shadow-sm transition"
+                className="rounded-xl border border-dash-line bg-dash-card p-4 hover:border-dash-line-strong hover:shadow-sm transition"
               >
-                <p className="font-medium text-slate-900 leading-snug line-clamp-2">
+                <p className="font-medium text-dash-ink leading-snug line-clamp-2">
                   {topic.isImplicit ? topic.title : `${topic.topicNo ?? ''} ${topic.title}`.trim()}
                 </p>
                 {scan.bookId?.title && (
-                  <p className="text-xs text-slate-500 mt-1">{scan.bookId.title}</p>
+                  <p className="text-xs text-dash-mute mt-1">{scan.bookId.title}</p>
                 )}
-                <p className="flex items-center gap-1.5 text-xs text-slate-400 mt-3">
+                <p className="flex items-center gap-1.5 text-xs text-dash-mute2 mt-3">
                   <FiClock className="w-3.5 h-3.5" />
                   {timeAgo(scan.lastScannedAt)}
                   {scan.scanCount > 1 && <span>· {scan.scanCount} বার</span>}

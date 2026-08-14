@@ -111,20 +111,20 @@ export default function CreateBlog() {
                 <div className="flex items-center gap-4">
                     <Link
                         href="/dashboard/admin/blog"
-                        className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                        className="p-2 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
                     >
                         <FiArrowLeft />
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800 outfit">Create New Blog</h1>
-                        <p className="text-slate-500 text-sm work">Add a new blog post to your website</p>
+                        <h1 className="text-2xl font-bold text-dash-ink2 outfit">Create New Blog</h1>
+                        <p className="text-dash-mute text-sm work">Add a new blog post to your website</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
                         onClick={() => setPreview(!preview)}
-                        className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
                     >
                         <FiEye />
                         {preview ? 'Edit' : 'Preview'}
@@ -132,7 +132,7 @@ export default function CreateBlog() {
                     <button
                         onClick={handleSubmit}
                         disabled={loading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-[#41bfb8] text-white font-medium rounded-lg hover:bg-[#38a89d] transition-all shadow-lg shadow-teal-100 disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-aqua text-white font-medium rounded-lg hover:bg-aqua-hover transition-all shadow-lg shadow-teal-100 disabled:opacity-50"
                     >
                         <FiSave />
                         {loading ? 'Publishing...' : 'Publish Blog'}
@@ -146,9 +146,9 @@ export default function CreateBlog() {
                     {!preview ? (
                         <>
                             {/* Title - English */}
-                            <div className="bg-white rounded-xl border border-slate-200 p-6">
-                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                                    <FiType className="text-[#41bfb8]" />
+                            <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                                <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                                    <FiType className="text-aqua" />
                                     Blog Title (English) *
                                 </label>
                                 <input
@@ -157,16 +157,16 @@ export default function CreateBlog() {
                                     value={formData.title}
                                     onChange={handleChange}
                                     placeholder="Enter an engaging title for your blog..."
-                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all ${errors.title ? 'border-red-400' : 'border-slate-200'
+                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all ${errors.title ? 'border-red-400' : 'border-dash-line'
                                         }`}
                                 />
                                 {errors.title && <p className="text-red-500 text-xs mt-2">{errors.title}</p>}
                             </div>
 
                             {/* Title - Bengali */}
-                            <div className="bg-white rounded-xl border border-slate-200 p-6">
-                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                                    <FiType className="text-[#9AA0A8]" />
+                            <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                                <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                                    <FiType className="text-dash-steel" />
                                     Blog Title (Bengali)
                                 </label>
                                 <input
@@ -175,14 +175,14 @@ export default function CreateBlog() {
                                     value={formData.titleBn}
                                     onChange={handleChange}
                                     placeholder="ব্লগের শিরোনাম বাংলায় লিখুন..."
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all hind-siliguri"
+                                    className="w-full px-4 py-3 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all hind-siliguri"
                                 />
                             </div>
 
                             {/* Excerpt - English */}
-                            <div className="bg-white rounded-xl border border-slate-200 p-6">
-                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                                    <FiAlignLeft className="text-[#41bfb8]" />
+                            <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                                <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                                    <FiAlignLeft className="text-aqua" />
                                     Short Excerpt (English)
                                 </label>
                                 <textarea
@@ -191,14 +191,14 @@ export default function CreateBlog() {
                                     onChange={handleChange}
                                     placeholder="Write a brief summary of your blog (displayed in listings)..."
                                     rows={3}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all resize-none"
+                                    className="w-full px-4 py-3 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all resize-none"
                                 />
                             </div>
 
                             {/* Excerpt - Bengali */}
-                            <div className="bg-white rounded-xl border border-slate-200 p-6">
-                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                                    <FiAlignLeft className="text-[#9AA0A8]" />
+                            <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                                <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                                    <FiAlignLeft className="text-dash-steel" />
                                     Short Excerpt (Bengali)
                                 </label>
                                 <textarea
@@ -207,14 +207,14 @@ export default function CreateBlog() {
                                     onChange={handleChange}
                                     placeholder="ব্লগের সংক্ষিপ্ত বিবরণ বাংলায় লিখুন..."
                                     rows={3}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all resize-none hind-siliguri"
+                                    className="w-full px-4 py-3 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all resize-none hind-siliguri"
                                 />
                             </div>
 
                             {/* Content - English */}
-                            <div className="bg-white rounded-xl border border-slate-200 p-6">
-                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                                    <FiAlignLeft className="text-[#41bfb8]" />
+                            <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                                <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                                    <FiAlignLeft className="text-aqua" />
                                     Full Content (English) *
                                 </label>
                                 <textarea
@@ -223,16 +223,16 @@ export default function CreateBlog() {
                                     onChange={handleChange}
                                     placeholder="Write your complete blog content here... You can use markdown formatting."
                                     rows={12}
-                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all resize-none ${errors.content ? 'border-red-400' : 'border-slate-200'
+                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all resize-none ${errors.content ? 'border-red-400' : 'border-dash-line'
                                         }`}
                                 />
                                 {errors.content && <p className="text-red-500 text-xs mt-2">{errors.content}</p>}
                             </div>
 
                             {/* Content - Bengali */}
-                            <div className="bg-white rounded-xl border border-slate-200 p-6">
-                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                                    <FiAlignLeft className="text-[#9AA0A8]" />
+                            <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                                <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                                    <FiAlignLeft className="text-dash-steel" />
                                     Full Content (Bengali)
                                 </label>
                                 <textarea
@@ -241,35 +241,35 @@ export default function CreateBlog() {
                                     onChange={handleChange}
                                     placeholder="এখানে সম্পূর্ণ ব্লগ কন্টেন্ট বাংলায় লিখুন..."
                                     rows={12}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all resize-none hind-siliguri"
+                                    className="w-full px-4 py-3 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all resize-none hind-siliguri"
                                 />
                             </div>
                         </>
                     ) : (
                         /* Preview Mode */
-                        <div className="bg-white rounded-xl border border-slate-200 p-8">
-                            <h2 className="text-3xl font-bold text-slate-800 outfit mb-4">{formData.title || 'Untitled Blog'}</h2>
+                        <div className="bg-dash-card rounded-xl border border-dash-line p-8">
+                            <h2 className="text-3xl font-bold text-dash-ink2 outfit mb-4">{formData.title || 'Untitled Blog'}</h2>
                             {formData.image && (
                                 <img src={formData.image} alt="Preview" className="w-full h-64 object-cover rounded-xl mb-6" />
                             )}
                             <div className="flex items-center gap-4 mb-6">
-                                <span className="px-3 py-1 bg-[#41bfb8]/10 text-[#41bfb8] rounded-full text-sm font-medium">
+                                <span className="px-3 py-1 bg-aqua/10 text-aqua rounded-full text-sm font-medium">
                                     {formData.category || 'Category'}
                                 </span>
-                                <span className="text-sm text-slate-500">By {formData.author || 'Author'}</span>
+                                <span className="text-sm text-dash-mute">By {formData.author || 'Author'}</span>
                             </div>
                             {formData.excerpt && (
-                                <p className="text-lg text-slate-600 italic mb-6 border-l-4 border-[#41bfb8] pl-4">
+                                <p className="text-lg text-dash-ink4 italic mb-6 border-l-4 border-aqua pl-4">
                                     {formData.excerpt}
                                 </p>
                             )}
-                            <div className="prose max-w-none text-slate-700 whitespace-pre-wrap">
+                            <div className="prose max-w-none text-dash-ink3 whitespace-pre-wrap">
                                 {formData.content || 'No content yet...'}
                             </div>
                             {formData.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-slate-100">
+                                <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-dash-line-soft">
                                     {formData.tags.map((tag, idx) => (
-                                        <span key={idx} className="px-3 py-1 bg-slate-100 rounded-full text-sm text-slate-600">
+                                        <span key={idx} className="px-3 py-1 bg-dash-soft2 rounded-full text-sm text-dash-ink4">
                                             #{tag}
                                         </span>
                                     ))}
@@ -282,9 +282,9 @@ export default function CreateBlog() {
                 {/* Sidebar Settings */}
                 <div className="space-y-6">
                     {/* Featured Image */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-6">
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                            <FiImage className="text-[#41bfb8]" />
+                    <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                        <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                            <FiImage className="text-aqua" />
                             Featured Image *
                         </label>
                         <input
@@ -293,7 +293,7 @@ export default function CreateBlog() {
                             value={formData.image}
                             onChange={handleChange}
                             placeholder="https://example.com/image.jpg"
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all ${errors.image ? 'border-red-400' : 'border-slate-200'
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all ${errors.image ? 'border-red-400' : 'border-dash-line'
                                 }`}
                         />
                         {errors.image && <p className="text-red-500 text-xs mt-2">{errors.image}</p>}
@@ -301,23 +301,23 @@ export default function CreateBlog() {
                             <img
                                 src={formData.image}
                                 alt="Preview"
-                                className="mt-4 w-full h-40 object-cover rounded-lg border border-slate-200"
+                                className="mt-4 w-full h-40 object-cover rounded-lg border border-dash-line"
                                 onError={(e) => e.target.style.display = 'none'}
                             />
                         )}
                     </div>
 
                     {/* Category */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-6">
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                            <FiTag className="text-[#41bfb8]" />
+                    <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                        <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                            <FiTag className="text-aqua" />
                             Category *
                         </label>
                         <select
                             name="category"
                             value={formData.category}
                             onChange={handleChange}
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all ${errors.category ? 'border-red-400' : 'border-slate-200'
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all ${errors.category ? 'border-red-400' : 'border-dash-line'
                                 }`}
                         >
                             <option value="">Select Category</option>
@@ -329,9 +329,9 @@ export default function CreateBlog() {
                     </div>
 
                     {/* Author */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-6">
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                            <FiUser className="text-[#41bfb8]" />
+                    <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                        <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                            <FiUser className="text-aqua" />
                             Author Name
                         </label>
                         <input
@@ -340,14 +340,14 @@ export default function CreateBlog() {
                             value={formData.author}
                             onChange={handleChange}
                             placeholder="Enter author name"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all"
+                            className="w-full px-4 py-3 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all"
                         />
                     </div>
 
                     {/* Tags */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-6">
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                            <FiTag className="text-[#9AA0A8]" />
+                    <div className="bg-dash-card rounded-xl border border-dash-line p-6">
+                        <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-3">
+                            <FiTag className="text-dash-steel" />
                             Tags
                         </label>
                         <div className="flex gap-2">
@@ -357,12 +357,12 @@ export default function CreateBlog() {
                                 onChange={(e) => setTagInput(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                                 placeholder="Add a tag..."
-                                className="flex-1 px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all"
+                                className="flex-1 px-4 py-3 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all"
                             />
                             <button
                                 type="button"
                                 onClick={addTag}
-                                className="px-4 py-3 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
+                                className="px-4 py-3 bg-dash-soft2 rounded-lg text-dash-ink4 hover:bg-dash-soft3 transition-colors"
                             >
                                 Add
                             </button>
@@ -372,7 +372,7 @@ export default function CreateBlog() {
                                 {formData.tags.map((tag, idx) => (
                                     <span
                                         key={idx}
-                                        className="inline-flex items-center gap-1 px-3 py-1 bg-[#41bfb8]/10 text-[#41bfb8] rounded-full text-sm"
+                                        className="inline-flex items-center gap-1 px-3 py-1 bg-aqua/10 text-aqua rounded-full text-sm"
                                     >
                                         {tag}
                                         <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-500">
@@ -385,14 +385,14 @@ export default function CreateBlog() {
                     </div>
 
                     {/* Status & Featured */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+                    <div className="bg-dash-card rounded-xl border border-dash-line p-6 space-y-4">
                         <div>
-                            <label className="text-sm font-bold text-slate-700 mb-3 block">Status</label>
+                            <label className="text-sm font-bold text-dash-ink3 mb-3 block">Status</label>
                             <select
                                 name="status"
                                 value={formData.status}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all"
+                                className="w-full px-4 py-3 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all"
                             >
                                 <option value="published">Published</option>
                                 <option value="draft">Draft</option>
@@ -404,9 +404,9 @@ export default function CreateBlog() {
                                 name="featured"
                                 checked={formData.featured}
                                 onChange={handleChange}
-                                className="w-5 h-5 rounded border-slate-300 text-[#41bfb8] focus:ring-[#41bfb8]"
+                                className="w-5 h-5 rounded border-dash-line-strong text-aqua focus:ring-aqua"
                             />
-                            <span className="text-sm font-medium text-slate-700">Featured Post</span>
+                            <span className="text-sm font-medium text-dash-ink3">Featured Post</span>
                         </label>
                     </div>
                 </div>

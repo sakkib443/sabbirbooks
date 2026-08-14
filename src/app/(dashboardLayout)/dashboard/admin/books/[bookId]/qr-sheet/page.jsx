@@ -71,7 +71,7 @@ export default function QrSheetPage() {
   const normalisedBase = baseUrl.replace(/\/+$/, '');
   const usingTempDomain = /sslip\.io|localhost|\d+\.\d+\.\d+\.\d+/.test(normalisedBase);
 
-  if (loading) return <div className="p-8 text-slate-500">লোড হচ্ছে…</div>;
+  if (loading) return <div className="p-8 text-dash-mute">লোড হচ্ছে…</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
   return (
@@ -80,8 +80,8 @@ export default function QrSheetPage() {
       <div className="print:hidden">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">QR শিট</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <h1 className="text-xl font-semibold text-dash-ink">QR শিট</h1>
+            <p className="text-sm text-dash-mute mt-0.5">
               {visible.length} টি কোড {partFilter !== 'all' && `(মোট ${rows.length})`}
             </p>
           </div>
@@ -95,22 +95,22 @@ export default function QrSheetPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-dash-ink4 mb-1">
               বেস URL — QR কোডে এটাই ছাপা হবে
             </label>
             <input
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
               placeholder="https://sabbirbooks.com"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono"
+              className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm font-mono"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">পার্ট</label>
+            <label className="block text-xs font-medium text-dash-ink4 mb-1">পার্ট</label>
             <select
               value={partFilter}
               onChange={e => setPartFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
             >
               <option value="all">সব পার্ট</option>
               {parts.map(([id, title]) => (
@@ -135,8 +135,8 @@ export default function QrSheetPage() {
           </div>
         )}
 
-        <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          <p className="font-medium text-slate-800 mb-1">ছাপার আগে প্রুফ টেস্ট</p>
+        <div className="mb-5 rounded-lg border border-dash-line bg-dash-soft px-4 py-3 text-sm text-dash-ink4">
+          <p className="font-medium text-dash-ink2 mb-1">ছাপার আগে প্রুফ টেস্ট</p>
           <p>
             ২–৩টা কোড কাগজে ছেপে আসল ফোনে স্ক্যান করুন — স্ক্রিন থেকে নয়, কালি ও কাগজ আলাদা
             আচরণ করে। বইয়ে যে আকারে বসবে ঠিক সেই আকারেই টেস্ট করুন।
@@ -149,9 +149,9 @@ export default function QrSheetPage() {
         {visible.map(row => (
           <div
             key={row._id}
-            className="qr-cell rounded-lg border border-slate-200 bg-white p-3 flex flex-col items-center text-center break-inside-avoid"
+            className="qr-cell rounded-lg border border-dash-line bg-dash-card p-3 flex flex-col items-center text-center break-inside-avoid"
           >
-            <div className="bg-white p-1.5">
+            <div className="bg-dash-card p-1.5">
               <QRCode
                 value={`${normalisedBase}/b/${row.qrCode}`}
                 size={104}
@@ -160,13 +160,13 @@ export default function QrSheetPage() {
                 level="M"
               />
             </div>
-            <p className="mt-2 text-[11px] font-medium text-slate-800 leading-tight line-clamp-2">
+            <p className="mt-2 text-[11px] font-medium text-dash-ink2 leading-tight line-clamp-2">
               {row.topicNo} {row.topicTitle}
             </p>
-            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+            <p className="text-[10px] text-dash-mute mt-0.5 leading-tight">
               {row.chapterNo}. {row.chapterTitle}
             </p>
-            <code className="text-[10px] font-mono text-slate-400 mt-1">{row.qrCode}</code>
+            <code className="text-[10px] font-mono text-dash-mute2 mt-1">{row.qrCode}</code>
           </div>
         ))}
       </div>

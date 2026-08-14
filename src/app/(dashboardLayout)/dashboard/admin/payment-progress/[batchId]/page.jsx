@@ -38,7 +38,7 @@ function EditableCell({ studentId, enrollmentId, field, value, color, editing, e
         <button onClick={() => onSave(enrollmentId, field, editValue)} disabled={saving} className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50">
           {saving ? <FiLoader className="animate-spin" size={10} /> : <FiSave size={10} />}
         </button>
-        <button onClick={onCancel} className="text-slate-400 hover:text-slate-600"><FiX size={10} /></button>
+        <button onClick={onCancel} className="text-dash-mute2 hover:text-dash-ink4"><FiX size={10} /></button>
       </div>
     );
   }
@@ -46,7 +46,7 @@ function EditableCell({ studentId, enrollmentId, field, value, color, editing, e
     <div className="group flex items-center justify-center gap-1">
       <span className={`text-xs font-bold ${color}`}>{formatTk(value)}</span>
       <button onClick={(e) => { e.stopPropagation(); onStart(studentId, field, value); }}
-        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-teal-600 transition">
+        className="opacity-0 group-hover:opacity-100 text-dash-mute2 hover:text-teal-600 transition">
         <FiEdit3 size={9} />
       </button>
     </div>
@@ -183,7 +183,7 @@ export default function BatchPaymentPage({ params }) {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><FiLoader className="animate-spin text-teal-500" size={28} /></div>;
   if (!details) return (
     <div className="text-center py-20">
-      <p className="text-sm text-slate-500">Failed to load</p>
+      <p className="text-sm text-dash-mute">Failed to load</p>
       <Link href="/dashboard/admin/payment-progress" className="text-sm text-teal-600 hover:underline mt-2 inline-block">← Back</Link>
     </div>
   );
@@ -223,15 +223,15 @@ export default function BatchPaymentPage({ params }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/admin/payment-progress" className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition shrink-0">
+          <Link href="/dashboard/admin/payment-progress" className="w-9 h-9 rounded-lg bg-dash-soft2 flex items-center justify-center text-dash-mute hover:bg-dash-soft3 transition shrink-0">
             <FiArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-lg font-bold text-slate-800 outfit">{batchName}</h1>
-            <p className="text-xs text-slate-400">{details.batch?.courseName || ''} • {fmtDate(details.batch?.startDate)} — {fmtDate(details.batch?.endDate)}</p>
+            <h1 className="text-lg font-bold text-dash-ink2 outfit">{batchName}</h1>
+            <p className="text-xs text-dash-mute2">{details.batch?.courseName || ''} • {fmtDate(details.batch?.startDate)} — {fmtDate(details.batch?.endDate)}</p>
           </div>
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+        <button onClick={load} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-ink4 bg-dash-card border border-dash-line rounded-lg hover:bg-dash-soft transition">
           <FiRefreshCw size={12} /> Refresh
         </button>
       </div>
@@ -239,14 +239,14 @@ export default function BatchPaymentPage({ params }) {
       {/* Batch Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
-          { label: 'Course Fee', value: formatTk(coursePrice), border: 'border-slate-200', color: 'text-slate-700' },
+          { label: 'Course Fee', value: formatTk(coursePrice), border: 'border-dash-line', color: 'text-dash-ink3' },
           { label: 'Total Collected', value: formatTk(payment.totalCollected), border: 'border-emerald-200', color: 'text-emerald-600' },
           { label: 'Total Due', value: formatTk(payment.totalRemainingDue ?? payment.totalPending), border: 'border-red-200', color: 'text-red-500' },
           { label: 'Paid Installments', value: payment.installments?.paid || 0, border: 'border-teal-200', color: 'text-teal-600' },
           { label: 'Due Installments', value: payment.installments?.due || 0, border: 'border-amber-200', color: 'text-amber-600' },
         ].map(c => (
-          <div key={c.label} className={`bg-white border ${c.border} rounded-xl px-4 py-3`}>
-            <p className="text-[10px] text-slate-400 font-medium uppercase">{c.label}</p>
+          <div key={c.label} className={`bg-dash-card border ${c.border} rounded-xl px-4 py-3`}>
+            <p className="text-[10px] text-dash-mute2 font-medium uppercase">{c.label}</p>
             <p className={`text-lg font-bold ${c.color} mt-0.5`}>{c.value}</p>
           </div>
         ))}
@@ -258,26 +258,26 @@ export default function BatchPaymentPage({ params }) {
           {filterTabs.map(f => (
             <button key={f.id} onClick={() => setPayFilter(f.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                payFilter === f.id ? f.active : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                payFilter === f.id ? f.active : 'bg-dash-card text-dash-mute border-dash-line hover:bg-dash-soft'
               }`}>
               {f.label}
-              <span className={`ml-1 ${payFilter === f.id ? 'text-white/80' : 'text-slate-400'}`}>({f.count})</span>
+              <span className={`ml-1 ${payFilter === f.id ? 'text-white/80' : 'text-dash-mute2'}`}>({f.count})</span>
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 w-full sm:w-56 shrink-0">
-          <FiSearch size={13} className="text-slate-400" />
+        <div className="flex items-center gap-1.5 bg-dash-card border border-dash-line rounded-lg px-3 py-2 w-full sm:w-56 shrink-0">
+          <FiSearch size={13} className="text-dash-mute2" />
           <input type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
-            placeholder="Search students..." className="text-sm text-slate-600 outline-none bg-transparent w-full" />
-          {studentSearch && <button onClick={() => setStudentSearch('')}><FiX size={12} className="text-slate-400" /></button>}
+            placeholder="Search students..." className="text-sm text-dash-ink4 outline-none bg-transparent w-full" />
+          {studentSearch && <button onClick={() => setStudentSearch('')}><FiX size={12} className="text-dash-mute2" /></button>}
         </div>
       </div>
 
       {/* Student Cards */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-          <FiUsers className="mx-auto text-slate-300 mb-3" size={32} />
-          <p className="text-sm text-slate-500">No students found</p>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-12 text-center">
+          <FiUsers className="mx-auto text-dash-faint mb-3" size={32} />
+          <p className="text-sm text-dash-mute">No students found</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -289,20 +289,20 @@ export default function BatchPaymentPage({ params }) {
             return (
               <div key={ps.studentId || i}
                 className={`transition-all duration-300 ${expandedStudent && !isOpen ? 'opacity-30 scale-[0.99] blur-[1px] pointer-events-none' : 'opacity-100'}`}>
-                <div className={`bg-white border rounded-xl overflow-hidden transition-all ${isOpen ? 'border-teal-300 shadow-lg shadow-teal-100/40' : 'border-slate-200 hover:shadow-sm'}`}>
+                <div className={`bg-dash-card border rounded-xl overflow-hidden transition-all ${isOpen ? 'border-teal-300 shadow-lg shadow-teal-100/40' : 'border-dash-line hover:shadow-sm'}`}>
                   {/* Student Header Row */}
-                  <div className="cursor-pointer px-5 py-3.5 hover:bg-slate-50/50 transition"
+                  <div className="cursor-pointer px-5 py-3.5 hover:bg-dash-soft/50 transition"
                     onClick={() => setExpandedStudent(isOpen ? null : ps.studentId)}>
                     <div className="grid grid-cols-12 gap-3 items-center">
                       {/* # + Name */}
                       <div className="col-span-3 flex items-center gap-3 min-w-0">
-                        <span className="text-xs text-slate-400 w-5 shrink-0">{i + 1}</span>
+                        <span className="text-xs text-dash-mute2 w-5 shrink-0">{i + 1}</span>
                         <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                           {ps.name?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800 truncate">{ps.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                          <p className="text-sm font-semibold text-dash-ink2 truncate">{ps.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-dash-mute2">
                             <span className="flex items-center gap-0.5 truncate"><FiPhone size={8} /> {ps.phone || '—'}</span>
                           </div>
                         </div>
@@ -310,9 +310,9 @@ export default function BatchPaymentPage({ params }) {
 
                       {/* Total Payable (editable) */}
                       <div className="col-span-2 text-center" onClick={e => e.stopPropagation()}>
-                        <p className="text-[9px] text-slate-400 uppercase">Total Payment</p>
+                        <p className="text-[9px] text-dash-mute2 uppercase">Total Payment</p>
                         <EditableCell studentId={ps.studentId} enrollmentId={ps.enrollmentId}
-                          field="customFee" value={ps.coursePrice} color="text-slate-700"
+                          field="customFee" value={ps.coursePrice} color="text-dash-ink3"
                           editing={editingField} editValue={editValue} setEditValue={setEditValue}
                           onSave={saveEdit} onCancel={cancelEdit} onStart={startEdit} saving={editLoading} />
                         {ps.hasCustomFee && (
@@ -322,7 +322,7 @@ export default function BatchPaymentPage({ params }) {
 
                       {/* Admission (editable) */}
                       <div className="col-span-2 text-center" onClick={e => e.stopPropagation()}>
-                        <p className="text-[9px] text-slate-400 uppercase">Admission Paid</p>
+                        <p className="text-[9px] text-dash-mute2 uppercase">Admission Paid</p>
                         <EditableCell studentId={ps.studentId} enrollmentId={ps.enrollmentId}
                           field="admissionPayment" value={ps.admissionPayment} color="text-blue-600"
                           editing={editingField} editValue={editValue} setEditValue={setEditValue}
@@ -331,11 +331,11 @@ export default function BatchPaymentPage({ params }) {
 
                       {/* Paid / Due */}
                       <div className="col-span-1 text-center">
-                        <p className="text-[9px] text-slate-400 uppercase">Paid</p>
+                        <p className="text-[9px] text-dash-mute2 uppercase">Paid</p>
                         <p className="text-xs font-bold text-emerald-600">{formatTk(ps.totalPaid)}</p>
                       </div>
                       <div className="col-span-1 text-center">
-                        <p className="text-[9px] text-slate-400 uppercase">Due</p>
+                        <p className="text-[9px] text-dash-mute2 uppercase">Due</p>
                         <p className={`text-xs font-bold ${ps.remainingDue > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                           {ps.remainingDue > 0 ? formatTk(ps.remainingDue) : '✓'}
                         </p>
@@ -343,20 +343,20 @@ export default function BatchPaymentPage({ params }) {
 
                       {/* Installments */}
                       <div className="col-span-2 text-center">
-                        <p className="text-[9px] text-slate-400 uppercase">Installments</p>
+                        <p className="text-[9px] text-dash-mute2 uppercase">Installments</p>
                         <div className="flex items-center justify-center gap-1.5 mt-0.5">
                           <span className="text-[10px] font-bold text-teal-600">{ps.paidCount}/{ps.installmentCount}</span>
-                          <div className="w-14 bg-slate-100 rounded-full h-1.5">
+                          <div className="w-14 bg-dash-soft2 rounded-full h-1.5">
                             <div className={`h-1.5 rounded-full transition-all ${payPct >= 100 ? 'bg-emerald-500' : payPct >= 50 ? 'bg-amber-500' : payPct > 0 ? 'bg-orange-400' : 'bg-red-300'}`}
                               style={{ width: `${payPct}%` }} />
                           </div>
-                          <span className="text-[10px] font-bold text-slate-500">{payPct}%</span>
+                          <span className="text-[10px] font-bold text-dash-mute">{payPct}%</span>
                         </div>
                       </div>
 
                       {/* Expand */}
                       <div className="col-span-1 flex justify-end">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${isOpen ? 'bg-teal-100 text-teal-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${isOpen ? 'bg-teal-100 text-teal-600 rotate-180' : 'bg-dash-soft2 text-dash-mute2'}`}>
                           <FiChevronDown size={14} />
                         </div>
                       </div>
@@ -365,15 +365,15 @@ export default function BatchPaymentPage({ params }) {
 
                   {/* ═══ EXPANDED ═══ */}
                   {isOpen && (
-                    <div className="border-t border-slate-100 bg-gradient-to-b from-slate-50/80 to-white">
+                    <div className="border-t border-dash-line-soft bg-gradient-to-b from-dash-soft/80 to-dash-card">
                       <div className="px-5 py-5 space-y-5">
                         {/* Payment Breakdown */}
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                          <div className="bg-white border border-slate-200 rounded-lg p-3">
+                          <div className="bg-dash-card border border-dash-line rounded-lg p-3">
                             <div className="flex items-center justify-between mb-1">
-                              <p className="text-[10px] text-slate-400 font-medium">Total Payment</p>
+                              <p className="text-[10px] text-dash-mute2 font-medium">Total Payment</p>
                               <button onClick={() => startEdit(ps.studentId, 'customFee', ps.coursePrice)}
-                                className="text-slate-400 hover:text-teal-600"><FiEdit3 size={10} /></button>
+                                className="text-dash-mute2 hover:text-teal-600"><FiEdit3 size={10} /></button>
                             </div>
                             {editingField?.studentId === ps.studentId && editingField?.field === 'customFee' ? (
                               <div className="flex items-center gap-1">
@@ -387,7 +387,7 @@ export default function BatchPaymentPage({ params }) {
                                   className="text-emerald-600"><FiSave size={12} /></button>
                               </div>
                             ) : (
-                              <p className="text-base font-bold text-slate-700">{formatTk(ps.coursePrice)}</p>
+                              <p className="text-base font-bold text-dash-ink3">{formatTk(ps.coursePrice)}</p>
                             )}
                             {ps.hasCustomFee && <p className="text-[9px] text-violet-400 mt-0.5">Custom fee (default: {formatTk(ps.defaultCoursePrice)})</p>}
                           </div>
@@ -423,17 +423,17 @@ export default function BatchPaymentPage({ params }) {
                             <p className={`text-base font-bold ${ps.remainingDue > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                               {ps.remainingDue > 0 ? formatTk(ps.remainingDue) : '✓ Fully Paid'}
                             </p>
-                            <p className="text-[9px] text-slate-400 mt-0.5">Auto-calculated</p>
+                            <p className="text-[9px] text-dash-mute2 mt-0.5">Auto-calculated</p>
                           </div>
-                          <div className="bg-white border border-slate-200 rounded-lg p-3 flex flex-col items-center justify-center">
+                          <div className="bg-dash-card border border-dash-line rounded-lg p-3 flex flex-col items-center justify-center">
                             <div className="relative w-12 h-12">
                               <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
-                                <circle cx="18" cy="18" r="14" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+                                <circle cx="18" cy="18" r="14" fill="none" stroke="var(--dash-line)" strokeWidth="3" />
                                 <circle cx="18" cy="18" r="14" fill="none"
                                   stroke={payPct >= 100 ? '#10b981' : payPct >= 50 ? '#f59e0b' : '#ef4444'}
                                   strokeWidth="3" strokeDasharray={`${payPct * 0.88} 88`} strokeLinecap="round" />
                               </svg>
-                              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-700">{payPct}%</span>
+                              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-dash-ink3">{payPct}%</span>
                             </div>
                           </div>
                         </div>
@@ -441,8 +441,8 @@ export default function BatchPaymentPage({ params }) {
                         {/* Installment Header */}
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="text-sm font-bold text-slate-700">Installment Schedule</h4>
-                            <p className="text-[11px] text-slate-400">
+                            <h4 className="text-sm font-bold text-dash-ink3">Installment Schedule</h4>
+                            <p className="text-[11px] text-dash-mute2">
                               {installments.length > 0 ? `${ps.paidCount} of ${installments.length} installments paid` : 'No installment plan set'}
                             </p>
                           </div>
@@ -462,24 +462,24 @@ export default function BatchPaymentPage({ params }) {
 
                         {/* Installment Table */}
                         {installments.length === 0 ? (
-                          <div className="bg-white border border-dashed border-slate-300 rounded-xl p-8 text-center">
-                            <FiDollarSign className="mx-auto text-slate-300 mb-2" size={28} />
-                            <p className="text-sm text-slate-500 mb-1">No payments recorded yet</p>
-                            <p className="text-xs text-slate-400">Use “Add Payment” or “Mark Fully Paid” to record a payment</p>
+                          <div className="bg-dash-card border border-dashed border-dash-line-strong rounded-xl p-8 text-center">
+                            <FiDollarSign className="mx-auto text-dash-faint mb-2" size={28} />
+                            <p className="text-sm text-dash-mute mb-1">No payments recorded yet</p>
+                            <p className="text-xs text-dash-mute2">Use “Add Payment” or “Mark Fully Paid” to record a payment</p>
                           </div>
                         ) : (
-                          <div className="border border-slate-200 rounded-xl overflow-hidden">
+                          <div className="border border-dash-line rounded-xl overflow-hidden">
                             <table className="w-full">
                               <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-500 w-12">#</th>
-                                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-500">Description</th>
-                                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-slate-500">Amount</th>
-                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-slate-500">Due Date</th>
-                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-slate-500">Paid Date</th>
-                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-slate-500">Method</th>
-                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-slate-500">Status</th>
-                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-slate-500 w-16"></th>
+                                <tr className="bg-dash-soft border-b border-dash-line">
+                                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-dash-mute w-12">#</th>
+                                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-dash-mute">Description</th>
+                                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-dash-mute">Amount</th>
+                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-dash-mute">Due Date</th>
+                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-dash-mute">Paid Date</th>
+                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-dash-mute">Method</th>
+                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-dash-mute">Status</th>
+                                  <th className="text-center px-4 py-2.5 text-[11px] font-semibold text-dash-mute w-16"></th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -492,43 +492,43 @@ export default function BatchPaymentPage({ params }) {
 
                                   return (
                                     <tr key={inst._id || idx}
-                                      className={`border-b border-slate-50 last:border-0 transition ${
-                                        isPaid ? 'bg-white hover:bg-emerald-50/30'
+                                      className={`border-b border-dash-soft last:border-0 transition ${
+                                        isPaid ? 'bg-dash-card hover:bg-emerald-50/30'
                                         : isOverdue ? 'bg-red-50/40 hover:bg-red-50/60'
                                         : isDue ? 'bg-amber-50/30 hover:bg-amber-50/50'
-                                        : 'bg-white hover:bg-slate-50/50'
+                                        : 'bg-dash-card hover:bg-dash-soft/50'
                                       }`}>
                                       <td className="px-4 py-3">
                                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                                           isPaid ? 'bg-emerald-100 text-emerald-600'
                                           : isOverdue ? 'bg-red-100 text-red-600'
                                           : isDue ? 'bg-amber-100 text-amber-600'
-                                          : 'bg-slate-100 text-slate-400'
+                                          : 'bg-dash-soft2 text-dash-mute2'
                                         }`}>{isPaid ? '✓' : inst.installmentNumber || idx + 1}</span>
                                       </td>
                                       <td className="px-4 py-3">
-                                        <p className="text-xs font-medium text-slate-700">
+                                        <p className="text-xs font-medium text-dash-ink3">
                                           {`Installment ${inst.installmentNumber || idx + 1}`}
                                         </p>
-                                        {inst.notes && <p className="text-[10px] text-slate-400 mt-0.5">{inst.notes}</p>}
+                                        {inst.notes && <p className="text-[10px] text-dash-mute2 mt-0.5">{inst.notes}</p>}
                                       </td>
                                       <td className="px-4 py-3 text-right">
-                                        <span className={`text-sm font-bold ${isPaid ? 'text-emerald-600' : isOverdue ? 'text-red-600' : 'text-slate-700'}`}>
+                                        <span className={`text-sm font-bold ${isPaid ? 'text-emerald-600' : isOverdue ? 'text-red-600' : 'text-dash-ink3'}`}>
                                           {formatTk(inst.amount)}
                                         </span>
                                       </td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>{fmtDate(inst.dueDate)}</span>
+                                        <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-dash-mute'}`}>{fmtDate(inst.dueDate)}</span>
                                         {!isPaid && dLeft !== null && (
-                                          <p className={`text-[9px] font-bold mt-0.5 ${isOverdue ? 'text-red-500' : dLeft <= 7 ? 'text-amber-500' : 'text-slate-400'}`}>
+                                          <p className={`text-[9px] font-bold mt-0.5 ${isOverdue ? 'text-red-500' : dLeft <= 7 ? 'text-amber-500' : 'text-dash-mute2'}`}>
                                             {isOverdue ? `${Math.abs(dLeft)}d overdue` : `${dLeft}d left`}
                                           </p>
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-center text-xs text-slate-500">{isPaid && inst.paidDate ? fmtDate(inst.paidDate) : '—'}</td>
+                                      <td className="px-4 py-3 text-center text-xs text-dash-mute">{isPaid && inst.paidDate ? fmtDate(inst.paidDate) : '—'}</td>
                                       <td className="px-4 py-3 text-center">
                                         {inst.method ? (
-                                          <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                          <span className="text-[10px] text-dash-mute bg-dash-soft2 px-1.5 py-0.5 rounded">
                                             {inst.method === 'bkash' ? 'bKash' : inst.method === 'cash' ? 'Cash' : inst.method === 'sslcommerz' ? 'SSL' : 'Manual'}
                                           </span>
                                         ) : '—'}
@@ -538,12 +538,12 @@ export default function BatchPaymentPage({ params }) {
                                           isPaid ? 'bg-emerald-100 text-emerald-700'
                                           : isOverdue ? 'bg-red-100 text-red-600'
                                           : isDue ? 'bg-amber-100 text-amber-700'
-                                          : 'bg-slate-100 text-slate-500'
+                                          : 'bg-dash-soft2 text-dash-mute'
                                         }`}>{isPaid ? 'PAID' : isOverdue ? 'OVERDUE' : isDue ? 'DUE' : 'UPCOMING'}</span>
                                       </td>
                                       <td className="px-4 py-3 text-center">
                                         <button onClick={() => deleteInst(inst._id)}
-                                          className="text-slate-300 hover:text-red-500 transition" title="Delete payment">
+                                          className="text-dash-faint hover:text-red-500 transition" title="Delete payment">
                                           <FiTrash2 size={12} />
                                         </button>
                                       </td>
@@ -551,13 +551,13 @@ export default function BatchPaymentPage({ params }) {
                                   );
                                 })}
                                 {/* Summary Row */}
-                                <tr className="bg-slate-50 border-t border-slate-200">
-                                  <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-slate-600">Total</td>
-                                  <td className="px-4 py-2.5 text-right text-sm font-bold text-slate-700">
+                                <tr className="bg-dash-soft border-t border-dash-line">
+                                  <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-dash-ink4">Total</td>
+                                  <td className="px-4 py-2.5 text-right text-sm font-bold text-dash-ink3">
                                     {formatTk(installments.reduce((s, x) => s + (x.amount || 0), 0))}
                                   </td>
                                   <td colSpan={2} className="px-4 py-2.5 text-center">
-                                    <span className="text-[10px] text-slate-400">
+                                    <span className="text-[10px] text-dash-mute2">
                                       Paid: {formatTk(installments.filter(x => x.status === 'paid').reduce((s, x) => s + (x.amount || 0), 0))}
                                       {' | '}
                                       Due: {formatTk(installments.filter(x => x.status !== 'paid').reduce((s, x) => s + (x.amount || 0), 0))}
@@ -609,19 +609,19 @@ export default function BatchPaymentPage({ params }) {
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
           onClick={() => setShowAdd(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="bg-dash-card rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-dash-line-soft">
               <div>
-                <h3 className="text-sm font-bold text-slate-800">Add Payment</h3>
-                <p className="text-xs text-slate-400">{showAdd.name}</p>
+                <h3 className="text-sm font-bold text-dash-ink2">Add Payment</h3>
+                <p className="text-xs text-dash-mute2">{showAdd.name}</p>
               </div>
-              <button onClick={() => setShowAdd(null)} className="p-1 hover:bg-slate-100 rounded-lg"><FiX size={16} /></button>
+              <button onClick={() => setShowAdd(null)} className="p-1 hover:bg-dash-soft2 rounded-lg"><FiX size={16} /></button>
             </div>
             <div className="p-5 space-y-3">
-              <div className="grid grid-cols-3 gap-2 text-center bg-slate-50 rounded-lg p-3">
+              <div className="grid grid-cols-3 gap-2 text-center bg-dash-soft rounded-lg p-3">
                 <div>
-                  <p className="text-[9px] text-slate-400 uppercase font-bold">Total Payment</p>
-                  <p className="text-xs font-bold text-slate-700">{formatTk(showAdd.coursePrice)}</p>
+                  <p className="text-[9px] text-dash-mute2 uppercase font-bold">Total Payment</p>
+                  <p className="text-xs font-bold text-dash-ink3">{formatTk(showAdd.coursePrice)}</p>
                 </div>
                 <div>
                   <p className="text-[9px] text-emerald-500 uppercase font-bold">Total Paid</p>
@@ -635,7 +635,7 @@ export default function BatchPaymentPage({ params }) {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-semibold text-slate-600 block">Amount (tk) *</label>
+                  <label className="text-[11px] font-semibold text-dash-ink4 block">Amount (tk) *</label>
                   {showAdd.remainingDue > 0 && (
                     <button type="button" onClick={() => setAddForm({ ...addForm, amount: String(showAdd.remainingDue) })}
                       className="text-[10px] font-semibold text-teal-600 hover:text-teal-700">Full ({formatTk(showAdd.remainingDue)})</button>
@@ -643,7 +643,7 @@ export default function BatchPaymentPage({ params }) {
                 </div>
                 <input type="number" value={addForm.amount}
                   onChange={e => setAddForm({ ...addForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400"
+                  className="w-full px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400"
                   placeholder={showAdd.remainingDue > 0 ? `Max: ${showAdd.remainingDue}` : '0'} />
                 {addForm.amount && Number(addForm.amount) > showAdd.remainingDue && showAdd.remainingDue > 0 && (
                   <p className="text-[10px] text-red-500 mt-1">⚠ Exceeds remaining due ({formatTk(showAdd.remainingDue)})</p>
@@ -651,26 +651,26 @@ export default function BatchPaymentPage({ params }) {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 mb-1 block">Due Date <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="text-[11px] font-semibold text-dash-ink4 mb-1 block">Due Date <span className="text-dash-mute2 font-normal">(optional)</span></label>
                 <input type="date" value={addForm.dueDate}
                   onChange={e => setAddForm({ ...addForm, dueDate: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20" />
+                  className="w-full px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600 mb-1 block">Status</label>
+                  <label className="text-[11px] font-semibold text-dash-ink4 mb-1 block">Status</label>
                   <select value={addForm.status} onChange={e => setAddForm({ ...addForm, status: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none">
+                    className="w-full px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none">
                     <option value="paid">Paid (received)</option>
                     <option value="due">Due (scheduled)</option>
                     <option value="upcoming">Upcoming</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600 mb-1 block">Method</label>
+                  <label className="text-[11px] font-semibold text-dash-ink4 mb-1 block">Method</label>
                   <select value={addForm.method} onChange={e => setAddForm({ ...addForm, method: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none">
+                    className="w-full px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none">
                     <option value="manual">Manual</option>
                     <option value="bkash">bKash</option>
                     <option value="sslcommerz">SSLCommerz</option>
@@ -680,10 +680,10 @@ export default function BatchPaymentPage({ params }) {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 mb-1 block">Notes</label>
+                <label className="text-[11px] font-semibold text-dash-ink4 mb-1 block">Notes</label>
                 <input type="text" value={addForm.notes}
                   onChange={e => setAddForm({ ...addForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none"
+                  className="w-full px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none"
                   placeholder="Optional notes" />
               </div>
 

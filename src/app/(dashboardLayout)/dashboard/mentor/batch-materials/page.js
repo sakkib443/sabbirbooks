@@ -51,15 +51,15 @@ export default function BatchMaterialsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 outfit">Batch Materials</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Manage class materials, meeting links & recordings for each batch</p>
+        <h1 className="text-2xl font-bold text-dash-ink2 outfit">Batch Materials</h1>
+        <p className="text-sm text-dash-mute mt-0.5">Manage class materials, meeting links & recordings for each batch</p>
       </div>
 
       {batches.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
-          <FiFolder className="mx-auto text-slate-300 mb-4" size={40} />
-          <h3 className="text-lg font-bold text-slate-700 mb-1">No Batches Assigned</h3>
-          <p className="text-sm text-slate-500">You haven't been assigned to any batches yet.</p>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-16 text-center">
+          <FiFolder className="mx-auto text-dash-faint mb-4" size={40} />
+          <h3 className="text-lg font-bold text-dash-ink3 mb-1">No Batches Assigned</h3>
+          <p className="text-sm text-dash-mute">You haven't been assigned to any batches yet.</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -72,7 +72,7 @@ export default function BatchMaterialsPage() {
 
             return (
               <Link key={batch._id} href={`/dashboard/mentor/batch-materials/${batch._id}`}
-                className="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                className="group bg-dash-card rounded-2xl border border-dash-line overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 {/* Top Banner */}
                 <div className={`bg-gradient-to-r ${statusColor} px-5 py-4 relative overflow-hidden`}>
                   <div className="absolute inset-0 opacity-10">
@@ -96,34 +96,34 @@ export default function BatchMaterialsPage() {
                       <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center mx-auto mb-1">
                         <FiFolder size={16} className="text-teal-600" />
                       </div>
-                      <p className="text-lg font-bold text-slate-800">{classCount}</p>
-                      <p className="text-[10px] text-slate-400">Classes</p>
+                      <p className="text-lg font-bold text-dash-ink2">{classCount}</p>
+                      <p className="text-[10px] text-dash-mute2">Classes</p>
                     </div>
                     <div>
                       <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-1">
                         <FiUsers size={16} className="text-blue-600" />
                       </div>
-                      <p className="text-lg font-bold text-slate-800">{studentCount}</p>
-                      <p className="text-[10px] text-slate-400">Students</p>
+                      <p className="text-lg font-bold text-dash-ink2">{studentCount}</p>
+                      <p className="text-[10px] text-dash-mute2">Students</p>
                     </div>
                     <div>
                       <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mx-auto mb-1">
                         <FiClock size={16} className="text-amber-600" />
                       </div>
-                      <p className="text-sm font-bold text-slate-800">{batch.classTime || '—'}</p>
-                      <p className="text-[10px] text-slate-400">Time</p>
+                      <p className="text-sm font-bold text-dash-ink2">{batch.classTime || '—'}</p>
+                      <p className="text-[10px] text-dash-mute2">Time</p>
                     </div>
                   </div>
 
                   {batch.classDays?.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-1">
                       {batch.classDays.map(d => (
-                        <span key={d} className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{d.slice(0, 3)}</span>
+                        <span key={d} className="text-[9px] font-bold bg-dash-soft2 text-dash-mute px-1.5 py-0.5 rounded">{d.slice(0, 3)}</span>
                       ))}
                     </div>
                   )}
 
-                  <div className="flex items-center justify-center gap-1 text-sm font-semibold text-teal-600 group-hover:text-teal-700 transition pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-center gap-1 text-sm font-semibold text-teal-600 group-hover:text-teal-700 transition pt-2 border-t border-dash-line-soft">
                     Open Materials <FiArrowRight className="group-hover:translate-x-1 transition-transform" size={14} />
                   </div>
                 </div>

@@ -25,6 +25,17 @@ import {
   ShippingAddress,
   effectiveCoursePrice,
 } from "./types";
+import type { GatewayStatus } from "./paymentOptions";
+
+// What POST /orders/:id/pay/{bkash|sslcommerz} hands back. The two gateways name
+// their hosted-page URL differently; both keys are optional because the demo
+// responses and the live ones do not agree on which extras they include.
+interface GatewaySession {
+  bkashURL?: string;
+  GatewayPageURL?: string;
+  paymentID?: string;
+  tran_id?: string;
+}
 
 // ── Auth helpers ───────────────────────────────────────────────────────────
 export function getToken(): string | null {
@@ -179,16 +190,52 @@ export async function payForCourse(opts: {
   return { reference: done?.val_id || tranId, amount, method: "sslcommerz" };
 }
 
-// ── BOOK flow: create order → pay → complete (demo) ────────────────────────
+// ── Gateway availability (public) ──────────────────────────────────────────
+// Which hosted checkouts the server actually holds credentials for. Returning
+// null on any failure is what keeps a server hiccup from breaking checkout: the
+// caller treats null as "no gateway", and the buyer falls back to the manual and
+// COD options that have always been there.
+export async function fetchGatewayStatus(): Promise<GatewayStatus | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/payment/gateways`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const json = await readJson(res);
+    const d = json.data as GatewayStatus | undefined;
+    if (!d || typeof d !== "object" || !d.bkash || !d.sslcommerz) return null;
+    return d;
+  } catch {
+    return null;
+  }
+}
+
+// ── BOOK flow: create order → open the gateway ─────────────────────────────
+//
+// Two shapes, decided by the SERVER, never by the client:
+//
+//   real gateway  → create the order, open a hosted session, hand the browser to
+//                   the gateway. The order is settled by the gateway's callback
+//                   and IPN hitting the API directly. This function does not come
+//                   back — it returns { redirected: true } and the page navigates.
+//
+//   demo (no keys) → the existing create → pay → complete sequence, unchanged, so
+//                   the flow stays clickable end-to-end before credentials exist.
+//
+// The demo branch is gated on the server telling us it is in demo mode.
+// `POST /orders/:id/pay/complete` marks an order paid with no gateway
+// verification whatsoever, so once real money is involved the client must never
+// be the thing that calls it — see the note in the report about locking that
+// endpoint down (it lives in another agent's file).
 export async function checkoutBook(opts: {
   book: CheckoutBook;
   quantity: number;
   method: PaymentMethod;
+  /** True when the server reports credentials for `method`. */
+  isLiveGateway: boolean;
   shippingAddress?: ShippingAddress;
   onProgress?: (s: CheckoutStep) => void;
   genericErr: string;
-}): Promise<OrderResult> {
-  const { book, quantity, method, shippingAddress, onProgress, genericErr } = opts;
+}): Promise<{ redirected: true } | { redirected: false; order: OrderResult }> {
+  const { book, quantity, method, isLiveGateway, shippingAddress, onProgress, genericErr } = opts;
 
   // 1) Create the pending order (server computes prices/total server-side).
   onProgress?.("creating");
@@ -202,18 +249,33 @@ export async function checkoutBook(opts: {
   );
   if (!order?._id) throw new Error(genericErr);
 
-  // 2) Kick off the (demo) gateway session.
+  // 2) Open the gateway session.
   onProgress?.("paying");
-  await post(`/orders/${order._id}/pay/${method}`, {}, genericErr);
+  const session = await post<GatewaySession>(`/orders/${order._id}/pay/${method}`, {}, genericErr);
 
-  // 3) Finalize the demo payment → marks paid, grants access / moves to processing.
-  onProgress?.("confirming");
-  const finalized = await post<OrderResult>(
-    `/orders/${order._id}/pay/complete`,
-    { method },
-    genericErr
-  );
-  return finalized;
+  // 3a) Real gateway → leave the app. Nothing else is done client-side: the
+  //     callback and IPN settle the order server-side, so closing the tab mid-
+  //     payment still results in a paid order rather than a lost one.
+  const hostedUrl = session?.bkashURL || session?.GatewayPageURL;
+  if (isLiveGateway) {
+    if (!hostedUrl) throw new Error(genericErr);
+    onProgress?.("redirecting");
+    if (typeof window !== "undefined") window.location.assign(hostedUrl);
+    return { redirected: true };
+  }
+
+  // 3b) No hosted URL and not live. There is deliberately nothing to call here
+  // any more: `/orders/:id/pay/complete` used to finalise the order from the
+  // browser with no gateway verification, which meant any buyer could mark
+  // their own order paid and unlock the book's QR content for free. That route
+  // is gone (see the note in order.routes.ts); an order is only ever settled by
+  // a verified gateway callback or an admin approval.
+  //
+  // This branch is unreachable in practice — gateway mode is never offered
+  // unless the server reports a configured gateway — so reaching it means a
+  // misconfiguration, and the order stays honestly pending rather than being
+  // silently marked paid.
+  throw new Error(genericErr);
 }
 
 // ── Cash on delivery: create the order and stop ─────────────────────────────

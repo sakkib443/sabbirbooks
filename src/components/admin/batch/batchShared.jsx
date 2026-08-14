@@ -49,18 +49,18 @@ export const TimeRangePicker = ({ value = '', onChange }) => {
   };
 
   const box =
-    'flex-1 px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 ' +
-    'focus:outline-none focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/15 transition-all';
+    'flex-1 px-3 py-2.5 rounded-lg border border-dash-line bg-dash-card text-sm text-dash-ink3 ' +
+    'focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition-all';
 
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1.5 flex-1">
-        <span className="text-[10px] font-bold text-gray-400 uppercase w-10 shrink-0">From</span>
+        <span className="text-[10px] font-bold text-dash-mute2 uppercase w-10 shrink-0">From</span>
         <input type="time" value={start24} onChange={(e) => emit(e.target.value, end24)} className={box} />
       </div>
-      <FiClock className="text-[#c9871a] shrink-0" size={15} />
+      <FiClock className="text-brand-ink shrink-0" size={15} />
       <div className="flex items-center gap-1.5 flex-1">
-        <span className="text-[10px] font-bold text-gray-400 uppercase w-6 shrink-0">To</span>
+        <span className="text-[10px] font-bold text-dash-mute2 uppercase w-6 shrink-0">To</span>
         <input type="time" value={end24} onChange={(e) => emit(start24, e.target.value)} className={box} />
       </div>
     </div>

@@ -93,28 +93,28 @@ const courseSchema = z.object({
 
 // ─── Small UI helpers ────────────────────────────────────────
 const inputClass =
-  'w-full px-3.5 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 ' +
-  'placeholder:text-gray-300 focus:outline-none focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/15 transition-all';
-const labelClass = 'block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5';
+  'w-full px-3.5 py-2.5 rounded-lg border border-dash-line bg-dash-card text-sm text-dash-ink2 ' +
+  'placeholder:text-dash-faint focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition-all';
+const labelClass = 'block text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5';
 
 const FieldError = ({ msg }) => msg
   ? <p className="flex items-center gap-1 text-[11px] text-red-500 mt-1"><FiAlertCircle size={11} /> {msg}</p>
   : null;
 
 const SectionTitle = ({ icon: Icon, title, hint }) => (
-  <div className="flex items-center gap-3 pb-4 mb-5 border-b border-gray-100">
-    <div className="w-9 h-9 rounded-lg bg-[#FEF6E7] flex items-center justify-center shrink-0">
-      <Icon className="text-[#c9871a]" size={16} />
+  <div className="flex items-center gap-3 pb-4 mb-5 border-b border-dash-line-soft">
+    <div className="w-9 h-9 rounded-lg bg-brand-soft flex items-center justify-center shrink-0">
+      <Icon className="text-brand-ink" size={16} />
     </div>
     <div>
-      <h2 className="text-sm font-bold text-gray-800 outfit leading-tight">{title}</h2>
-      {hint && <p className="text-[11px] text-gray-400 work mt-0.5">{hint}</p>}
+      <h2 className="text-sm font-bold text-dash-ink2 outfit leading-tight">{title}</h2>
+      {hint && <p className="text-[11px] text-dash-mute2 work mt-0.5">{hint}</p>}
     </div>
   </div>
 );
 
 const Card = ({ children, className = '' }) => (
-  <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 ${className}`}>{children}</div>
+  <div className={`bg-dash-card rounded-2xl border border-dash-line-soft shadow-sm p-6 ${className}`}>{children}</div>
 );
 
 // ═══════════════════════════════════════════════════════════════
@@ -367,9 +367,9 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
 
   if (fetching) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#faf9f6] gap-3">
-        <FiLoader className="animate-spin text-[#F3A522]" size={34} />
-        <p className="text-sm text-gray-400 work">Loading course form...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-dash-cream gap-3">
+        <FiLoader className="animate-spin text-brand" size={34} />
+        <p className="text-sm text-dash-mute2 work">Loading course form...</p>
       </div>
     );
   }
@@ -379,28 +379,28 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
     : isEdit ? 'Save Changes' : (isRecorded ? 'Save & Add Modules' : 'Publish Course');
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] pb-24">
+    <div className="min-h-screen bg-dash-cream pb-24">
       {/* ─── Sticky Top Bar ──────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-gray-100">
-        <div className="h-[3px] w-full bg-gradient-to-r from-[#F3A522] via-[#e2941c] to-[#9AA0A8]"></div>
+      <div className="sticky top-0 z-30 bg-dash-card/90 backdrop-blur-xl border-b border-dash-line-soft">
+        <div className="h-[3px] w-full bg-gradient-to-r from-brand via-brand-strong to-dash-steel"></div>
         <div className="w-full px-4 md:px-8 py-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <Link
               href="/dashboard/admin/course"
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider hover:text-[#c9871a] transition-colors"
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider hover:text-brand-ink transition-colors"
             >
               <FiArrowLeft size={12} /> Courses
             </Link>
-            <h1 className="text-lg md:text-xl font-bold text-gray-900 outfit truncate">
+            <h1 className="text-lg md:text-xl font-bold text-dash-ink outfit truncate">
               {isEdit ? (
-                <>Edit Course{courseDoc?.title ? <span className="text-[#c9871a]">: {courseDoc.title}</span> : ''}</>
+                <>Edit Course{courseDoc?.title ? <span className="text-brand-ink">: {courseDoc.title}</span> : ''}</>
               ) : 'Create New Course'}
             </h1>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
             <div className="hidden sm:block">
-              <select {...register('status')} className="px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-xs font-bold text-gray-600 focus:outline-none focus:border-[#F3A522] cursor-pointer">
+              <select {...register('status')} className="px-3 py-2.5 rounded-lg border border-dash-line bg-dash-card text-xs font-bold text-dash-ink4 focus:outline-none focus:border-brand cursor-pointer">
                 <option value="published">✓ Published</option>
                 <option value="draft">◌ Draft</option>
                 <option value="archived">⊘ Archived</option>
@@ -410,7 +410,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
               <button
                 onClick={handleSubmit(onSubmit)}
                 disabled={saving || uploading}
-                className="flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white text-sm font-bold shadow-lg shadow-[#F3A522]/25 hover:shadow-xl hover:shadow-[#F3A522]/30 disabled:opacity-50 transition-all"
+                className="flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg bg-gradient-to-r from-brand to-brand-hover text-white text-sm font-bold shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-brand/30 disabled:opacity-50 transition-all"
               >
                 {saving ? <FiLoader className="animate-spin" /> : <FiSave />}
                 <span className="hidden sm:inline">{saveLabel}</span>
@@ -440,19 +440,19 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                   onClick={() => setValue('type', key, { shouldValidate: true })}
                   className={`relative flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all duration-300
                     ${active
-                      ? 'border-[#F3A522] bg-[#FEF6E7] shadow-md shadow-[#F3A522]/10'
-                      : 'border-gray-100 bg-white hover:border-[#F3A522]/40'}`}
+                      ? 'border-brand bg-brand-soft shadow-md shadow-brand/10'
+                      : 'border-dash-line-soft bg-dash-card hover:border-brand/40'}`}
                 >
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
-                    ${active ? 'bg-[#F3A522] text-white' : 'bg-gray-50 text-gray-400'}`}>
+                    ${active ? 'bg-brand text-white' : 'bg-dash-soft text-dash-mute2'}`}>
                     <Icon size={18} />
                   </div>
                   <div className="min-w-0">
-                    <p className={`text-sm font-bold outfit ${active ? 'text-[#a5680f]' : 'text-gray-700'}`}>{label}</p>
-                    <p className="text-[11px] text-gray-400 work leading-snug mt-0.5">{desc}</p>
+                    <p className={`text-sm font-bold outfit ${active ? 'text-brand-deep' : 'text-dash-ink3'}`}>{label}</p>
+                    <p className="text-[11px] text-dash-mute2 work leading-snug mt-0.5">{desc}</p>
                   </div>
                   {active && (
-                    <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#F3A522] text-white flex items-center justify-center">
+                    <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center">
                       <FiCheckCircle size={12} />
                     </span>
                   )}
@@ -464,7 +464,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
 
         {/* ─── Tabs (Recorded only) ──────────────────────────── */}
         {isRecorded && (
-          <div className="flex bg-white rounded-xl border border-gray-100 p-1.5 shadow-sm">
+          <div className="flex bg-dash-card rounded-xl border border-dash-line-soft p-1.5 shadow-sm">
             {[
               { id: 'info', label: 'Course Info', Icon: LuInfo },
               { id: 'modules', label: 'Modules & Lessons', Icon: LuLayers },
@@ -475,8 +475,8 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                 onClick={() => setActiveTab(id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all
                   ${activeTab === id
-                    ? 'bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white shadow-md shadow-[#F3A522]/20'
-                    : 'text-gray-500 hover:bg-gray-50'}`}
+                    ? 'bg-gradient-to-r from-brand to-brand-hover text-white shadow-md shadow-brand/20'
+                    : 'text-dash-mute hover:bg-dash-soft'}`}
               >
                 <Icon size={16} /> {label}
                 {id === 'modules' && !isEdit && (
@@ -495,18 +495,18 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
             </Card>
           ) : (
             <Card className="text-center py-16">
-              <div className="w-20 h-20 bg-[#FEF6E7] rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <LuLayers className="text-3xl text-[#F3A522]" />
+              <div className="w-20 h-20 bg-brand-soft rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <LuLayers className="text-3xl text-brand" />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 outfit mb-2">Save the course first</h3>
-              <p className="text-sm text-gray-400 work max-w-md mx-auto mb-6">
-                Fill in the course info and hit <span className="font-bold text-[#c9871a]">Save &amp; Add Modules</span> —
+              <h3 className="text-lg font-bold text-dash-ink2 outfit mb-2">Save the course first</h3>
+              <p className="text-sm text-dash-mute2 work max-w-md mx-auto mb-6">
+                Fill in the course info and hit <span className="font-bold text-brand-ink">Save &amp; Add Modules</span> —
                 you will land right here to build modules and lessons.
               </p>
               <button
                 type="button"
                 onClick={() => setActiveTab('info')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white text-sm font-bold shadow-lg shadow-[#F3A522]/25 hover:shadow-xl transition-all"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-brand to-brand-hover text-white text-sm font-bold shadow-lg shadow-brand/25 hover:shadow-xl transition-all"
               >
                 <FiArrowLeft /> Back to Course Info
               </button>
@@ -561,7 +561,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                     </div>
                     <div>
                       <label className={labelClass}>Course ID</label>
-                      <input {...register('id')} readOnly className={`${inputClass} bg-gray-50 text-gray-400 cursor-not-allowed`} />
+                      <input {...register('id')} readOnly className={`${inputClass} bg-dash-soft text-dash-mute2 cursor-not-allowed`} />
                     </div>
                     <div>
                       <label className={labelClass}>Category</label>
@@ -606,7 +606,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                     <div className="space-y-2.5">
                       {curriculums.fields.map((field, index) => (
                         <div key={field.id} className="flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-lg bg-[#FEF6E7] text-[#c9871a] text-xs font-bold outfit flex items-center justify-center shrink-0">
+                          <span className="w-8 h-8 rounded-lg bg-brand-soft text-brand-ink text-xs font-bold outfit flex items-center justify-center shrink-0">
                             {String(index + 1).padStart(2, '0')}
                           </span>
                           <input {...register(`curriculum.${index}`)} className={inputClass} placeholder={`Topic ${index + 1} — e.g. Introduction & Fundamentals`} />
@@ -624,7 +624,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                     <button
                       type="button"
                       onClick={() => curriculums.append('')}
-                      className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#c9871a] hover:text-[#a5680f] transition-colors"
+                      className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-brand-ink hover:text-brand-deep transition-colors"
                     >
                       <FiPlus size={14} /> Add Topic
                     </button>
@@ -633,9 +633,9 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
 
                 {/* Recorded note instead of curriculum */}
                 {isRecorded && (
-                  <div className="flex items-start gap-3 p-4 bg-[#FEF6E7]/60 border border-[#F0DFB4] rounded-2xl">
-                    <LuLayers className="text-[#c9871a] mt-0.5 shrink-0" size={18} />
-                    <p className="text-xs text-[#7a5210] work leading-relaxed">
+                  <div className="flex items-start gap-3 p-4 bg-brand-soft/60 border border-brand-line rounded-2xl">
+                    <LuLayers className="text-brand-ink mt-0.5 shrink-0" size={18} />
+                    <p className="text-xs text-brand-deep work leading-relaxed">
                       <span className="font-bold">Recorded course</span> — the curriculum is built from
                       <span className="font-bold"> Modules &amp; Lessons</span> (videos, quizzes, assignments).
                       {isEdit
@@ -654,7 +654,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                       const Ic = (ICON_OPTIONS.find(o => o.value === iconVal) || ICON_OPTIONS[6]).Icon;
                       return (
                         <div key={field.id} className="flex items-center gap-2">
-                          <span className="w-9 h-9 rounded-lg bg-[#FEF6E7] text-[#c9871a] flex items-center justify-center shrink-0">
+                          <span className="w-9 h-9 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center shrink-0">
                             <Ic size={16} />
                           </span>
                           <select {...register(`courseIncludes.${index}.icon`)} className={`${inputClass} w-44 shrink-0`}>
@@ -676,7 +676,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                   <button
                     type="button"
                     onClick={() => includes.append({ icon: 'FaCheckCircle', text: '' })}
-                    className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#c9871a] hover:text-[#a5680f] transition-colors"
+                    className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-brand-ink hover:text-brand-deep transition-colors"
                   >
                     <FiPlus size={14} /> Add Benefit
                   </button>
@@ -697,8 +697,8 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => { e.preventDefault(); handleImageFile(e.dataTransfer.files?.[0]); }}
                     className={`relative w-full aspect-video rounded-xl overflow-hidden border-2 border-dashed transition-all
-                      ${errors.image ? 'border-red-300' : 'border-gray-200 hover:border-[#F3A522]/60'}
-                      ${imageMode === 'upload' ? 'cursor-pointer' : ''} bg-gray-50 group`}
+                      ${errors.image ? 'border-red-300' : 'border-dash-line hover:border-brand/60'}
+                      ${imageMode === 'upload' ? 'cursor-pointer' : ''} bg-dash-soft group`}
                   >
                     {imageUrl ? (
                       <>
@@ -713,18 +713,18 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                         )}
                       </>
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-300">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-dash-faint">
                         {uploading
-                          ? <FiLoader className="animate-spin text-[#F3A522]" size={26} />
+                          ? <FiLoader className="animate-spin text-brand" size={26} />
                           : <FiUploadCloud size={26} />}
-                        <p className="text-[11px] font-bold work text-gray-400">
+                        <p className="text-[11px] font-bold work text-dash-mute2">
                           {uploading ? 'Uploading...' : 'Click or drop an image here'}
                         </p>
                       </div>
                     )}
                     {uploading && imageUrl && (
-                      <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                        <FiLoader className="animate-spin text-[#F3A522]" size={26} />
+                      <div className="absolute inset-0 bg-dash-card/70 flex items-center justify-center">
+                        <FiLoader className="animate-spin text-brand" size={26} />
                       </div>
                     )}
                   </div>
@@ -742,7 +742,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                       type="button"
                       onClick={() => setImageMode('upload')}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all
-                        ${imageMode === 'upload' ? 'bg-[#FEF6E7] text-[#a5680f] border border-[#F0DFB4]' : 'bg-gray-50 text-gray-400 border border-transparent hover:bg-gray-100'}`}
+                        ${imageMode === 'upload' ? 'bg-brand-soft text-brand-deep border border-brand-line' : 'bg-dash-soft text-dash-mute2 border border-transparent hover:bg-dash-soft2'}`}
                     >
                       <FiUploadCloud size={13} /> Upload
                     </button>
@@ -750,7 +750,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                       type="button"
                       onClick={() => setImageMode('url')}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all
-                        ${imageMode === 'url' ? 'bg-[#FEF6E7] text-[#a5680f] border border-[#F0DFB4]' : 'bg-gray-50 text-gray-400 border border-transparent hover:bg-gray-100'}`}
+                        ${imageMode === 'url' ? 'bg-brand-soft text-brand-deep border border-brand-line' : 'bg-dash-soft text-dash-mute2 border border-transparent hover:bg-dash-soft2'}`}
                     >
                       <FiLink size={13} /> Use URL
                     </button>
@@ -773,12 +773,12 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
                     <div>
                       <label className={labelClass}>Offer Price (optional)</label>
                       <input {...register('offerPrice')} className={inputClass} placeholder="e.g. 8500" />
-                      <p className="text-[10px] text-gray-300 work mt-1">Leave empty for no discount</p>
+                      <p className="text-[10px] text-dash-faint work mt-1">Leave empty for no discount</p>
                     </div>
                     <div>
                       <label className={labelClass}>Admission Fee (optional)</label>
                       <input type="number" min="0" {...register('admissionFee')} className={inputClass} placeholder="e.g. 2000" />
-                      <p className="text-[10px] text-gray-300 work mt-1">
+                      <p className="text-[10px] text-dash-faint work mt-1">
                         ভর্তি নিশ্চিত করতে student এই minimum টাকা দিলেই হবে, বাকিটা installment-এ। ০ = পুরো টাকা দিতে হবে।
                       </p>
                       <FieldError msg={errors.admissionFee?.message} />
@@ -837,7 +837,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
               <button
                 type="submit"
                 disabled={saving || uploading}
-                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white text-sm font-bold shadow-lg shadow-[#F3A522]/25 hover:shadow-xl disabled:opacity-50 transition-all"
+                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-brand to-brand-hover text-white text-sm font-bold shadow-lg shadow-brand/25 hover:shadow-xl disabled:opacity-50 transition-all"
               >
                 {saving ? <FiLoader className="animate-spin" /> : <FiSave />} {saveLabel}
               </button>
@@ -852,7 +852,7 @@ const CourseForm = ({ mode = 'create', courseId = null }) => {
           ${toast.type === 'success' ? 'bg-[#14100c] text-white' : 'bg-red-600 text-white'}`}
         >
           {toast.type === 'success'
-            ? <FiCheckCircle className="text-[#F3A522]" size={18} />
+            ? <FiCheckCircle className="text-brand" size={18} />
             : <FiAlertCircle size={18} />}
           {toast.msg}
         </div>

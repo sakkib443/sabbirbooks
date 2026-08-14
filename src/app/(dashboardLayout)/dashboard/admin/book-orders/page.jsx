@@ -82,10 +82,10 @@ function StatusBadge({ status }) {
 
 const DetailRow = ({ icon: Icon, label, value, mono }) => (
   <div className="flex items-start gap-2">
-    <Icon size={13} className="text-slate-300 mt-0.5 shrink-0" />
+    <Icon size={13} className="text-dash-faint mt-0.5 shrink-0" />
     <div className="min-w-0">
-      <p className="text-[10px] text-slate-400 uppercase tracking-wider">{label}</p>
-      <p className={`text-sm text-slate-700 break-words ${mono ? 'font-mono' : ''}`}>{value || '—'}</p>
+      <p className="text-[10px] text-dash-mute2 uppercase tracking-wider">{label}</p>
+      <p className={`text-sm text-dash-ink3 break-words ${mono ? 'font-mono' : ''}`}>{value || '—'}</p>
     </div>
   </div>
 );
@@ -270,14 +270,14 @@ export default function BookOrdersPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2.5">
-            <FiShoppingBag className="text-[#F3A522]" /> Book Orders
+          <h1 className="text-2xl font-bold text-dash-ink2 flex items-center gap-2.5">
+            <FiShoppingBag className="text-brand" /> Book Orders
           </h1>
-          <p className="text-slate-500 text-sm">Track and fulfill customer book orders.</p>
+          <p className="text-dash-mute text-sm">Track and fulfill customer book orders.</p>
         </div>
         <button
           onClick={fetchOrders}
-          className="flex items-center gap-2 px-3.5 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors self-start"
+          className="flex items-center gap-2 px-3.5 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors self-start"
         >
           <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
@@ -285,43 +285,43 @@ export default function BookOrdersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-xl font-bold text-slate-800">{stats.total}</p>
-          <p className="text-xs text-slate-400 mt-1">Total orders</p>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+          <p className="text-xl font-bold text-dash-ink2">{stats.total}</p>
+          <p className="text-xs text-dash-mute2 mt-1">Total orders</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-emerald-600">{bdt(stats.revenue)}</p>
-          <p className="text-xs text-slate-400 mt-1">Paid revenue</p>
+          <p className="text-xs text-dash-mute2 mt-1">Paid revenue</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
-          <p className="text-xs text-slate-400 mt-1">Awaiting confirmation</p>
+          <p className="text-xs text-dash-mute2 mt-1">Awaiting confirmation</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-orange-600">{bdt(stats.codOutstanding)}</p>
-          <p className="text-xs text-slate-400 mt-1">COD to collect</p>
+          <p className="text-xs text-dash-mute2 mt-1">COD to collect</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-sky-600">{stats.delivered}</p>
-          <p className="text-xs text-slate-400 mt-1">Delivered</p>
+          <p className="text-xs text-dash-mute2 mt-1">Delivered</p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dash-mute2" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by order #, buyer name, phone or email…"
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#F3A522]/25 focus:border-[#F3A522] outline-none"
+            className="w-full pl-10 pr-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => changeStatus(e.target.value)}
-          className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#F3A522]/25 focus:border-[#F3A522] outline-none text-slate-600"
+          className="px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4"
         >
           <option value="all">All statuses</option>
           <option value="pending">Pending</option>
@@ -336,7 +336,7 @@ export default function BookOrdersPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400">
+        <div className="flex items-center justify-center py-20 text-dash-mute2">
           <FiLoader className="animate-spin mr-2" /> Loading orders…
         </div>
       ) : error ? (
@@ -344,10 +344,10 @@ export default function BookOrdersPage() {
           <FiAlertCircle /> {error}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-200">
-          <FiShoppingBag className="mx-auto text-slate-300" size={40} />
-          <p className="text-slate-500 mt-3 font-medium">No orders found</p>
-          <p className="text-slate-400 text-sm">
+        <div className="text-center py-20 bg-dash-card rounded-xl border border-dashed border-dash-line">
+          <FiShoppingBag className="mx-auto text-dash-faint" size={40} />
+          <p className="text-dash-mute mt-3 font-medium">No orders found</p>
+          <p className="text-dash-mute2 text-sm">
             {orders.length === 0 ? 'Book orders will appear here once customers buy.' : 'Try adjusting the filters.'}
           </p>
         </div>
@@ -356,24 +356,24 @@ export default function BookOrdersPage() {
           {filtered.map((o) => {
             const isOpen = expanded === o._id;
             return (
-              <div key={o._id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div key={o._id} className="bg-dash-card rounded-xl border border-dash-line overflow-hidden">
                 {/* Summary row */}
                 <button
                   onClick={() => setExpanded(isOpen ? null : o._id)}
-                  className="w-full flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3.5 text-left hover:bg-slate-50/70 transition-colors"
+                  className="w-full flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3.5 text-left hover:bg-dash-soft/70 transition-colors"
                 >
                   <div className="flex items-center gap-2 min-w-[150px]">
-                    <FiHash className="text-slate-300" size={14} />
-                    <span className="font-mono text-sm font-semibold text-slate-700">{o.orderNumber}</span>
+                    <FiHash className="text-dash-faint" size={14} />
+                    <span className="font-mono text-sm font-semibold text-dash-ink3">{o.orderNumber}</span>
                   </div>
                   <div className="min-w-[140px] flex-1">
-                    <p className="text-sm font-medium text-slate-700 truncate">{buyerName(o.user)}</p>
-                    <p className="text-xs text-slate-400">{fmtDate(o.createdAt)}</p>
+                    <p className="text-sm font-medium text-dash-ink3 truncate">{buyerName(o.user)}</p>
+                    <p className="text-xs text-dash-mute2">{fmtDate(o.createdAt)}</p>
                   </div>
-                  <div className="text-sm text-slate-500 hidden sm:block">
+                  <div className="text-sm text-dash-mute hidden sm:block">
                     {o.items?.length || 0} item{(o.items?.length || 0) === 1 ? '' : 's'}
                   </div>
-                  <div className="font-bold text-slate-800 min-w-[70px] text-right">{bdt(o.total)}</div>
+                  <div className="font-bold text-dash-ink2 min-w-[70px] text-right">{bdt(o.total)}</div>
                   {isCod(o) && (
                     <span className="px-2 py-0.5 rounded-md text-xs font-bold border bg-amber-50 text-amber-700 border-amber-200">
                       COD
@@ -383,48 +383,48 @@ export default function BookOrdersPage() {
                     {o.payment?.status || 'pending'}
                   </span>
                   <StatusBadge status={o.status} />
-                  <FiChevronDown className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <FiChevronDown className={`text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Expanded detail */}
                 {isOpen && (
-                  <div className="border-t border-slate-100 p-4 sm:p-5 bg-slate-50/40 space-y-5">
+                  <div className="border-t border-dash-line-soft p-4 sm:p-5 bg-dash-soft/40 space-y-5">
                     {/* Items */}
                     <div>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Items</p>
-                      <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-100">
+                      <p className="text-xs font-bold text-dash-mute uppercase tracking-wider mb-2">Items</p>
+                      <div className="bg-dash-card rounded-lg border border-dash-line divide-y divide-dash-line-soft">
                         {(o.items || []).map((it, i) => (
                           <div key={i} className="flex items-center justify-between px-3 py-2.5 text-sm">
                             <div className="min-w-0">
-                              <p className="font-medium text-slate-700 truncate">{it.title}</p>
-                              <p className="text-xs text-slate-400 capitalize">{it.format} · {bdt(it.price)} × {it.quantity}</p>
+                              <p className="font-medium text-dash-ink3 truncate">{it.title}</p>
+                              <p className="text-xs text-dash-mute2 capitalize">{it.format} · {bdt(it.price)} × {it.quantity}</p>
                             </div>
-                            <span className="font-semibold text-slate-700 shrink-0">{bdt(it.price * it.quantity)}</span>
+                            <span className="font-semibold text-dash-ink3 shrink-0">{bdt(it.price * it.quantity)}</span>
                           </div>
                         ))}
                       </div>
                       <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 mt-2 text-sm px-1">
-                        <span className="text-slate-400">Subtotal: <span className="text-slate-600">{bdt(o.subtotal)}</span></span>
+                        <span className="text-dash-mute2">Subtotal: <span className="text-dash-ink4">{bdt(o.subtotal)}</span></span>
                         {o.discount > 0 && (
-                          <span className="text-slate-400">Discount: <span className="text-emerald-600">−{bdt(o.discount)}</span></span>
+                          <span className="text-dash-mute2">Discount: <span className="text-emerald-600">−{bdt(o.discount)}</span></span>
                         )}
                         {o.deliveryCharge > 0 && (
-                          <span className="text-slate-400">Delivery: <span className="text-slate-600">{bdt(o.deliveryCharge)}</span></span>
+                          <span className="text-dash-mute2">Delivery: <span className="text-dash-ink4">{bdt(o.deliveryCharge)}</span></span>
                         )}
-                        <span className="font-semibold text-slate-700">Total: {bdt(o.total)}</span>
+                        <span className="font-semibold text-dash-ink3">Total: {bdt(o.total)}</span>
                       </div>
                     </div>
 
                     {/* Buyer / shipping / payment */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-white rounded-lg border border-slate-200 p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-dash-card rounded-lg border border-dash-line p-4">
                       <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Buyer</p>
+                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Buyer</p>
                         <DetailRow icon={FiUser} label="Name" value={buyerName(o.user)} />
                         <DetailRow icon={FiMail} label="Email" value={o.user?.email} />
                         <DetailRow icon={FiPhone} label="Phone" value={o.user?.phoneNumber || o.shippingAddress?.phone} />
                       </div>
                       <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Shipping</p>
+                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Shipping</p>
                         {o.shippingAddress ? (
                           <>
                             <DetailRow icon={FiUser} label="Recipient" value={o.shippingAddress.name} />
@@ -438,11 +438,11 @@ export default function BookOrdersPage() {
                             {o.shippingAddress.note && <DetailRow icon={FiPackage} label="Note" value={o.shippingAddress.note} />}
                           </>
                         ) : (
-                          <p className="text-sm text-slate-400">Digital delivery — no shipping</p>
+                          <p className="text-sm text-dash-mute2">Digital delivery — no shipping</p>
                         )}
                       </div>
                       <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Payment</p>
+                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Payment</p>
                         <DetailRow
                           icon={FiCreditCard}
                           label="Method"
@@ -473,10 +473,10 @@ export default function BookOrdersPage() {
                         book's QR content), and it becomes paid when marked
                         delivered. Approving it here would book revenue for a
                         parcel still in a van. */}
-                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="rounded-lg border border-dash-line bg-dash-card p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          <span className="text-xs font-bold text-dash-mute uppercase tracking-wider">
                             {isCod(o) ? 'Cash on delivery' : 'Payment verification'}
                           </span>
                           <span className={`px-2 py-0.5 rounded-md text-xs font-medium border capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
@@ -488,7 +488,7 @@ export default function BookOrdersPage() {
                             <button
                               onClick={() => startEdit(o)}
                               disabled={busyId === o._id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 text-slate-600 hover:border-[#F3A522] hover:text-[#c9871a] transition disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-dash-line text-dash-ink4 hover:border-brand hover:text-brand-ink transition disabled:opacity-50"
                             >
                               <FiEdit2 size={12} /> Edit
                             </button>
@@ -537,7 +537,7 @@ export default function BookOrdersPage() {
                       </div>
 
                       {isCod(o) && (
-                        <p className="mt-3 text-xs text-slate-500 leading-relaxed bg-amber-50/70 border border-amber-100 rounded-lg px-3 py-2">
+                        <p className="mt-3 text-xs text-dash-mute leading-relaxed bg-amber-50/70 border border-amber-100 rounded-lg px-3 py-2">
                           {o.status === 'pending' ? (
                             <>
                               কল করে অর্ডারটি নিশ্চিত করে <b>Confirm order</b> চাপুন — তখনই স্টক
@@ -558,11 +558,11 @@ export default function BookOrdersPage() {
                       {editingId === o._id && (
                         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <label className="text-xs">
-                            <span className="text-slate-500 font-medium">Channel</span>
+                            <span className="text-dash-mute font-medium">Channel</span>
                             <select
                               value={editForm.channel}
                               onChange={(e) => setEditForm((f) => ({ ...f, channel: e.target.value }))}
-                              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#F3A522]"
+                              className="mt-1 w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:border-brand"
                             >
                               <option value="bkash">bKash</option>
                               <option value="rocket">Rocket</option>
@@ -570,49 +570,49 @@ export default function BookOrdersPage() {
                             </select>
                           </label>
                           <label className="text-xs">
-                            <span className="text-slate-500 font-medium">Transaction ID</span>
+                            <span className="text-dash-mute font-medium">Transaction ID</span>
                             <input
                               value={editForm.transactionId}
                               onChange={(e) => setEditForm((f) => ({ ...f, transactionId: e.target.value }))}
-                              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#F3A522]"
+                              className="mt-1 w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:border-brand"
                             />
                           </label>
                           <label className="text-xs">
-                            <span className="text-slate-500 font-medium">Sender number</span>
+                            <span className="text-dash-mute font-medium">Sender number</span>
                             <input
                               value={editForm.senderNumber}
                               onChange={(e) => setEditForm((f) => ({ ...f, senderNumber: e.target.value }))}
-                              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#F3A522]"
+                              className="mt-1 w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:border-brand"
                             />
                           </label>
                           <label className="text-xs">
-                            <span className="text-slate-500 font-medium">Sent at</span>
+                            <span className="text-dash-mute font-medium">Sent at</span>
                             <input
                               type="datetime-local"
                               value={editForm.sentAt}
                               onChange={(e) => setEditForm((f) => ({ ...f, sentAt: e.target.value }))}
-                              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#F3A522]"
+                              className="mt-1 w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:border-brand"
                             />
                           </label>
                           <label className="text-xs sm:col-span-2">
-                            <span className="text-slate-500 font-medium">Note</span>
+                            <span className="text-dash-mute font-medium">Note</span>
                             <input
                               value={editForm.note}
                               onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
-                              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#F3A522]"
+                              className="mt-1 w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:border-brand"
                             />
                           </label>
                           <div className="sm:col-span-2 flex justify-end gap-2">
                             <button
                               onClick={() => setEditingId(null)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-dash-line text-dash-ink4 hover:bg-dash-soft"
                             >
                               Cancel
                             </button>
                             <button
                               onClick={() => saveEdit(o)}
                               disabled={busyId === o._id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#F3A522] text-white hover:bg-[#d88f13] disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50"
                             >
                               {busyId === o._id ? <FiLoader className="animate-spin" size={12} /> : <FiSave size={12} />} Save
                             </button>
@@ -623,7 +623,7 @@ export default function BookOrdersPage() {
 
                     {/* Fulfillment status control */}
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Update status:</span>
+                      <span className="text-xs font-bold text-dash-mute uppercase tracking-wider">Update status:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {FULFILLMENT_OPTIONS.map((s) => (
                           <button
@@ -633,8 +633,8 @@ export default function BookOrdersPage() {
                             title={FULFILLMENT_HELP[s]}
                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition disabled:opacity-40 disabled:cursor-not-allowed
                               ${o.status === s
-                                ? 'bg-[#F3A522] text-white border-[#F3A522]'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-[#F3A522] hover:text-[#c9871a]'}`}
+                                ? 'bg-brand text-white border-brand'
+                                : 'bg-dash-card text-dash-ink4 border-dash-line hover:border-brand hover:text-brand-ink'}`}
                           >
                             {updatingId === o._id ? (
                               <FiLoader className="animate-spin" size={12} />
@@ -648,7 +648,7 @@ export default function BookOrdersPage() {
 
                     {/* Fulfillment trail — when each step actually happened */}
                     {(o.confirmedAt || o.shippedAt || o.deliveredAt || o.cancelledAt) && (
-                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-slate-400">
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-dash-mute2">
                         {o.confirmedAt && <span>Confirmed: {fmtDate(o.confirmedAt)}</span>}
                         {o.shippedAt && <span>Shipped: {fmtDate(o.shippedAt)}</span>}
                         {o.deliveredAt && <span>Delivered: {fmtDate(o.deliveredAt)}</span>}

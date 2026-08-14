@@ -78,6 +78,25 @@ export default function AnswerStyles({ dark = false }: { dark?: boolean }) {
       .sb-answer ol ol ol {
         list-style: lower-roman;
       }
+      /* Depth is only a guess at what the author meant. When the paste cleaner
+         could read the real marker off the Word document it says so with a type
+         attribute, and that has to beat the guess — a roman sub-list nested one
+         deep is otherwise silently relettered a, b, c. */
+      .sb-answer ol[type='1'] {
+        list-style: decimal;
+      }
+      .sb-answer ol[type='a'] {
+        list-style: lower-alpha;
+      }
+      .sb-answer ol[type='A'] {
+        list-style: upper-alpha;
+      }
+      .sb-answer ol[type='i'] {
+        list-style: lower-roman;
+      }
+      .sb-answer ol[type='I'] {
+        list-style: upper-roman;
+      }
       .sb-answer li {
         margin: 0.2rem 0;
       }
@@ -96,8 +115,34 @@ export default function AnswerStyles({ dark = false }: { dark?: boolean }) {
         padding: 0 2px;
         border-radius: 2px;
         /* Highlights are pale by design; on the dark page the text on top of
-           them has to flip or it disappears into the swatch. */
-        ${dark ? "color: #0f172a;" : ""}
+           them has to flip or it disappears into the swatch. Marked important
+           because TipTap's Highlight writes color:inherit into the element's
+           own style attribute, and an inline declaration outranks everything
+           except this. */
+        ${dark ? "color: #0f172a !important;" : ""}
+      }
+      ${
+        dark
+          ? `/* Word shades table cells and whole paragraphs too, and that arrives
+             as an inline background rather than a <mark>. Same problem, so the
+             same answer: anything that brought its own background gets dark
+             text. An element that also brought its own colour still wins —
+             that colour is inline and inline always beats a stylesheet. */
+      .sb-answer [style*='background'] {
+        color: #0f172a;
+      }`
+          : ""
+      }
+
+      /* A pasted Word document usually opens with its own Heading 1, which the
+         editor now keeps. Left at prose's default it would shout louder than the
+         question it is answering. */
+      .sb-answer h1 {
+        font-size: 1.35em;
+        margin: 1.1em 0 0.5em;
+      }
+      .sb-answer h2 {
+        font-size: 1.18em;
       }
 
       .sb-answer a {

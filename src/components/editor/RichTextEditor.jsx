@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Extension } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -49,6 +50,7 @@ import {
   FiMinus,
 } from 'react-icons/fi';
 import {
+  LuHeading1,
   LuHeading2,
   LuHeading3,
   LuListOrdered,
@@ -59,8 +61,45 @@ import {
   LuStrikethrough,
   LuHighlighter,
 } from 'react-icons/lu';
-import { cleanWordHtml, rehostPastedImages } from './wordPaste';
+import { captureClipboardImages, cleanWordHtml, rehostPastedImages } from './wordPaste';
 import { isImageFile } from '@/components/shared/uploadMedia';
+
+/**
+ * Node types that may carry text formatting of their own.
+ *
+ * TipTap's TextStyle mark only ever looks at <span>, but Word puts colour, font
+ * and spacing on the paragraph, the list item or the table cell at least as
+ * often — a whole-paragraph or whole-cell format would otherwise evaporate the
+ * moment it was pasted, which is exactly what "not quite like Word" looked like.
+ */
+const STYLED_BLOCKS = ['paragraph', 'heading', 'listItem', 'tableCell', 'tableHeader'];
+const STYLE_TARGETS = ['textStyle', ...STYLED_BLOCKS];
+
+const styleAttribute = (name, css) => ({
+  default: null,
+  parseHTML: element => element.style[name] || null,
+  renderHTML: attributes => (attributes[name] ? { style: `${css}: ${attributes[name]}` } : {}),
+});
+
+/**
+ * Indentation is the one part of Word's paragraph formatting TipTap ships no
+ * extension for, so an indented paragraph used to arrive flush against the
+ * margin. These two properties are the whole of what Word means by "indent".
+ */
+const WordIndent = Extension.create({
+  name: 'wordIndent',
+  addGlobalAttributes() {
+    return [
+      {
+        types: STYLED_BLOCKS,
+        attributes: {
+          marginLeft: styleAttribute('marginLeft', 'margin-left'),
+          textIndent: styleAttribute('textIndent', 'text-indent'),
+        },
+      },
+    ];
+  },
+});
 
 const API =
   (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '') + '/api';
@@ -173,19 +212,30 @@ function ColorMenu({ icon, title, colors, onPick, onClear }) {
 export default function RichTextEditor({ value, onChange, placeholder = 'উত্তর লিখুন…' }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(null);
 
   const editor = useEditor({
     // Next renders this on the server first; without it React hydration warns.
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3, 4] },
+        // Level 1 included because Word documents start with one. Without it
+        // the title of a pasted answer is demoted to a plain paragraph.
+        heading: { levels: [1, 2, 3, 4] },
         link: { openOnClick: false, HTMLAttributes: { rel: 'noopener noreferrer' } },
       }),
-      // Carries colour, background, font family and font size as inline styles —
-      // exactly the shape the Word cleaner emits.
-      TextStyleKit.configure({ lineHeight: false }),
+      // Carries colour, background, font family, size and line spacing as inline
+      // styles — exactly the shape the Word cleaner emits — on spans AND on the
+      // blocks Word formats directly, including table cells, whose shading has
+      // nowhere else to live.
+      TextStyleKit.configure({
+        color: { types: STYLE_TARGETS },
+        backgroundColor: { types: STYLE_TARGETS },
+        fontFamily: { types: STYLE_TARGETS },
+        fontSize: { types: STYLE_TARGETS },
+        lineHeight: { types: STYLE_TARGETS },
+      }),
+      WordIndent,
       Highlight.configure({ multicolor: true }),
       Image.configure({ HTMLAttributes: { class: 'rounded-lg max-w-full' } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -198,6 +248,16 @@ export default function RichTextEditor({ value, onChange, placeholder = 'উত�
       attributes: {
         class:
           'prose prose-sm max-w-none min-h-[280px] px-4 py-3 focus:outline-none prose-headings:font-semibold prose-p:my-2 sb-answer-editor',
+      },
+      // Word's pictures are not in the HTML flavour of the clipboard at all —
+      // that flavour only points at files on the author's own disk. The bytes
+      // live in the RTF flavour, and this is the one hook that sees the paste
+      // event itself, before ProseMirror throws the other flavours away.
+      handleDOMEvents: {
+        paste: (view, event) => {
+          captureClipboardImages(event.clipboardData);
+          return false;
+        },
       },
       // The one hook that runs on the clipboard's HTML before ProseMirror parses
       // it. Everything the paste cleaner does has to happen here.
@@ -220,18 +280,25 @@ export default function RichTextEditor({ value, onChange, placeholder = 'উত�
       setTimeout(async () => {
         setUploading(true);
         try {
-          const { uploaded, dropped } = await rehostPastedImages(editor, uploadFile);
-          if (uploaded || dropped) {
-            setNotice(
-              [
-                uploaded ? `${uploaded}টি ছবি সার্ভারে আপলোড হয়েছে` : '',
-                dropped ? `${dropped}টি ছবি আনা যায়নি — আলাদা করে আপলোড করুন` : '',
-              ]
-                .filter(Boolean)
-                .join(' · ')
-            );
-            setTimeout(() => setNotice(''), 6000);
-          }
+          const { uploaded, kept, removed } = await rehostPastedImages(editor, uploadFile);
+          if (!uploaded && !kept && !removed) return;
+          // A picture that could not be recovered has been taken out of the
+          // document. Saying so plainly — and saying what to do instead — beats
+          // letting the author discover the hole after publishing.
+          const lost = kept + removed;
+          setNotice({
+            tone: lost ? 'warn' : 'ok',
+            text: [
+              uploaded ? `${uploaded}টি ছবি সার্ভারে আপলোড হয়েছে` : '',
+              removed
+                ? `${removed}টি ছবি ওয়ার্ড থেকে আনা যায়নি — ওয়ার্ডে ছবির উপর রাইট-ক্লিক করে "Save as Picture" দিয়ে সেভ করুন, তারপর টুলবারের ছবি বোতাম দিয়ে আপলোড করুন`
+                : '',
+              kept ? `${kept}টি ছবি আপলোড হয়নি — সেভ করার আগে আবার চেষ্টা করুন` : '',
+            ]
+              .filter(Boolean)
+              .join(' · '),
+          });
+          setTimeout(() => setNotice(null), lost ? 15000 : 6000);
         } finally {
           setUploading(false);
         }
@@ -372,6 +439,13 @@ export default function RichTextEditor({ value, onChange, placeholder = 'উত�
 
         <Divider />
 
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          active={editor.isActive('heading', { level: 1 })}
+          title="প্রধান শিরোনাম"
+        >
+          <LuHeading1 />
+        </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor.isActive('heading', { level: 2 })}
@@ -555,8 +629,14 @@ export default function RichTextEditor({ value, onChange, placeholder = 'উত�
       )}
 
       {notice && (
-        <p className="px-3 py-1.5 text-[11px] text-emerald-700 bg-emerald-50 border-b border-emerald-100">
-          {notice}
+        <p
+          className={`px-3 py-1.5 text-[11px] border-b ${
+            notice.tone === 'warn'
+              ? 'text-amber-900 bg-amber-50 border-amber-200 font-medium'
+              : 'text-emerald-700 bg-emerald-50 border-emerald-100'
+          }`}
+        >
+          {notice.text}
         </p>
       )}
 

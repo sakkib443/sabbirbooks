@@ -52,17 +52,17 @@ export default function BookPreviewPickerPage() {
     load();
   }, [load]);
 
-  if (loading) return <div className="text-slate-500">লোড হচ্ছে…</div>;
+  if (loading) return <div className="text-dash-mute">লোড হচ্ছে…</div>;
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-slate-900">বুক প্রিভিউ</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">
+      <h1 className="text-xl font-semibold text-dash-ink">বুক প্রিভিউ</h1>
+      <p className="text-sm text-dash-mute mt-1 mb-6">
         প্রিভিউ আলাদা ফুল-স্ক্রিন প্লেয়ারে খুলবে — রেকর্ডেড কোর্সের মতো ডানপাশে কনটেন্ট ট্রি থাকবে।
       </p>
 
       {books.length === 0 && (
-        <p className="text-slate-500 text-sm">কোনো বই নেই। আগে একটি বই যোগ করুন।</p>
+        <p className="text-dash-mute text-sm">কোনো বই নেই। আগে একটি বই যোগ করুন।</p>
       )}
 
       <div className="space-y-3">
@@ -74,23 +74,23 @@ export default function BookPreviewPickerPage() {
           return (
             <div
               key={book._id}
-              className="rounded-xl border border-slate-200 bg-white p-4 flex flex-wrap items-center gap-4"
+              className="rounded-xl border border-dash-line bg-dash-card p-4 flex flex-wrap items-center gap-4"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
                   <FiBook className="w-5 h-5 text-violet-500" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-medium text-slate-900 truncate">{book.title}</p>
+                  <p className="font-medium text-dash-ink truncate">{book.title}</p>
                   {s ? (
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-dash-mute mt-0.5">
                       {s.parts} পার্ট · {s.chapters} অধ্যায় · {s.topics} টপিক ·{' '}
-                      <span className={pct === 100 ? 'text-emerald-600' : 'text-slate-500'}>
+                      <span className={pct === 100 ? 'text-emerald-600' : 'text-dash-mute'}>
                         {s.answered}/{s.questions} উত্তর ({pct}%)
                       </span>
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-400 mt-0.5">কনটেন্ট যোগ করা হয়নি</p>
+                    <p className="text-xs text-dash-mute2 mt-0.5">কনটেন্ট যোগ করা হয়নি</p>
                   )}
                 </div>
               </div>
@@ -101,14 +101,14 @@ export default function BookPreviewPickerPage() {
                   className={`inline-flex items-center gap-1.5 rounded-lg text-sm px-4 py-2 transition ${
                     hasContent
                       ? 'bg-violet-600 text-white hover:bg-violet-700'
-                      : 'bg-slate-200 text-slate-400 pointer-events-none'
+                      : 'bg-dash-soft3 text-dash-mute2 pointer-events-none'
                   }`}
                 >
                   <FiEye className="w-4 h-4" /> প্রিভিউ
                 </Link>
                 <Link
                   href={`/dashboard/admin/books/${book._id}/content`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-sm px-4 py-2 hover:bg-slate-50 transition"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line-strong text-sm px-4 py-2 hover:bg-dash-soft transition"
                 >
                   <FiEdit3 className="w-4 h-4" /> কনটেন্ট
                 </Link>

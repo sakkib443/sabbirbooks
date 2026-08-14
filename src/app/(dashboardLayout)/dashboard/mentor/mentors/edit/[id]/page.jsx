@@ -95,33 +95,33 @@ const MentorEditMentor = () => {
         }
     };
 
-    const inputClass = "w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none text-[13px] transition-all bg-white";
-    const labelClass = "block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wider";
+    const inputClass = "w-full px-4 py-2 rounded-lg border border-dash-line focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none text-[13px] transition-all bg-dash-card";
+    const labelClass = "block text-[11px] font-bold text-dash-ink4 mb-1.5 uppercase tracking-wider";
     const errorClass = "text-red-500 text-[10px] mt-1 font-medium";
 
     if (fetching) {
         return (
-            <div className="flex h-screen items-center justify-center bg-white">
-                <FiLoader className="animate-spin text-[#41bfb8]" size={35} />
+            <div className="flex h-screen items-center justify-center bg-dash-card">
+                <FiLoader className="animate-spin text-aqua" size={35} />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-poppins">
+        <div className="min-h-screen bg-dash-soft p-4 md:p-8 font-poppins">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <Link href="/dashboard/mentor/mentors" className="flex items-center gap-2 text-slate-500 hover:text-[#41bfb8] text-xs mb-2">
+                        <Link href="/dashboard/mentor/mentors" className="flex items-center gap-2 text-dash-mute hover:text-aqua text-xs mb-2">
                             <FiArrowLeft /> Cancel Editing
                         </Link>
-                        <h1 className="text-2xl font-outfit font-bold text-slate-900">Update Mentor Details</h1>
+                        <h1 className="text-2xl font-outfit font-bold text-dash-ink">Update Mentor Details</h1>
                     </div>
                     <button
                         onClick={handleSubmit(onSubmit)}
                         disabled={loading}
-                        className="flex items-center gap-2 bg-[#41bfb8] text-white px-8 py-2.5 rounded-xl font-bold text-sm hover:bg-[#38a89d] shadow-lg disabled:bg-slate-300 transition-all"
+                        className="flex items-center gap-2 bg-aqua text-white px-8 py-2.5 rounded-xl font-bold text-sm hover:bg-aqua-hover shadow-lg disabled:bg-dash-faint transition-all"
                     >
                         {loading ? 'Updating...' : <><FiSave /> Save Changes</>}
                     </button>
@@ -129,8 +129,8 @@ const MentorEditMentor = () => {
 
                 <form className="space-y-6">
                     {/* Card 1: Core Information */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div className="md:col-span-2 text-[11px] font-extrabold border-b pb-2 uppercase tracking-[2px] text-[#41bfb8]">Core Identity & Contact</div>
+                    <div className="bg-dash-card p-6 rounded-2xl border border-dash-line-soft shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="md:col-span-2 text-[11px] font-extrabold border-b pb-2 uppercase tracking-[2px] text-aqua">Core Identity & Contact</div>
 
                         <div className="space-y-1">
                             <label className={labelClass}>Mentor Unique ID</label>
@@ -175,8 +175,8 @@ const MentorEditMentor = () => {
                     </div>
 
                     {/* Card 2: Training Stats */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                        <div className="text-[11px] font-extrabold border-b pb-2 mb-5 uppercase tracking-[2px] text-[#41bfb8]">Experience Metrics</div>
+                    <div className="bg-dash-card p-6 rounded-2xl border border-dash-line-soft shadow-sm">
+                        <div className="text-[11px] font-extrabold border-b pb-2 mb-5 uppercase tracking-[2px] text-aqua">Experience Metrics</div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-1">
                                 <label className={labelClass}>Years of Experience</label>
@@ -198,13 +198,13 @@ const MentorEditMentor = () => {
                             { title: 'Education Background', fields: eduFields, name: 'education_qualification', ph: 'Degree...' },
                             { title: 'Professional Work History', fields: workFields, name: 'work_experience', ph: 'Company/Role...' }
                         ].map((section) => (
-                            <div key={section.name} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                            <div key={section.name} className="bg-dash-card p-6 rounded-2xl border border-dash-line-soft shadow-sm">
                                 <div className="flex justify-between items-center mb-4">
-                                    <label className="text-[11px] font-extrabold uppercase tracking-[2px] text-[#41bfb8]">{section.title}</label>
+                                    <label className="text-[11px] font-extrabold uppercase tracking-[2px] text-aqua">{section.title}</label>
                                     <button
                                         type="button"
                                         onClick={() => section.fields.append('')}
-                                        className="text-[10px] flex items-center gap-1 font-black text-[#9AA0A8] hover:bg-orange-50 px-2 py-1 rounded"
+                                        className="text-[10px] flex items-center gap-1 font-black text-dash-steel hover:bg-orange-50 px-2 py-1 rounded"
                                     >
                                         <FiPlus /> ADD NEW
                                     </button>
@@ -218,7 +218,7 @@ const MentorEditMentor = () => {
                                                 placeholder={section.ph}
                                             />
                                             {section.fields.fields.length > 1 && (
-                                                <button type="button" onClick={() => section.fields.remove(index)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                                <button type="button" onClick={() => section.fields.remove(index)} className="p-2 text-dash-faint hover:text-red-500 transition-colors">
                                                     <FiTrash2 size={16} />
                                                 </button>
                                             )}
@@ -231,8 +231,8 @@ const MentorEditMentor = () => {
                     </div>
 
                     {/* Card 3: Narrative Bio */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-5">
-                        <div className="text-[11px] font-extrabold border-b pb-2 uppercase tracking-[2px] text-[#41bfb8]">Biography & Professional Story</div>
+                    <div className="bg-dash-card p-6 rounded-2xl border border-dash-line-soft shadow-sm space-y-5">
+                        <div className="text-[11px] font-extrabold border-b pb-2 uppercase tracking-[2px] text-aqua">Biography & Professional Story</div>
                         <div className="space-y-1">
                             <label className={labelClass}>Detailed Profile Description</label>
                             <textarea {...register('details')} rows={4} className={inputClass} placeholder="About the mentor..." />

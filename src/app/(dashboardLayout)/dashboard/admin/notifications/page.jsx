@@ -17,7 +17,7 @@ const typeConfig = {
   exam:        { icon: '📝', bg: 'bg-violet-50', label: 'Exam' },
   assignment:  { icon: '📋', bg: 'bg-amber-50', label: 'Assignment' },
   certificate: { icon: '🎓', bg: 'bg-yellow-50', label: 'Certificate' },
-  system:      { icon: '📢', bg: 'bg-slate-50', label: 'System' },
+  system:      { icon: '📢', bg: 'bg-dash-soft', label: 'System' },
   reminder:    { icon: '⏰', bg: 'bg-rose-50', label: 'Reminder' },
 };
 
@@ -116,8 +116,8 @@ export default function AdminNotificationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 outfit">Notifications</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-dash-ink2 outfit">Notifications</h1>
+          <p className="text-sm text-dash-mute mt-0.5">
             {unread > 0 ? `${unread} unread notifications` : 'All caught up!'}
           </p>
         </div>
@@ -131,7 +131,7 @@ export default function AdminNotificationsPage() {
           <button onClick={() => setShowSendForm(!showSendForm)}
             className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg transition ${
               showSendForm
-                ? 'text-slate-600 bg-slate-100 border border-slate-200'
+                ? 'text-dash-ink4 bg-dash-soft2 border border-dash-line'
                 : 'text-white bg-gradient-to-r from-teal-500 to-emerald-500 shadow-sm hover:shadow-md'
             }`}>
             {showSendForm ? <><FiX size={13} /> Close</> : <><FiPlus size={13} /> Send Notification</>}
@@ -141,15 +141,15 @@ export default function AdminNotificationsPage() {
 
       {/* Send Notification Form */}
       {showSendForm && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <div className="bg-dash-card rounded-xl border border-dash-line shadow-sm p-5">
+          <h3 className="text-base font-bold text-dash-ink2 mb-4 flex items-center gap-2">
             <FiSend size={16} className="text-teal-500" /> Send New Notification
           </h3>
           <form onSubmit={handleSend} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5">Type</label>
+              <label className="block text-xs font-bold text-dash-ink4 mb-1.5">Type</label>
               <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-teal-400 outline-none">
+                className="w-full px-3 py-2.5 border border-dash-line rounded-xl text-sm focus:border-teal-400 outline-none">
                 <option value="system">📢 System Announcement</option>
                 <option value="reminder">⏰ Reminder</option>
                 <option value="class">📅 Class Update</option>
@@ -158,26 +158,26 @@ export default function AdminNotificationsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5">Send To</label>
+              <label className="block text-xs font-bold text-dash-ink4 mb-1.5">Send To</label>
               <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-teal-400 outline-none">
+                className="w-full px-3 py-2.5 border border-dash-line rounded-xl text-sm focus:border-teal-400 outline-none">
                 <option value="student">👨‍🎓 All Students</option>
                 <option value="mentor">👨‍🏫 All Mentors</option>
                 <option value="admin">👤 All Admins</option>
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-600 mb-1.5">Title *</label>
+              <label className="block text-xs font-bold text-dash-ink4 mb-1.5">Title *</label>
               <input value={form.title} onChange={e => setForm({...form, title: e.target.value})} required
                 placeholder="e.g. Important Announcement"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-teal-400 outline-none" />
+                className="w-full px-3 py-2.5 border border-dash-line rounded-xl text-sm focus:border-teal-400 outline-none" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-600 mb-1.5">Message *</label>
+              <label className="block text-xs font-bold text-dash-ink4 mb-1.5">Message *</label>
               <textarea value={form.message} onChange={e => setForm({...form, message: e.target.value})} required
                 placeholder="Write your notification message..."
                 rows={3}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm resize-none focus:border-teal-400 outline-none" />
+                className="w-full px-3 py-2.5 border border-dash-line rounded-xl text-sm resize-none focus:border-teal-400 outline-none" />
             </div>
             {result && (
               <div className={`md:col-span-2 p-3 rounded-xl text-sm font-semibold ${result.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
@@ -197,8 +197,8 @@ export default function AdminNotificationsPage() {
           </form>
 
           {/* Quick Templates */}
-          <div className="mt-4 pt-4 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-400 uppercase mb-2">Quick Templates</p>
+          <div className="mt-4 pt-4 border-t border-dash-line-soft">
+            <p className="text-[11px] font-bold text-dash-mute2 uppercase mb-2">Quick Templates</p>
             <div className="flex flex-wrap gap-2">
               {[
                 { title: '📢 Platform Maintenance', msg: 'The platform will be under maintenance on Sunday from 2-4 AM.' },
@@ -207,7 +207,7 @@ export default function AdminNotificationsPage() {
                 { title: '🎓 Certificates Ready', msg: 'Certificates for completed courses are now ready.' },
               ].map((t, i) => (
                 <button key={i} onClick={() => setForm({...form, title: t.title, message: t.msg})}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-teal-300 hover:bg-teal-50/30 transition text-xs font-medium text-slate-600">
+                  className="px-3 py-1.5 rounded-lg border border-dash-line hover:border-teal-300 hover:bg-teal-50/30 transition text-xs font-medium text-dash-ink4">
                   {t.title}
                 </button>
               ))}
@@ -218,31 +218,31 @@ export default function AdminNotificationsPage() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-dash-soft2 rounded-xl p-1">
           {[
             { key: 'all', label: 'All' },
             { key: 'unread', label: `Unread (${unread})` },
             { key: 'read', label: 'Read' },
           ].map(f => (
             <button key={f.key} onClick={() => setFilterRead(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filterRead === f.key ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filterRead === f.key ? 'bg-dash-card text-teal-700 shadow-sm' : 'text-dash-mute hover:text-dash-ink3'}`}>
               {f.label}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 max-w-xs">
-          <FiSearch size={13} className="text-slate-400" />
+        <div className="flex items-center gap-1.5 bg-dash-card border border-dash-line rounded-lg px-2.5 py-1.5 flex-1 max-w-xs">
+          <FiSearch size={13} className="text-dash-mute2" />
           <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search notifications..."
-            className="text-sm text-slate-600 outline-none bg-transparent w-full placeholder:text-slate-400" />
+            className="text-sm text-dash-ink4 outline-none bg-transparent w-full placeholder:text-dash-mute2" />
           {searchTerm && (
-            <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-slate-600">
+            <button onClick={() => setSearchTerm('')} className="text-dash-mute2 hover:text-dash-ink4">
               <FiX size={12} />
             </button>
           )}
         </div>
         <select value={filterType} onChange={e => setFilterType(e.target.value)}
-          className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 outline-none bg-white">
+          className="px-3 py-1.5 border border-dash-line rounded-lg text-xs font-medium text-dash-ink4 outline-none bg-dash-card">
           <option value="all">All Types</option>
           {Object.entries(typeConfig).map(([key, cfg]) => (
             <option key={key} value={key}>{cfg.icon} {cfg.label}</option>
@@ -251,49 +251,49 @@ export default function AdminNotificationsPage() {
       </div>
 
       {/* Notification List */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-dash-card rounded-xl border border-dash-line overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <FiLoader className="animate-spin text-teal-500" size={24} />
-            <span className="ml-2 text-sm text-slate-400">Loading notifications...</span>
+            <span className="ml-2 text-sm text-dash-mute2">Loading notifications...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-              <FiBell className="text-slate-300" size={24} />
+            <div className="w-14 h-14 rounded-2xl bg-dash-soft2 flex items-center justify-center mx-auto mb-3">
+              <FiBell className="text-dash-faint" size={24} />
             </div>
-            <p className="text-sm font-medium text-slate-500">No notifications found</p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-sm font-medium text-dash-mute">No notifications found</p>
+            <p className="text-xs text-dash-mute2 mt-1">
               {searchTerm ? 'Try a different search term' : filterRead === 'unread' ? 'All notifications are read!' : 'No notifications yet'}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-dash-soft">
             {filtered.map((n) => {
               const config = getConfig(n.type);
               return (
                 <div key={n._id}
-                  className={`group relative flex items-start gap-3 px-5 py-4 transition hover:bg-slate-50/50 cursor-pointer ${!n.isRead ? config.bg : ''}`}
+                  className={`group relative flex items-start gap-3 px-5 py-4 transition hover:bg-dash-soft/50 cursor-pointer ${!n.isRead ? config.bg : ''}`}
                   onClick={() => { if (!n.isRead) markRead(n._id); }}>
                   {/* Icon */}
-                  <div className={`w-10 h-10 rounded-xl ${!n.isRead ? 'bg-white shadow-sm border border-slate-100' : 'bg-slate-100'} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                  <div className={`w-10 h-10 rounded-xl ${!n.isRead ? 'bg-dash-card shadow-sm border border-dash-line-soft' : 'bg-dash-soft2'} flex items-center justify-center flex-shrink-0 mt-0.5`}>
                     <span className="text-lg">{config.icon}</span>
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className={`text-sm leading-snug ${!n.isRead ? 'font-bold text-slate-900' : 'font-medium text-slate-600'}`}>
+                      <p className={`text-sm leading-snug ${!n.isRead ? 'font-bold text-dash-ink' : 'font-medium text-dash-ink4'}`}>
                         {n.title}
                       </p>
                       {!n.isRead && <span className="w-2 h-2 bg-teal-500 rounded-full flex-shrink-0" />}
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${!n.isRead ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-400'}`}>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${!n.isRead ? 'bg-teal-100 text-teal-700' : 'bg-dash-soft2 text-dash-mute2'}`}>
                         {config.label}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                    <p className="text-xs text-dash-mute mt-0.5 line-clamp-2">{n.message}</p>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-[11px] text-slate-400">{timeAgo(n.createdAt)}</span>
+                      <span className="text-[11px] text-dash-mute2">{timeAgo(n.createdAt)}</span>
                       {n.link && (
                         <a href={n.link} onClick={e => e.stopPropagation()}
                           className="text-[11px] text-teal-500 flex items-center gap-0.5 hover:text-teal-600">
@@ -307,12 +307,12 @@ export default function AdminNotificationsPage() {
                   <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition">
                     {!n.isRead && (
                       <button onClick={(e) => { e.stopPropagation(); markRead(n._id); }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" title="Mark as read">
+                        className="p-1.5 rounded-lg text-dash-mute2 hover:text-teal-600 hover:bg-teal-50 transition" title="Mark as read">
                         <FiCheckCircle size={14} />
                       </button>
                     )}
                     <button onClick={(e) => { e.stopPropagation(); removeOne(n._id); }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition" title="Delete">
+                      className="p-1.5 rounded-lg text-dash-mute2 hover:text-red-500 hover:bg-red-50 transition" title="Delete">
                       <FiTrash2 size={14} />
                     </button>
                   </div>

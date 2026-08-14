@@ -394,7 +394,17 @@ export default function BookDetailPage() {
                   <h2 className={cn("font-heading text-xl font-bold text-foreground", bn)}>
                     {S.aboutHeading}
                   </h2>
-                  <p className={cn("mt-3 leading-relaxed text-muted-foreground", bn)}>
+                  {/* whitespace-pre-line so a description written as several
+                      paragraphs in the admin form reads as several paragraphs
+                      here. Without it every line break collapses and a long
+                      description arrives as one unbroken wall of text — which
+                      is the whole reason this page felt thin. */}
+                  <p
+                    className={cn(
+                      "mt-3 whitespace-pre-line leading-relaxed text-muted-foreground",
+                      bn
+                    )}
+                  >
                     {book.description}
                   </p>
                 </div>

@@ -388,15 +388,15 @@ export default function BatchMaterialDetailPage({ params }) {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/mentor/batch-materials"
-            className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition">
+            className="w-10 h-10 rounded-xl bg-dash-soft2 flex items-center justify-center text-dash-mute hover:bg-dash-soft3 transition">
             <FiArrowLeft size={16} />
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-800 outfit">{batch?.name || batch?.courseName || 'Batch'}</h1>
-              <code className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{batch?.id}</code>
+              <h1 className="text-xl font-bold text-dash-ink2 outfit">{batch?.name || batch?.courseName || 'Batch'}</h1>
+              <code className="text-[10px] text-dash-mute2 bg-dash-soft2 px-2 py-0.5 rounded">{batch?.id}</code>
             </div>
-            <p className="text-sm text-slate-500">{batch?.courseId?.title || batch?.courseName} • {classes.length} class folders</p>
+            <p className="text-sm text-dash-mute">{batch?.courseId?.title || batch?.courseName} • {classes.length} class folders</p>
           </div>
         </div>
         <Link href={`/dashboard/mentor/batch-materials/${batchId}/create`}
@@ -407,7 +407,7 @@ export default function BatchMaterialDetailPage({ params }) {
 
       {/* Batch Info */}
       {batch && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap items-center gap-6 text-sm text-slate-600">
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4 flex flex-wrap items-center gap-6 text-sm text-dash-ink4">
           <span className="flex items-center gap-1.5"><FiCalendar size={13} className="text-blue-500" />
             {batch.startDate ? new Date(batch.startDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—'}
             → {batch.endDate ? new Date(batch.endDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—'}
@@ -423,10 +423,10 @@ export default function BatchMaterialDetailPage({ params }) {
 
       {/* Class Folders List */}
       {classes.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
-          <FiFolder className="mx-auto text-slate-300 mb-4" size={40} />
-          <h3 className="text-lg font-bold text-slate-700 mb-1">No Class Folders Yet</h3>
-          <p className="text-sm text-slate-500 mb-4">Create your first class folder to add materials, links & recordings.</p>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-16 text-center">
+          <FiFolder className="mx-auto text-dash-faint mb-4" size={40} />
+          <h3 className="text-lg font-bold text-dash-ink3 mb-1">No Class Folders Yet</h3>
+          <p className="text-sm text-dash-mute mb-4">Create your first class folder to add materials, links & recordings.</p>
           <Link href={`/dashboard/mentor/batch-materials/${batchId}/create`} className="px-4 py-2 bg-teal-500 text-white rounded-lg text-sm font-bold hover:bg-teal-600 transition">
             <FiPlus className="inline mr-1" /> Create Class Folder
           </Link>
@@ -436,10 +436,10 @@ export default function BatchMaterialDetailPage({ params }) {
           {classes.map((cls, idx) => {
             const isExpanded = expandedClass === cls._id;
             return (
-              <div key={cls._id} className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-sm transition">
+              <div key={cls._id} className="bg-dash-card rounded-xl border border-dash-line overflow-hidden hover:shadow-sm transition">
                 {/* Folder Header */}
                 <button onClick={() => setExpandedClass(isExpanded ? null : cls._id)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50/50 transition">
+                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-dash-soft/50 transition">
                   <div className="flex items-center gap-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm ${
                       cls.status === 'completed' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
@@ -450,24 +450,24 @@ export default function BatchMaterialDetailPage({ params }) {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-slate-800">{cls.title}</h3>
+                        <h3 className="text-sm font-bold text-dash-ink2">{cls.title}</h3>
                         {cls.sentToStudents && (
                           <span className="text-[9px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-200 flex items-center gap-0.5">
                             <FiCheck size={9} /> Sent
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500">{cls.topic}</p>
+                      <p className="text-xs text-dash-mute">{cls.topic}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right hidden sm:block">
-                      <p className="text-xs font-medium text-slate-600">
+                      <p className="text-xs font-medium text-dash-ink4">
                         {cls.date ? new Date(cls.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '—'}
                       </p>
-                      <p className="text-[10px] text-slate-400">{cls.startTime} - {cls.endTime}</p>
+                      <p className="text-[10px] text-dash-mute2">{cls.startTime} - {cls.endTime}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-400">
+                    <div className="flex items-center gap-1 text-dash-mute2">
                       {cls.meetingLink && <FiLink size={12} className="text-blue-500" />}
                       {((cls.recordings?.length > 0) || cls.recordingUrl) && (
                         <span className="inline-flex items-center gap-0.5 text-violet-500">
@@ -477,7 +477,7 @@ export default function BatchMaterialDetailPage({ params }) {
                       )}
                       {cls.materials?.length > 0 && <span className="text-[10px] font-bold bg-teal-50 text-teal-600 px-1.5 rounded">{cls.materials.length}</span>}
                     </div>
-                    <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-4 h-4 text-dash-mute2 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
@@ -485,14 +485,14 @@ export default function BatchMaterialDetailPage({ params }) {
 
                 {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="border-t border-slate-100 px-5 py-4 space-y-4 bg-slate-50/30">
-                    <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                  <div className="border-t border-dash-line-soft px-5 py-4 space-y-4 bg-dash-soft/30">
+                    <div className="flex flex-wrap gap-3 text-xs text-dash-mute">
                       <span className="flex items-center gap-1"><FiCalendar size={11} className="text-blue-500" />
                         {cls.date ? new Date(cls.date).toLocaleDateString('en-GB', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }) : '—'}
                       </span>
                       <span className="flex items-center gap-1"><FiClock size={11} className="text-amber-500" /> {cls.startTime} - {cls.endTime}</span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        cls.type === 'live' ? 'bg-red-50 text-red-600' : cls.type === 'offline' ? 'bg-slate-100 text-slate-600' : 'bg-violet-50 text-violet-600'
+                        cls.type === 'live' ? 'bg-red-50 text-red-600' : cls.type === 'offline' ? 'bg-dash-soft2 text-dash-ink4' : 'bg-violet-50 text-violet-600'
                       }`}>{cls.type === 'live' ? '🔴 Live' : cls.type === 'offline' ? '📍 Offline' : '📹 Recorded'}</span>
                     </div>
 
@@ -503,7 +503,7 @@ export default function BatchMaterialDetailPage({ params }) {
                       </a>
                     )}
 
-                    {cls.venue && <p className="text-xs text-slate-600 flex items-center gap-1.5"><FiMapPin size={12} /> {cls.venue}</p>}
+                    {cls.venue && <p className="text-xs text-dash-ink4 flex items-center gap-1.5"><FiMapPin size={12} /> {cls.venue}</p>}
 
                     {(() => {
                       const recs = Array.isArray(cls.recordings) && cls.recordings.length > 0
@@ -512,7 +512,7 @@ export default function BatchMaterialDetailPage({ params }) {
                       if (recs.length === 0) return null;
                       return (
                         <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Recordings ({recs.length})</p>
+                          <p className="text-[10px] font-bold text-dash-mute2 uppercase mb-2">Recordings ({recs.length})</p>
                           <div className="flex flex-wrap gap-2">
                             {recs.map((r, i) => (
                               <button key={i} onClick={() => openViewer(r.url, `${cls.title} — ${r.title || 'Recording'}`)}
@@ -526,36 +526,36 @@ export default function BatchMaterialDetailPage({ params }) {
                     })()}
 
                     {cls.notes && (
-                      <div className="bg-white rounded-lg border border-slate-200 p-3">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Notes / Instructions</p>
-                        <p className="text-xs text-slate-600 whitespace-pre-wrap">{cls.notes}</p>
+                      <div className="bg-dash-card rounded-lg border border-dash-line p-3">
+                        <p className="text-[10px] font-bold text-dash-mute2 uppercase mb-1">Notes / Instructions</p>
+                        <p className="text-xs text-dash-ink4 whitespace-pre-wrap">{cls.notes}</p>
                       </div>
                     )}
 
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Materials ({cls.materials?.length || 0})</p>
+                      <p className="text-[10px] font-bold text-dash-mute2 uppercase mb-2">Materials ({cls.materials?.length || 0})</p>
                       {cls.materials?.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {cls.materials.map((m, i) => (
-                            <div key={i} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 group hover:border-teal-300 transition">
+                            <div key={i} className="flex items-center gap-2 px-3 py-2 bg-dash-card rounded-lg border border-dash-line group hover:border-teal-300 transition">
                               <FiFileText size={12} className="text-teal-500" />
-                              <button onClick={() => openViewer(m.fileUrl, m.title)} className="text-xs text-slate-700 font-medium hover:text-teal-600 cursor-pointer">{m.title}</button>
-                              <span className="text-[8px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded uppercase font-bold">{m.fileType}</span>
+                              <button onClick={() => openViewer(m.fileUrl, m.title)} className="text-xs text-dash-ink3 font-medium hover:text-teal-600 cursor-pointer">{m.title}</button>
+                              <span className="text-[8px] bg-dash-soft2 text-dash-mute2 px-1.5 py-0.5 rounded uppercase font-bold">{m.fileType}</span>
                               <button onClick={() => openViewer(m.fileUrl, m.title)}
                                 className="text-blue-400 hover:text-blue-600 transition" title="Preview"><FiEye size={11} /></button>
                               <button onClick={() => handleRemoveMaterial(cls._id, i)}
-                                className="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-600 transition"><FiTrash2 size={11} /></button>
+                                className="opacity-0 group-hover:opacity-100 touch-always-visible text-rose-400 hover:text-rose-600 transition"><FiTrash2 size={11} /></button>
                             </div>
                           ))}
                         </div>
-                      ) : <p className="text-xs text-slate-400 italic">No materials added yet.</p>}
+                      ) : <p className="text-xs text-dash-mute2 italic">No materials added yet.</p>}
                     </div>
 
-                    <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-200">
-                      <button onClick={() => openEdit(cls)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-dash-line">
+                      <button onClick={() => openEdit(cls)} className="flex items-center gap-1.5 px-3 py-2 bg-dash-card border border-dash-line rounded-lg text-xs font-medium text-dash-ink4 hover:bg-dash-soft transition">
                         <FiEdit3 size={12} /> Edit
                       </button>
-                      <button onClick={() => handleQuickAddMaterial(cls._id)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-teal-50 hover:text-teal-700 transition">
+                      <button onClick={() => handleQuickAddMaterial(cls._id)} className="flex items-center gap-1.5 px-3 py-2 bg-dash-card border border-dash-line rounded-lg text-xs font-medium text-dash-ink4 hover:bg-teal-50 hover:text-teal-700 transition">
                         <FiFileText size={12} /> Quick Add Material
                       </button>
                       {!cls.sentToStudents ? (
@@ -569,7 +569,7 @@ export default function BatchMaterialDetailPage({ params }) {
                         </span>
                       )}
                       <button onClick={() => handleDelete(cls._id)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-rose-500 hover:bg-rose-50 transition ml-auto">
+                        className="flex items-center gap-1.5 px-3 py-2 bg-dash-card border border-dash-line rounded-lg text-xs font-medium text-rose-500 hover:bg-rose-50 transition ml-auto">
                         <FiTrash2 size={12} /> Delete
                       </button>
                     </div>
@@ -584,12 +584,12 @@ export default function BatchMaterialDetailPage({ params }) {
       {/* ═══════ CREATE / EDIT MODAL — ALL FIELDS ═══════ */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10 rounded-t-2xl">
-              <h3 className="text-lg font-bold text-slate-800">
+          <div className="bg-dash-card rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-dash-line-soft sticky top-0 bg-dash-card z-10 rounded-t-2xl">
+              <h3 className="text-lg font-bold text-dash-ink2">
                 {editingClass ? '✏️ Edit Class Folder' : '📁 Create Class Folder'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-lg"><FiX size={18} /></button>
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-dash-soft2 rounded-lg"><FiX size={18} /></button>
             </div>
 
             <div className="p-6 space-y-5">
@@ -604,21 +604,21 @@ export default function BatchMaterialDetailPage({ params }) {
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Class Title *</label>
+                    <label className="text-xs font-bold text-dash-mute mb-1 block">Class Title *</label>
                     <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                      placeholder="e.g. Class 01 - Introduction" className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
+                      placeholder="e.g. Class 01 - Introduction" className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Date *</label>
+                    <label className="text-xs font-bold text-dash-mute mb-1 block">Date *</label>
                     <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
+                      className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="text-xs font-bold text-slate-500 mb-1 block">Topics / What will be taught *</label>
+                  <label className="text-xs font-bold text-dash-mute mb-1 block">Topics / What will be taught *</label>
                   <textarea value={form.topic} onChange={e => setForm({ ...form, topic: e.target.value })} rows={2}
                     placeholder="e.g. HTML Structure, CSS Selectors, Flexbox Layout, Responsive Design..."
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
+                    className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
                 </div>
               </div>
 
@@ -629,19 +629,19 @@ export default function BatchMaterialDetailPage({ params }) {
                 </h4>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Start Time</label>
+                    <label className="text-xs font-bold text-dash-mute mb-1 block">Start Time</label>
                     <input type="time" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+                      className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">End Time</label>
+                    <label className="text-xs font-bold text-dash-mute mb-1 block">End Time</label>
                     <input type="time" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+                      className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Class Type</label>
+                    <label className="text-xs font-bold text-dash-mute mb-1 block">Class Type</label>
                     <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400">
+                      className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400">
                       <option value="live">🔴 Live Online</option>
                       <option value="offline">📍 Offline</option>
                       <option value="recorded">📹 Pre-Recorded</option>
@@ -657,14 +657,14 @@ export default function BatchMaterialDetailPage({ params }) {
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Meeting / Zoom Link</label>
+                    <label className="text-xs font-bold text-dash-mute mb-1 block">Meeting / Zoom Link</label>
                     <input type="url" value={form.meetingLink} onChange={e => setForm({ ...form, meetingLink: e.target.value })}
-                      placeholder="https://zoom.us/j/..." className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+                      placeholder="https://zoom.us/j/..." className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Platform</label>
+                    <label className="text-xs font-bold text-dash-mute mb-1 block">Platform</label>
                     <select value={form.meetingPlatform} onChange={e => setForm({ ...form, meetingPlatform: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400">
+                      className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400">
                       <option value="zoom">Zoom</option>
                       <option value="meet">Google Meet</option>
                       <option value="teams">MS Teams</option>
@@ -673,9 +673,9 @@ export default function BatchMaterialDetailPage({ params }) {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="text-xs font-bold text-slate-500 mb-1 block">Venue (for offline class)</label>
+                  <label className="text-xs font-bold text-dash-mute mb-1 block">Venue (for offline class)</label>
                   <input type="text" value={form.venue} onChange={e => setForm({ ...form, venue: e.target.value })}
-                    placeholder="Room 301, Aptech Learning HQ" className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+                    placeholder="Room 301, Aptech Learning HQ" className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
                 </div>
               </div>
 
@@ -689,10 +689,10 @@ export default function BatchMaterialDetailPage({ params }) {
                 {form.recordings.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {form.recordings.map((r, i) => (
-                      <div key={i} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
+                      <div key={i} className="flex items-center gap-2 px-3 py-2 bg-dash-soft rounded-lg border border-dash-line">
                         <FiVideo size={12} className="text-red-500 flex-shrink-0" />
-                        <span className="text-xs text-slate-700 font-medium flex-1 truncate">{r.title}</span>
-                        <span className="text-[10px] text-slate-400 truncate max-w-[180px]" title={r.url}>{r.url}</span>
+                        <span className="text-xs text-dash-ink3 font-medium flex-1 truncate">{r.title}</span>
+                        <span className="text-[10px] text-dash-mute2 truncate max-w-[180px]" title={r.url}>{r.url}</span>
                         <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700"><FiExternalLink size={11} /></a>
                         <button onClick={() => removeRecordingFromForm(i)} className="text-rose-400 hover:text-rose-600"><FiTrash2 size={11} /></button>
                       </div>
@@ -707,12 +707,12 @@ export default function BatchMaterialDetailPage({ params }) {
                     <input type="text" value={newRecording.title}
                       onChange={e => setNewRecording({ ...newRecording, title: e.target.value })}
                       placeholder="Title (e.g. Part 1)"
-                      className="px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-rose-400 bg-white" />
+                      className="px-3 py-2 border border-dash-line rounded-lg text-xs outline-none focus:border-rose-400 bg-dash-card" />
                     <input type="url" value={newRecording.url}
                       onChange={e => setNewRecording({ ...newRecording, url: e.target.value })}
                       placeholder="https://youtube.com/... or drive.google.com link"
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addRecordingToForm(); } }}
-                      className="px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-rose-400 bg-white" />
+                      className="px-3 py-2 border border-dash-line rounded-lg text-xs outline-none focus:border-rose-400 bg-dash-card" />
                     <button type="button" onClick={addRecordingToForm}
                       className="px-3 py-2 bg-rose-500 text-white rounded-lg text-xs font-bold hover:bg-rose-600 transition flex items-center justify-center gap-1">
                       <FiPlus size={12} /> Add
@@ -731,10 +731,10 @@ export default function BatchMaterialDetailPage({ params }) {
                 {form.materials.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {form.materials.map((m, i) => (
-                      <div key={i} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
+                      <div key={i} className="flex items-center gap-2 px-3 py-2 bg-dash-soft rounded-lg border border-dash-line">
                         <FiFileText size={12} className="text-teal-500" />
-                        <span className="text-xs text-slate-700 font-medium flex-1">{m.title}</span>
-                        <span className="text-[8px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold">{m.fileType}</span>
+                        <span className="text-xs text-dash-ink3 font-medium flex-1">{m.title}</span>
+                        <span className="text-[8px] bg-dash-soft3 text-dash-mute px-1.5 py-0.5 rounded uppercase font-bold">{m.fileType}</span>
                         <a href={m.fileUrl} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700"><FiExternalLink size={11} /></a>
                         <button onClick={() => removeMaterialFromForm(i)} className="text-rose-400 hover:text-rose-600"><FiTrash2 size={11} /></button>
                       </div>
@@ -743,11 +743,11 @@ export default function BatchMaterialDetailPage({ params }) {
                 )}
 
                 {/* Add new material - Upload or Link */}
-                <div className="bg-slate-50 rounded-lg border border-dashed border-slate-300 p-4 space-y-4">
+                <div className="bg-dash-soft rounded-lg border border-dashed border-dash-line-strong p-4 space-y-4">
                   {/* File Upload */}
                   <div>
                     <label className="text-[10px] font-bold text-teal-600 uppercase mb-2 block">📤 Upload File (PDF, PPT, DOC, ZIP)</label>
-                    <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition ${uploading ? 'border-amber-300 bg-amber-50' : 'border-teal-300 bg-white hover:bg-teal-50 hover:border-teal-400'}`}>
+                    <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition ${uploading ? 'border-amber-300 bg-amber-50' : 'border-teal-300 bg-dash-card hover:bg-teal-50 hover:border-teal-400'}`}>
                       <input type="file" className="hidden" multiple onChange={handleFileUpload} accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.xlsx" disabled={uploading} />
                       {uploading ? (
                         <><FiLoader className="animate-spin text-amber-500" size={16} /> <span className="text-xs font-medium text-amber-600">Uploading to Cloudinary...</span></>
@@ -759,9 +759,9 @@ export default function BatchMaterialDetailPage({ params }) {
 
                   {/* OR Divider */}
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-slate-200" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">or add by link</span>
-                    <div className="flex-1 h-px bg-slate-200" />
+                    <div className="flex-1 h-px bg-dash-soft3" />
+                    <span className="text-[10px] font-bold text-dash-mute2 uppercase">or add by link</span>
+                    <div className="flex-1 h-px bg-dash-soft3" />
                   </div>
 
                   {/* Link-based add */}
@@ -769,12 +769,12 @@ export default function BatchMaterialDetailPage({ params }) {
                     <label className="text-[10px] font-bold text-blue-600 uppercase mb-2 block">🔗 Add Link (Google Drive, GitHub, etc.)</label>
                     <div className="grid grid-cols-3 gap-3">
                       <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({ ...newMaterial, title: e.target.value })}
-                        placeholder="Title (e.g. Slides)" className="px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-teal-400 bg-white" />
+                        placeholder="Title (e.g. Slides)" className="px-3 py-2 border border-dash-line rounded-lg text-xs outline-none focus:border-teal-400 bg-dash-card" />
                       <input type="url" value={newMaterial.fileUrl} onChange={e => setNewMaterial({ ...newMaterial, fileUrl: e.target.value })}
-                        placeholder="URL (drive, github, etc)" className="px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-teal-400 bg-white" />
+                        placeholder="URL (drive, github, etc)" className="px-3 py-2 border border-dash-line rounded-lg text-xs outline-none focus:border-teal-400 bg-dash-card" />
                       <div className="flex gap-2">
                         <select value={newMaterial.fileType} onChange={e => setNewMaterial({ ...newMaterial, fileType: e.target.value })}
-                          className="flex-1 px-2 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-teal-400 bg-white">
+                          className="flex-1 px-2 py-2 border border-dash-line rounded-lg text-xs outline-none focus:border-teal-400 bg-dash-card">
                           <option value="pdf">PDF</option><option value="ppt">PPT</option><option value="doc">DOC</option>
                           <option value="zip">ZIP</option><option value="link">Link</option><option value="video">Video</option>
                         </select>
@@ -790,18 +790,18 @@ export default function BatchMaterialDetailPage({ params }) {
 
               {/* Section 6: Notes */}
               <div>
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-dash-mute uppercase tracking-wider mb-3 flex items-center gap-1.5">
                   📝 Notes / Instructions (optional)
                 </h4>
                 <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3}
                   placeholder="Prerequisites, homework, preparation, guidelines, additional instructions..."
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
+                  className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 sticky bottom-0 bg-white rounded-b-2xl">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-dash-line-soft sticky bottom-0 bg-dash-card rounded-b-2xl">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2.5 text-sm font-medium text-dash-ink4 hover:bg-dash-soft2 rounded-lg transition">Cancel</button>
               <button onClick={handleSave} disabled={saving}
                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-lg text-sm font-bold hover:shadow-lg disabled:opacity-50 transition shadow-sm">
                 {saving ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />}
@@ -819,38 +819,38 @@ export default function BatchMaterialDetailPage({ params }) {
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={(e) => { if (e.target === e.currentTarget) closeViewer(); }}>
-            <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+            <div className={`bg-dash-card rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
               isFullscreen ? 'w-full h-full rounded-none' : 'w-full max-w-5xl max-h-[90vh]'
             }`}>
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-white flex-shrink-0">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-dash-line-soft bg-dash-card flex-shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    ['youtube','gdrive','video','vimeo'].includes(type) ? 'bg-blue-50' : type === 'pdf' ? 'bg-red-50' : 'bg-slate-50'
+                    ['youtube','gdrive','video','vimeo'].includes(type) ? 'bg-blue-50' : type === 'pdf' ? 'bg-red-50' : 'bg-dash-soft'
                   }`}>
                     {['youtube','gdrive','video','vimeo'].includes(type)
                       ? <FiVideo size={16} className="text-blue-500" />
                       : type === 'pdf' ? <FiFileText size={16} className="text-red-500" />
-                      : <FiFileText size={16} className="text-slate-500" />
+                      : <FiFileText size={16} className="text-dash-mute" />
                     }
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-slate-800 truncate">{title}</h3>
-                    <p className="text-[11px] text-slate-400">{getFileTypeLabel(url)}</p>
+                    <h3 className="text-sm font-bold text-dash-ink2 truncate">{title}</h3>
+                    <p className="text-[11px] text-dash-mute2">{getFileTypeLabel(url)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <a href={url} download target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-mute hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"
                     onClick={(e) => e.stopPropagation()}>
                     <FiDownload size={13} /> Download
                   </a>
                   <button onClick={() => setIsFullscreen(!isFullscreen)}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-400 hover:text-slate-600">
+                    className="p-2 hover:bg-dash-soft2 rounded-lg transition text-dash-mute2 hover:text-dash-ink4">
                     {isFullscreen ? <FiMinimize2 size={16} /> : <FiMaximize2 size={16} />}
                   </button>
                   <button onClick={closeViewer}
-                    className="p-2 hover:bg-rose-50 rounded-lg transition text-slate-400 hover:text-rose-500">
+                    className="p-2 hover:bg-rose-50 rounded-lg transition text-dash-mute2 hover:text-rose-500">
                     <FiX size={18} />
                   </button>
                 </div>
@@ -867,7 +867,7 @@ export default function BatchMaterialDetailPage({ params }) {
                   <video src={url} controls autoPlay className="w-full h-full absolute inset-0 object-contain bg-black" title={title} />
                 )}
                 {type === 'pdf' && (
-                  <iframe src={url} className="w-full h-full absolute inset-0 bg-white" frameBorder="0" title={title} />
+                  <iframe src={url} className="w-full h-full absolute inset-0 bg-dash-card" frameBorder="0" title={title} />
                 )}
                 {type === 'image' && (
                   <div className="w-full h-full flex items-center justify-center p-4">
@@ -876,7 +876,7 @@ export default function BatchMaterialDetailPage({ params }) {
                 )}
                 {type === 'link' && (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8">
-                    <FiLink size={32} className="text-slate-400" />
+                    <FiLink size={32} className="text-dash-mute2" />
                     <p className="text-white/90 text-base font-bold">{title}</p>
                     <p className="text-white/50 text-sm">Trying to load inline preview...</p>
                     <iframe src={url} className="w-full flex-1 rounded-xl border border-slate-700 mt-2" frameBorder="0" title={title}

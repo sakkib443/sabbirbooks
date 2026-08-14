@@ -87,17 +87,17 @@ export default function BatchAnalyticsPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white rounded-xl border border-slate-200/60 p-4 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-dash-card rounded-xl border border-dash-line/60 p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white"><FiCalendar size={20} /></div>
           <div>
-            <h1 className="text-lg font-bold text-slate-900 outfit">Batch Analytics</h1>
-            <p className="text-xs text-slate-400">Select a batch folder to view classes, students, attendance &amp; payment</p>
+            <h1 className="text-lg font-bold text-dash-ink outfit">Batch Analytics</h1>
+            <p className="text-xs text-dash-mute2">Select a batch folder to view classes, students, attendance &amp; payment</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/dashboard/admin" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition"><FiArrowLeft size={12} /> Dashboard</Link>
-          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition"><FiRefreshCw size={12} /> Reload</button>
+          <Link href="/dashboard/admin" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-ink4 bg-dash-soft border border-dash-line rounded-lg hover:bg-dash-soft2 transition"><FiArrowLeft size={12} /> Dashboard</Link>
+          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-ink4 bg-dash-soft border border-dash-line rounded-lg hover:bg-dash-soft2 transition"><FiRefreshCw size={12} /> Reload</button>
           <Link href="/dashboard/admin/batch/create" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition shadow-sm"><FiCalendar size={12} /> New Batch</Link>
         </div>
       </div>
@@ -107,12 +107,12 @@ export default function BatchAnalyticsPage() {
         {cards.map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.title} className="bg-white rounded-xl border border-slate-200/60 p-5 shadow-sm hover:shadow-md transition-all group">
+            <div key={s.title} className="bg-dash-card rounded-xl border border-dash-line/60 p-5 shadow-sm hover:shadow-md transition-all group">
               <div className="flex items-center gap-3">
                 <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${s.bg} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform shrink-0`}><Icon size={20} /></div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-900 outfit leading-none">{loading ? <span className="inline-block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : s.val}</p>
-                  <p className="text-[10px] font-semibold text-slate-400 tracking-wider mt-1">{s.title}</p>
+                  <p className="text-2xl font-bold text-dash-ink outfit leading-none">{loading ? <span className="inline-block w-8 h-6 bg-dash-soft2 animate-pulse rounded" /> : s.val}</p>
+                  <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider mt-1">{s.title}</p>
                 </div>
               </div>
             </div>
@@ -121,46 +121,46 @@ export default function BatchAnalyticsPage() {
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-3">
+      <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm p-3">
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 w-48">
-            <FiSearch size={13} className="text-slate-400 shrink-0" />
+          <div className="flex items-center gap-1.5 bg-dash-soft border border-dash-line rounded-lg px-2.5 py-2 w-48">
+            <FiSearch size={13} className="text-dash-mute2 shrink-0" />
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search batches..."
-              className="text-sm text-slate-600 outline-none bg-transparent w-full placeholder:text-slate-400" />
-            {searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600"><FiX size={11} /></button>}
+              className="text-sm text-dash-ink4 outline-none bg-transparent w-full placeholder:text-dash-mute2" />
+            {searchQuery && <button onClick={() => setSearchQuery('')} className="text-dash-mute2 hover:text-dash-ink4"><FiX size={11} /></button>}
           </div>
-          <div className="w-px h-6 bg-slate-200 hidden sm:block" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition">
+          <div className="w-px h-6 bg-dash-soft3 hidden sm:block" />
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm text-dash-ink4 bg-dash-soft border border-dash-line rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition">
             <option value="all">All Status</option>
             <option value="active">Running</option>
             <option value="upcoming">Upcoming</option>
             <option value="completed">Completed</option>
           </select>
-          <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition max-w-[170px]">
+          <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className="text-sm text-dash-ink4 bg-dash-soft border border-dash-line rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition max-w-[170px]">
             <option value="">All Courses</option>
             {courses.map((c) => <option key={c._id} value={c._id}>{c.title}</option>)}
           </select>
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition">
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="text-sm text-dash-ink4 bg-dash-soft border border-dash-line rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition">
             <option value="">All Months</option>
             {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
           </select>
-          <select value={capacityFilter} onChange={(e) => setCapacityFilter(e.target.value)} className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition">
+          <select value={capacityFilter} onChange={(e) => setCapacityFilter(e.target.value)} className="text-sm text-dash-ink4 bg-dash-soft border border-dash-line rounded-lg px-3 py-2 outline-none focus:border-violet-300 transition">
             {CAPACITY_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
           {hasActiveFilter && (
             <button onClick={clearFilters} className="flex items-center gap-1 px-2.5 py-2 text-xs font-medium text-red-500 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition"><FiX size={11} /> Clear</button>
           )}
-          <span className="text-xs text-slate-400 ml-auto">{filtered.length} of {allBatches.length} batches</span>
+          <span className="text-xs text-dash-mute2 ml-auto">{filtered.length} of {allBatches.length} batches</span>
         </div>
       </div>
 
       {/* Batch Folder Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-[120px] bg-white border border-slate-200 rounded-xl animate-pulse" />)}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-[120px] bg-dash-card border border-dash-line rounded-xl animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
-          <FiFolder className="mx-auto text-slate-300 mb-3" size={40} />
-          <p className="text-sm text-slate-500">{hasActiveFilter ? 'No batches match your filters' : 'No batches found'}</p>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-16 text-center">
+          <FiFolder className="mx-auto text-dash-faint mb-3" size={40} />
+          <p className="text-sm text-dash-mute">{hasActiveFilter ? 'No batches match your filters' : 'No batches found'}</p>
           {hasActiveFilter && <button onClick={clearFilters} className="mt-2 text-xs text-violet-600 hover:underline">Clear filters</button>}
         </div>
       ) : (
@@ -170,30 +170,30 @@ export default function BatchAnalyticsPage() {
             const seatPct = batch.seatsFilled || 0;
             return (
               <Link key={batch._id} href={`/dashboard/admin/batch-analytics/${batch._id}`}
-                className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md hover:border-violet-200 transition-all group">
+                className="bg-dash-card border border-dash-line rounded-xl p-4 hover:shadow-md hover:border-violet-200 transition-all group">
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 rounded-lg bg-${c}-50 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
                     <FiFolder size={18} className={`text-${c}-500`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-slate-800 truncate group-hover:text-violet-700 transition-colors">{batch.name || batch.id}</h3>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{batch.courseName || batch.courseId?.title || 'Course'}</p>
-                    <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
+                    <h3 className="text-sm font-semibold text-dash-ink2 truncate group-hover:text-violet-700 transition-colors">{batch.name || batch.id}</h3>
+                    <p className="text-xs text-dash-mute2 truncate mt-0.5">{batch.courseName || batch.courseId?.title || 'Course'}</p>
+                    <div className="flex items-center gap-3 mt-2 text-[11px] text-dash-mute2">
                       <span className="flex items-center gap-1"><FiUsers size={10} /> {batch.enrolledStudents || 0}/{batch.maxStudents || 50}</span>
                       <span className="flex items-center gap-1"><FiCalendar size={10} /> {formatDate(batch.startDate)}</span>
                     </div>
                     {/* Seats bar */}
                     <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 bg-slate-100 rounded-full h-1.5">
+                      <div className="flex-1 bg-dash-soft2 rounded-full h-1.5">
                         <div className={`h-1.5 rounded-full ${seatPct >= 80 ? 'bg-emerald-500' : seatPct >= 50 ? 'bg-amber-500' : 'bg-blue-400'}`} style={{ width: `${Math.min(seatPct, 100)}%` }} />
                       </div>
-                      <span className="text-[10px] text-slate-400 shrink-0">{seatPct}%</span>
+                      <span className="text-[10px] text-dash-mute2 shrink-0">{seatPct}%</span>
                     </div>
                     <span className={`inline-block mt-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-${c}-50 text-${c}-600`}>
                       {batch._status === 'active' ? 'Running' : batch._status === 'upcoming' ? 'Upcoming' : 'Completed'}
                     </span>
                   </div>
-                  <FiChevronRight size={16} className="text-slate-300 group-hover:text-violet-500 mt-1 transition-colors" />
+                  <FiChevronRight size={16} className="text-dash-faint group-hover:text-violet-500 mt-1 transition-colors" />
                 </div>
               </Link>
             );

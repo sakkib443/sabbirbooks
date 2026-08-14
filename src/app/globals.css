@@ -8,10 +8,39 @@
 /* ============================================================
    SABBIR BOOK — MEDICAL DESIGN SYSTEM
    A clean, trustworthy medical theme: teal primary, mint accent,
-   deep-slate text on airy backgrounds. Light + dark (system) aware.
+   deep-slate text on airy backgrounds.
+
+   THEMING STRATEGY  (read this before touching any colour below)
+   --------------------------------------------------------------
+   Three user-facing states: "light", "dark", "system" (default).
+   "system" is resolved *in JavaScript*, not in CSS: the no-flash
+   inline script in app/layout.tsx reads localStorage("theme"),
+   asks matchMedia for the OS preference when the stored value is
+   "system"/absent, and stamps the RESOLVED result onto <html> as
+   `data-theme="light" | "dark"` before the first paint. So CSS
+   only ever has to answer one question — is data-theme dark?
+
+   That gives us exactly two dark blocks:
+     1. `@media (prefers-color-scheme: dark) :root:not([data-theme])`
+        — a no-JS / script-blocked fallback. It is a verbatim copy of
+          the site-wide dark palette as it stood before the toggle
+          existed, so a visitor with JavaScript off sees exactly what
+          they saw before. It deliberately does NOT carry the
+          dashboard tokens: the dashboard is a client-rendered SPA
+          behind a localStorage token and renders nothing at all
+          without JS, so there is no no-JS dashboard to theme.
+     2. `:root[data-theme="dark"]`
+        — the real one. Site tokens + dashboard tokens + the scoped
+          status-hue remap. The script always sets this attribute.
+
+   Every site token in block 1 must also appear in block 2, or a
+   no-JS-to-JS transition would change colour. The theme audit script
+   asserts exactly that.
    ============================================================ */
 
 :root {
+  color-scheme: light;
+
   /* Surfaces & text */
   --background: #ffffff;
   --surface-soft: #f1fafb; /* very light teal wash for alt sections */
@@ -52,10 +81,65 @@
   --shadow-soft: 0 1px 2px rgba(14, 42, 51, 0.04), 0 4px 16px rgba(14, 42, 51, 0.05);
   --shadow-card: 0 2px 6px rgba(14, 42, 51, 0.05), 0 12px 32px rgba(14, 42, 51, 0.08);
   --shadow-glow: 0 12px 40px rgba(14, 154, 167, 0.22);
+
+  /* ----------------------------------------------------------
+     DASHBOARD PALETTE  (admin / mentor / student panels)
+     The dashboard was built on a second, undeclared palette:
+     raw slate utilities plus a hardcoded amber accent. These
+     tokens ARE that palette, promoted to first-class variables.
+
+     Every LIGHT value below is byte-identical to the literal it
+     replaces — the slate ones are Tailwind v4's own oklch values
+     copied out of node_modules/tailwindcss/theme.css — so the
+     migration is a no-op in light mode by construction.
+     ---------------------------------------------------------- */
+
+  /* Surfaces — page < card, then progressively stronger fills */
+  --dash-bg: #f8fafb;                          /* was bg-[#f8fafb]   */
+  --dash-card: #ffffff;                        /* was bg-white       */
+  --dash-cream: #faf9f6;                       /* was bg-[#faf9f6]   */
+  --dash-soft: oklch(98.4% 0.003 247.858);     /* was slate-50       */
+  --dash-soft2: oklch(96.8% 0.007 247.896);    /* was slate-100      */
+  --dash-soft3: oklch(92.9% 0.013 255.508);    /* was slate-200      */
+
+  /* Hairlines */
+  --dash-line-soft: oklch(96.8% 0.007 247.896);   /* was border-slate-100 */
+  --dash-line: oklch(92.9% 0.013 255.508);        /* was border-slate-200 */
+  --dash-line-strong: oklch(86.9% 0.022 252.894); /* was border-slate-300 */
+
+  /* Text ramp — ink (strongest) → faint (decorative only) */
+  --dash-ink: oklch(20.8% 0.042 265.755);      /* was text-slate-900 */
+  --dash-ink2: oklch(27.9% 0.041 260.031);     /* was text-slate-800 */
+  --dash-ink3: oklch(37.2% 0.044 257.287);     /* was text-slate-700 */
+  --dash-ink4: oklch(44.6% 0.043 257.281);     /* was text-slate-600 */
+  --dash-mute: oklch(55.4% 0.046 257.417);     /* was text-slate-500 */
+  --dash-mute2: oklch(70.4% 0.04 256.788);     /* was text-slate-400 */
+  --dash-faint: oklch(86.9% 0.022 252.894);    /* was text-slate-300 */
+  --dash-steel: #9aa0a8;                       /* was [#9AA0A8]      */
+
+  /* Brand amber — the dashboard's own accent, kept (see AGENTS note
+     in the migration report). `brand` fills, `brand-ink` is the
+     amber that has to survive as TEXT, `brand-soft` is the tint. */
+  --brand: #f3a522;
+  --brand-hover: #d88f13;
+  --brand-strong: #e0941c;
+  --brand-ink: #c9871a;
+  --brand-deep: #a5680f;
+  --brand-soft: #fef6e7;
+  --brand-line: #f0dfb4;
+
+  /* Secondary aqua used by the mentor/blog surfaces */
+  --aqua: #41bfb8;
+  --aqua-hover: #38a89d;
+  --aqua-deep: #1f7e7a;
 }
 
+/* --- DARK #1: no-JS fallback. Only applies while the resolver script
+       has not stamped an explicit data-theme onto <html>. --- */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
     --background: #07191f;
     --surface-soft: #0b232a;
     --surface-mint: #0a2621;
@@ -90,6 +174,256 @@
   }
 }
 
+/* --- DARK #2: the resolved theme. Superset of DARK #1. --- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #07191f;
+  --surface-soft: #0b232a;
+  --surface-mint: #0a2621;
+  --foreground: #e7f2f4;
+  --card: #0d242b;
+  --card-foreground: #e7f2f4;
+  --muted: #0f272e;
+  --muted-foreground: #90aab2;
+  --border: #1b3a43;
+  --input: #1b3a43;
+
+  --primary: #22b8c4;
+  --primary-foreground: #04141a;
+  --primary-hover: #3fc7d1;
+  --primary-strong: #1aa0aa;
+  --primary-soft: #0e3138;
+
+  --secondary: #4a96d8;
+  --secondary-foreground: #04141a;
+
+  --accent: #1fd09b;
+  --accent-foreground: #04141a;
+  --accent-soft: #0e3630;
+
+  --coral: #ff8080;
+
+  --ring: #22b8c4;
+
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 12px 40px rgba(34, 184, 196, 0.28);
+
+  --dash-bg: oklch(17.5% 0.014 252);
+  --dash-card: oklch(22% 0.015 252);
+  --dash-cream: oklch(20% 0.012 252);
+  --dash-soft: oklch(25.5% 0.016 252);
+  --dash-soft2: oklch(29.5% 0.018 252);
+  --dash-soft3: oklch(34% 0.019 252);
+
+  --dash-line-soft: oklch(26.5% 0.015 252);
+  --dash-line: oklch(31% 0.017 252);
+  --dash-line-strong: oklch(38% 0.02 252);
+
+  --dash-ink: oklch(95% 0.008 250);
+  --dash-ink2: oklch(92% 0.009 250);
+  --dash-ink3: oklch(87% 0.011 250);
+  --dash-ink4: oklch(80% 0.015 250);
+  --dash-mute: oklch(72% 0.02 250);
+  --dash-mute2: oklch(64% 0.022 250);
+  --dash-faint: oklch(52% 0.02 250);
+  --dash-steel: #8f9aa5;
+
+  --brand: #f3a522;
+  --brand-hover: #cf8b1c;
+  --brand-strong: #d99626;
+  --brand-ink: #f2b23f;
+  --brand-deep: #e9a835;
+  --brand-soft: #2e2312;
+  --brand-line: #4a3a1b;
+
+  --aqua: #4fd2c9;
+  --aqua-hover: #3fbdb2;
+  --aqua-deep: #5fdbd2;
+
+  /* ----------------------------------------------------------
+     SCOPED STATUS-HUE REMAP
+     The dashboard paints ~2,100 status chips with raw Tailwind
+     hues: bg-emerald-50 + text-emerald-700, bg-rose-50, and so
+     on. Left alone those become white blobs in dark mode, and the
+     -700 text shades sink to roughly 1.8:1 against a dark card,
+     which is effectively invisible.
+
+     Rather than rewrite every chip, the hue ramp itself is bent
+     inside the dashboard subtree only. Tailwind v4 compiles
+     .text-emerald-700 down to color: var(--color-emerald-700), so
+     shadowing that variable on .dash-scope reaches every chip at
+     once — including the /NN opacity variants, which resolve
+     through color-mix on the same variable.
+
+     The rule: shades 50-300 become tints OF the hue mixed INTO
+     the card, and 600-900 become progressively lighter pastels of
+     it. 400 and 500 are left untouched because they are mostly
+     solid fills (bg-emerald-500 with text-white) that already
+     read fine either way. A chip therefore keeps its meaning —
+     emerald stays green — and simply inverts its light/dark
+     relationship.
+
+     Light mode never sees any of this: the block only exists
+     under [data-theme="dark"].
+     ---------------------------------------------------------- */
+  & .dash-scope {
+    --color-red-50: color-mix(in oklab, var(--color-red-500) 12%, var(--dash-card));
+    --color-red-100: color-mix(in oklab, var(--color-red-500) 20%, var(--dash-card));
+    --color-red-200: color-mix(in oklab, var(--color-red-500) 32%, var(--dash-card));
+    --color-red-300: color-mix(in oklab, var(--color-red-500) 48%, var(--dash-card));
+    --color-red-600: color-mix(in oklab, var(--color-red-500) 84%, #fff);
+    --color-red-700: color-mix(in oklab, var(--color-red-500) 64%, #fff);
+    --color-red-800: color-mix(in oklab, var(--color-red-500) 48%, #fff);
+    --color-red-900: color-mix(in oklab, var(--color-red-500) 36%, #fff);
+
+    --color-orange-50: color-mix(in oklab, var(--color-orange-500) 12%, var(--dash-card));
+    --color-orange-100: color-mix(in oklab, var(--color-orange-500) 20%, var(--dash-card));
+    --color-orange-200: color-mix(in oklab, var(--color-orange-500) 32%, var(--dash-card));
+    --color-orange-300: color-mix(in oklab, var(--color-orange-500) 48%, var(--dash-card));
+    --color-orange-600: color-mix(in oklab, var(--color-orange-500) 84%, #fff);
+    --color-orange-700: color-mix(in oklab, var(--color-orange-500) 64%, #fff);
+    --color-orange-800: color-mix(in oklab, var(--color-orange-500) 48%, #fff);
+    --color-orange-900: color-mix(in oklab, var(--color-orange-500) 36%, #fff);
+
+    --color-amber-50: color-mix(in oklab, var(--color-amber-500) 12%, var(--dash-card));
+    --color-amber-100: color-mix(in oklab, var(--color-amber-500) 20%, var(--dash-card));
+    --color-amber-200: color-mix(in oklab, var(--color-amber-500) 32%, var(--dash-card));
+    --color-amber-300: color-mix(in oklab, var(--color-amber-500) 48%, var(--dash-card));
+    --color-amber-600: color-mix(in oklab, var(--color-amber-500) 84%, #fff);
+    --color-amber-700: color-mix(in oklab, var(--color-amber-500) 64%, #fff);
+    --color-amber-800: color-mix(in oklab, var(--color-amber-500) 48%, #fff);
+    --color-amber-900: color-mix(in oklab, var(--color-amber-500) 36%, #fff);
+
+    --color-yellow-50: color-mix(in oklab, var(--color-yellow-500) 12%, var(--dash-card));
+    --color-yellow-100: color-mix(in oklab, var(--color-yellow-500) 20%, var(--dash-card));
+    --color-yellow-200: color-mix(in oklab, var(--color-yellow-500) 32%, var(--dash-card));
+    --color-yellow-300: color-mix(in oklab, var(--color-yellow-500) 48%, var(--dash-card));
+    --color-yellow-600: color-mix(in oklab, var(--color-yellow-500) 84%, #fff);
+    --color-yellow-700: color-mix(in oklab, var(--color-yellow-500) 64%, #fff);
+    --color-yellow-800: color-mix(in oklab, var(--color-yellow-500) 48%, #fff);
+    --color-yellow-900: color-mix(in oklab, var(--color-yellow-500) 36%, #fff);
+
+    --color-lime-50: color-mix(in oklab, var(--color-lime-500) 12%, var(--dash-card));
+    --color-lime-100: color-mix(in oklab, var(--color-lime-500) 20%, var(--dash-card));
+    --color-lime-200: color-mix(in oklab, var(--color-lime-500) 32%, var(--dash-card));
+    --color-lime-300: color-mix(in oklab, var(--color-lime-500) 48%, var(--dash-card));
+    --color-lime-600: color-mix(in oklab, var(--color-lime-500) 84%, #fff);
+    --color-lime-700: color-mix(in oklab, var(--color-lime-500) 64%, #fff);
+    --color-lime-800: color-mix(in oklab, var(--color-lime-500) 48%, #fff);
+    --color-lime-900: color-mix(in oklab, var(--color-lime-500) 36%, #fff);
+
+    --color-green-50: color-mix(in oklab, var(--color-green-500) 12%, var(--dash-card));
+    --color-green-100: color-mix(in oklab, var(--color-green-500) 20%, var(--dash-card));
+    --color-green-200: color-mix(in oklab, var(--color-green-500) 32%, var(--dash-card));
+    --color-green-300: color-mix(in oklab, var(--color-green-500) 48%, var(--dash-card));
+    --color-green-600: color-mix(in oklab, var(--color-green-500) 84%, #fff);
+    --color-green-700: color-mix(in oklab, var(--color-green-500) 64%, #fff);
+    --color-green-800: color-mix(in oklab, var(--color-green-500) 48%, #fff);
+    --color-green-900: color-mix(in oklab, var(--color-green-500) 36%, #fff);
+
+    --color-emerald-50: color-mix(in oklab, var(--color-emerald-500) 12%, var(--dash-card));
+    --color-emerald-100: color-mix(in oklab, var(--color-emerald-500) 20%, var(--dash-card));
+    --color-emerald-200: color-mix(in oklab, var(--color-emerald-500) 32%, var(--dash-card));
+    --color-emerald-300: color-mix(in oklab, var(--color-emerald-500) 48%, var(--dash-card));
+    --color-emerald-600: color-mix(in oklab, var(--color-emerald-500) 84%, #fff);
+    --color-emerald-700: color-mix(in oklab, var(--color-emerald-500) 64%, #fff);
+    --color-emerald-800: color-mix(in oklab, var(--color-emerald-500) 48%, #fff);
+    --color-emerald-900: color-mix(in oklab, var(--color-emerald-500) 36%, #fff);
+
+    --color-teal-50: color-mix(in oklab, var(--color-teal-500) 12%, var(--dash-card));
+    --color-teal-100: color-mix(in oklab, var(--color-teal-500) 20%, var(--dash-card));
+    --color-teal-200: color-mix(in oklab, var(--color-teal-500) 32%, var(--dash-card));
+    --color-teal-300: color-mix(in oklab, var(--color-teal-500) 48%, var(--dash-card));
+    --color-teal-600: color-mix(in oklab, var(--color-teal-500) 84%, #fff);
+    --color-teal-700: color-mix(in oklab, var(--color-teal-500) 64%, #fff);
+    --color-teal-800: color-mix(in oklab, var(--color-teal-500) 48%, #fff);
+    --color-teal-900: color-mix(in oklab, var(--color-teal-500) 36%, #fff);
+
+    --color-cyan-50: color-mix(in oklab, var(--color-cyan-500) 12%, var(--dash-card));
+    --color-cyan-100: color-mix(in oklab, var(--color-cyan-500) 20%, var(--dash-card));
+    --color-cyan-200: color-mix(in oklab, var(--color-cyan-500) 32%, var(--dash-card));
+    --color-cyan-300: color-mix(in oklab, var(--color-cyan-500) 48%, var(--dash-card));
+    --color-cyan-600: color-mix(in oklab, var(--color-cyan-500) 84%, #fff);
+    --color-cyan-700: color-mix(in oklab, var(--color-cyan-500) 64%, #fff);
+    --color-cyan-800: color-mix(in oklab, var(--color-cyan-500) 48%, #fff);
+    --color-cyan-900: color-mix(in oklab, var(--color-cyan-500) 36%, #fff);
+
+    --color-sky-50: color-mix(in oklab, var(--color-sky-500) 12%, var(--dash-card));
+    --color-sky-100: color-mix(in oklab, var(--color-sky-500) 20%, var(--dash-card));
+    --color-sky-200: color-mix(in oklab, var(--color-sky-500) 32%, var(--dash-card));
+    --color-sky-300: color-mix(in oklab, var(--color-sky-500) 48%, var(--dash-card));
+    --color-sky-600: color-mix(in oklab, var(--color-sky-500) 84%, #fff);
+    --color-sky-700: color-mix(in oklab, var(--color-sky-500) 64%, #fff);
+    --color-sky-800: color-mix(in oklab, var(--color-sky-500) 48%, #fff);
+    --color-sky-900: color-mix(in oklab, var(--color-sky-500) 36%, #fff);
+
+    --color-blue-50: color-mix(in oklab, var(--color-blue-500) 12%, var(--dash-card));
+    --color-blue-100: color-mix(in oklab, var(--color-blue-500) 20%, var(--dash-card));
+    --color-blue-200: color-mix(in oklab, var(--color-blue-500) 32%, var(--dash-card));
+    --color-blue-300: color-mix(in oklab, var(--color-blue-500) 48%, var(--dash-card));
+    --color-blue-600: color-mix(in oklab, var(--color-blue-500) 84%, #fff);
+    --color-blue-700: color-mix(in oklab, var(--color-blue-500) 64%, #fff);
+    --color-blue-800: color-mix(in oklab, var(--color-blue-500) 48%, #fff);
+    --color-blue-900: color-mix(in oklab, var(--color-blue-500) 36%, #fff);
+
+    --color-indigo-50: color-mix(in oklab, var(--color-indigo-500) 12%, var(--dash-card));
+    --color-indigo-100: color-mix(in oklab, var(--color-indigo-500) 20%, var(--dash-card));
+    --color-indigo-200: color-mix(in oklab, var(--color-indigo-500) 32%, var(--dash-card));
+    --color-indigo-300: color-mix(in oklab, var(--color-indigo-500) 48%, var(--dash-card));
+    --color-indigo-600: color-mix(in oklab, var(--color-indigo-500) 84%, #fff);
+    --color-indigo-700: color-mix(in oklab, var(--color-indigo-500) 64%, #fff);
+    --color-indigo-800: color-mix(in oklab, var(--color-indigo-500) 48%, #fff);
+    --color-indigo-900: color-mix(in oklab, var(--color-indigo-500) 36%, #fff);
+
+    --color-violet-50: color-mix(in oklab, var(--color-violet-500) 12%, var(--dash-card));
+    --color-violet-100: color-mix(in oklab, var(--color-violet-500) 20%, var(--dash-card));
+    --color-violet-200: color-mix(in oklab, var(--color-violet-500) 32%, var(--dash-card));
+    --color-violet-300: color-mix(in oklab, var(--color-violet-500) 48%, var(--dash-card));
+    --color-violet-600: color-mix(in oklab, var(--color-violet-500) 84%, #fff);
+    --color-violet-700: color-mix(in oklab, var(--color-violet-500) 64%, #fff);
+    --color-violet-800: color-mix(in oklab, var(--color-violet-500) 48%, #fff);
+    --color-violet-900: color-mix(in oklab, var(--color-violet-500) 36%, #fff);
+
+    --color-purple-50: color-mix(in oklab, var(--color-purple-500) 12%, var(--dash-card));
+    --color-purple-100: color-mix(in oklab, var(--color-purple-500) 20%, var(--dash-card));
+    --color-purple-200: color-mix(in oklab, var(--color-purple-500) 32%, var(--dash-card));
+    --color-purple-300: color-mix(in oklab, var(--color-purple-500) 48%, var(--dash-card));
+    --color-purple-600: color-mix(in oklab, var(--color-purple-500) 84%, #fff);
+    --color-purple-700: color-mix(in oklab, var(--color-purple-500) 64%, #fff);
+    --color-purple-800: color-mix(in oklab, var(--color-purple-500) 48%, #fff);
+    --color-purple-900: color-mix(in oklab, var(--color-purple-500) 36%, #fff);
+
+    --color-fuchsia-50: color-mix(in oklab, var(--color-fuchsia-500) 12%, var(--dash-card));
+    --color-fuchsia-100: color-mix(in oklab, var(--color-fuchsia-500) 20%, var(--dash-card));
+    --color-fuchsia-200: color-mix(in oklab, var(--color-fuchsia-500) 32%, var(--dash-card));
+    --color-fuchsia-300: color-mix(in oklab, var(--color-fuchsia-500) 48%, var(--dash-card));
+    --color-fuchsia-600: color-mix(in oklab, var(--color-fuchsia-500) 84%, #fff);
+    --color-fuchsia-700: color-mix(in oklab, var(--color-fuchsia-500) 64%, #fff);
+    --color-fuchsia-800: color-mix(in oklab, var(--color-fuchsia-500) 48%, #fff);
+    --color-fuchsia-900: color-mix(in oklab, var(--color-fuchsia-500) 36%, #fff);
+
+    --color-pink-50: color-mix(in oklab, var(--color-pink-500) 12%, var(--dash-card));
+    --color-pink-100: color-mix(in oklab, var(--color-pink-500) 20%, var(--dash-card));
+    --color-pink-200: color-mix(in oklab, var(--color-pink-500) 32%, var(--dash-card));
+    --color-pink-300: color-mix(in oklab, var(--color-pink-500) 48%, var(--dash-card));
+    --color-pink-600: color-mix(in oklab, var(--color-pink-500) 84%, #fff);
+    --color-pink-700: color-mix(in oklab, var(--color-pink-500) 64%, #fff);
+    --color-pink-800: color-mix(in oklab, var(--color-pink-500) 48%, #fff);
+    --color-pink-900: color-mix(in oklab, var(--color-pink-500) 36%, #fff);
+
+    --color-rose-50: color-mix(in oklab, var(--color-rose-500) 12%, var(--dash-card));
+    --color-rose-100: color-mix(in oklab, var(--color-rose-500) 20%, var(--dash-card));
+    --color-rose-200: color-mix(in oklab, var(--color-rose-500) 32%, var(--dash-card));
+    --color-rose-300: color-mix(in oklab, var(--color-rose-500) 48%, var(--dash-card));
+    --color-rose-600: color-mix(in oklab, var(--color-rose-500) 84%, #fff);
+    --color-rose-700: color-mix(in oklab, var(--color-rose-500) 64%, #fff);
+    --color-rose-800: color-mix(in oklab, var(--color-rose-500) 48%, #fff);
+    --color-rose-900: color-mix(in oklab, var(--color-rose-500) 36%, #fff);
+  }
+}
+
 /* Expose tokens to Tailwind utilities (bg-primary, text-foreground, …).
    `inline` keeps the utilities referencing the live CSS vars so they follow
    the light/dark override automatically. */
@@ -120,6 +454,37 @@
 
   --color-coral: var(--coral);
   --color-ring: var(--ring);
+
+  /* Dashboard palette → bg-dash-card, text-dash-mute, border-dash-line, … */
+  --color-dash-bg: var(--dash-bg);
+  --color-dash-card: var(--dash-card);
+  --color-dash-cream: var(--dash-cream);
+  --color-dash-soft: var(--dash-soft);
+  --color-dash-soft2: var(--dash-soft2);
+  --color-dash-soft3: var(--dash-soft3);
+  --color-dash-line-soft: var(--dash-line-soft);
+  --color-dash-line: var(--dash-line);
+  --color-dash-line-strong: var(--dash-line-strong);
+  --color-dash-ink: var(--dash-ink);
+  --color-dash-ink2: var(--dash-ink2);
+  --color-dash-ink3: var(--dash-ink3);
+  --color-dash-ink4: var(--dash-ink4);
+  --color-dash-mute: var(--dash-mute);
+  --color-dash-mute2: var(--dash-mute2);
+  --color-dash-faint: var(--dash-faint);
+  --color-dash-steel: var(--dash-steel);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-line: var(--brand-line);
+
+  --color-aqua: var(--aqua);
+  --color-aqua-hover: var(--aqua-hover);
+  --color-aqua-deep: var(--aqua-deep);
 
   --font-sans: var(--font-poppins);
   --font-heading: var(--font-outfit);
@@ -270,5 +635,64 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Controls that only appear on hover — delete, reorder, edit — simply do not
+   exist on a phone or tablet, because there is no cursor to hover with. The
+   admin editing book content from a tablet could see the uploaded images but
+   had no way to remove or reorder one.
+   Pair this with `opacity-0 group-hover:opacity-100`: pointers keep the calm
+   reveal-on-hover behaviour, touch devices get the controls permanently. */
+@media (hover: none) {
+  .touch-always-visible {
+    opacity: 1 !important;
+  }
+}
+
+/* ============================================================
+   PRINT — always on paper terms, never the screen theme
+   The admin QR sheet and the analytics report are printed from
+   inside the dashboard. In dark mode their cards would otherwise
+   go to the printer as dark surfaces with pale text: unreadable,
+   and a tonerkiller. Paper is white, so print always resolves the
+   dashboard palette back to its light values.
+   Keep in sync with the :root block above.
+   ============================================================ */
+@media print {
+  :root[data-theme="dark"] {
+    color-scheme: light;
+
+    --dash-bg: #f8fafb;
+    --dash-card: #ffffff;
+    --dash-cream: #faf9f6;
+    --dash-soft: oklch(98.4% 0.003 247.858);
+    --dash-soft2: oklch(96.8% 0.007 247.896);
+    --dash-soft3: oklch(92.9% 0.013 255.508);
+
+    --dash-line-soft: oklch(96.8% 0.007 247.896);
+    --dash-line: oklch(92.9% 0.013 255.508);
+    --dash-line-strong: oklch(86.9% 0.022 252.894);
+
+    --dash-ink: oklch(20.8% 0.042 265.755);
+    --dash-ink2: oklch(27.9% 0.041 260.031);
+    --dash-ink3: oklch(37.2% 0.044 257.287);
+    --dash-ink4: oklch(44.6% 0.043 257.281);
+    --dash-mute: oklch(55.4% 0.046 257.417);
+    --dash-mute2: oklch(70.4% 0.04 256.788);
+    --dash-faint: oklch(86.9% 0.022 252.894);
+    --dash-steel: #9aa0a8;
+
+    --brand: #f3a522;
+    --brand-hover: #d88f13;
+    --brand-strong: #e0941c;
+    --brand-ink: #c9871a;
+    --brand-deep: #a5680f;
+    --brand-soft: #fef6e7;
+    --brand-line: #f0dfb4;
+
+    --aqua: #41bfb8;
+    --aqua-hover: #38a89d;
+    --aqua-deep: #1f7e7a;
   }
 }

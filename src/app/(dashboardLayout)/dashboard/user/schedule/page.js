@@ -159,7 +159,7 @@ export default function StudentSchedulePage() {
   if (loading) {
     return (
       <div className="p-6 min-h-screen flex items-center justify-center">
-        <FiLoader className="animate-spin text-[#F3A522]" size={30} />
+        <FiLoader className="animate-spin text-brand" size={30} />
       </div>
     );
   }
@@ -169,15 +169,15 @@ export default function StudentSchedulePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Schedule</h1>
-          <p className="text-slate-500 text-sm mt-1">View your class schedule and join live sessions</p>
+          <h1 className="text-2xl font-bold text-dash-ink">My Schedule</h1>
+          <p className="text-dash-mute text-sm mt-1">View your class schedule and join live sessions</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-          <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-            <FiCalendar className="text-slate-400" size={22} />
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-12 text-center">
+          <div className="w-14 h-14 rounded-full bg-dash-soft2 flex items-center justify-center mx-auto mb-4">
+            <FiCalendar className="text-dash-mute2" size={22} />
           </div>
-          <h3 className="text-lg font-bold text-slate-700">No batch assigned yet</h3>
-          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+          <h3 className="text-lg font-bold text-dash-ink3">No batch assigned yet</h3>
+          <p className="text-sm text-dash-mute mt-1 max-w-md mx-auto">
             Once you are enrolled in a batch, your weekly class schedule (days &amp; time) will appear here.
           </p>
         </div>
@@ -191,48 +191,48 @@ export default function StudentSchedulePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">My Schedule</h1>
-        <p className="text-slate-500 text-sm mt-1">Your weekly class schedule and upcoming sessions</p>
+        <h1 className="text-2xl font-bold text-dash-ink">My Schedule</h1>
+        <p className="text-dash-mute text-sm mt-1">Your weekly class schedule and upcoming sessions</p>
       </div>
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-          <p className="text-[11px] text-slate-500 uppercase tracking-wide">Today</p>
-          <p className="text-2xl font-bold text-[#F3A522] mt-1">{todayClasses.length || (batchSchedules.some(bs => (bs.batch.classDays || []).includes(WEEKDAYS_FULL[new Date().getDay()])) ? '•' : 0)}</p>
-          <p className="text-[11px] text-slate-400">{todayClasses.length > 0 ? 'scheduled' : (batchSchedules.some(bs => (bs.batch.classDays || []).includes(WEEKDAYS_FULL[new Date().getDay()])) ? 'class day' : 'no class')}</p>
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-4 shadow-sm">
+          <p className="text-[11px] text-dash-mute uppercase tracking-wide">Today</p>
+          <p className="text-2xl font-bold text-brand mt-1">{todayClasses.length || (batchSchedules.some(bs => (bs.batch.classDays || []).includes(WEEKDAYS_FULL[new Date().getDay()])) ? '•' : 0)}</p>
+          <p className="text-[11px] text-dash-mute2">{todayClasses.length > 0 ? 'scheduled' : (batchSchedules.some(bs => (bs.batch.classDays || []).includes(WEEKDAYS_FULL[new Date().getDay()])) ? 'class day' : 'no class')}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-          <p className="text-[11px] text-slate-500 uppercase tracking-wide">Per Week</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{totalPerWeek}</p>
-          <p className="text-[11px] text-slate-400">classes</p>
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-4 shadow-sm">
+          <p className="text-[11px] text-dash-mute uppercase tracking-wide">Per Week</p>
+          <p className="text-2xl font-bold text-dash-ink mt-1">{totalPerWeek}</p>
+          <p className="text-[11px] text-dash-mute2">classes</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-          <p className="text-[11px] text-slate-500 uppercase tracking-wide">My Batches</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{batchSchedules.length}</p>
-          <p className="text-[11px] text-slate-400">active</p>
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-4 shadow-sm">
+          <p className="text-[11px] text-dash-mute uppercase tracking-wide">My Batches</p>
+          <p className="text-2xl font-bold text-dash-ink mt-1">{batchSchedules.length}</p>
+          <p className="text-[11px] text-dash-mute2">active</p>
         </div>
         {attendanceSummary ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <p className="text-[11px] text-slate-500 uppercase tracking-wide">Attendance</p>
+          <div className="bg-dash-card rounded-2xl border border-dash-line p-4 shadow-sm">
+            <p className="text-[11px] text-dash-mute uppercase tracking-wide">Attendance</p>
             <p className={`text-2xl font-bold mt-1 ${attendanceSummary.rate >= 80 ? 'text-emerald-600' : attendanceSummary.rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
               {attendanceSummary.rate}%
             </p>
-            <p className="text-[11px] text-slate-400">{attendanceSummary.present}/{attendanceSummary.total} present</p>
+            <p className="text-[11px] text-dash-mute2">{attendanceSummary.present}/{attendanceSummary.total} present</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <p className="text-[11px] text-slate-500 uppercase tracking-wide">Completed</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{pastClasses.length}</p>
-            <p className="text-[11px] text-slate-400">classes</p>
+          <div className="bg-dash-card rounded-2xl border border-dash-line p-4 shadow-sm">
+            <p className="text-[11px] text-dash-mute uppercase tracking-wide">Completed</p>
+            <p className="text-2xl font-bold text-dash-ink mt-1">{pastClasses.length}</p>
+            <p className="text-[11px] text-dash-mute2">classes</p>
           </div>
         )}
       </div>
 
       {/* ── BATCH WEEKLY SCHEDULE — the main fix ── */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-          <FiCalendar className="text-[#F3A522]" size={16} />
+        <h2 className="text-base font-bold text-dash-ink2 flex items-center gap-2">
+          <FiCalendar className="text-brand" size={16} />
           Weekly Class Schedule
         </h2>
 
@@ -241,16 +241,16 @@ export default function StudentSchedulePage() {
           const time = bs.batch.classTime || '';
           const mentor = typeof bs.batch.mentorId === 'object' ? bs.batch.mentorId : null;
           return (
-            <div key={bs.enrollmentId} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div key={bs.enrollmentId} className="bg-dash-card rounded-2xl border border-dash-line shadow-sm overflow-hidden">
               {/* Header */}
-              <div className="px-5 py-4 bg-gradient-to-r from-[#F3A522]/8 to-transparent border-b border-slate-100 flex items-start justify-between gap-3 flex-wrap">
+              <div className="px-5 py-4 bg-gradient-to-r from-brand/8 to-transparent border-b border-dash-line-soft flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <FiBookOpen className="text-[#F3A522] flex-shrink-0" size={15} />
-                    <h3 className="font-bold text-slate-800 truncate">{bs.course?.title || bs.batch.name || 'Course'}</h3>
+                    <FiBookOpen className="text-brand flex-shrink-0" size={15} />
+                    <h3 className="font-bold text-dash-ink2 truncate">{bs.course?.title || bs.batch.name || 'Course'}</h3>
                   </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF6E7] text-[#a5680f] font-mono font-bold text-[11px]">
+                  <div className="flex items-center gap-3 mt-1 text-xs text-dash-mute flex-wrap">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-soft text-brand-deep font-mono font-bold text-[11px]">
                       <FiHash size={10} /> {bs.batch.id || bs.batch.name}
                     </span>
                     {mentor && (
@@ -259,14 +259,14 @@ export default function StudentSchedulePage() {
                       </span>
                     )}
                     {bs.course?.type && (
-                      <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold uppercase text-slate-500">{bs.course.type}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-dash-soft2 text-[10px] font-bold uppercase text-dash-mute">{bs.course.type}</span>
                     )}
                   </div>
                 </div>
                 <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${
                   bs.batch.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                   bs.batch.status === 'upcoming' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                  'bg-slate-50 text-slate-600 border-slate-200'
+                  'bg-dash-soft text-dash-ink4 border-dash-line'
                 }`}>
                   {bs.batch.status || 'active'}
                 </span>
@@ -275,9 +275,9 @@ export default function StudentSchedulePage() {
               {/* Days + Time */}
               <div className="p-5 space-y-4">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Class Days</p>
+                  <p className="text-[10px] font-bold text-dash-mute2 uppercase tracking-wider mb-2">Class Days</p>
                   {days.length === 0 ? (
-                    <p className="text-sm text-slate-400 italic">Not set yet — please contact admin.</p>
+                    <p className="text-sm text-dash-mute2 italic">Not set yet — please contact admin.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {WEEKDAYS_FULL.map(d => {
@@ -286,8 +286,8 @@ export default function StudentSchedulePage() {
                         return (
                           <div key={d} className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl border-2 transition ${
                             isClassDay
-                              ? (isToday ? 'bg-[#F3A522] text-white border-[#F3A522] shadow-md shadow-[#F3A522]/30' : 'bg-[#F3A522]/10 text-[#1f7e7a] border-[#F3A522]/40')
-                              : 'bg-slate-50 text-slate-300 border-slate-100'
+                              ? (isToday ? 'bg-brand text-white border-brand shadow-md shadow-brand/30' : 'bg-brand/10 text-aqua-deep border-brand/40')
+                              : 'bg-dash-soft text-dash-faint border-dash-line-soft'
                           }`}>
                             <span className="text-[9px] font-bold uppercase opacity-80">{WEEKDAY_SHORT[d]}</span>
                             <span className="text-xs font-bold">{isClassDay ? '✓' : ''}</span>
@@ -305,7 +305,7 @@ export default function StudentSchedulePage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Class Time</p>
-                      <p className="text-sm font-bold text-slate-800 truncate">{time || 'Not set'}</p>
+                      <p className="text-sm font-bold text-dash-ink2 truncate">{time || 'Not set'}</p>
                     </div>
                   </div>
                   <div className="rounded-xl bg-blue-50/60 border border-blue-100 p-3.5 flex items-center gap-3">
@@ -314,7 +314,7 @@ export default function StudentSchedulePage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Duration</p>
-                      <p className="text-sm font-bold text-slate-800 truncate">
+                      <p className="text-sm font-bold text-dash-ink2 truncate">
                         {bs.batch.startDate ? new Date(bs.batch.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                         {bs.batch.endDate ? ` → ${new Date(bs.batch.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}
                       </p>
@@ -325,15 +325,15 @@ export default function StudentSchedulePage() {
                 {/* Next sessions */}
                 {bs.nextSessions.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Next 5 sessions</p>
+                    <p className="text-[10px] font-bold text-dash-mute2 uppercase tracking-wider mb-2">Next 5 sessions</p>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                       {bs.nextSessions.map((d, i) => {
                         const isToday = d.getTime() === today.getTime();
                         return (
-                          <div key={i} className={`rounded-lg border p-2.5 text-center ${isToday ? 'bg-[#F3A522]/10 border-[#F3A522]/40' : 'bg-slate-50/60 border-slate-100'}`}>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase">{d.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                            <p className={`text-lg font-bold ${isToday ? 'text-[#F3A522]' : 'text-slate-800'}`}>{d.getDate()}</p>
-                            <p className="text-[10px] text-slate-400">{d.toLocaleDateString('en-US', { month: 'short' })}</p>
+                          <div key={i} className={`rounded-lg border p-2.5 text-center ${isToday ? 'bg-brand/10 border-brand/40' : 'bg-dash-soft/60 border-dash-line-soft'}`}>
+                            <p className="text-[10px] font-bold text-dash-mute uppercase">{d.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                            <p className={`text-lg font-bold ${isToday ? 'text-brand' : 'text-dash-ink2'}`}>{d.getDate()}</p>
+                            <p className="text-[10px] text-dash-mute2">{d.toLocaleDateString('en-US', { month: 'short' })}</p>
                             {time && <p className="text-[9px] font-semibold text-amber-600 mt-0.5">{time}</p>}
                           </div>
                         );
@@ -350,11 +350,11 @@ export default function StudentSchedulePage() {
       {/* View Toggle */}
       <div className="flex items-center gap-2 pt-2">
         <button onClick={() => setView('list')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition ${view === 'list' ? 'bg-[#F3A522] text-white' : 'bg-white border text-slate-600'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-bold transition ${view === 'list' ? 'bg-brand text-white' : 'bg-dash-card border text-dash-ink4'}`}>
           List View
         </button>
         <button onClick={() => setView('calendar')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition ${view === 'calendar' ? 'bg-[#F3A522] text-white' : 'bg-white border text-slate-600'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-bold transition ${view === 'calendar' ? 'bg-brand text-white' : 'bg-dash-card border text-dash-ink4'}`}>
           Calendar View
         </button>
       </div>
@@ -364,18 +364,18 @@ export default function StudentSchedulePage() {
           {/* Today's scheduled classes (live events from mentor) */}
           {todayClasses.length > 0 && (
             <div>
-              <h2 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <h2 className="text-base font-bold text-dash-ink2 mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                 Today&apos;s Live Classes
               </h2>
               <div className="space-y-3">
                 {todayClasses.map(cls => (
-                  <div key={cls._id} className="bg-white rounded-xl border-2 border-[#F3A522]/30 shadow-sm p-5">
+                  <div key={cls._id} className="bg-dash-card rounded-xl border-2 border-brand/30 shadow-sm p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-bold text-slate-800 text-lg">{cls.title}</h3>
-                        <p className="text-sm text-slate-500">{cls.topic}</p>
-                        <div className="flex items-center flex-wrap gap-3 mt-2 text-xs text-slate-500">
+                        <h3 className="font-bold text-dash-ink2 text-lg">{cls.title}</h3>
+                        <p className="text-sm text-dash-mute">{cls.topic}</p>
+                        <div className="flex items-center flex-wrap gap-3 mt-2 text-xs text-dash-mute">
                           <span className="flex items-center gap-1"><FiClock size={12} /> {cls.startTime} - {cls.endTime}</span>
                           {cls.mentorId && <span className="flex items-center gap-1"><FiUser size={12} /> {cls.mentorId.firstName} {cls.mentorId.lastName}</span>}
                           {cls.venue && <span className="flex items-center gap-1"><FiMapPin size={12} /> {cls.venue}</span>}
@@ -383,7 +383,7 @@ export default function StudentSchedulePage() {
                       </div>
                       {cls.meetingLink && isJoinable(cls) && (
                         <a href={cls.meetingLink} target="_blank" rel="noopener"
-                          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white rounded-xl text-sm font-bold hover:shadow-lg animate-pulse">
+                          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand to-brand-hover text-white rounded-xl text-sm font-bold hover:shadow-lg animate-pulse">
                           <FiVideo size={16} /> Join Now
                         </a>
                       )}
@@ -391,7 +391,7 @@ export default function StudentSchedulePage() {
                     {cls.materials?.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {cls.materials.map((m, i) => (
-                          <a key={i} href={m.fileUrl} download className="flex items-center gap-1 px-3 py-1 bg-slate-50 border rounded-lg text-xs text-slate-600 hover:border-[#F3A522]">
+                          <a key={i} href={m.fileUrl} download className="flex items-center gap-1 px-3 py-1 bg-dash-soft border rounded-lg text-xs text-dash-ink4 hover:border-brand">
                             <FiDownload size={10} /> {m.title}
                           </a>
                         ))}
@@ -406,14 +406,14 @@ export default function StudentSchedulePage() {
           {/* Upcoming live classes */}
           {upcomingClasses.length > 0 && (
             <div>
-              <h2 className="text-base font-bold text-slate-800 mb-3">Upcoming Live Classes</h2>
+              <h2 className="text-base font-bold text-dash-ink2 mb-3">Upcoming Live Classes</h2>
               <div className="space-y-2">
                 {upcomingClasses.map(cls => (
-                  <div key={cls._id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
+                  <div key={cls._id} className="bg-dash-card rounded-xl border border-dash-line shadow-sm p-4 flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-sm">{cls.title}</h3>
-                      <p className="text-xs text-slate-500">{cls.topic}</p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                      <h3 className="font-bold text-dash-ink2 text-sm">{cls.title}</h3>
+                      <p className="text-xs text-dash-mute">{cls.topic}</p>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-dash-mute2">
                         <span><FiCalendar className="inline mr-1" size={10} />{new Date(cls.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
                         <span><FiClock className="inline mr-1" size={10} />{cls.startTime}</span>
                         {cls.mentorId && <span>{cls.mentorId.firstName}</span>}
@@ -425,7 +425,7 @@ export default function StudentSchedulePage() {
                           Recording{cls.recordings?.length > 1 ? `s (${cls.recordings.length})` : ''}
                         </a>
                       )}
-                      <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${cls.type === 'live' ? 'bg-blue-50 text-blue-700' : cls.type === 'offline' ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-500'}`}>
+                      <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${cls.type === 'live' ? 'bg-blue-50 text-blue-700' : cls.type === 'offline' ? 'bg-amber-50 text-amber-700' : 'bg-dash-soft text-dash-mute'}`}>
                         {cls.type}
                       </span>
                     </div>
@@ -437,14 +437,14 @@ export default function StudentSchedulePage() {
 
           {pastClasses.filter(c => (c.recordings?.length > 0) || c.recordingUrl).length > 0 && (
             <div>
-              <h2 className="text-base font-bold text-slate-800 mb-3">Past Recordings</h2>
+              <h2 className="text-base font-bold text-dash-ink2 mb-3">Past Recordings</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {pastClasses.filter(c => (c.recordings?.length > 0) || c.recordingUrl).map(cls => {
                   const recs = (cls.recordings?.length > 0) ? cls.recordings : (cls.recordingUrl ? [{ title: 'Recording', url: cls.recordingUrl }] : []);
                   return (
-                    <div key={cls._id} className="bg-white rounded-xl border border-slate-200 p-4">
-                      <h3 className="font-bold text-slate-800 text-sm">{cls.title}</h3>
-                      <p className="text-xs text-slate-500 mb-2">{new Date(cls.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    <div key={cls._id} className="bg-dash-card rounded-xl border border-dash-line p-4">
+                      <h3 className="font-bold text-dash-ink2 text-sm">{cls.title}</h3>
+                      <p className="text-xs text-dash-mute mb-2">{new Date(cls.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                       <div className="space-y-1.5">
                         {recs.map((r, i) => (
                           <a key={i} href={r.url} target="_blank" rel="noopener"
@@ -461,44 +461,44 @@ export default function StudentSchedulePage() {
           )}
 
           {todayClasses.length === 0 && upcomingClasses.length === 0 && (
-            <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
-              <p className="text-sm text-slate-500">No individual class sessions scheduled yet. Your regular weekly schedule is shown above.</p>
+            <div className="bg-dash-card rounded-2xl border border-dashed border-dash-line p-8 text-center">
+              <p className="text-sm text-dash-mute">No individual class sessions scheduled yet. Your regular weekly schedule is shown above.</p>
             </div>
           )}
         </div>
       ) : (
         /* Calendar View — combines recurring batch days + scheduled classes */
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div className="bg-dash-card rounded-2xl border border-dash-line shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
-              className="p-2 hover:bg-slate-100 rounded-lg"><FiChevronLeft /></button>
-            <h3 className="text-lg font-bold text-slate-800">
+              className="p-2 hover:bg-dash-soft2 rounded-lg"><FiChevronLeft /></button>
+            <h3 className="text-lg font-bold text-dash-ink2">
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h3>
             <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
-              className="p-2 hover:bg-slate-100 rounded-lg"><FiChevronRight /></button>
+              className="p-2 hover:bg-dash-soft2 rounded-lg"><FiChevronRight /></button>
           </div>
 
           <div className="grid grid-cols-7 gap-1">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-              <div key={d} className="text-center text-xs font-bold text-slate-400 py-2">{d}</div>
+              <div key={d} className="text-center text-xs font-bold text-dash-mute2 py-2">{d}</div>
             ))}
             {calendarDays.map((day, i) => {
               const recurring = getRecurringForDay(day);
               const scheduled = getScheduledClassesForDay(day);
               const isToday = day && new Date().getDate() === day && new Date().getMonth() === currentMonth.getMonth() && new Date().getFullYear() === currentMonth.getFullYear();
               return (
-                <div key={i} className={`min-h-[80px] p-1 border rounded-lg ${day ? 'bg-white' : 'bg-slate-50'} ${isToday ? 'border-[#F3A522] border-2' : 'border-slate-100'}`}>
+                <div key={i} className={`min-h-[80px] p-1 border rounded-lg ${day ? 'bg-dash-card' : 'bg-dash-soft'} ${isToday ? 'border-brand border-2' : 'border-dash-line-soft'}`}>
                   {day && (
                     <>
-                      <span className={`text-xs font-bold ${isToday ? 'text-[#F3A522]' : 'text-slate-600'}`}>{day}</span>
+                      <span className={`text-xs font-bold ${isToday ? 'text-brand' : 'text-dash-ink4'}`}>{day}</span>
                       {scheduled.map(c => (
-                        <div key={c._id} className={`mt-0.5 px-1 py-0.5 rounded text-[9px] font-bold truncate ${c.type === 'live' ? 'bg-blue-100 text-blue-700' : c.type === 'offline' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                        <div key={c._id} className={`mt-0.5 px-1 py-0.5 rounded text-[9px] font-bold truncate ${c.type === 'live' ? 'bg-blue-100 text-blue-700' : c.type === 'offline' ? 'bg-amber-100 text-amber-700' : 'bg-dash-soft2 text-dash-ink4'}`}>
                           {c.startTime} {c.title}
                         </div>
                       ))}
                       {scheduled.length === 0 && recurring.map((r, idx) => (
-                        <div key={idx} className="mt-0.5 px-1 py-0.5 rounded text-[9px] font-bold truncate bg-[#F3A522]/15 text-[#1f7e7a]" title={r.courseName}>
+                        <div key={idx} className="mt-0.5 px-1 py-0.5 rounded text-[9px] font-bold truncate bg-brand/15 text-aqua-deep" title={r.courseName}>
                           {r.time?.split('-')[0]?.trim() || ''} {r.title}
                         </div>
                       ))}
@@ -508,8 +508,8 @@ export default function StudentSchedulePage() {
               );
             })}
           </div>
-          <div className="mt-4 flex items-center gap-4 text-[11px] text-slate-500 flex-wrap">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[#F3A522]/15 border border-[#F3A522]/40"></span> Recurring class day</span>
+          <div className="mt-4 flex items-center gap-4 text-[11px] text-dash-mute flex-wrap">
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand/15 border border-brand/40"></span> Recurring class day</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span> Live session</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> Offline session</span>
           </div>

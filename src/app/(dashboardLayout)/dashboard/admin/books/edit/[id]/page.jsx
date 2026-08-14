@@ -54,7 +54,7 @@ export default function EditBookPage() {
 
   if (state.loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh] text-slate-400">
+      <div className="flex items-center justify-center h-[60vh] text-dash-mute2">
         <FiLoader className="animate-spin mr-2" /> Loading book…
       </div>
     );
@@ -63,7 +63,7 @@ export default function EditBookPage() {
   if (state.error) {
     return (
       <div className="p-8">
-        <Link href="/dashboard/admin/books" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6">
+        <Link href="/dashboard/admin/books" className="inline-flex items-center gap-2 text-dash-mute hover:text-dash-ink3 mb-6">
           <FiArrowLeft /> Back to books
         </Link>
         <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600">

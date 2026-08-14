@@ -11,6 +11,7 @@ import {
 import "./globals.css";
 import Providers from "@/components/Providers";
 import SiteChrome from "@/components/shared/SiteChrome";
+import ThemeScript from "@/components/theme/ThemeScript";
 
 // Google Fonts (ported from the Aptech Learning setup)
 const poppins = Poppins({
@@ -89,10 +90,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning: ThemeScript stamps data-theme / colorScheme onto
+    // this element before React hydrates, so the DOM legitimately differs from
+    // the server output. Without it React would discard the corrected DOM and
+    // the theme would flash.
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${poppins.variable} ${roboto.variable} ${lobster.variable} ${caveat.variable} ${worksans.variable} ${outfit.variable} ${hindSiliguri.variable} h-full antialiased`}
     >
+      <head>
+        <ThemeScript />
+      </head>
       <body className="min-h-full flex flex-col">
         <Providers>
           <SiteChrome>{children}</SiteChrome>

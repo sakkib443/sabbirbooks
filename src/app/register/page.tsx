@@ -21,7 +21,14 @@ import { Button, cn } from "@/components/ui";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import { apiRegister, apiLogin, persistSession } from "@/components/auth/authClient";
+import {
+  apiRegister,
+  apiLogin,
+  persistSession,
+  type LoginData,
+} from "@/components/auth/authClient";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { homeRouteFor } from "@/lib/permissions";
 
 export default function RegisterPage() {
   const { isBengali } = useLanguage();
@@ -53,6 +60,7 @@ export default function RegisterPage() {
         hidePw: "পাসওয়ার্ড লুকান",
         submit: "রেজিস্টার করুন",
         creating: "অ্যাকাউন্ট তৈরি হচ্ছে...",
+        or: "অথবা",
         signingIn: "সাইন ইন করা হচ্ছে...",
         haveAccount: "ইতিমধ্যে অ্যাকাউন্ট আছে?",
         login: "লগইন করুন",
@@ -89,6 +97,7 @@ export default function RegisterPage() {
         hidePw: "Hide password",
         submit: "Create account",
         creating: "Creating account...",
+        or: "or",
         signingIn: "Signing you in...",
         haveAccount: "Already have an account?",
         login: "Log in",
@@ -168,6 +177,18 @@ export default function RegisterPage() {
       setApiError(S.network);
       setPhase("idle");
     }
+  };
+
+  // Google sign-in is one step, not two: there is no separate "register" — the
+  // server creates the account on first sight of a verified Google identity and
+  // signs it in. So this lands wherever the account's role belongs, using the
+  // same table the login page and the route guard read. An existing staff
+  // member who presses it on THIS page still gets their own dashboard rather
+  // than the "/" a fresh signup gets.
+  const goAfterGoogle = (data: LoginData) => {
+    const role = (data.user as { role?: string } | undefined)?.role;
+    router.push(homeRouteFor(role));
+    router.refresh();
   };
 
   const busy = isSubmitting || phase !== "idle";
@@ -291,6 +312,20 @@ export default function RegisterPage() {
           <span>{S.deviceNote}</span>
         </div>
       </form>
+
+      {/* Sign up with Google — same component as /login, only the wording on
+          Google's own button differs. Renders nothing without
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID. Outside the <form> so it cannot be
+          triggered by the form's Enter key. */}
+      <div className="mt-6">
+        <GoogleSignInButton
+          bengali={isBengali}
+          intent="signup"
+          dividerLabel={S.or}
+          onSuccess={goAfterGoogle}
+          onError={setApiError}
+        />
+      </div>
 
       <p className={cn("mt-6 text-center text-sm text-muted-foreground", bn)}>
         {S.haveAccount}{" "}

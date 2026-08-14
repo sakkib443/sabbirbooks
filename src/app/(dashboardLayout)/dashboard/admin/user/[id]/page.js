@@ -74,7 +74,7 @@ export default function StudentDetailPage() {
       case 'pending': return 'bg-amber-50 text-amber-600 border-amber-300';
       case 'cancelled': return 'bg-red-50 text-red-500 border-red-300';
       case 'completed': return 'bg-blue-50 text-blue-600 border-blue-300';
-      default: return 'bg-slate-100 text-slate-500 border-slate-300';
+      default: return 'bg-dash-soft2 text-dash-mute border-dash-line-strong';
     }
   };
 
@@ -93,39 +93,39 @@ export default function StudentDetailPage() {
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button onClick={() => window.history.back()} className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition">
+        <button onClick={() => window.history.back()} className="w-10 h-10 rounded-xl bg-dash-soft2 flex items-center justify-center text-dash-mute hover:bg-dash-soft3 transition">
           <FiArrowLeft size={16} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Complete profile with enrollment & payment history</p>
+          <h1 className="text-2xl font-bold text-dash-ink">Student Details</h1>
+          <p className="text-sm text-dash-mute mt-0.5">Complete profile with enrollment & payment history</p>
         </div>
       </div>
 
       {/* Profile Card */}
-      <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-6">
+      <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-2xl font-bold">
             {(student?.firstName || student?.name || 'S').charAt(0).toUpperCase()}
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-slate-800">
+            <h2 className="text-xl font-bold text-dash-ink2">
               {student?.firstName || student?.name || 'Student'} {student?.lastName || ''}
             </h2>
             <div className="flex flex-wrap gap-4 mt-2">
-              <span className="text-sm text-slate-500 flex items-center gap-1.5"><FiMail size={13} /> {student?.email || '—'}</span>
-              <span className="text-sm text-slate-500 flex items-center gap-1.5"><FiPhone size={13} /> {student?.phone || '—'}</span>
-              <span className="text-sm text-slate-500 flex items-center gap-1.5"><FiCalendar size={13} /> Joined: {student?.createdAt ? new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+              <span className="text-sm text-dash-mute flex items-center gap-1.5"><FiMail size={13} /> {student?.email || '—'}</span>
+              <span className="text-sm text-dash-mute flex items-center gap-1.5"><FiPhone size={13} /> {student?.phone || '—'}</span>
+              <span className="text-sm text-dash-mute flex items-center gap-1.5"><FiCalendar size={13} /> Joined: {student?.createdAt ? new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
             </div>
           </div>
           <div className="flex gap-4">
             <div className="text-center">
               <p className="text-xl font-bold text-emerald-600">৳{totalPaid.toLocaleString()}</p>
-              <p className="text-xs text-slate-400">Total Paid</p>
+              <p className="text-xs text-dash-mute2">Total Paid</p>
             </div>
             <div className="text-center">
               <p className="text-xl font-bold text-amber-600">৳{totalDue.toLocaleString()}</p>
-              <p className="text-xs text-slate-400">Due</p>
+              <p className="text-xs text-dash-mute2">Due</p>
             </div>
           </div>
         </div>
@@ -133,11 +133,11 @@ export default function StudentDetailPage() {
 
       {/* Enrollments */}
       <div>
-        <h3 className="text-lg font-bold text-slate-800 mb-3">Enrolled Courses ({enrollments.length})</h3>
+        <h3 className="text-lg font-bold text-dash-ink2 mb-3">Enrolled Courses ({enrollments.length})</h3>
         {enrollments.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200/60 p-12 text-center shadow-sm">
-            <FiBook className="mx-auto text-slate-300 mb-3" size={32} />
-            <p className="text-sm text-slate-400">No enrollments found for this student.</p>
+          <div className="bg-dash-card rounded-xl border border-dash-line/60 p-12 text-center shadow-sm">
+            <FiBook className="mx-auto text-dash-faint mb-3" size={32} />
+            <p className="text-sm text-dash-mute2">No enrollments found for this student.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -148,16 +148,16 @@ export default function StudentDetailPage() {
               const inst = installments[enr._id] || [];
 
               return (
-                <div key={enr._id} className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-5">
+                <div key={enr._id} className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm p-5">
                   <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                     {/* Course */}
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-dash-soft2">
                         {course.image && <img src={course.image} alt="" className="w-full h-full object-cover" />}
                       </div>
                       <div>
-                        <p className="text-base font-semibold text-slate-800">{course.title || 'Course'}</p>
-                        {course.type && <span className="text-xs font-semibold uppercase text-slate-400">{course.type}</span>}
+                        <p className="text-base font-semibold text-dash-ink2">{course.title || 'Course'}</p>
+                        {course.type && <span className="text-xs font-semibold uppercase text-dash-mute2">{course.type}</span>}
                       </div>
                     </div>
 
@@ -167,8 +167,8 @@ export default function StudentDetailPage() {
                     </span>
 
                     {/* Batch */}
-                    <div className="text-sm text-slate-600">
-                      <span className="text-xs text-slate-400">Batch: </span>
+                    <div className="text-sm text-dash-ink4">
+                      <span className="text-xs text-dash-mute2">Batch: </span>
                       {batch ? (
                         <span className="font-semibold text-teal-600">{batch.id || batch.name}</span>
                       ) : (
@@ -177,29 +177,29 @@ export default function StudentDetailPage() {
                     </div>
 
                     {/* Enrolled Date */}
-                    <span className="text-sm text-slate-500">
+                    <span className="text-sm text-dash-mute">
                       {new Date(enr.enrolledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
 
                   {/* Payment Section */}
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Payment</p>
+                  <div className="mt-4 pt-4 border-t border-dash-line-soft">
+                    <p className="text-xs font-semibold text-dash-mute2 uppercase mb-2">Payment</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div>
-                        <p className="text-xs text-slate-400">Amount</p>
-                        <p className="text-sm font-semibold text-slate-800">৳{(payment.amount || 0).toLocaleString()}</p>
+                        <p className="text-xs text-dash-mute2">Amount</p>
+                        <p className="text-sm font-semibold text-dash-ink2">৳{(payment.amount || 0).toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Method</p>
-                        <p className="text-sm text-slate-700 capitalize">{payment.method || '—'}</p>
+                        <p className="text-xs text-dash-mute2">Method</p>
+                        <p className="text-sm text-dash-ink3 capitalize">{payment.method || '—'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">TXN ID</p>
-                        <p className="text-sm text-slate-700 font-mono">{payment.transactionId || '—'}</p>
+                        <p className="text-xs text-dash-mute2">TXN ID</p>
+                        <p className="text-sm text-dash-ink3 font-mono">{payment.transactionId || '—'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Payment Status</p>
+                        <p className="text-xs text-dash-mute2">Payment Status</p>
                         <span className={`text-xs font-semibold capitalize ${payment.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
                           {payment.status || '—'}
                         </span>
@@ -209,8 +209,8 @@ export default function StudentDetailPage() {
 
                   {/* Installments */}
                   {inst.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-2">
+                    <div className="mt-4 pt-4 border-t border-dash-line-soft">
+                      <p className="text-xs font-semibold text-dash-mute2 uppercase mb-2">
                         Installment Plan ({inst.filter(i => i.status === 'paid').length}/{inst.length} paid)
                       </p>
                       <div className="space-y-2">

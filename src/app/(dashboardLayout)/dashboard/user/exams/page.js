@@ -97,24 +97,24 @@ export default function StudentExamsPage() {
     return 'text-red-600';
   };
 
-  if (loading) return <div className="p-6 min-h-screen bg-slate-50 flex items-center justify-center"><FiLoader className="animate-spin text-[#F3A522]" size={30} /></div>;
+  if (loading) return <div className="p-6 min-h-screen bg-dash-soft flex items-center justify-center"><FiLoader className="animate-spin text-brand" size={30} /></div>;
 
   // ── EXAM TAKING VIEW ──
   if (takingExam && submission) {
     return (
-      <div className="p-4 lg:p-6 min-h-screen bg-slate-50">
+      <div className="p-4 lg:p-6 min-h-screen bg-dash-soft">
         {/* Header */}
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-4 mb-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm p-4 mb-4 flex items-center justify-between sticky top-0 z-10">
           <div>
-            <h2 className="font-bold text-slate-800">{takingExam.title}</h2>
-            <p className="text-xs text-slate-500">{questions.length} questions • {takingExam.totalMarks} marks</p>
+            <h2 className="font-bold text-dash-ink2">{takingExam.title}</h2>
+            <p className="text-xs text-dash-mute">{questions.length} questions • {takingExam.totalMarks} marks</p>
           </div>
           <div className="flex items-center gap-4">
-            <span className={`flex items-center gap-1 text-lg font-bold font-mono ${timer < 300 ? 'text-red-600 animate-pulse' : 'text-slate-700'}`}>
+            <span className={`flex items-center gap-1 text-lg font-bold font-mono ${timer < 300 ? 'text-red-600 animate-pulse' : 'text-dash-ink3'}`}>
               <FiClock size={18} /> {formatTime(timer)}
             </span>
             <button onClick={handleSubmit} disabled={submitting}
-              className="px-5 py-2 bg-[#F3A522] text-white rounded-xl text-sm font-bold disabled:opacity-50">
+              className="px-5 py-2 bg-brand text-white rounded-xl text-sm font-bold disabled:opacity-50">
               {submitting ? 'Submitting...' : 'Submit Exam'}
             </button>
           </div>
@@ -123,9 +123,9 @@ export default function StudentExamsPage() {
         {/* Questions */}
         <div className="space-y-4">
           {questions.map((q, idx) => (
-            <div key={q._id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-xs text-[#F3A522] font-bold mb-2">Question {idx + 1} of {questions.length} • {q.marks} marks</p>
-              <p className="text-sm font-bold text-slate-800 mb-3">{q.questionText}</p>
+            <div key={q._id} className="bg-dash-card rounded-xl border border-dash-line p-5 shadow-sm">
+              <p className="text-xs text-brand font-bold mb-2">Question {idx + 1} of {questions.length} • {q.marks} marks</p>
+              <p className="text-sm font-bold text-dash-ink2 mb-3">{q.questionText}</p>
 
               {q.questionType === 'mcq' && q.options ? (
                 <div className="space-y-2">
@@ -133,8 +133,8 @@ export default function StudentExamsPage() {
                     <button key={i} onClick={() => setAnswers({...answers, [q._id]: { selectedOption: i }})}
                       className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition ${
                         answers[q._id]?.selectedOption === i
-                          ? 'border-[#F3A522] bg-[#F3A522]/10 text-[#F3A522] font-bold'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                          ? 'border-brand bg-brand/10 text-brand font-bold'
+                          : 'border-dash-line hover:border-dash-line-strong text-dash-ink3'
                       }`}>
                       <span className="font-bold mr-2">{String.fromCharCode(65 + i)}.</span> {opt.text}
                     </button>
@@ -146,7 +146,7 @@ export default function StudentExamsPage() {
                   onChange={e => setAnswers({...answers, [q._id]: { writtenAnswer: e.target.value }})}
                   placeholder="Write your answer here..."
                   rows={4}
-                  className="w-full px-3 py-2 border rounded-lg text-sm resize-none focus:border-[#F3A522] outline-none"
+                  className="w-full px-3 py-2 border rounded-lg text-sm resize-none focus:border-brand outline-none"
                 />
               )}
             </div>
@@ -159,20 +159,20 @@ export default function StudentExamsPage() {
   // ── MAIN VIEW ──
   return (
     <div className="space-y-6">
-      <div className="mb-2"><h1 className="text-2xl font-bold text-slate-900">Exams & Results</h1></div>
+      <div className="mb-2"><h1 className="text-2xl font-bold text-dash-ink">Exams & Results</h1></div>
 
       {/* Available Exams */}
-      <h2 className="font-bold text-slate-800 mb-3">📝 Available Exams</h2>
+      <h2 className="font-bold text-dash-ink2 mb-3">📝 Available Exams</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {exams.length === 0 ? (
-          <p className="text-slate-500 text-sm col-span-2">No published exams available.</p>
+          <p className="text-dash-mute text-sm col-span-2">No published exams available.</p>
         ) : exams.map(exam => {
           const attempted = results.find(r => r.examId?._id === exam._id);
           return (
-            <div key={exam._id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <h3 className="font-bold text-slate-800">{exam.title}</h3>
-              <p className="text-xs text-slate-500 mb-2">{exam.courseId?.title}</p>
-              <div className="flex gap-3 text-xs text-slate-400 mb-3">
+            <div key={exam._id} className="bg-dash-card rounded-xl border border-dash-line p-5 shadow-sm">
+              <h3 className="font-bold text-dash-ink2">{exam.title}</h3>
+              <p className="text-xs text-dash-mute mb-2">{exam.courseId?.title}</p>
+              <div className="flex gap-3 text-xs text-dash-mute2 mb-3">
                 <span><FiClock className="inline mr-1" />{exam.duration}min</span>
                 <span><FiAward className="inline mr-1" />{exam.totalMarks} marks</span>
                 <span>Pass: {exam.passingMarks}</span>
@@ -182,7 +182,7 @@ export default function StudentExamsPage() {
                   ✓ Scored: {attempted.obtainedMarks}/{attempted.totalMarks} ({attempted.percentage}%) - Grade: {attempted.grade}
                 </div>
               ) : (
-                <button onClick={() => startExam(exam._id)} className="flex items-center gap-2 px-4 py-2 bg-[#F3A522] text-white rounded-lg text-sm font-bold hover:shadow-lg">
+                <button onClick={() => startExam(exam._id)} className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-sm font-bold hover:shadow-lg">
                   <FiPlay /> Start Exam
                 </button>
               )}
@@ -192,18 +192,18 @@ export default function StudentExamsPage() {
       </div>
 
       {/* Results */}
-      <h2 className="font-bold text-slate-800 mb-3">📊 My Results</h2>
+      <h2 className="font-bold text-dash-ink2 mb-3">📊 My Results</h2>
       <div className="space-y-2">
         {results.length === 0 ? (
-          <p className="text-slate-500 text-sm">No results yet.</p>
+          <p className="text-dash-mute text-sm">No results yet.</p>
         ) : results.map(r => (
-          <div key={r._id} className="bg-white rounded-xl border border-slate-200/60 p-4 flex items-center justify-between shadow-sm hover:shadow-md transition">
+          <div key={r._id} className="bg-dash-card rounded-xl border border-dash-line/60 p-4 flex items-center justify-between shadow-sm hover:shadow-md transition">
             <div>
-              <p className="font-bold text-slate-800 text-sm">{r.examId?.title}</p>
-              <p className="text-xs text-slate-500">{r.examId?.courseId?.title} • {new Date(r.submittedAt).toLocaleDateString()}</p>
+              <p className="font-bold text-dash-ink2 text-sm">{r.examId?.title}</p>
+              <p className="text-xs text-dash-mute">{r.examId?.courseId?.title} • {new Date(r.submittedAt).toLocaleDateString()}</p>
             </div>
             <div className="text-right">
-              <p className="text-lg font-bold text-slate-800">{r.obtainedMarks}/{r.totalMarks}</p>
+              <p className="text-lg font-bold text-dash-ink2">{r.obtainedMarks}/{r.totalMarks}</p>
               <p className={`text-xs font-bold ${getGradeColor(r.grade)}`}>{r.percentage}% • Grade: {r.grade || 'Pending'}</p>
             </div>
           </div>

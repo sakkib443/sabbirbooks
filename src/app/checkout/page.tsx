@@ -25,11 +25,11 @@ function CheckoutFallback() {
       <Container>
         <div className="mb-6 h-8 w-48 animate-pulse rounded bg-muted" />
         <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)] lg:gap-8">
-          <div className="order-2 space-y-6 lg:order-1">
+          <div className="space-y-6">
             <div className="h-40 w-full animate-pulse rounded-2xl bg-muted" />
             <div className="h-28 w-full animate-pulse rounded-2xl bg-muted" />
           </div>
-          <div className="order-1 space-y-4 lg:order-2">
+          <div className="space-y-4">
             <div className="h-56 w-full animate-pulse rounded-2xl bg-muted" />
             <div className="h-12 w-full animate-pulse rounded-xl bg-muted" />
           </div>

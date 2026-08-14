@@ -25,8 +25,8 @@ const authHeaders = () => ({
 });
 
 const inputClass =
-  'w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 ' +
-  'placeholder:text-gray-300 focus:outline-none focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/15 transition-all';
+  'w-full px-4 py-2.5 rounded-lg border border-dash-line bg-dash-card text-sm text-dash-ink2 ' +
+  'placeholder:text-dash-faint focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition-all';
 
 // ═══════════════════════════════════════════════════════════════
 // MODULE & LESSON MANAGER
@@ -103,15 +103,15 @@ const ModuleLessonManager = ({ courseId }) => {
       case 'video': return <FiVideo className="text-blue-500" />;
       case 'text': return <FiFileText className="text-green-500" />;
       case 'quiz': return <FiCheck className="text-purple-500" />;
-      case 'assignment': return <FiEdit2 className="text-[#c9871a]" />;
-      default: return <FiVideo className="text-gray-400" />;
+      case 'assignment': return <FiEdit2 className="text-brand-ink" />;
+      default: return <FiVideo className="text-dash-mute2" />;
     }
   };
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">
-      <FiLoader className="animate-spin text-[#F3A522]" size={28} />
-      <p className="ml-3 text-sm text-gray-400 work">Loading modules...</p>
+      <FiLoader className="animate-spin text-brand" size={28} />
+      <p className="ml-3 text-sm text-dash-mute2 work">Loading modules...</p>
     </div>
   );
 
@@ -120,15 +120,15 @@ const ModuleLessonManager = ({ courseId }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-base font-bold text-gray-800 outfit flex items-center gap-2">
-            <LuLayers className="text-[#F3A522]" />
+          <h2 className="text-base font-bold text-dash-ink2 outfit flex items-center gap-2">
+            <LuLayers className="text-brand" />
             Course Modules ({modules.length})
           </h2>
-          <p className="text-[11px] text-gray-400 work mt-0.5">Build the recorded curriculum — modules contain video, text, quiz and assignment lessons</p>
+          <p className="text-[11px] text-dash-mute2 work mt-0.5">Build the recorded curriculum — modules contain video, text, quiz and assignment lessons</p>
         </div>
         <button
           onClick={() => { setEditingModule(null); setShowModuleModal(true); }}
-          className="flex items-center gap-2 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-[#F3A522]/25 hover:shadow-xl transition-all"
+          className="flex items-center gap-2 bg-gradient-to-r from-brand to-brand-hover text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-brand/25 hover:shadow-xl transition-all"
         >
           <FiPlus /> Add Module
         </button>
@@ -136,17 +136,17 @@ const ModuleLessonManager = ({ courseId }) => {
 
       {/* Empty state */}
       {modules.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-gray-200 p-14 text-center bg-[#faf9f6]">
-          <div className="w-16 h-16 bg-[#FEF6E7] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <LuLayers className="text-2xl text-[#F3A522]" />
+        <div className="rounded-2xl border border-dashed border-dash-line p-14 text-center bg-dash-cream">
+          <div className="w-16 h-16 bg-brand-soft rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <LuLayers className="text-2xl text-brand" />
           </div>
-          <h3 className="text-base font-bold text-gray-700 outfit mb-1.5">No modules yet</h3>
-          <p className="text-xs text-gray-400 work mb-5 max-w-sm mx-auto">
+          <h3 className="text-base font-bold text-dash-ink3 outfit mb-1.5">No modules yet</h3>
+          <p className="text-xs text-dash-mute2 work mb-5 max-w-sm mx-auto">
             Start by adding the first module — then fill it with video, text, quiz or assignment lessons.
           </p>
           <button
             onClick={() => { setEditingModule(null); setShowModuleModal(true); }}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white px-6 py-3 rounded-lg font-bold text-sm shadow-lg shadow-[#F3A522]/25 hover:shadow-xl transition-all"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-brand to-brand-hover text-white px-6 py-3 rounded-lg font-bold text-sm shadow-lg shadow-brand/25 hover:shadow-xl transition-all"
           >
             <FiPlus /> Create First Module
           </button>
@@ -156,25 +156,25 @@ const ModuleLessonManager = ({ courseId }) => {
       {/* Modules list */}
       <div className="space-y-3">
         {modules.map((mod, idx) => (
-          <div key={mod._id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          <div key={mod._id} className="bg-dash-card rounded-xl border border-dash-line-soft shadow-sm overflow-hidden transition-all hover:shadow-md">
             {/* Module header */}
             <div
-              className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-[#faf9f6] transition-colors"
+              className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-dash-cream transition-colors"
               onClick={() => toggleModule(mod._id)}
             >
-              <div className="w-9 h-9 bg-gradient-to-br from-[#F3A522] to-[#d88f13] text-white rounded-lg flex items-center justify-center font-bold text-sm outfit shrink-0">
+              <div className="w-9 h-9 bg-gradient-to-br from-brand to-brand-hover text-white rounded-lg flex items-center justify-center font-bold text-sm outfit shrink-0">
                 {idx + 1}
               </div>
 
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-800 outfit text-sm truncate">{mod.title}</h3>
+                <h3 className="font-bold text-dash-ink2 outfit text-sm truncate">{mod.title}</h3>
                 <div className="flex items-center gap-3 mt-0.5">
-                  {mod.titleBn && <span className="text-[11px] text-gray-400 hind-siliguri">{mod.titleBn}</span>}
+                  {mod.titleBn && <span className="text-[11px] text-dash-mute2 hind-siliguri">{mod.titleBn}</span>}
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${mod.isPublished ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
                     {mod.isPublished ? '✓ Published' : '◌ Draft'}
                   </span>
                   {moduleLessons[mod._id] && (
-                    <span className="text-[10px] text-gray-400">{moduleLessons[mod._id].length} lessons</span>
+                    <span className="text-[10px] text-dash-mute2">{moduleLessons[mod._id].length} lessons</span>
                   )}
                 </div>
               </div>
@@ -182,7 +182,7 @@ const ModuleLessonManager = ({ courseId }) => {
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                 <button
                   onClick={() => { setEditingModule(mod); setShowModuleModal(true); }}
-                  className="p-2 text-[#c9871a] hover:bg-[#FEF6E7] rounded-lg transition"
+                  className="p-2 text-brand-ink hover:bg-brand-soft rounded-lg transition"
                   title="Edit Module"
                 >
                   <FiEdit2 size={15} />
@@ -196,48 +196,48 @@ const ModuleLessonManager = ({ courseId }) => {
                 </button>
                 <button
                   onClick={() => { setActiveModuleForLesson(mod._id); setEditingLesson(null); setShowLessonModal(true); }}
-                  className="p-2 text-[#F3A522] hover:bg-[#FEF6E7] rounded-lg transition"
+                  className="p-2 text-brand hover:bg-brand-soft rounded-lg transition"
                   title="Add Lesson"
                 >
                   <FiPlus size={15} />
                 </button>
               </div>
 
-              {expandedModule === mod._id ? <FiChevronUp className="text-gray-400" /> : <FiChevronDown className="text-gray-400" />}
+              {expandedModule === mod._id ? <FiChevronUp className="text-dash-mute2" /> : <FiChevronDown className="text-dash-mute2" />}
             </div>
 
             {/* Lessons (expanded) */}
             {expandedModule === mod._id && (
-              <div className="border-t border-gray-100 bg-[#faf9f6]/60">
+              <div className="border-t border-dash-line-soft bg-dash-cream/60">
                 {!moduleLessons[mod._id] ? (
-                  <div className="py-6 text-center text-gray-400 text-sm">
+                  <div className="py-6 text-center text-dash-mute2 text-sm">
                     <FiLoader className="animate-spin mx-auto mb-2" size={18} />
                     Loading lessons...
                   </div>
                 ) : moduleLessons[mod._id].length === 0 ? (
                   <div className="py-7 text-center">
-                    <p className="text-xs text-gray-400 work mb-2.5">No lessons yet</p>
+                    <p className="text-xs text-dash-mute2 work mb-2.5">No lessons yet</p>
                     <button
                       onClick={() => { setActiveModuleForLesson(mod._id); setEditingLesson(null); setShowLessonModal(true); }}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#c9871a] hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-brand-ink hover:underline"
                     >
                       <FiPlus size={13} /> Add first lesson
                     </button>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-dash-line-soft">
                     {moduleLessons[mod._id].map((lesson, lesIdx) => (
-                      <div key={lesson._id} className="flex items-center gap-3 px-5 py-3 hover:bg-white transition-colors group">
-                        <span className="w-7 h-7 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-[11px] font-bold text-gray-500 shrink-0">
+                      <div key={lesson._id} className="flex items-center gap-3 px-5 py-3 hover:bg-dash-card transition-colors group">
+                        <span className="w-7 h-7 bg-dash-card border border-dash-line rounded-lg flex items-center justify-center text-[11px] font-bold text-dash-mute shrink-0">
                           {lesIdx + 1}
                         </span>
                         {getLessonIcon(lesson.type)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700 truncate">{lesson.title}</p>
+                          <p className="text-sm font-medium text-dash-ink3 truncate">{lesson.title}</p>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] uppercase font-bold text-gray-400">{lesson.type}</span>
+                            <span className="text-[10px] uppercase font-bold text-dash-mute2">{lesson.type}</span>
                             {lesson.videoDuration ? (
-                              <span className="text-[10px] text-gray-400">{Math.round(lesson.videoDuration / 60)} min</span>
+                              <span className="text-[10px] text-dash-mute2">{Math.round(lesson.videoDuration / 60)} min</span>
                             ) : null}
                             {lesson.isFree && (
                               <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">FREE</span>
@@ -247,15 +247,15 @@ const ModuleLessonManager = ({ courseId }) => {
                         <div className="flex items-center gap-1">
                           {lesson.isPublished
                             ? <span className="text-green-500" title="Published"><FiEye size={14} /></span>
-                            : <span className="text-gray-300" title="Draft"><FiEyeOff size={14} /></span>}
+                            : <span className="text-dash-faint" title="Draft"><FiEyeOff size={14} /></span>}
                           {lesson.isLocked
-                            ? <span className="text-[#c9871a]" title="Locked"><FiLock size={14} /></span>
-                            : <span className="text-gray-300" title="Unlocked"><FiUnlock size={14} /></span>}
+                            ? <span className="text-brand-ink" title="Locked"><FiLock size={14} /></span>
+                            : <span className="text-dash-faint" title="Unlocked"><FiUnlock size={14} /></span>}
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => { setActiveModuleForLesson(mod._id); setEditingLesson(lesson); setShowLessonModal(true); }}
-                            className="p-1.5 text-[#c9871a] hover:bg-[#FEF6E7] rounded transition"
+                            className="p-1.5 text-brand-ink hover:bg-brand-soft rounded transition"
                           >
                             <FiEdit2 size={13} />
                           </button>
@@ -272,10 +272,10 @@ const ModuleLessonManager = ({ courseId }) => {
                 )}
 
                 {moduleLessons[mod._id]?.length > 0 && (
-                  <div className="px-5 py-3 border-t border-gray-100">
+                  <div className="px-5 py-3 border-t border-dash-line-soft">
                     <button
                       onClick={() => { setActiveModuleForLesson(mod._id); setEditingLesson(null); setShowLessonModal(true); }}
-                      className="flex items-center gap-1.5 text-xs font-bold text-[#c9871a] hover:text-[#a5680f] transition"
+                      className="flex items-center gap-1.5 text-xs font-bold text-brand-ink hover:text-brand-deep transition"
                     >
                       <FiPlus size={13} /> Add Lesson
                     </button>
@@ -343,15 +343,15 @@ const ModuleModal = ({ courseId, module, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-[#F3A522] to-[#d88f13]">
+      <div className="bg-dash-card rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-brand to-brand-hover">
           <h3 className="text-white font-bold text-base outfit">{module ? 'Edit Module' : 'Add New Module'}</h3>
           <button onClick={onClose} className="text-white/70 hover:text-white transition"><FiX size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Module Title (English) *</label>
+            <label className="text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5 block">Module Title (English) *</label>
             <input
               value={formData.title}
               onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
@@ -360,7 +360,7 @@ const ModuleModal = ({ courseId, module, onClose, onSave }) => {
             />
           </div>
           <div>
-            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Module Title (Bangla)</label>
+            <label className="text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5 block">Module Title (Bangla)</label>
             <input
               value={formData.titleBn}
               onChange={e => setFormData(prev => ({ ...prev, titleBn: e.target.value }))}
@@ -369,7 +369,7 @@ const ModuleModal = ({ courseId, module, onClose, onSave }) => {
             />
           </div>
           <div>
-            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Description</label>
+            <label className="text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5 block">Description</label>
             <textarea
               value={formData.description}
               onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -386,23 +386,23 @@ const ModuleModal = ({ courseId, module, onClose, onSave }) => {
                 checked={formData.isPublished}
                 onChange={e => setFormData(prev => ({ ...prev, isPublished: e.target.checked }))}
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#F3A522]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-[#F3A522] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              <div className="w-11 h-6 bg-dash-soft3 peer-focus:ring-2 peer-focus:ring-brand/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-brand after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-dash-card after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
             </label>
-            <span className="text-sm text-gray-600 work">Published</span>
+            <span className="text-sm text-dash-ink4 work">Published</span>
           </div>
 
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-600 font-medium text-sm hover:bg-gray-50 transition"
+              className="flex-1 py-2.5 rounded-lg border border-dash-line text-dash-ink4 font-medium text-sm hover:bg-dash-soft transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white font-bold text-sm shadow-lg shadow-[#F3A522]/25 hover:shadow-xl disabled:opacity-50 transition-all"
+              className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-brand to-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/25 hover:shadow-xl disabled:opacity-50 transition-all"
             >
               {saving ? 'Saving...' : module ? 'Update Module' : 'Create Module'}
             </button>
@@ -459,8 +459,8 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-[#F3A522] to-[#d88f13] shrink-0">
+      <div className="bg-dash-card rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-brand to-brand-hover shrink-0">
           <h3 className="text-white font-bold text-base outfit">{lesson ? 'Edit Lesson' : 'Add New Lesson'}</h3>
           <button onClick={onClose} className="text-white/70 hover:text-white transition"><FiX size={20} /></button>
         </div>
@@ -468,7 +468,7 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Lesson Title (English) *</label>
+              <label className="text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5 block">Lesson Title (English) *</label>
               <input
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
@@ -477,7 +477,7 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
               />
             </div>
             <div>
-              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Title (Bangla)</label>
+              <label className="text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5 block">Title (Bangla)</label>
               <input
                 value={formData.titleBn}
                 onChange={e => setFormData(prev => ({ ...prev, titleBn: e.target.value }))}
@@ -488,7 +488,7 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Lesson Type</label>
+            <label className="text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5 block">Lesson Type</label>
             <div className="grid grid-cols-4 gap-2">
               {['video', 'text', 'quiz', 'assignment'].map(type => (
                 <button
@@ -496,8 +496,8 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, type }))}
                   className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${formData.type === type
-                    ? 'bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white shadow'
-                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                    ? 'bg-gradient-to-r from-brand to-brand-hover text-white shadow'
+                    : 'bg-dash-soft text-dash-mute hover:bg-dash-soft2'}`}
                 >
                   {type}
                 </button>
@@ -506,9 +506,9 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
           </div>
 
           {formData.type === 'video' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-[#FEF6E7]/50 rounded-xl border border-[#F0DFB4]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-brand-soft/50 rounded-xl border border-brand-line">
               <div className="md:col-span-2">
-                <label className="text-[11px] font-bold text-[#a5680f] uppercase tracking-wider mb-1.5 block">Video URL</label>
+                <label className="text-[11px] font-bold text-brand-deep uppercase tracking-wider mb-1.5 block">Video URL</label>
                 <input
                   value={formData.videoUrl}
                   onChange={e => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
@@ -517,7 +517,7 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
                 />
               </div>
               <div>
-                <label className="text-[11px] font-bold text-[#a5680f] uppercase tracking-wider mb-1.5 block">Duration (seconds)</label>
+                <label className="text-[11px] font-bold text-brand-deep uppercase tracking-wider mb-1.5 block">Duration (seconds)</label>
                 <input
                   type="number"
                   value={formData.videoDuration}
@@ -543,7 +543,7 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
           )}
 
           <div>
-            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Description</label>
+            <label className="text-[11px] font-bold text-dash-mute uppercase tracking-wider mb-1.5 block">Description</label>
             <textarea
               value={formData.description}
               onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -553,24 +553,24 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4 p-4 bg-[#faf9f6] rounded-xl border border-gray-100">
+          <div className="grid grid-cols-3 gap-4 p-4 bg-dash-cream rounded-xl border border-dash-line-soft">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.isFree}
                 onChange={e => setFormData(prev => ({ ...prev, isFree: e.target.checked }))}
-                className="w-4 h-4 accent-[#F3A522] rounded"
+                className="w-4 h-4 accent-brand rounded"
               />
-              <span className="text-xs font-medium text-gray-600">Free Preview</span>
+              <span className="text-xs font-medium text-dash-ink4">Free Preview</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.isLocked}
                 onChange={e => setFormData(prev => ({ ...prev, isLocked: e.target.checked }))}
-                className="w-4 h-4 accent-[#F3A522] rounded"
+                className="w-4 h-4 accent-brand rounded"
               />
-              <span className="text-xs font-medium text-gray-600">Locked</span>
+              <span className="text-xs font-medium text-dash-ink4">Locked</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -579,7 +579,7 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
                 onChange={e => setFormData(prev => ({ ...prev, isPublished: e.target.checked }))}
                 className="w-4 h-4 accent-green-500 rounded"
               />
-              <span className="text-xs font-medium text-gray-600">Published</span>
+              <span className="text-xs font-medium text-dash-ink4">Published</span>
             </label>
           </div>
 
@@ -587,14 +587,14 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-600 font-medium text-sm hover:bg-gray-50 transition"
+              className="flex-1 py-2.5 rounded-lg border border-dash-line text-dash-ink4 font-medium text-sm hover:bg-dash-soft transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white font-bold text-sm shadow-lg shadow-[#F3A522]/25 hover:shadow-xl disabled:opacity-50 transition-all"
+              className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-brand to-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/25 hover:shadow-xl disabled:opacity-50 transition-all"
             >
               {saving ? 'Saving...' : lesson ? 'Update Lesson' : 'Create Lesson'}
             </button>

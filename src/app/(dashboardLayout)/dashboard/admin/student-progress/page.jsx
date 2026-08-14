@@ -51,14 +51,14 @@ export default function StudentProgressPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 outfit">Student Progress</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Select a batch to view student attendance, assignments &amp; exam progress</p>
+          <h1 className="text-xl font-bold text-dash-ink2 outfit">Student Progress</h1>
+          <p className="text-xs text-dash-mute2 mt-0.5">Select a batch to view student attendance, assignments &amp; exam progress</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/dashboard/admin" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+          <Link href="/dashboard/admin" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-ink4 bg-dash-card border border-dash-line rounded-lg hover:bg-dash-soft transition">
             <FiArrowLeft size={12} /> Dashboard
           </Link>
-          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-ink4 bg-dash-card border border-dash-line rounded-lg hover:bg-dash-soft transition">
             <FiRefreshCw size={12} /> Refresh
           </button>
         </div>
@@ -66,27 +66,27 @@ export default function StudentProgressPage() {
 
       {/* Search & Filter */}
       <div className="flex flex-wrap items-center gap-2.5">
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-2 w-56">
-          <FiSearch size={13} className="text-slate-400 shrink-0" />
+        <div className="flex items-center gap-1.5 bg-dash-card border border-dash-line rounded-lg px-3 py-2 w-56">
+          <FiSearch size={13} className="text-dash-mute2 shrink-0" />
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search batches..." className="text-sm text-slate-600 outline-none bg-transparent w-full" />
-          {searchQuery && <button onClick={() => setSearchQuery('')}><FiX size={12} className="text-slate-400" /></button>}
+            placeholder="Search batches..." className="text-sm text-dash-ink4 outline-none bg-transparent w-full" />
+          {searchQuery && <button onClick={() => setSearchQuery('')}><FiX size={12} className="text-dash-mute2" /></button>}
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="text-sm text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none">
+          className="text-sm text-dash-ink4 bg-dash-card border border-dash-line rounded-lg px-3 py-2 outline-none">
           <option value="all">All Status</option>
           <option value="active">Running</option>
           <option value="upcoming">Upcoming</option>
           <option value="completed">Completed</option>
         </select>
-        <span className="text-xs text-slate-400 ml-auto">{filteredBatches.length} batches</span>
+        <span className="text-xs text-dash-mute2 ml-auto">{filteredBatches.length} batches</span>
       </div>
 
       {/* Batch Folder Grid */}
       {filteredBatches.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
-          <FiFolder className="mx-auto text-slate-300 mb-3" size={40} />
-          <p className="text-sm text-slate-500">No batches found</p>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-16 text-center">
+          <FiFolder className="mx-auto text-dash-faint mb-3" size={40} />
+          <p className="text-sm text-dash-mute">No batches found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -94,15 +94,15 @@ export default function StudentProgressPage() {
             const c = batch._status === 'active' ? 'emerald' : batch._status === 'upcoming' ? 'blue' : 'slate';
             return (
               <Link key={batch._id} href={`/dashboard/admin/student-progress/${batch._id}`}
-                className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md hover:border-teal-200 transition-all group">
+                className="bg-dash-card border border-dash-line rounded-xl p-4 hover:shadow-md hover:border-teal-200 transition-all group">
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 rounded-lg bg-${c}-50 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
                     <FiFolder size={18} className={`text-${c}-500`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-slate-800 truncate group-hover:text-teal-700 transition-colors">{batch.name || batch.courseName}</h3>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{batch.courseName}</p>
-                    <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
+                    <h3 className="text-sm font-semibold text-dash-ink2 truncate group-hover:text-teal-700 transition-colors">{batch.name || batch.courseName}</h3>
+                    <p className="text-xs text-dash-mute2 truncate mt-0.5">{batch.courseName}</p>
+                    <div className="flex items-center gap-3 mt-2 text-[11px] text-dash-mute2">
                       <span className="flex items-center gap-1"><FiUsers size={10} /> {batch.enrolledStudents || 0}</span>
                       <span className="flex items-center gap-1"><FiCalendar size={10} /> {formatDate(batch.startDate)}</span>
                     </div>
@@ -110,7 +110,7 @@ export default function StudentProgressPage() {
                       {batch._status === 'active' ? 'Running' : batch._status === 'upcoming' ? 'Upcoming' : 'Completed'}
                     </span>
                   </div>
-                  <FiChevronRight size={16} className="text-slate-300 group-hover:text-teal-500 mt-1 transition-colors" />
+                  <FiChevronRight size={16} className="text-dash-faint group-hover:text-teal-500 mt-1 transition-colors" />
                 </div>
               </Link>
             );

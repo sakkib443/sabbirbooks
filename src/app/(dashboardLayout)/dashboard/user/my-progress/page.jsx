@@ -10,8 +10,8 @@ const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replac
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 const cid = (v) => String(v?._id || v || '');
 
-const overallColor = (p) => (p >= 80 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : p >= 60 ? 'text-[#c9871a] bg-[#FEF6E7] border-[#F0DFB4]' : p >= 40 ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-rose-500 bg-rose-50 border-rose-200');
-const barColor = (p) => (p >= 80 ? 'bg-emerald-500' : p >= 60 ? 'bg-[#F3A522]' : p >= 40 ? 'bg-amber-500' : 'bg-rose-400');
+const overallColor = (p) => (p >= 80 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : p >= 60 ? 'text-brand-ink bg-brand-soft border-brand-line' : p >= 40 ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-rose-500 bg-rose-50 border-rose-200');
+const barColor = (p) => (p >= 80 ? 'bg-emerald-500' : p >= 60 ? 'bg-brand' : p >= 40 ? 'bg-amber-500' : 'bg-rose-400');
 
 export default function MyProgressPage() {
   const [loading, setLoading] = useState(true);
@@ -78,95 +78,95 @@ export default function MyProgressPage() {
     finally { setLoading(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><FiLoader className="animate-spin text-[#F3A522]" size={28} /></div>;
+  if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><FiLoader className="animate-spin text-brand" size={28} /></div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 outfit">My Progress</h1>
-        <p className="text-sm text-slate-500 mt-0.5">প্রতিটি assignment-এ তোমার নম্বর ও overall ফলাফল</p>
+        <h1 className="text-2xl font-bold text-dash-ink outfit">My Progress</h1>
+        <p className="text-sm text-dash-mute mt-0.5">প্রতিটি assignment-এ তোমার নম্বর ও overall ফলাফল</p>
       </div>
 
       {courses.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
-          <FiTrendingUp className="mx-auto text-slate-300 mb-4" size={40} />
-          <h3 className="text-lg font-bold text-slate-700 mb-1">No Progress Yet</h3>
-          <p className="text-sm text-slate-500">কোনো course-এ enroll করলে এখানে তোমার progress দেখাবে।</p>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-16 text-center">
+          <FiTrendingUp className="mx-auto text-dash-faint mb-4" size={40} />
+          <h3 className="text-lg font-bold text-dash-ink3 mb-1">No Progress Yet</h3>
+          <p className="text-sm text-dash-mute">কোনো course-এ enroll করলে এখানে তোমার progress দেখাবে।</p>
         </div>
       ) : (
         <div className="space-y-4">
           {courses.map(course => {
             const isOpen = expanded === course.key;
             return (
-              <div key={course.key} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div key={course.key} className="bg-dash-card rounded-2xl border border-dash-line overflow-hidden">
                 {/* Header */}
-                <button onClick={() => setExpanded(isOpen ? null : course.key)} className="w-full text-left px-5 py-4 hover:bg-slate-50/60 transition">
+                <button onClick={() => setExpanded(isOpen ? null : course.key)} className="w-full text-left px-5 py-4 hover:bg-dash-soft/60 transition">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center text-white shrink-0">
+                      <div className="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center text-white shrink-0">
                         {course.image ? <img src={course.image} alt="" className="w-full h-full object-cover" /> : <FiBook size={18} />}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-base font-bold text-slate-800 truncate">{course.title}</h3>
-                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${course.status === 'active' ? 'bg-emerald-50 text-emerald-600' : course.status === 'completed' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>{course.status}</span>
+                          <h3 className="text-base font-bold text-dash-ink2 truncate">{course.title}</h3>
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${course.status === 'active' ? 'bg-emerald-50 text-emerald-600' : course.status === 'completed' ? 'bg-blue-50 text-blue-600' : 'bg-dash-soft2 text-dash-mute'}`}>{course.status}</span>
                         </div>
-                        <p className="text-xs text-slate-400 mt-0.5">{course.graded} graded · {course.assignments.length} assignment{course.assignments.length !== 1 ? 's' : ''}</p>
+                        <p className="text-xs text-dash-mute2 mt-0.5">{course.graded} graded · {course.assignments.length} assignment{course.assignments.length !== 1 ? 's' : ''}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Overall</p>
-                        <p className={`text-xl font-black leading-none ${course.overallPct >= 60 ? 'text-[#c9871a]' : course.overallPct > 0 ? 'text-amber-600' : 'text-slate-300'}`}>{course.graded > 0 ? `${course.overallPct}%` : '—'}</p>
+                        <p className="text-[9px] font-bold text-dash-mute2 uppercase">Overall</p>
+                        <p className={`text-xl font-black leading-none ${course.overallPct >= 60 ? 'text-brand-ink' : course.overallPct > 0 ? 'text-amber-600' : 'text-dash-faint'}`}>{course.graded > 0 ? `${course.overallPct}%` : '—'}</p>
                       </div>
-                      <FiChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      <FiChevronDown size={16} className={`text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                     </div>
                   </div>
                 </button>
 
                 {isOpen && (
-                  <div className="border-t border-slate-100 bg-slate-50/30 p-5 space-y-4">
+                  <div className="border-t border-dash-line-soft bg-dash-soft/30 p-5 space-y-4">
                     {/* summary stats */}
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
-                        <p className="text-lg font-bold text-[#c9871a]">{course.graded > 0 ? `${course.obtained}/${course.max}` : '—'}</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Total Marks</p>
+                      <div className="bg-dash-card rounded-xl border border-dash-line-soft p-3 text-center">
+                        <p className="text-lg font-bold text-brand-ink">{course.graded > 0 ? `${course.obtained}/${course.max}` : '—'}</p>
+                        <p className="text-[10px] text-dash-mute2 uppercase font-bold">Total Marks</p>
                       </div>
-                      <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+                      <div className="bg-dash-card rounded-xl border border-dash-line-soft p-3 text-center">
                         <p className={`text-lg font-bold ${overallColor(course.overallPct).split(' ')[0]}`}>{course.graded > 0 ? `${course.overallPct}%` : '—'}</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Overall</p>
+                        <p className="text-[10px] text-dash-mute2 uppercase font-bold">Overall</p>
                       </div>
-                      <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+                      <div className="bg-dash-card rounded-xl border border-dash-line-soft p-3 text-center">
                         <p className="text-lg font-bold text-emerald-600">{course.attendance.total > 0 ? `${course.attendance.rate}%` : '—'}</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Attendance</p>
+                        <p className="text-[10px] text-dash-mute2 uppercase font-bold">Attendance</p>
                       </div>
                     </div>
 
                     {/* assignment breakdown */}
                     {course.assignments.length === 0 ? (
-                      <div className="bg-white rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
-                        <FiClipboard className="mx-auto mb-2 text-slate-300" size={24} /> এখনো কোনো assignment নেই।
+                      <div className="bg-dash-card rounded-xl border border-dashed border-dash-line p-6 text-center text-sm text-dash-mute2">
+                        <FiClipboard className="mx-auto mb-2 text-dash-faint" size={24} /> এখনো কোনো assignment নেই।
                       </div>
                     ) : (
-                      <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-                        <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
-                          <FiClipboard size={13} className="text-[#c9871a]" />
-                          <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wide">Assignment Marks</h4>
+                      <div className="bg-dash-card rounded-xl border border-dash-line-soft overflow-hidden">
+                        <div className="px-4 py-2.5 border-b border-dash-line-soft flex items-center gap-2">
+                          <FiClipboard size={13} className="text-brand-ink" />
+                          <h4 className="text-xs font-bold text-dash-ink4 uppercase tracking-wide">Assignment Marks</h4>
                         </div>
-                        <div className="divide-y divide-slate-50">
+                        <div className="divide-y divide-dash-soft">
                           {course.assignments.map((a, i) => {
                             const pct = a.marks != null && a.total ? Math.round((a.marks / a.total) * 100) : 0;
                             return (
                               <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-                                <span className="text-[11px] font-bold text-slate-300 w-5">{String(i + 1).padStart(2, '0')}</span>
+                                <span className="text-[11px] font-bold text-dash-faint w-5">{String(i + 1).padStart(2, '0')}</span>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-slate-700 truncate">{a.title}</p>
+                                  <p className="text-sm font-semibold text-dash-ink3 truncate">{a.title}</p>
                                   {a.marks != null ? (
                                     <div className="flex items-center gap-2 mt-1">
-                                      <div className="w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                      <div className="w-28 h-1.5 bg-dash-soft2 rounded-full overflow-hidden">
                                         <div className={`h-full rounded-full ${barColor(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                                       </div>
-                                      <span className="text-[11px] text-slate-400">{pct}%</span>
+                                      <span className="text-[11px] text-dash-mute2">{pct}%</span>
                                     </div>
                                   ) : (
                                     <span className="text-[11px] text-amber-500 font-medium">নম্বর এখনো দেওয়া হয়নি</span>
@@ -174,8 +174,8 @@ export default function MyProgressPage() {
                                 </div>
                                 <div className="text-right shrink-0">
                                   {a.marks != null ? (
-                                    <span className={`text-sm font-bold ${pct >= 60 ? 'text-emerald-600' : pct >= 40 ? 'text-amber-600' : 'text-rose-500'}`}>{a.marks}<span className="text-[11px] text-slate-400 font-normal">/{a.total}</span></span>
-                                  ) : <span className="text-slate-300 text-sm">—/{a.total}</span>}
+                                    <span className={`text-sm font-bold ${pct >= 60 ? 'text-emerald-600' : pct >= 40 ? 'text-amber-600' : 'text-rose-500'}`}>{a.marks}<span className="text-[11px] text-dash-mute2 font-normal">/{a.total}</span></span>
+                                  ) : <span className="text-dash-faint text-sm">—/{a.total}</span>}
                                 </div>
                               </div>
                             );

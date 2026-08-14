@@ -21,7 +21,7 @@ const typeColors = {
   exam: 'bg-amber-50 border-amber-200',
   assignment: 'bg-cyan-50 border-cyan-200',
   certificate: 'bg-green-50 border-green-200',
-  system: 'bg-slate-50 border-slate-200',
+  system: 'bg-dash-soft border-dash-line',
   reminder: 'bg-red-50 border-red-200',
 };
 
@@ -82,19 +82,19 @@ export default function NotificationsPage() {
     : filter === 'unread' ? notifications.filter(n => !n.isRead)
     : notifications.filter(n => n.type === filter);
 
-  if (loading) return <div className="p-6 min-h-screen bg-slate-50 flex items-center justify-center"><FiLoader className="animate-spin text-[#F3A522]" size={30} /></div>;
+  if (loading) return <div className="p-6 min-h-screen bg-dash-soft flex items-center justify-center"><FiLoader className="animate-spin text-brand" size={30} /></div>;
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-          <p className="text-slate-500 text-sm mt-1">{unread} unread of {total} total</p>
+          <h1 className="text-2xl font-bold text-dash-ink">Notifications</h1>
+          <p className="text-dash-mute text-sm mt-1">{unread} unread of {total} total</p>
         </div>
         <div className="flex gap-2">
           {unread > 0 && (
             <button onClick={markAllRead}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#F3A522]/10 text-[#F3A522] rounded-xl text-xs font-bold hover:bg-[#F3A522]/20">
+              className="flex items-center gap-1.5 px-4 py-2 bg-brand/10 text-brand rounded-xl text-xs font-bold hover:bg-brand/20">
               <FiCheckCircle size={14} /> Mark All Read
             </button>
           )}
@@ -108,11 +108,11 @@ export default function NotificationsPage() {
       </div>
 
       {/* Filter */}
-      <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-xl w-fit mb-6">
+      <div className="flex flex-wrap items-center gap-1 p-1 bg-dash-soft2 rounded-xl w-fit mb-6">
         {['all', 'unread', 'payment', 'class', 'exam', 'assignment', 'certificate', 'system'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
-              filter === f ? 'bg-white shadow text-[#F3A522]' : 'text-slate-500 hover:text-slate-700'
+              filter === f ? 'bg-dash-card shadow text-brand' : 'text-dash-mute hover:text-dash-ink3'
             }`}>
             {f === 'all' ? 'All' : f === 'unread' ? `Unread (${unread})` : `${typeIcons[f] || ''} ${f.charAt(0).toUpperCase() + f.slice(1)}`}
           </button>
@@ -122,38 +122,38 @@ export default function NotificationsPage() {
       {/* List */}
       <div className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border p-16 text-center">
-            <FiBell className="mx-auto text-4xl text-slate-300 mb-4" />
-            <h3 className="font-bold text-slate-700">No notifications</h3>
-            <p className="text-sm text-slate-500">You&apos;re all caught up!</p>
+          <div className="bg-dash-card rounded-2xl border p-16 text-center">
+            <FiBell className="mx-auto text-4xl text-dash-faint mb-4" />
+            <h3 className="font-bold text-dash-ink3">No notifications</h3>
+            <p className="text-sm text-dash-mute">You&apos;re all caught up!</p>
           </div>
         ) : filtered.map(n => (
           <div key={n._id}
-            className={`bg-white rounded-xl border p-4 transition hover:shadow-sm cursor-pointer ${
-              !n.isRead ? 'border-l-4 border-l-[#F3A522]' : ''
+            className={`bg-dash-card rounded-xl border p-4 transition hover:shadow-sm cursor-pointer ${
+              !n.isRead ? 'border-l-4 border-l-brand' : ''
             }`}
             onClick={() => { if (!n.isRead) markRead(n._id); if (n.link) window.location.href = n.link; }}
           >
             <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 border ${typeColors[n.type] || 'bg-slate-50'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 border ${typeColors[n.type] || 'bg-dash-soft'}`}>
                 {typeIcons[n.type] || '🔔'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className={`text-sm ${!n.isRead ? 'font-bold text-slate-900' : 'text-slate-700'}`}>{n.title}</p>
-                  {!n.isRead && <span className="w-2 h-2 bg-[#F3A522] rounded-full flex-shrink-0" />}
-                  <span className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 text-slate-500 rounded-full ml-auto">{n.type}</span>
+                  <p className={`text-sm ${!n.isRead ? 'font-bold text-dash-ink' : 'text-dash-ink3'}`}>{n.title}</p>
+                  {!n.isRead && <span className="w-2 h-2 bg-brand rounded-full flex-shrink-0" />}
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold bg-dash-soft2 text-dash-mute rounded-full ml-auto">{n.type}</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">{n.message}</p>
-                <p className="text-[10px] text-slate-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+                <p className="text-xs text-dash-mute mt-0.5">{n.message}</p>
+                <p className="text-[10px] text-dash-mute2 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {!n.isRead && (
                   <button onClick={(e) => { e.stopPropagation(); markRead(n._id); }}
-                    className="p-1.5 text-[#F3A522] hover:bg-[#FEF6E7] rounded-lg" title="Mark as read"><FiCheck size={14} /></button>
+                    className="p-1.5 text-brand hover:bg-brand-soft rounded-lg" title="Mark as read"><FiCheck size={14} /></button>
                 )}
                 <button onClick={(e) => { e.stopPropagation(); removeOne(n._id); }}
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg" title="Delete"><FiTrash2 size={14} /></button>
+                  className="p-1.5 text-dash-mute2 hover:text-red-500 hover:bg-red-50 rounded-lg" title="Delete"><FiTrash2 size={14} /></button>
               </div>
             </div>
           </div>
@@ -164,10 +164,10 @@ export default function NotificationsPage() {
       {total > 30 && (
         <div className="flex justify-center gap-2 mt-6">
           <button disabled={page <= 1} onClick={() => setPage(page - 1)}
-            className="px-4 py-2 bg-white border rounded-lg text-sm disabled:opacity-50">Previous</button>
-          <span className="px-4 py-2 text-sm text-slate-600">Page {page}</span>
+            className="px-4 py-2 bg-dash-card border rounded-lg text-sm disabled:opacity-50">Previous</button>
+          <span className="px-4 py-2 text-sm text-dash-ink4">Page {page}</span>
           <button disabled={page * 30 >= total} onClick={() => setPage(page + 1)}
-            className="px-4 py-2 bg-white border rounded-lg text-sm disabled:opacity-50">Next</button>
+            className="px-4 py-2 bg-dash-card border rounded-lg text-sm disabled:opacity-50">Next</button>
         </div>
       )}
       {toastNode}{confirmNode}

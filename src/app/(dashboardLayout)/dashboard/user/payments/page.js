@@ -92,7 +92,7 @@ export default function UserPaymentsPage() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 text-slate-600 text-xs font-bold rounded-full border border-slate-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-dash-soft text-dash-ink4 text-xs font-bold rounded-full border border-dash-line">
             {status}
           </span>
         );
@@ -114,7 +114,7 @@ export default function UserPaymentsPage() {
         icon: via === 'bkash' ? '🅱️' : via === 'nagad' ? '🟠' : via === 'rocket' ? '🟣' : '🏦',
         color: 'text-amber-600',
       };
-      default: return { label: cap(method) || '—', icon: '💰', color: 'text-slate-600' };
+      default: return { label: cap(method) || '—', icon: '💰', color: 'text-dash-ink4' };
     }
   };
 
@@ -183,9 +183,9 @@ export default function UserPaymentsPage() {
 
   if (loading) {
     return (
-      <div className="p-6 min-h-screen bg-slate-50 flex items-center justify-center">
-        <FiLoader className="animate-spin text-[#F3A522]" size={30} />
-        <p className="ml-3 text-slate-500">Loading payment history...</p>
+      <div className="p-6 min-h-screen bg-dash-soft flex items-center justify-center">
+        <FiLoader className="animate-spin text-brand" size={30} />
+        <p className="ml-3 text-dash-mute">Loading payment history...</p>
       </div>
     );
   }
@@ -194,60 +194,60 @@ export default function UserPaymentsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Payment History</h1>
-        <p className="text-slate-500 text-sm mt-1">View your payment records and download invoices</p>
+        <h1 className="text-2xl font-bold text-dash-ink">Payment History</h1>
+        <p className="text-dash-mute text-sm mt-1">View your payment records and download invoices</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center">
               <FiDollarSign className="text-emerald-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium">Total Paid</p>
-              <p className="text-xl font-bold text-slate-900 outfit">৳{totalPaid.toLocaleString()}</p>
+              <p className="text-xs text-dash-mute font-medium">Total Paid</p>
+              <p className="text-xl font-bold text-dash-ink outfit">৳{totalPaid.toLocaleString()}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center">
               <FiDollarSign className="text-red-500" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium">Total Due</p>
-              <p className="text-xl font-bold text-slate-900 outfit">৳{totalDue.toLocaleString()}</p>
+              <p className="text-xs text-dash-mute font-medium">Total Due</p>
+              <p className="text-xl font-bold text-dash-ink outfit">৳{totalDue.toLocaleString()}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
               <FiCreditCard className="text-blue-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium">Total Transactions</p>
-              <p className="text-xl font-bold text-slate-900 outfit">{enrollments.length}</p>
+              <p className="text-xs text-dash-mute font-medium">Total Transactions</p>
+              <p className="text-xl font-bold text-dash-ink outfit">{enrollments.length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center">
               <FiClock className="text-amber-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium">Pending</p>
-              <p className="text-xl font-bold text-slate-900 outfit">{totalPending}</p>
+              <p className="text-xs text-dash-mute font-medium">Pending</p>
+              <p className="text-xl font-bold text-dash-ink outfit">{totalPending}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 mb-6 bg-white rounded-xl border border-slate-200 p-1.5 shadow-sm w-fit">
+      <div className="flex items-center gap-2 mb-6 bg-dash-card rounded-xl border border-dash-line p-1.5 shadow-sm w-fit">
         {[
           { id: 'all', label: 'All' },
           { id: 'paid', label: 'Paid' },
@@ -258,8 +258,8 @@ export default function UserPaymentsPage() {
             key={tab.id}
             onClick={() => setFilter(tab.id)}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filter === tab.id
-              ? 'bg-[#F3A522] text-white shadow-md'
-              : 'text-slate-500 hover:bg-slate-50'
+              ? 'bg-brand text-white shadow-md'
+              : 'text-dash-mute hover:bg-dash-soft'
               }`}
           >
             {tab.label}
@@ -269,48 +269,48 @@ export default function UserPaymentsPage() {
 
       {/* Payment Records */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center">
-          <FiCreditCard className="mx-auto text-4xl text-slate-300 mb-4" />
-          <h3 className="text-lg font-bold text-slate-700 mb-2">No Payment Records</h3>
-          <p className="text-slate-500 text-sm">No payments found for the selected filter.</p>
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-16 text-center">
+          <FiCreditCard className="mx-auto text-4xl text-dash-faint mb-4" />
+          <h3 className="text-lg font-bold text-dash-ink3 mb-2">No Payment Records</h3>
+          <p className="text-dash-mute text-sm">No payments found for the selected filter.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-dash-card rounded-2xl border border-dash-line shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Course</th>
-                  <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                  <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Method</th>
-                  <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                  <th className="text-left px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                  <th className="text-right px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice</th>
+                <tr className="border-b border-dash-line-soft bg-dash-soft/50">
+                  <th className="text-left px-6 py-4 text-[10px] font-black text-dash-mute2 uppercase tracking-widest">Course</th>
+                  <th className="text-left px-6 py-4 text-[10px] font-black text-dash-mute2 uppercase tracking-widest">Amount</th>
+                  <th className="text-left px-6 py-4 text-[10px] font-black text-dash-mute2 uppercase tracking-widest">Method</th>
+                  <th className="text-left px-6 py-4 text-[10px] font-black text-dash-mute2 uppercase tracking-widest">Status</th>
+                  <th className="text-left px-6 py-4 text-[10px] font-black text-dash-mute2 uppercase tracking-widest">Date</th>
+                  <th className="text-right px-6 py-4 text-[10px] font-black text-dash-mute2 uppercase tracking-widest">Invoice</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-dash-soft">
                 {filtered.map((enrollment) => {
                   const course = enrollment.courseId || {};
                   const payment = enrollment.payment || {};
                   const method = getMethodLabel(payment);
 
                   return (
-                    <tr key={enrollment._id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={enrollment._id} className="hover:bg-dash-soft/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           {course.image && (
                             <img src={course.image} alt="" className="w-10 h-10 rounded-lg object-cover" />
                           )}
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-800 truncate max-w-[200px]">{course.title || 'Course'}</p>
-                            <p className="text-[11px] text-slate-400">{course.type}</p>
+                            <p className="text-sm font-bold text-dash-ink2 truncate max-w-[200px]">{course.title || 'Course'}</p>
+                            <p className="text-[11px] text-dash-mute2">{course.type}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         {(() => { const m = enrollMoney(enrollment); return (
                           <>
-                            <span className="text-sm font-bold text-slate-800">৳{m.totalPaid.toLocaleString()}</span>
+                            <span className="text-sm font-bold text-dash-ink2">৳{m.totalPaid.toLocaleString()}</span>
                             {m.due > 0 && <p className="text-[11px] text-red-400 mt-0.5">৳{m.due.toLocaleString()} due</p>}
                           </>
                         ); })()}
@@ -325,7 +325,7 @@ export default function UserPaymentsPage() {
                         {getStatusBadge(payment.status)}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-dash-mute">
                           {payment.paidAt
                             ? new Date(payment.paidAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                             : new Date(enrollment.enrolledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -346,7 +346,7 @@ export default function UserPaymentsPage() {
                             <button
                               onClick={() => handleDownloadInvoice(enrollment._id)}
                               disabled={downloadingId === enrollment._id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-[#F3A522] hover:text-white transition-all disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dash-soft2 text-dash-ink4 text-xs font-bold rounded-lg hover:bg-brand hover:text-white transition-all disabled:opacity-50"
                             >
                               {downloadingId === enrollment._id ? (
                                 <FiLoader className="animate-spin" size={12} />
@@ -370,8 +370,8 @@ export default function UserPaymentsPage() {
       {/* ═══ Pay Now (due) Modal ═══ */}
       {payModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setPayModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#F3A522] to-[#d88f13]">
+          <div className="bg-dash-card rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-brand to-brand-hover">
               <div>
                 <h3 className="text-white font-bold text-lg outfit">Pay Due</h3>
                 <p className="text-white/80 text-xs truncate max-w-[280px]">{payModal.enrollment.courseId?.title || 'Course'}</p>
@@ -386,28 +386,28 @@ export default function UserPaymentsPage() {
               </div>
 
               {/* Send money note */}
-              <div className="rounded-lg bg-slate-50 border border-slate-100 p-3">
-                <p className="text-[11px] text-slate-500 leading-relaxed">
+              <div className="rounded-lg bg-dash-soft border border-dash-line-soft p-3">
+                <p className="text-[11px] text-dash-mute leading-relaxed">
                   নিচের যেকোনো নম্বরে “Send Money” করুন, তারপর তথ্য দিন:
                 </p>
-                <p className="text-sm font-bold text-slate-700 font-mono mt-1">01711-946614 <span className="text-[10px] font-normal text-slate-400">(bKash / Nagad / Rocket)</span></p>
+                <p className="text-sm font-bold text-dash-ink3 font-mono mt-1">01711-946614 <span className="text-[10px] font-normal text-dash-mute2">(bKash / Nagad / Rocket)</span></p>
               </div>
 
               {/* Amount */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Amount (৳)</label>
+                <label className="text-xs font-semibold text-dash-ink4 mb-1 block">Amount (৳)</label>
                 <input type="number" min="1" max={payModal.due} value={payForm.amount}
                   onChange={e => setPayForm({ ...payForm, amount: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522]" />
+                  className="w-full px-4 py-2.5 rounded-lg border border-dash-line text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
 
               {/* Payment via */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Payment Via</label>
+                <label className="text-xs font-semibold text-dash-ink4 mb-1 block">Payment Via</label>
                 <div className="flex gap-2">
                   {['bkash', 'nagad', 'rocket'].map(t => (
                     <button key={t} type="button" onClick={() => setPayForm({ ...payForm, paymentType: t })}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold capitalize border transition ${payForm.paymentType === t ? 'border-[#F3A522] bg-[#f0fffe] text-[#F3A522]' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
+                      className={`px-4 py-2 rounded-lg text-xs font-bold capitalize border transition ${payForm.paymentType === t ? 'border-brand bg-brand-soft text-brand' : 'border-dash-line bg-dash-card text-dash-mute hover:border-dash-line-strong'}`}>
                       {t}
                     </button>
                   ))}
@@ -416,22 +416,22 @@ export default function UserPaymentsPage() {
 
               {/* Sender number */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Sender Number</label>
+                <label className="text-xs font-semibold text-dash-ink4 mb-1 block">Sender Number</label>
                 <input type="tel" placeholder="01XXXXXXXXX" value={payForm.senderNumber}
                   onChange={e => setPayForm({ ...payForm, senderNumber: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522]" />
+                  className="w-full px-4 py-2.5 rounded-lg border border-dash-line text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
 
               {/* Transaction ID */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Transaction ID</label>
+                <label className="text-xs font-semibold text-dash-ink4 mb-1 block">Transaction ID</label>
                 <input type="text" placeholder="e.g. TXN8K4F2J9D" value={payForm.transactionId}
                   onChange={e => setPayForm({ ...payForm, transactionId: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522]" />
+                  className="w-full px-4 py-2.5 rounded-lg border border-dash-line text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
 
               <button onClick={submitPay} disabled={paying}
-                className="w-full py-3 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white font-bold text-sm rounded-lg hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 transition">
+                className="w-full py-3 bg-gradient-to-r from-brand to-brand-hover text-white font-bold text-sm rounded-lg hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 transition">
                 {paying ? <FiLoader className="animate-spin" size={16} /> : <FiCheckCircle size={16} />}
                 {paying ? 'Processing...' : 'Confirm Payment'}
               </button>

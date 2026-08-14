@@ -24,18 +24,18 @@ const bdt = (v) => (typeof v === 'number' ? '৳' + v.toLocaleString('en-US') : 
 const STATUS_STYLES = {
   published: 'bg-emerald-50 text-emerald-600 border-emerald-200',
   draft: 'bg-amber-50 text-amber-600 border-amber-200',
-  archived: 'bg-slate-100 text-slate-500 border-slate-200',
+  archived: 'bg-dash-soft2 text-dash-mute border-dash-line',
 };
 
 function StatCard({ label, value, icon: Icon, tone }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3">
+    <div className="bg-dash-card rounded-xl border border-dash-line p-4 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${tone}`}>
         <Icon size={18} />
       </div>
       <div>
-        <p className="text-xl font-bold text-slate-800 leading-none">{value}</p>
-        <p className="text-xs text-slate-400 mt-1">{label}</p>
+        <p className="text-xl font-bold text-dash-ink2 leading-none">{value}</p>
+        <p className="text-xs text-dash-mute2 mt-1">{label}</p>
       </div>
     </div>
   );
@@ -126,22 +126,22 @@ export default function AdminBooksPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2.5">
-            <FiBook className="text-[#F3A522]" /> Books
+          <h1 className="text-2xl font-bold text-dash-ink2 flex items-center gap-2.5">
+            <FiBook className="text-brand" /> Books
           </h1>
-          <p className="text-slate-500 text-sm">Manage your store catalog — add, edit and remove books.</p>
+          <p className="text-dash-mute text-sm">Manage your store catalog — add, edit and remove books.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={fetchBooks}
-            className="flex items-center gap-2 px-3.5 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-2 px-3.5 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
             title="Refresh"
           >
             <FiRefreshCw className={loading ? 'animate-spin' : ''} />
           </button>
           <Link
             href="/dashboard/admin/books/create"
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#F3A522] text-white font-semibold rounded-lg hover:bg-[#d88f13] transition-all shadow-lg shadow-[#F3A522]/20"
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand text-white font-semibold rounded-lg hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
           >
             <FiPlus /> Add Book
           </Link>
@@ -150,7 +150,7 @@ export default function AdminBooksPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total books" value={stats.total} icon={FiBook} tone="bg-[#FEF6E7] text-[#F3A522]" />
+        <StatCard label="Total books" value={stats.total} icon={FiBook} tone="bg-brand-soft text-brand" />
         <StatCard label="Published" value={stats.published} icon={FiStar} tone="bg-emerald-50 text-emerald-500" />
         <StatCard label="Printed" value={stats.printed} icon={FiBox} tone="bg-sky-50 text-sky-500" />
         <StatCard label="Digital" value={stats.digital} icon={FiDownload} tone="bg-violet-50 text-violet-500" />
@@ -159,18 +159,18 @@ export default function AdminBooksPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dash-mute2" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by title, author or category…"
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#F3A522]/25 focus:border-[#F3A522] outline-none"
+            className="w-full pl-10 pr-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none"
           />
         </div>
         <select
           value={formatFilter}
           onChange={(e) => setFormatFilter(e.target.value)}
-          className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#F3A522]/25 focus:border-[#F3A522] outline-none text-slate-600"
+          className="px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4"
         >
           <option value="all">All formats</option>
           <option value="printed">Printed</option>
@@ -179,7 +179,7 @@ export default function AdminBooksPage() {
         <select
           value={statusFilter}
           onChange={(e) => changeStatus(e.target.value)}
-          className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#F3A522]/25 focus:border-[#F3A522] outline-none text-slate-600"
+          className="px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4"
         >
           <option value="all">All statuses</option>
           <option value="published">Published</option>
@@ -190,7 +190,7 @@ export default function AdminBooksPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400">
+        <div className="flex items-center justify-center py-20 text-dash-mute2">
           <FiLoader className="animate-spin mr-2" /> Loading books…
         </div>
       ) : error ? (
@@ -198,27 +198,27 @@ export default function AdminBooksPage() {
           <FiAlertCircle /> {error}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-200">
-          <FiBook className="mx-auto text-slate-300" size={40} />
-          <p className="text-slate-500 mt-3 font-medium">No books found</p>
-          <p className="text-slate-400 text-sm">
+        <div className="text-center py-20 bg-dash-card rounded-xl border border-dashed border-dash-line">
+          <FiBook className="mx-auto text-dash-faint" size={40} />
+          <p className="text-dash-mute mt-3 font-medium">No books found</p>
+          <p className="text-dash-mute2 text-sm">
             {books.length === 0 ? 'Add your first book to get started.' : 'Try adjusting the filters.'}
           </p>
           {books.length === 0 && (
             <Link
               href="/dashboard/admin/books/create"
-              className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[#F3A522] text-white rounded-lg font-medium hover:bg-[#d88f13] transition"
+              className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-brand text-white rounded-lg font-medium hover:bg-brand-hover transition"
             >
               <FiPlus /> Add Book
             </Link>
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-dash-card rounded-xl border border-dash-line overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-400">
+                <tr className="bg-dash-soft text-left text-xs uppercase tracking-wider text-dash-mute2">
                   <th className="px-4 py-3 font-semibold">Book</th>
                   <th className="px-4 py-3 font-semibold">Category</th>
                   <th className="px-4 py-3 font-semibold">Format</th>
@@ -228,27 +228,27 @@ export default function AdminBooksPage() {
                   <th className="px-4 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-dash-line-soft">
                 {filtered.map((b) => (
-                  <tr key={b._id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr key={b._id} className="hover:bg-dash-soft/70 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3 min-w-[220px]">
-                        <div className="w-10 h-14 rounded-md bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                        <div className="w-10 h-14 rounded-md bg-dash-soft2 border border-dash-line overflow-hidden shrink-0">
                           {b.coverImage && (
                             <img src={b.coverImage} alt="" className="w-full h-full object-cover"
                               onError={(e) => (e.target.style.display = 'none')} />
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-700 truncate flex items-center gap-1.5">
-                            {b.isFeatured && <FiStar className="text-[#F3A522] shrink-0" size={13} title="Featured" />}
+                          <p className="font-semibold text-dash-ink3 truncate flex items-center gap-1.5">
+                            {b.isFeatured && <FiStar className="text-brand shrink-0" size={13} title="Featured" />}
                             {b.title}
                           </p>
-                          <p className="text-xs text-slate-400 truncate">{b.author}</p>
+                          <p className="text-xs text-dash-mute2 truncate">{b.author}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{b.category || '—'}</td>
+                    <td className="px-4 py-3 text-dash-ink4">{b.category || '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-md text-xs font-medium border ${b.format === 'digital' ? 'bg-violet-50 text-violet-600 border-violet-200' : 'bg-sky-50 text-sky-600 border-sky-200'}`}>
                         {b.format}
@@ -257,14 +257,14 @@ export default function AdminBooksPage() {
                     <td className="px-4 py-3">
                       {typeof b.offerPrice === 'number' && b.offerPrice > 0 && b.offerPrice < b.price ? (
                         <div className="leading-tight">
-                          <span className="font-semibold text-slate-700">{bdt(b.offerPrice)}</span>
-                          <span className="text-xs text-slate-400 line-through ml-1">{bdt(b.price)}</span>
+                          <span className="font-semibold text-dash-ink3">{bdt(b.offerPrice)}</span>
+                          <span className="text-xs text-dash-mute2 line-through ml-1">{bdt(b.price)}</span>
                         </div>
                       ) : (
-                        <span className="font-semibold text-slate-700">{bdt(b.price)}</span>
+                        <span className="font-semibold text-dash-ink3">{bdt(b.price)}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-dash-ink4">
                       {b.format === 'printed' ? (
                         <span className={b.stock > 0 ? '' : 'text-red-500 font-medium'}>{b.stock ?? 0}</span>
                       ) : '—'}
@@ -278,7 +278,7 @@ export default function AdminBooksPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
                           href={`/dashboard/admin/books/edit/${b._id}`}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-[#F3A522] hover:bg-[#FEF6E7] transition"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-dash-mute hover:text-brand hover:bg-brand-soft transition"
                           title="Edit"
                         >
                           <FiEdit2 size={15} />
@@ -286,7 +286,7 @@ export default function AdminBooksPage() {
                         <button
                           onClick={() => handleDelete(b)}
                           disabled={deletingId === b._id}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-dash-mute hover:text-red-500 hover:bg-red-50 transition disabled:opacity-50"
                           title="Delete"
                         >
                           {deletingId === b._id ? <FiLoader size={15} className="animate-spin" /> : <FiTrash2 size={15} />}
@@ -298,7 +298,7 @@ export default function AdminBooksPage() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-3 text-xs text-slate-400 border-t border-slate-100">
+          <div className="px-4 py-3 text-xs text-dash-mute2 border-t border-dash-line-soft">
             Showing {filtered.length} of {books.length} book{books.length === 1 ? '' : 's'}
           </div>
         </div>

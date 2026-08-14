@@ -56,12 +56,12 @@ export default function AdminBlogList() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800 outfit">All Blogs</h1>
-                    <p className="text-slate-500 text-sm work">Manage your blog posts and articles</p>
+                    <h1 className="text-2xl font-bold text-dash-ink2 outfit">All Blogs</h1>
+                    <p className="text-dash-mute text-sm work">Manage your blog posts and articles</p>
                 </div>
                 <Link
                     href="/dashboard/admin/blog/create"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#41bfb8] text-white font-medium rounded-lg hover:bg-[#38a89d] transition-all shadow-lg shadow-teal-100"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-aqua text-white font-medium rounded-lg hover:bg-aqua-hover transition-all shadow-lg shadow-teal-100"
                 >
                     <FiPlus className="text-lg" />
                     Create New Blog
@@ -70,18 +70,18 @@ export default function AdminBlogList() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <p className="text-slate-500 text-xs font-medium work uppercase tracking-wider">Total Blogs</p>
-                    <p className="text-3xl font-bold text-slate-800 mt-2 outfit">{blogs.length}</p>
+                <div className="bg-dash-card rounded-xl border border-dash-line p-5">
+                    <p className="text-dash-mute text-xs font-medium work uppercase tracking-wider">Total Blogs</p>
+                    <p className="text-3xl font-bold text-dash-ink2 mt-2 outfit">{blogs.length}</p>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <p className="text-slate-500 text-xs font-medium work uppercase tracking-wider">Published</p>
+                <div className="bg-dash-card rounded-xl border border-dash-line p-5">
+                    <p className="text-dash-mute text-xs font-medium work uppercase tracking-wider">Published</p>
                     <p className="text-3xl font-bold text-green-600 mt-2 outfit">
                         {blogs.filter(b => b.status === 'published').length}
                     </p>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <p className="text-slate-500 text-xs font-medium work uppercase tracking-wider">Draft</p>
+                <div className="bg-dash-card rounded-xl border border-dash-line p-5">
+                    <p className="text-dash-mute text-xs font-medium work uppercase tracking-wider">Draft</p>
                     <p className="text-3xl font-bold text-amber-600 mt-2 outfit">
                         {blogs.filter(b => b.status === 'draft').length}
                     </p>
@@ -89,19 +89,19 @@ export default function AdminBlogList() {
             </div>
 
             {/* Search & Filter Bar */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="bg-dash-card rounded-xl border border-dash-line p-4">
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1 relative">
-                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-mute2" />
                         <input
                             type="text"
                             placeholder="Search blogs by title, category, or author..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none transition-all"
+                            className="w-full pl-10 pr-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none transition-all"
                         />
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                    <button className="flex items-center gap-2 px-4 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors">
                         <FiFilter />
                         <span>Filters</span>
                     </button>
@@ -109,11 +109,11 @@ export default function AdminBlogList() {
             </div>
 
             {/* Blog Table */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="bg-dash-card rounded-xl border border-dash-line overflow-hidden">
                 {loading ? (
                     <div className="p-12 text-center">
-                        <div className="w-10 h-10 border-4 border-[#41bfb8] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-slate-500">Loading blogs...</p>
+                        <div className="w-10 h-10 border-4 border-aqua border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-dash-mute">Loading blogs...</p>
                     </div>
                 ) : error ? (
                     <div className="p-12 text-center">
@@ -121,13 +121,13 @@ export default function AdminBlogList() {
                     </div>
                 ) : paginatedBlogs.length === 0 ? (
                     <div className="p-12 text-center">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <FiEdit2 className="text-2xl text-slate-400" />
+                        <div className="w-16 h-16 bg-dash-soft2 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FiEdit2 className="text-2xl text-dash-mute2" />
                         </div>
-                        <p className="text-slate-500 mb-4">No blogs found</p>
+                        <p className="text-dash-mute mb-4">No blogs found</p>
                         <Link
                             href="/dashboard/admin/blog/create"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#41bfb8] text-white font-medium rounded-lg hover:bg-[#38a89d] transition-all"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-aqua text-white font-medium rounded-lg hover:bg-aqua-hover transition-all"
                         >
                             <FiPlus />
                             Create Your First Blog
@@ -137,51 +137,51 @@ export default function AdminBlogList() {
                     <>
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-slate-50 border-b border-slate-200">
+                                <thead className="bg-dash-soft border-b border-dash-line">
                                     <tr>
-                                        <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Blog</th>
-                                        <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
-                                        <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Author</th>
-                                        <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                                        <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                        <th className="text-right px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                                        <th className="text-left px-6 py-4 text-xs font-bold text-dash-mute uppercase tracking-wider">Blog</th>
+                                        <th className="text-left px-6 py-4 text-xs font-bold text-dash-mute uppercase tracking-wider">Category</th>
+                                        <th className="text-left px-6 py-4 text-xs font-bold text-dash-mute uppercase tracking-wider">Author</th>
+                                        <th className="text-left px-6 py-4 text-xs font-bold text-dash-mute uppercase tracking-wider">Date</th>
+                                        <th className="text-left px-6 py-4 text-xs font-bold text-dash-mute uppercase tracking-wider">Status</th>
+                                        <th className="text-right px-6 py-4 text-xs font-bold text-dash-mute uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100">
+                                <tbody className="divide-y divide-dash-line-soft">
                                     {paginatedBlogs.map((blog, idx) => (
-                                        <tr key={blog._id || blog.id || idx} className="hover:bg-slate-50 transition-colors">
+                                        <tr key={blog._id || blog.id || idx} className="hover:bg-dash-soft transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-16 h-12 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                                                    <div className="w-16 h-12 rounded-lg overflow-hidden bg-dash-soft2 shrink-0">
                                                         {blog.image ? (
                                                             <img src={blog.image} alt={blog.title} className="w-full h-full object-cover" />
                                                         ) : (
-                                                            <div className="w-full h-full bg-gradient-to-br from-[#41bfb8] to-[#9AA0A8] flex items-center justify-center text-white font-bold">
+                                                            <div className="w-full h-full bg-gradient-to-br from-aqua to-dash-steel flex items-center justify-center text-white font-bold">
                                                                 {blog.title?.charAt(0) || 'B'}
                                                             </div>
                                                         )}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <h3 className="font-semibold text-slate-800 truncate max-w-[200px]">{blog.title}</h3>
-                                                        <p className="text-xs text-slate-500 truncate max-w-[200px]">{blog.excerpt || blog.content?.substring(0, 50) + '...'}</p>
+                                                        <h3 className="font-semibold text-dash-ink2 truncate max-w-[200px]">{blog.title}</h3>
+                                                        <p className="text-xs text-dash-mute truncate max-w-[200px]">{blog.excerpt || blog.content?.substring(0, 50) + '...'}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-medium text-slate-600">
+                                                <span className="px-3 py-1 bg-dash-soft2 rounded-full text-xs font-medium text-dash-ink4">
                                                     {blog.category || 'Uncategorized'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <FiUser className="text-slate-400" />
-                                                    <span className="text-sm text-slate-600">{blog.author || 'Admin'}</span>
+                                                    <FiUser className="text-dash-mute2" />
+                                                    <span className="text-sm text-dash-ink4">{blog.author || 'Admin'}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <FiCalendar className="text-slate-400" />
-                                                    <span className="text-sm text-slate-600">{formatDate(blog.createdAt || blog.date)}</span>
+                                                    <FiCalendar className="text-dash-mute2" />
+                                                    <span className="text-sm text-dash-ink4">{formatDate(blog.createdAt || blog.date)}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -197,21 +197,21 @@ export default function AdminBlogList() {
                                                     <Link
                                                         href={`/blogs/${blog._id || blog.id}`}
                                                         target="_blank"
-                                                        className="p-2 text-slate-400 hover:text-[#41bfb8] hover:bg-teal-50 rounded-lg transition-all"
+                                                        className="p-2 text-dash-mute2 hover:text-aqua hover:bg-teal-50 rounded-lg transition-all"
                                                         title="View"
                                                     >
                                                         <FiEye />
                                                     </Link>
                                                     <Link
                                                         href={`/dashboard/admin/blog/${blog._id || blog.id}`}
-                                                        className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                                                        className="p-2 text-dash-mute2 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
                                                         title="Edit"
                                                     >
                                                         <FiEdit2 />
                                                     </Link>
                                                     <button
                                                         onClick={() => setDeleteConfirm(blog._id || blog.id)}
-                                                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                        className="p-2 text-dash-mute2 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                                         title="Delete"
                                                     >
                                                         <FiTrash2 />
@@ -226,15 +226,15 @@ export default function AdminBlogList() {
 
                         {/* Pagination */}
                         {totalPages > 1 && (
-                            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
-                                <p className="text-sm text-slate-500">
+                            <div className="flex items-center justify-between px-6 py-4 border-t border-dash-line">
+                                <p className="text-sm text-dash-mute">
                                     Showing {startIndex + 1} to {Math.min(startIndex + blogsPerPage, filteredBlogs.length)} of {filteredBlogs.length} blogs
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
-                                        className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="p-2 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         <FiChevronLeft />
                                     </button>
@@ -243,8 +243,8 @@ export default function AdminBlogList() {
                                             key={i}
                                             onClick={() => setCurrentPage(i + 1)}
                                             className={`w-8 h-8 rounded-lg font-medium text-sm transition-all ${currentPage === i + 1
-                                                    ? 'bg-[#41bfb8] text-white'
-                                                    : 'text-slate-600 hover:bg-slate-100'
+                                                    ? 'bg-aqua text-white'
+                                                    : 'text-dash-ink4 hover:bg-dash-soft2'
                                                 }`}
                                         >
                                             {i + 1}
@@ -253,7 +253,7 @@ export default function AdminBlogList() {
                                     <button
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
-                                        className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="p-2 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         <FiChevronRight />
                                     </button>
@@ -267,13 +267,13 @@ export default function AdminBlogList() {
             {/* Delete Confirmation Modal */}
             {deleteConfirm && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
-                        <h3 className="text-xl font-bold text-slate-800 outfit mb-2">Delete Blog?</h3>
-                        <p className="text-slate-500 mb-6">Are you sure you want to delete this blog post? This action cannot be undone.</p>
+                    <div className="bg-dash-card rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+                        <h3 className="text-xl font-bold text-dash-ink2 outfit mb-2">Delete Blog?</h3>
+                        <p className="text-dash-mute mb-6">Are you sure you want to delete this blog post? This action cannot be undone.</p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setDeleteConfirm(null)}
-                                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+                                className="flex-1 px-4 py-2.5 border border-dash-line rounded-lg text-dash-ink4 font-medium hover:bg-dash-soft transition-colors"
                             >
                                 Cancel
                             </button>

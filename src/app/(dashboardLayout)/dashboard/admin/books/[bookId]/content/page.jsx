@@ -42,7 +42,7 @@ import FileDropZone from '@/components/shared/FileDropZone';
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), {
   ssr: false,
   loading: () => (
-    <div className="rounded-lg border border-slate-300 min-h-[300px] flex items-center justify-center text-sm text-slate-400">
+    <div className="rounded-lg border border-dash-line-strong min-h-[300px] flex items-center justify-center text-sm text-dash-mute2">
       এডিটর লোড হচ্ছে…
     </div>
   ),
@@ -73,14 +73,85 @@ const formatSize = bytes => {
   return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
 };
 
+// ─── Question serials ───────────────────────────────────────
+//
+// A serial may be typed as "12", "১২" or "১২ক". The server owns the placement
+// rule; everything here only mirrors it, so the admin can see what a number is
+// about to do to its neighbours before committing to it.
+
+const BN_ZERO = 0x09e6;
+
+const asciiDigits = value =>
+  String(value ?? '').replace(/[০-৯]/g, d => String(d.charCodeAt(0) - BN_ZERO));
+
+const bengaliDigits = n => String(n).replace(/\d/g, d => String.fromCharCode(BN_ZERO + Number(d)));
+
+const sameSerial = (a, b) =>
+  asciiDigits(a).trim().toLowerCase() === asciiDigits(b).trim().toLowerCase();
+
+/** Leading integer of a serial — "১২ক" → 12 — or null when it has none. */
+const serialValue = value => {
+  const match = /^\s*(\d+)/.exec(asciiDigits(value));
+  return match ? Number(match[1]) : null;
+};
+
+const bumpSerial = questionNo => {
+  const value = serialValue(questionNo);
+  return /[০-৯]/.test(questionNo) ? bengaliDigits(value + 1) : String(value + 1);
+};
+
+const isPlainSerial = value => /^\s*\d+\s*$/.test(asciiDigits(value));
+
+/** Where this number would land, and who it would push down to get there. */
+const previewPlacement = (questions, questionNo) => {
+  const no = String(questionNo || '').trim();
+  if (!no) return null;
+
+  const clash = questions.find(q => sameSerial(q.questionNo, no));
+  if (clash) {
+    const moved = questions
+      .slice(questions.indexOf(clash))
+      .filter(q => isPlainSerial(q.questionNo))
+      .map(q => `${q.questionNo} → ${bumpSerial(q.questionNo)}`);
+    return {
+      kind: 'shift',
+      at: clash.questionNo,
+      moved: moved.slice(0, 3).join(', ') + (moved.length > 3 ? ' …' : ''),
+    };
+  }
+
+  const value = serialValue(no);
+  const next =
+    value === null
+      ? undefined
+      : questions.find(q => {
+          const v = serialValue(q.questionNo);
+          return v !== null && v > value;
+        });
+
+  return next ? { kind: 'gap', before: next.questionNo } : { kind: 'append' };
+};
+
+/** Serial to prefill the add dialog with — one past the highest already used. */
+const nextSerial = questions => {
+  let best = null;
+  for (const q of questions) {
+    const value = serialValue(q.questionNo);
+    if (value !== null && (best === null || value >= best.value)) {
+      best = { value, source: q.questionNo };
+    }
+  }
+  return best ? bumpSerial(best.source) : String(questions.length + 1);
+};
+
 /** Progress for the file currently going up, plus its place in the queue. */
 function UploadBar({ pct, queue }) {
   return (
     <div className="mb-3">
-      <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-dash-soft3 overflow-hidden">
         <div className="h-full bg-blue-600 transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <p className="text-[11px] text-slate-500 mt-1">
+      <p className="text-[11px] text-dash-mute mt-1">
         {queue ? `${queue.index}/${queue.total} — ` : ''}আপলোড হচ্ছে {pct}%
       </p>
     </div>
@@ -162,6 +233,11 @@ export default function BookContentEditorPage() {
   const [nodeModal, setNodeModal] = useState(null);
   const [nodeSaving, setNodeSaving] = useState(false);
   const [nodeError, setNodeError] = useState('');
+
+  // { questionNo } — the serial a new question is being inserted at.
+  const [addModal, setAddModal] = useState(null);
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState('');
 
   // Videos sit on the VPS disk alongside everything else, so a soft cap keeps
   // one careless 500MB lecture recording from filling the volume. Long videos
@@ -323,12 +399,9 @@ export default function BookContentEditorPage() {
   }, [loadTree]);
 
   // ─── Load one topic's questions ───────────────────────────
-  const openTopic = useCallback(async topic => {
-    setActiveTopic(topic);
-    setActiveQuestionId(null);
-    setDraft(null);
+  const loadQuestions = useCallback(async topicId => {
     try {
-      const res = await fetch(`${API}/book-content/questions/topic/${topic._id}`, {
+      const res = await fetch(`${API}/book-content/questions/topic/${topicId}`, {
         headers: hdrs(),
       });
       const body = await res.json();
@@ -337,6 +410,16 @@ export default function BookContentEditorPage() {
       setQuestions([]);
     }
   }, []);
+
+  const openTopic = useCallback(
+    async topic => {
+      setActiveTopic(topic);
+      setActiveQuestionId(null);
+      setDraft(null);
+      await loadQuestions(topic._id);
+    },
+    [loadQuestions]
+  );
 
   const openQuestion = q => {
     setActiveQuestionId(q._id);
@@ -384,28 +467,57 @@ export default function BookContentEditorPage() {
     }
   };
 
-  const addQuestion = async () => {
+  const openAddQuestion = () => {
     if (!activeTopic) return;
-    const nextNo = String(questions.length + 1);
-    const res = await fetch(`${API}/book-content/questions`, {
-      method: 'POST',
-      headers: hdrs(),
-      body: JSON.stringify({
-        bookId,
-        chapterId: activeTopic.chapterId,
-        topicId: activeTopic._id,
-        questionNo: nextNo,
-        order: questions.length + 1,
-      }),
-    });
-    const body = await res.json();
-    if (body.success) {
-      setQuestions(qs => [...qs, body.data]);
+    setAddError('');
+    setAddModal({ questionNo: nextSerial(questions) });
+  };
+
+  const closeAddQuestion = () => {
+    setAddModal(null);
+    setAddError('');
+    setAddSaving(false);
+  };
+
+  const submitAddQuestion = async () => {
+    if (!activeTopic || !addModal) return;
+    const questionNo = addModal.questionNo.trim();
+    if (!questionNo) {
+      setAddError('প্রশ্নের নম্বর দিতে হবে');
+      return;
+    }
+    setAddSaving(true);
+    setAddError('');
+    try {
+      const res = await fetch(`${API}/book-content/questions`, {
+        method: 'POST',
+        headers: hdrs(),
+        // No `order` is sent: the server derives it from this number, which is
+        // what makes the typed serial the position the question lands in.
+        body: JSON.stringify({
+          bookId,
+          chapterId: activeTopic.chapterId,
+          topicId: activeTopic._id,
+          questionNo,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) throw new Error(body.message || 'প্রশ্ন যোগ করা যায়নি');
+
+      // An insert renumbers its neighbours server-side, so the list in hand is
+      // stale the moment it lands — refetch rather than splice into it.
+      await loadQuestions(activeTopic._id);
       openQuestion(body.data);
+      closeAddQuestion();
       loadTree();
+    } catch (err) {
+      setAddError(err.message);
+      setAddSaving(false);
     }
   };
 
+  // Untouched by the insert work: a delete still leaves its serial gap behind,
+  // and createQuestion is what puts a re-added question back into it.
   const deleteQuestion = async id => {
     if (!window.confirm('এই প্রশ্নটি মুছে ফেলবেন?')) return;
     await fetch(`${API}/book-content/questions/${id}`, { method: 'DELETE', headers: hdrs() });
@@ -451,6 +563,8 @@ export default function BookContentEditorPage() {
     );
     return { ...t, topics: allTopics.length };
   }, [allTopics]);
+
+  const addPlacement = addModal ? previewPlacement(questions, addModal.questionNo) : null;
 
   const toggle = id => setExpanded(e => ({ ...e, [id]: !e[id] }));
 
@@ -615,7 +729,7 @@ export default function BookContentEditorPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-slate-500">লোড হচ্ছে…</div>;
+    return <div className="p-8 text-dash-mute">লোড হচ্ছে…</div>;
   }
   if (error) {
     return (
@@ -646,11 +760,11 @@ export default function BookContentEditorPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">{tree?.book?.title}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl font-semibold text-dash-ink">{tree?.book?.title}</h1>
+          <p className="text-sm text-dash-mute mt-0.5">
             {totals.topics} টপিক · {totals.answered}/{totals.total} প্রশ্নের উত্তর দেওয়া হয়েছে
             {totals.total > 0 && (
-              <span className="ml-2 text-slate-400">
+              <span className="ml-2 text-dash-mute2">
                 ({Math.round((totals.answered / totals.total) * 100)}%)
               </span>
             )}
@@ -665,7 +779,7 @@ export default function BookContentEditorPage() {
           </button>
           <Link
             href={`/dashboard/admin/books/${bookId}/qr-sheet`}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 text-sm px-4 py-2 hover:bg-slate-50 transition"
+            className="inline-flex items-center gap-2 rounded-lg border border-dash-line-strong text-sm px-4 py-2 hover:bg-dash-soft transition"
           >
             <FiGrid className="w-4 h-4" /> QR শিট
           </Link>
@@ -680,9 +794,9 @@ export default function BookContentEditorPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5">
         {/* ─── Tree ──────────────────────────────────────── */}
-        <aside className="rounded-xl border border-slate-200 bg-white overflow-hidden self-start">
-          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <aside className="rounded-xl border border-dash-line bg-dash-card overflow-hidden self-start">
+          <div className="px-4 py-3 border-b border-dash-line bg-dash-soft flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-dash-mute">
               বইয়ের কাঠামো
             </p>
             <button
@@ -695,45 +809,45 @@ export default function BookContentEditorPage() {
           </div>
           <div className="max-h-[70vh] overflow-y-auto py-1">
             {tree?.parts?.length === 0 && (
-              <p className="px-4 py-6 text-xs text-slate-400 text-center">
+              <p className="px-4 py-6 text-xs text-dash-mute2 text-center">
                 এখনো কোনো বোর্ড নেই। উপরে থেকে যোগ করুন।
               </p>
             )}
             {tree?.parts?.map(part => (
               <div key={part._id}>
-                <div className="group relative flex items-center hover:bg-slate-50">
+                <div className="group relative flex items-center hover:bg-dash-soft">
                   <button
                     onClick={() => toggle(part._id)}
                     className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 text-left"
                   >
                     {expanded[part._id] ? (
-                      <FiChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                      <FiChevronDown className="w-4 h-4 text-dash-mute2 shrink-0" />
                     ) : (
-                      <FiChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                      <FiChevronRight className="w-4 h-4 text-dash-mute2 shrink-0" />
                     )}
-                    <span className="text-sm font-semibold text-slate-800 truncate">
+                    <span className="text-sm font-semibold text-dash-ink2 truncate">
                       {part.title}
                     </span>
                   </button>
-                  <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition">
+                  <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 touch-always-visible transition">
                     <button
                       onClick={() => openCreate('chapter', { partId: part._id })}
                       title="নতুন অধ্যায় যোগ"
-                      className="p-1.5 rounded hover:bg-blue-100 text-slate-500 hover:text-blue-700"
+                      className="p-1.5 rounded hover:bg-blue-100 text-dash-mute hover:text-blue-700"
                     >
                       <FiPlus className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => openEdit('part', part)}
                       title="বোর্ড এডিট"
-                      className="p-1.5 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800"
+                      className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
                     >
                       <FiEdit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => deleteNode('part', part)}
                       title="বোর্ড ডিলিট"
-                      className="p-1.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-700"
+                      className="p-1.5 rounded hover:bg-red-100 text-dash-mute hover:text-red-700"
                     >
                       <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
@@ -741,7 +855,7 @@ export default function BookContentEditorPage() {
                 </div>
 
                 {expanded[part._id] && part.chapters.length === 0 && (
-                  <p className="pl-10 pr-3 py-2 text-[11px] text-slate-400">
+                  <p className="pl-10 pr-3 py-2 text-[11px] text-dash-mute2">
                     কোনো অধ্যায় নেই।
                   </p>
                 )}
@@ -749,22 +863,22 @@ export default function BookContentEditorPage() {
                 {expanded[part._id] &&
                   part.chapters.map(chapter => (
                     <div key={chapter._id}>
-                      <div className="group relative flex items-center hover:bg-slate-50">
+                      <div className="group relative flex items-center hover:bg-dash-soft">
                         <button
                           onClick={() => toggle(chapter._id)}
                           className="flex-1 min-w-0 flex items-center gap-2 pl-7 pr-3 py-2 text-left"
                         >
                           {expanded[chapter._id] ? (
-                            <FiChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <FiChevronDown className="w-3.5 h-3.5 text-dash-mute2 shrink-0" />
                           ) : (
-                            <FiChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <FiChevronRight className="w-3.5 h-3.5 text-dash-mute2 shrink-0" />
                           )}
-                          <span className="text-sm text-slate-700 truncate">
+                          <span className="text-sm text-dash-ink3 truncate">
                             {chapter.chapterNo ? `${chapter.chapterNo}. ` : ''}
                             {chapter.title}
                           </span>
                         </button>
-                        <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition">
+                        <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 touch-always-visible transition">
                           <button
                             onClick={() =>
                               openCreate('topic', {
@@ -773,21 +887,21 @@ export default function BookContentEditorPage() {
                               })
                             }
                             title="নতুন টপিক যোগ"
-                            className="p-1.5 rounded hover:bg-blue-100 text-slate-500 hover:text-blue-700"
+                            className="p-1.5 rounded hover:bg-blue-100 text-dash-mute hover:text-blue-700"
                           >
                             <FiPlus className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => openEdit('chapter', chapter)}
                             title="অধ্যায় এডিট"
-                            className="p-1.5 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800"
+                            className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
                           >
                             <FiEdit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => deleteNode('chapter', chapter)}
                             title="অধ্যায় ডিলিট"
-                            className="p-1.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-700"
+                            className="p-1.5 rounded hover:bg-red-100 text-dash-mute hover:text-red-700"
                           >
                             <FiTrash2 className="w-3.5 h-3.5" />
                           </button>
@@ -795,7 +909,7 @@ export default function BookContentEditorPage() {
                       </div>
 
                       {expanded[chapter._id] && chapter.topics.length === 0 && (
-                        <p className="pl-14 pr-3 py-1.5 text-[11px] text-slate-400">
+                        <p className="pl-14 pr-3 py-1.5 text-[11px] text-dash-mute2">
                           কোনো টপিক নেই।
                         </p>
                       )}
@@ -812,38 +926,38 @@ export default function BookContentEditorPage() {
                               className={`group relative flex items-center transition ${
                                 isActive
                                   ? 'bg-blue-50 border-l-2 border-blue-500'
-                                  : 'hover:bg-slate-50 border-l-2 border-transparent'
+                                  : 'hover:bg-dash-soft border-l-2 border-transparent'
                               }`}
                             >
                               <button
                                 onClick={() => openTopic(topic)}
                                 className="flex-1 min-w-0 flex items-center justify-between gap-2 pl-12 pr-2 py-1.5 text-left"
                               >
-                                <span className="text-[13px] text-slate-600 truncate">
+                                <span className="text-[13px] text-dash-ink4 truncate">
                                   {topic.isImplicit
                                     ? '(সরাসরি প্রশ্ন)'
                                     : `${topic.topicNo || ''} ${topic.title}`}
                                 </span>
                                 <span
                                   className={`text-[11px] tabular-nums shrink-0 ${
-                                    done ? 'text-emerald-600' : 'text-slate-400'
+                                    done ? 'text-emerald-600' : 'text-dash-mute2'
                                   }`}
                                 >
                                   {topic.answeredQuestions}/{topic.totalQuestions}
                                 </span>
                               </button>
-                              <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition">
+                              <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 touch-always-visible transition">
                                 <button
                                   onClick={() => openEdit('topic', topic)}
                                   title="টপিক এডিট"
-                                  className="p-1.5 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800"
+                                  className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
                                 >
                                   <FiEdit2 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   onClick={() => deleteNode('topic', topic)}
                                   title="টপিক ডিলিট"
-                                  className="p-1.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-700"
+                                  className="p-1.5 rounded hover:bg-red-100 text-dash-mute hover:text-red-700"
                                 >
                                   <FiTrash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -859,28 +973,29 @@ export default function BookContentEditorPage() {
         </aside>
 
         {/* ─── Editor ────────────────────────────────────── */}
-        <section className="rounded-xl border border-slate-200 bg-white p-4 lg:p-5">
+        <section className="rounded-xl border border-dash-line bg-dash-card p-4 lg:p-5">
           {!activeTopic ? (
-            <p className="text-sm text-slate-500 py-16 text-center">
+            <p className="text-sm text-dash-mute py-16 text-center">
               বাঁ পাশ থেকে একটি টপিক বেছে নিন।
             </p>
           ) : (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-dash-line">
                 <div>
-                  <h2 className="font-semibold text-slate-900">
+                  <h2 className="font-semibold text-dash-ink">
                     {activeTopic.isImplicit
                       ? activeTopic.title
                       : `${activeTopic.topicNo} ${activeTopic.title}`}
                   </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    QR কোড: <code className="font-mono text-slate-700">{activeTopic.qrCode}</code>
-                    <span className="ml-2 text-slate-400">(ছাপা হয়ে গেলে আর বদলানো যাবে না)</span>
+                  <p className="text-xs text-dash-mute mt-1">
+                    QR কোড: <code className="font-mono text-dash-ink3">{activeTopic.qrCode}</code>
+                    <span className="ml-2 text-dash-mute2">(ছাপা হয়ে গেলে আর বদলানো যাবে না)</span>
                   </p>
                 </div>
                 <button
-                  onClick={addQuestion}
-                  className="inline-flex items-center gap-1.5 text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+                  onClick={openAddQuestion}
+                  title="নম্বর দিয়ে নির্দিষ্ট জায়গায় প্রশ্ন যোগ করুন"
+                  className="inline-flex items-center gap-1.5 text-sm rounded-lg border border-dash-line-strong px-3 py-1.5 hover:bg-dash-soft"
                 >
                   <FiPlus className="w-4 h-4" /> প্রশ্ন যোগ
                 </button>
@@ -900,7 +1015,7 @@ export default function BookContentEditorPage() {
                           ? 'bg-blue-600 text-white border-blue-600'
                           : answered
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          : 'bg-dash-card text-dash-mute border-dash-line hover:bg-dash-soft'
                       }`}
                     >
                       {q.questionNo}
@@ -908,35 +1023,40 @@ export default function BookContentEditorPage() {
                   );
                 })}
                 {questions.length === 0 && (
-                  <p className="text-sm text-slate-500">এই টপিকে এখনো কোনো প্রশ্ন নেই।</p>
+                  <p className="text-sm text-dash-mute">এই টপিকে এখনো কোনো প্রশ্ন নেই।</p>
                 )}
               </div>
 
               {/* Form */}
               {draft && (
-                <div className="space-y-4 pt-2 border-t border-slate-200">
+                <div className="space-y-4 pt-2 border-t border-dash-line">
                   <div className="grid grid-cols-1 sm:grid-cols-[100px_1fr] gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">নম্বর</label>
+                      <label className="block text-xs font-medium text-dash-ink4 mb-1">নম্বর</label>
                       <input
                         value={draft.questionNo}
                         onChange={e => setDraft(d => ({ ...d, questionNo: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                       />
+                      {/* Editing renames only. Moving a question is done by
+                          adding it at the number you want. */}
+                      <p className="text-[11px] text-dash-mute2 mt-1">
+                        এখানে বদলালে ক্রম বদলাবে না
+                      </p>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">প্রশ্ন</label>
+                      <label className="block text-xs font-medium text-dash-ink4 mb-1">প্রশ্ন</label>
                       <input
                         value={draft.questionText}
                         onChange={e => setDraft(d => ({ ...d, questionText: e.target.value }))}
                         placeholder="প্রশ্নটি লিখুন"
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">উত্তর</label>
+                    <label className="block text-xs font-medium text-dash-ink4 mb-1">উত্তর</label>
                     {/* Remounted per question: the editor keeps its own document
                         state, so without the key it would keep showing the
                         previous question's answer. */}
@@ -952,7 +1072,7 @@ export default function BookContentEditorPage() {
                     className={`rounded-lg border p-3 transition ${
                       imageDragging
                         ? 'border-blue-400 bg-blue-50/60'
-                        : 'border-slate-200'
+                        : 'border-dash-line'
                     }`}
                     onDragOver={e => {
                       e.preventDefault();
@@ -966,10 +1086,10 @@ export default function BookContentEditorPage() {
                     }}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                      <label className="text-xs font-medium text-dash-ink4 flex items-center gap-1.5">
                         <FiImage className="w-3.5 h-3.5" /> ছবি
                         {draft.images?.length > 0 && (
-                          <span className="text-slate-400">({draft.images.length}টি)</span>
+                          <span className="text-dash-mute2">({draft.images.length}টি)</span>
                         )}
                       </label>
                       <button
@@ -995,7 +1115,7 @@ export default function BookContentEditorPage() {
                         {draft.images.map((src, i) => (
                           <div
                             key={`${src}-${i}`}
-                            className="group relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50"
+                            className="group relative aspect-square rounded-lg overflow-hidden border border-dash-line bg-dash-soft"
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -1009,7 +1129,7 @@ export default function BookContentEditorPage() {
                             <span className="absolute top-1 left-1 text-[10px] bg-slate-900/70 text-white rounded px-1.5 py-0.5">
                               {i + 1}
                             </span>
-                            <div className="absolute inset-x-0 bottom-0 flex justify-between bg-slate-900/70 opacity-0 group-hover:opacity-100 transition">
+                            <div className="absolute inset-x-0 bottom-0 flex justify-between bg-slate-900/70 opacity-0 group-hover:opacity-100 touch-always-visible transition">
                               <button
                                 title="আগে সরান"
                                 disabled={i === 0}
@@ -1052,7 +1172,7 @@ export default function BookContentEditorPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-dash-mute2">
                         কোনো ছবি যোগ করা হয়নি। একসাথে কয়েকটা ছবি বাছাই করতে পারেন, বা এখানে
                         টেনে এনে ছাড়তে পারেন।
                       </p>
@@ -1060,12 +1180,12 @@ export default function BookContentEditorPage() {
                   </div>
 
                   {/* Videos — a YouTube link, or a file that lands on our server */}
-                  <div className="rounded-lg border border-slate-200 p-3">
+                  <div className="rounded-lg border border-dash-line p-3">
                     <div className="flex items-center justify-between mb-3">
-                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                      <label className="text-xs font-medium text-dash-ink4 flex items-center gap-1.5">
                         <FiVideo className="w-3.5 h-3.5" /> ভিডিও
                         {draft.videos?.length > 0 && (
-                          <span className="text-slate-400">({draft.videos.length}টি)</span>
+                          <span className="text-dash-mute2">({draft.videos.length}টি)</span>
                         )}
                       </label>
                       <div className="flex items-center gap-3">
@@ -1097,7 +1217,7 @@ export default function BookContentEditorPage() {
                     )}
 
                     {draft.videos.length === 0 && (
-                      <p className="text-xs text-slate-400">কোনো ভিডিও যোগ করা হয়নি।</p>
+                      <p className="text-xs text-dash-mute2">কোনো ভিডিও যোগ করা হয়নি।</p>
                     )}
 
                     {draft.videos.map((v, i) => (
@@ -1121,19 +1241,19 @@ export default function BookContentEditorPage() {
                             })
                           }
                           placeholder="শিরোনাম"
-                          className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="w-40 rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                         />
                         {v.provider === 'upload' ? (
                           <a
                             href={v.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 min-w-0 text-sm text-slate-600 truncate hover:text-blue-600 flex items-center gap-1.5"
+                            className="flex-1 min-w-0 text-sm text-dash-ink4 truncate hover:text-blue-600 flex items-center gap-1.5"
                           >
                             <FiExternalLink className="w-3.5 h-3.5 shrink-0" />
                             {v.fileName || v.url}
                             {v.fileSize ? (
-                              <span className="text-slate-400">({formatSize(v.fileSize)})</span>
+                              <span className="text-dash-mute2">({formatSize(v.fileSize)})</span>
                             ) : null}
                           </a>
                         ) : (
@@ -1147,14 +1267,14 @@ export default function BookContentEditorPage() {
                               })
                             }
                             placeholder="https://youtube.com/watch?v=…"
-                            className="flex-1 min-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="flex-1 min-w-[200px] rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                           />
                         )}
                         <button
                           onClick={() =>
                             setDraft(d => ({ ...d, videos: d.videos.filter((_, j) => j !== i) }))
                           }
-                          className="text-slate-400 hover:text-red-600 px-2"
+                          className="text-dash-mute2 hover:text-red-600 px-2"
                         >
                           <FiTrash2 className="w-4 h-4" />
                         </button>
@@ -1163,9 +1283,9 @@ export default function BookContentEditorPage() {
                   </div>
 
                   {/* PDFs / files — uploaded, not pasted */}
-                  <div className="rounded-lg border border-slate-200 p-3">
+                  <div className="rounded-lg border border-dash-line p-3">
                     <div className="flex items-center justify-between mb-3">
-                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                      <label className="text-xs font-medium text-dash-ink4 flex items-center gap-1.5">
                         <FiFileText className="w-3.5 h-3.5" /> PDF / ফাইল
                       </label>
                       <button
@@ -1187,12 +1307,12 @@ export default function BookContentEditorPage() {
                     )}
 
                     {draft.attachments.length === 0 && (
-                      <p className="text-xs text-slate-400">কোনো ফাইল যোগ করা হয়নি।</p>
+                      <p className="text-xs text-dash-mute2">কোনো ফাইল যোগ করা হয়নি।</p>
                     )}
 
                     {draft.attachments.map((a, i) => (
                       <div key={i} className="flex flex-wrap gap-2 mb-2 items-center">
-                        <span className="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-600 font-medium uppercase shrink-0">
+                        <span className="text-[10px] px-2 py-1 rounded bg-dash-soft2 text-dash-ink4 font-medium uppercase shrink-0">
                           {a.fileType}
                         </span>
                         <input
@@ -1205,18 +1325,18 @@ export default function BookContentEditorPage() {
                             })
                           }
                           placeholder="শিরোনাম"
-                          className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="w-56 rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                         />
                         <a
                           href={a.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 min-w-0 text-sm text-slate-500 truncate hover:text-blue-600 flex items-center gap-1.5"
+                          className="flex-1 min-w-0 text-sm text-dash-mute truncate hover:text-blue-600 flex items-center gap-1.5"
                         >
                           <FiExternalLink className="w-3.5 h-3.5 shrink-0" />
                           {a.fileUrl.split('/').pop()}
                           {a.fileSize ? (
-                            <span className="text-slate-400">({formatSize(a.fileSize)})</span>
+                            <span className="text-dash-mute2">({formatSize(a.fileSize)})</span>
                           ) : null}
                         </a>
                         <button
@@ -1226,7 +1346,7 @@ export default function BookContentEditorPage() {
                               attachments: d.attachments.filter((_, j) => j !== i),
                             }))
                           }
-                          className="text-slate-400 hover:text-red-600 px-2"
+                          className="text-dash-mute2 hover:text-red-600 px-2"
                         >
                           <FiTrash2 className="w-4 h-4" />
                         </button>
@@ -1295,6 +1415,95 @@ export default function BookContentEditorPage() {
         </section>
       </div>
 
+      {/* ─── Add question at a chosen serial ─────────────── */}
+      {addModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          onClick={closeAddQuestion}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-dash-card shadow-xl border border-dash-line"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-dash-line">
+              <h3 className="text-sm font-semibold text-dash-ink2">নতুন প্রশ্ন যোগ</h3>
+              <button
+                onClick={closeAddQuestion}
+                className="p-1 text-dash-mute2 hover:text-dash-ink3"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-dash-ink4 mb-1">
+                  প্রশ্নের নম্বর <span className="text-red-500">*</span>
+                </label>
+                <input
+                  autoFocus
+                  value={addModal.questionNo}
+                  onChange={e => setAddModal(m => ({ ...m, questionNo: e.target.value }))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !addSaving) submitAddQuestion();
+                  }}
+                  placeholder="যেমন: ৩, 3, ১২ক"
+                  className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
+                />
+                <p className="text-[11px] text-dash-mute mt-1.5 leading-relaxed">
+                  যে নম্বর দেবেন প্রশ্নটি ঠিক সেখানেই বসবে। ওই নম্বরে আগে থেকে প্রশ্ন থাকলে সেটি ও
+                  তার পরের সবগুলো এক ধাপ করে নিচে সরে যাবে।
+                </p>
+              </div>
+
+              {addPlacement?.kind === 'shift' && (
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 leading-relaxed">
+                  <strong>{addPlacement.at}</strong> নম্বরে ইতিমধ্যে একটি প্রশ্ন আছে। নতুনটি ওই
+                  জায়গায় বসবে, আর ওটা সহ পরের সব প্রশ্নের নম্বর এক ধাপ করে বেড়ে যাবে
+                  {addPlacement.moved ? ` — ${addPlacement.moved}` : ''}।
+                </p>
+              )}
+
+              {addPlacement?.kind === 'gap' && (
+                <p className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded px-3 py-2 leading-relaxed">
+                  <strong>{addPlacement.before}</strong> নম্বরের ঠিক আগে বসবে। অন্য কোনো প্রশ্নের
+                  নম্বর বদলাবে না।
+                </p>
+              )}
+
+              {addPlacement?.kind === 'append' && (
+                <p className="text-xs text-dash-ink4 bg-dash-soft border border-dash-line rounded px-3 py-2">
+                  তালিকার শেষে যোগ হবে।
+                </p>
+              )}
+
+              {addError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  {addError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-dash-line bg-dash-soft rounded-b-xl">
+              <button
+                onClick={closeAddQuestion}
+                className="text-sm px-3 py-1.5 rounded-lg text-dash-ink4 hover:bg-dash-soft3"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={submitAddQuestion}
+                disabled={addSaving}
+                className="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                <FiPlus className="w-3.5 h-3.5" />
+                {addSaving ? 'যোগ হচ্ছে…' : 'যোগ করুন'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Add / Edit modal for part / chapter / topic ─── */}
       {nodeModal && (
         <div
@@ -1302,11 +1511,11 @@ export default function BookContentEditorPage() {
           onClick={closeNodeModal}
         >
           <div
-            className="w-full max-w-md rounded-xl bg-white shadow-xl border border-slate-200"
+            className="w-full max-w-md rounded-xl bg-dash-card shadow-xl border border-dash-line"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-800">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-dash-line">
+              <h3 className="text-sm font-semibold text-dash-ink2">
                 {nodeModal.mode === 'create' ? 'নতুন ' : ''}
                 {nodeModal.level === 'part'
                   ? 'বোর্ড'
@@ -1317,7 +1526,7 @@ export default function BookContentEditorPage() {
               </h3>
               <button
                 onClick={closeNodeModal}
-                className="p-1 text-slate-400 hover:text-slate-700"
+                className="p-1 text-dash-mute2 hover:text-dash-ink3"
               >
                 <FiX className="w-4 h-4" />
               </button>
@@ -1326,7 +1535,7 @@ export default function BookContentEditorPage() {
             <div className="p-5 space-y-3">
               {nodeModal.level === 'chapter' && (
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                  <label className="block text-xs font-medium text-dash-ink4 mb-1">
                     অধ্যায় নম্বর
                   </label>
                   <input
@@ -1338,14 +1547,14 @@ export default function BookContentEditorPage() {
                       }))
                     }
                     placeholder="যেমন: ১, ২.১"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                   />
                 </div>
               )}
 
               {nodeModal.level === 'topic' && (
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                  <label className="block text-xs font-medium text-dash-ink4 mb-1">
                     টপিক নম্বর
                   </label>
                   <input
@@ -1357,13 +1566,13 @@ export default function BookContentEditorPage() {
                       }))
                     }
                     placeholder="যেমন: ১.১"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+                <label className="block text-xs font-medium text-dash-ink4 mb-1">
                   শিরোনাম <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1378,12 +1587,12 @@ export default function BookContentEditorPage() {
                   onKeyDown={e => {
                     if (e.key === 'Enter' && !nodeSaving) submitNodeModal();
                   }}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+                <label className="block text-xs font-medium text-dash-ink4 mb-1">
                   বাংলা শিরোনাম
                 </label>
                 <input
@@ -1395,12 +1604,12 @@ export default function BookContentEditorPage() {
                     }))
                   }
                   placeholder="ঐচ্ছিক"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+                <label className="block text-xs font-medium text-dash-ink4 mb-1">
                   ক্রম (order)
                 </label>
                 <input
@@ -1413,7 +1622,7 @@ export default function BookContentEditorPage() {
                     }))
                   }
                   placeholder="খালি রাখলে শেষে যোগ হবে"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                 />
               </div>
 
@@ -1424,10 +1633,10 @@ export default function BookContentEditorPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-dash-line bg-dash-soft rounded-b-xl">
               <button
                 onClick={closeNodeModal}
-                className="text-sm px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200"
+                className="text-sm px-3 py-1.5 rounded-lg text-dash-ink4 hover:bg-dash-soft3"
               >
                 বাতিল
               </button>

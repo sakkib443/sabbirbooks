@@ -13,6 +13,6 @@ export default function BookPreviewRedirect() {
   }, [bookId, router]);
 
   return (
-    <div className="p-8 text-slate-500 text-sm">প্রিভিউ খোলা হচ্ছে…</div>
+    <div className="p-8 text-dash-mute text-sm">প্রিভিউ খোলা হচ্ছে…</div>
   );
 }

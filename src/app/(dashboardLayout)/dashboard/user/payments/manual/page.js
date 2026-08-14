@@ -59,13 +59,13 @@ function ManualPaymentContent() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-dash-soft flex items-center justify-center p-4">
+        <div className="bg-dash-card rounded-2xl border border-dash-line shadow-lg p-8 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <FiCheckCircle className="text-emerald-500" size={30} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Payment Submitted!</h2>
-          <p className="text-slate-500 mb-6">
+          <h2 className="text-2xl font-bold text-dash-ink mb-2">Payment Submitted!</h2>
+          <p className="text-dash-mute mb-6">
             Your manual payment has been submitted for verification.
             Our admin team will review and verify within 24-48 hours.
           </p>
@@ -77,7 +77,7 @@ function ManualPaymentContent() {
           </div>
           <Link
             href="/dashboard/user/payments"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#F3A522] text-white font-bold rounded-xl hover:bg-[#d88f13] transition"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-brand text-white font-bold rounded-xl hover:bg-brand-hover transition"
           >
             View Payment History
           </Link>
@@ -87,54 +87,54 @@ function ManualPaymentContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 lg:p-8">
+    <div className="min-h-screen bg-dash-soft p-6 lg:p-8">
       <div className="max-w-2xl mx-auto">
         {/* Back */}
-        <Link href="/courses" className="text-slate-500 flex items-center gap-2 text-sm font-medium hover:text-[#F3A522] mb-6">
+        <Link href="/courses" className="text-dash-mute flex items-center gap-2 text-sm font-medium hover:text-brand mb-6">
           <FiArrowLeft /> Back
         </Link>
 
         {/* Header */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-[#F3A522] to-[#d88f13] px-6 py-5">
+        <div className="bg-dash-card rounded-2xl border border-dash-line shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-brand to-brand-hover px-6 py-5">
             <h1 className="text-xl font-bold text-white">Manual Payment</h1>
             <p className="text-white/80 text-sm mt-1">Bank Transfer / bKash / Nagad</p>
           </div>
 
           {/* Course Info */}
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-b border-dash-line-soft bg-dash-soft/50">
             <div className="flex justify-between">
               <div>
-                <p className="text-xs text-slate-500 font-medium">Course</p>
-                <p className="text-sm font-bold text-slate-800 mt-0.5">{decodeURIComponent(courseName)}</p>
+                <p className="text-xs text-dash-mute font-medium">Course</p>
+                <p className="text-sm font-bold text-dash-ink2 mt-0.5">{decodeURIComponent(courseName)}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate-500 font-medium">Amount</p>
-                <p className="text-xl font-bold text-[#F3A522]">৳{Number(amount).toLocaleString()}</p>
+                <p className="text-xs text-dash-mute font-medium">Amount</p>
+                <p className="text-xl font-bold text-brand">৳{Number(amount).toLocaleString()}</p>
               </div>
             </div>
           </div>
 
           {/* Bank Details */}
-          <div className="px-6 py-4 border-b border-slate-100 bg-blue-50/30">
-            <h3 className="text-sm font-bold text-slate-700 mb-3">Send payment to:</h3>
+          <div className="px-6 py-4 border-b border-dash-line-soft bg-blue-50/30">
+            <h3 className="text-sm font-bold text-dash-ink3 mb-3">Send payment to:</h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3 border border-slate-200">
+              <div className="flex items-center justify-between bg-dash-card rounded-xl px-4 py-3 border border-dash-line">
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">bKash (Personal)</p>
-                  <p className="text-sm font-bold text-slate-800">01XXXXXXXXX</p>
+                  <p className="text-[10px] text-dash-mute2 uppercase font-bold">bKash (Personal)</p>
+                  <p className="text-sm font-bold text-dash-ink2">01XXXXXXXXX</p>
                 </div>
-                <button className="text-slate-400 hover:text-[#F3A522] transition" onClick={() => navigator.clipboard.writeText('01XXXXXXXXX')}>
+                <button className="text-dash-mute2 hover:text-brand transition" onClick={() => navigator.clipboard.writeText('01XXXXXXXXX')}>
                   <FiCopy size={16} />
                 </button>
               </div>
-              <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3 border border-slate-200">
+              <div className="flex items-center justify-between bg-dash-card rounded-xl px-4 py-3 border border-dash-line">
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">Bank</p>
-                  <p className="text-sm font-bold text-slate-800">Aptech Learning — Islami Bank Bangladesh</p>
-                  <p className="text-xs text-slate-500">A/C: 0123456789</p>
+                  <p className="text-[10px] text-dash-mute2 uppercase font-bold">Bank</p>
+                  <p className="text-sm font-bold text-dash-ink2">Aptech Learning — Islami Bank Bangladesh</p>
+                  <p className="text-xs text-dash-mute">A/C: 0123456789</p>
                 </div>
-                <button className="text-slate-400 hover:text-[#F3A522] transition" onClick={() => navigator.clipboard.writeText('0123456789')}>
+                <button className="text-dash-mute2 hover:text-brand transition" onClick={() => navigator.clipboard.writeText('0123456789')}>
                   <FiCopy size={16} />
                 </button>
               </div>
@@ -143,14 +143,14 @@ function ManualPaymentContent() {
 
           {/* Payment Form */}
           <form onSubmit={handleSubmit} className="px-6 py-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-700">After sending payment, fill in details below:</h3>
+            <h3 className="text-sm font-bold text-dash-ink3">After sending payment, fill in details below:</h3>
 
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Payment Method / Bank Name *</label>
+              <label className="text-xs font-bold text-dash-mute uppercase mb-1 block">Payment Method / Bank Name *</label>
               <select
                 value={formData.bankName}
                 onChange={e => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522] outline-none text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-dash-line focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none text-sm"
                 required
               >
                 <option value="">Select method</option>
@@ -162,33 +162,33 @@ function ManualPaymentContent() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Transaction ID *</label>
+              <label className="text-xs font-bold text-dash-mute uppercase mb-1 block">Transaction ID *</label>
               <input
                 value={formData.transactionId}
                 onChange={e => setFormData(prev => ({ ...prev, transactionId: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522] outline-none text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-dash-line focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none text-sm"
                 placeholder="e.g. TRX123456789"
                 required
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Sender Number</label>
+              <label className="text-xs font-bold text-dash-mute uppercase mb-1 block">Sender Number</label>
               <input
                 value={formData.senderNumber}
                 onChange={e => setFormData(prev => ({ ...prev, senderNumber: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522] outline-none text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-dash-line focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none text-sm"
                 placeholder="e.g. 01700000000"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Notes (Optional)</label>
+              <label className="text-xs font-bold text-dash-mute uppercase mb-1 block">Notes (Optional)</label>
               <textarea
                 value={formData.notes}
                 onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522] outline-none text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-dash-line focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none text-sm"
                 placeholder="Any additional info..."
               />
             </div>
@@ -196,7 +196,7 @@ function ManualPaymentContent() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-brand to-brand-hover text-white font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2"
             >
               {submitting ? <FiLoader className="animate-spin" /> : <FiSend />}
               Submit Payment
@@ -210,7 +210,7 @@ function ManualPaymentContent() {
 
 export default function ManualPaymentPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><FiLoader className="animate-spin text-[#F3A522]" size={30} /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-dash-soft flex items-center justify-center"><FiLoader className="animate-spin text-brand" size={30} /></div>}>
       <ManualPaymentContent />
     </Suspense>
   );

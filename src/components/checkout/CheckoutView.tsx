@@ -26,9 +26,11 @@ import PaymentMethod from "./PaymentMethod";
 import PayModeSelector from "./PayModeSelector";
 import CheckoutSuccess from "./CheckoutSuccess";
 import {
+  checkoutBook,
   fetchBook,
   fetchCheckoutOptions,
   fetchCourse,
+  fetchGatewayStatus,
   fetchPaymentSettings,
   getStoredUser,
   getToken,
@@ -38,6 +40,14 @@ import {
   submitCourseManual,
 } from "./checkoutApi";
 import ManualPaymentDetails from "./ManualPaymentDetails";
+import GatewayChoice from "./GatewayChoice";
+import {
+  getAvailability,
+  preferredGateway,
+  resolvePayMode,
+  type GatewayId,
+  type GatewayStatus,
+} from "./paymentOptions";
 import {
   CheckoutBook,
   CheckoutCourse,
@@ -79,6 +89,13 @@ export default function CheckoutView() {
   const [payMode, setPayMode] = useState<PayMode>("cod");
   const [area, setArea] = useState<DeliveryArea>("inside-dhaka");
   const [options, setOptions] = useState<CheckoutOptions | null>(null);
+
+  // Which hosted checkouts the server holds credentials for. Stays null until the
+  // answer arrives (and if it never does), which reads as "no gateway" everywhere
+  // downstream — so a slow or failing config call degrades to today's checkout
+  // instead of blocking the buyer.
+  const [gateways, setGateways] = useState<GatewayStatus | null>(null);
+  const [gatewayId, setGatewayId] = useState<GatewayId>("bkash");
 
   // ── Manual payment (bKash/Rocket/Nagad) state ─────────────────────────────
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
@@ -122,13 +139,32 @@ export default function CheckoutView() {
   const isFreeCourse = isCourse && !!course && effectiveCoursePrice(course) <= 0;
   const needsPayment = !outOfStock && !isFreeCourse;
 
-  // Cash on delivery only makes sense when something is physically delivered:
-  // there is no parcel to hand over for a course or a PDF download.
-  const codAllowed = Boolean(isPrinted && !outOfStock && options?.codEnabled !== false);
+  // What the shop can actually accept right now. The rules live in
+  // paymentOptions.ts as pure functions so every combination of them is unit
+  // tested — this is the code that decides whether the live manual/COD revenue
+  // path stays reachable, and it is not a thing to leave as inline conditionals.
+  const availability = useMemo(
+    () =>
+      getAvailability({
+        isPrintedBook: Boolean(isPrinted),
+        outOfStock,
+        isFreeCourse,
+        codEnabled: options?.codEnabled !== false,
+        onlinePaymentEnabled: options?.onlinePaymentEnabled !== false,
+        manualChannels: availableChannels,
+        gateways,
+      }),
+    [isPrinted, outOfStock, isFreeCourse, options, availableChannels, gateways]
+  );
+
+  const codAllowed = availability.cod;
   const onlineAllowed = options?.onlinePaymentEnabled !== false;
   // The chosen mode, forced back to whatever is actually available.
-  const effectivePayMode: PayMode = codAllowed && payMode === "cod" ? "cod" : "online";
+  const effectivePayMode = resolvePayMode(payMode, availability);
   const isCod = needsPayment && effectivePayMode === "cod";
+  const isGateway = needsPayment && effectivePayMode === "gateway";
+  // Manual Send-Money details are only asked for on the manual path — unchanged.
+  const isManual = needsPayment && effectivePayMode === "online";
 
   const bookSubtotal = isBook && book ? effectiveBookPrice(book) * quantity : 0;
 
@@ -230,6 +266,18 @@ export default function CheckoutView() {
     });
   }, []);
 
+  // Which hosted gateways are configured. Note what does NOT happen here: the
+  // default pay mode is left alone. Buyers land on cash-on-delivery today and
+  // they still do — a gateway becoming available adds a card to the list, it does
+  // not quietly move anyone onto a different way of paying.
+  useEffect(() => {
+    fetchGatewayStatus().then((g) => {
+      if (!g) return;
+      setGateways(g);
+      setGatewayId(g.bkash.configured ? "bkash" : g.sslcommerz.configured ? "sslcommerz" : "bkash");
+    });
+  }, []);
+
   // A digital book or a course can only be paid for online.
   useEffect(() => {
     if (!isPrinted && payMode === "cod") setPayMode("online");
@@ -298,7 +346,30 @@ export default function CheckoutView() {
           });
         }
       } else if (type === "book" && book) {
-        if (isCod) {
+        if (isGateway) {
+          // Hosted checkout. On a real gateway this navigates away and never
+          // comes back — the order is settled by the gateway's server-to-server
+          // callback, so the buyer closing the tab mid-payment still produces a
+          // paid order. The success screen is reached via /payment/return.
+          const chosen = availability.gatewayOptions.includes(gatewayId)
+            ? gatewayId
+            : preferredGateway(availability);
+          if (!chosen) throw new Error(S.genericErr);
+          const live = Boolean(gateways?.[chosen]?.configured);
+
+          const res = await checkoutBook({
+            book,
+            quantity,
+            method: chosen,
+            isLiveGateway: live,
+            shippingAddress: shipping,
+            onProgress: setStep,
+            genericErr: S.genericErr,
+          });
+
+          if (res.redirected) return; // leaving the page; keep the spinner up
+          setResult({ kind: "book", order: res.order });
+        } else if (isCod) {
           // Nothing is paid now — the order is placed and the courier collects.
           const order = await submitBookCod({
             book,
@@ -311,6 +382,7 @@ export default function CheckoutView() {
             kind: "cod",
             title: book.title,
             reference: order.orderNumber,
+            orderId: order._id,
             amount: order.total,
             deliveryCharge: order.deliveryCharge ?? 0,
             supportPhone: options?.supportPhone,
@@ -330,6 +402,7 @@ export default function CheckoutView() {
             itemKind: "book",
             title: book.title,
             reference: order.orderNumber,
+            orderId: order._id,
             amount: order.total,
             channel: details.channel,
             isPrintedBook: order.deliveryType !== "digital",
@@ -351,10 +424,11 @@ export default function CheckoutView() {
 
   const onConfirm = () => {
     if (outOfStock) return;
-    // Wallet details are only required when paying now — a cash-on-delivery
-    // buyer has no transaction id to give, and demanding one was what made COD
-    // impossible to actually complete.
-    if (needsPayment && !isCod) {
+    // Wallet details are only required on the MANUAL path — a cash-on-delivery
+    // buyer has no transaction id to give (demanding one was what made COD
+    // impossible to actually complete), and a hosted-gateway buyer has not paid
+    // yet, so there is nothing for them to copy down either.
+    if (isManual) {
       if (availableChannels.length === 0) {
         setSubmitError(S.manualNotConfigured);
         return;
@@ -438,9 +512,16 @@ export default function CheckoutView() {
           </Link>
         </div>
 
+        {/* Source order is the mobile order: fill the form, then review and pay.
+            The columns used to carry order-2 / order-1, which only reversed on
+            phones — the grid is one column below lg, so the summary and its
+            Submit Payment button were painted ABOVE every input. Buyers had to
+            fill the address, scroll back up, and hunt for the button. On lg the
+            grid columns place these left and right regardless of order, so
+            dropping the utilities changes nothing on desktop. */}
         <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)] lg:gap-8">
           {/* Left: form column */}
-          <div className="order-2 space-y-6 lg:order-1">
+          <div className="space-y-6">
             {/* Quantity (printed books only) */}
             {isPrinted && !outOfStock && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
@@ -498,11 +579,43 @@ export default function CheckoutView() {
                 onChange={setPayMode}
                 codAllowed={codAllowed}
                 onlineAllowed={onlineAllowed}
+                gatewayAllowed={availability.gateway}
                 codReason={isBook && !isPrinted ? S.codDigitalOnly : undefined}
                 disabled={processing}
                 bn={bn}
                 S={payModeLabels(S)}
               />
+            )}
+
+            {/* Hosted checkout — how it works, and which one, if there's a choice */}
+            {isGateway && (
+              <>
+                <GatewayChoice
+                  value={gatewayId}
+                  onChange={setGatewayId}
+                  options={availability.gatewayOptions}
+                  sandbox={
+                    availability.gatewayOptions.length > 0 &&
+                    availability.gatewayOptions.every((g) => gateways?.[g]?.live === false)
+                  }
+                  disabled={processing}
+                  bn={bn}
+                  S={gatewayLabels(S)}
+                />
+                <div className={cn("rounded-2xl border border-accent/30 bg-accent-soft/40 p-5", bn)}>
+                  <div className="flex items-start gap-3">
+                    <LuShieldCheck className="mt-0.5 shrink-0 text-accent" />
+                    <div className="text-sm text-foreground">
+                      <p className="font-semibold">{S.gatewayHowTitle}</p>
+                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
+                        <li>{S.gatewayStep1}</li>
+                        <li>{S.gatewayStep2}</li>
+                        <li>{S.gatewayStep3}</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Cash on delivery — what actually happens next */}
@@ -525,8 +638,8 @@ export default function CheckoutView() {
               </div>
             )}
 
-            {/* Manual payment (bKash / Rocket / Nagad) — only when paying now */}
-            {needsPayment && !isCod && availableChannels.length > 0 && (
+            {/* Manual payment (bKash / Rocket / Nagad) — only when paying by hand */}
+            {isManual && availableChannels.length > 0 && (
               <>
                 <PaymentMethod
                   value={channel}
@@ -551,11 +664,15 @@ export default function CheckoutView() {
             )}
 
             {/* Manual payment not configured by admin yet */}
-            {needsPayment && !isCod && settings && availableChannels.length === 0 && (
+            {isManual && settings && availableChannels.length === 0 && (
               <div className={cn("flex items-start gap-3 rounded-2xl border border-coral/30 bg-coral/10 p-5", bn)}>
                 <LuTriangleAlert className="mt-0.5 shrink-0 text-coral" />
                 <p className="text-sm text-coral">
-                  {codAllowed ? S.manualNotConfiguredUseCod : S.manualNotConfigured}
+                  {availability.gateway
+                    ? S.manualNotConfiguredUseGateway
+                    : codAllowed
+                      ? S.manualNotConfiguredUseCod
+                      : S.manualNotConfigured}
                 </p>
               </div>
             )}
@@ -569,8 +686,8 @@ export default function CheckoutView() {
             )}
           </div>
 
-          {/* Right: order summary + pay (sticky) */}
-          <div className="order-1 lg:order-2">
+          {/* Right: order summary + pay (sticky on desktop, last on mobile) */}
+          <div>
             <div className="lg:sticky lg:top-24 space-y-4">
               <OrderSummary
                 type={type as CheckoutType}
@@ -600,10 +717,7 @@ export default function CheckoutView() {
                     size="lg"
                     variant="accent"
                     className={cn("w-full", bn)}
-                    disabled={
-                      processing ||
-                      (needsPayment && !isCod && availableChannels.length === 0)
-                    }
+                    disabled={processing || (isManual && availableChannels.length === 0)}
                     onClick={onConfirm}
                   >
                     {processing ? (
@@ -613,14 +727,26 @@ export default function CheckoutView() {
                     ) : (
                       <>
                         <LuLock className="text-base" />{" "}
-                        {isFreeCourse ? S.enrollFree : isCod ? S.placeCodOrder : S.submitPay}
+                        {isFreeCourse
+                          ? S.enrollFree
+                          : isCod
+                            ? S.placeCodOrder
+                            : isGateway
+                              ? S.payNow
+                              : S.submitPay}
                       </>
                     )}
                   </Button>
 
                   <p className={cn("flex items-center justify-center gap-1.5 text-xs text-muted-foreground", bn)}>
                     <LuShieldCheck className="text-accent" />{" "}
-                    {isFreeCourse ? S.secureNote : isCod ? S.codConfirmNote : S.verifyNote}
+                    {isFreeCourse
+                      ? S.secureNote
+                      : isCod
+                        ? S.codConfirmNote
+                        : isGateway
+                          ? S.gatewaySecureNote
+                          : S.verifyNote}
                   </p>
                 </>
               )}
@@ -691,11 +817,11 @@ function CheckoutSkeleton({ bn, S }: { bn: string; S: Copy }) {
       <Container>
         <div className="mb-6 h-8 w-48 animate-pulse rounded bg-muted" />
         <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)] lg:gap-8">
-          <div className="order-2 space-y-6 lg:order-1">
+          <div className="space-y-6">
             <div className="h-40 w-full animate-pulse rounded-2xl bg-muted" />
             <div className="h-28 w-full animate-pulse rounded-2xl bg-muted" />
           </div>
-          <div className="order-1 space-y-4 lg:order-2">
+          <div className="space-y-4">
             <div className="h-56 w-full animate-pulse rounded-2xl bg-muted" />
             <div className="h-12 w-full animate-pulse rounded-xl bg-muted" />
           </div>
@@ -715,6 +841,8 @@ function stepLabel(step: CheckoutStep, S: Copy): string {
       return S.stepInitiating;
     case "paying":
       return S.stepPaying;
+    case "redirecting":
+      return S.stepRedirecting;
     case "confirming":
       return S.stepConfirming;
     default:
@@ -753,6 +881,40 @@ const EN = {
   codStep3: "Pay the courier in cash when the book reaches you.",
   manualNotConfiguredUseCod:
     "Online payment is not set up yet — please choose Cash on Delivery.",
+  manualNotConfiguredUseGateway:
+    "Send Money is not set up yet — please use Pay Instantly instead.",
+
+  // Hosted gateway (bKash / SSLCommerz)
+  payNow: "Pay Now",
+  gatewayTitle: "Pay instantly",
+  gatewayText: "Pay with bKash or card on a secure page. Your order confirms at once.",
+  gatewayBadge: "Instant",
+  gatewaySecureNote: "You'll finish the payment on the provider's own secure page.",
+  gatewayHowTitle: "How paying instantly works",
+  gatewayStep1: "We take you to the payment provider's secure page.",
+  gatewayStep2: "Complete the payment there with your wallet PIN or card.",
+  gatewayStep3: "You come straight back and your order is confirmed — no waiting for verification.",
+  gatewayPickHeading: "Choose a payment provider",
+  gatewayPickSubtitle: "Both are secure. Pick whichever you prefer.",
+  gatewayBkash: "bKash",
+  gatewayBkashText: "Pay directly from your bKash wallet.",
+  gatewaySsl: "Cards & other wallets",
+  gatewaySslText: "Card, Nagad, Rocket and internet banking via SSLCommerz.",
+  gatewaySandboxNote: "Test mode — no real money will be charged.",
+
+  // Payment return screen (back from the gateway)
+  retLoading: "Confirming your payment…",
+  retSuccessTitle: "Payment successful!",
+  retSuccessSub: "Your payment went through and your order is confirmed.",
+  retFailTitle: "Payment did not go through",
+  retFailSub:
+    "No money has been taken. You can try again, or place the order with Cash on Delivery instead.",
+  retCancelTitle: "Payment cancelled",
+  retCancelSub: "You cancelled the payment, so nothing was charged. Your order is still waiting.",
+  retRefLabel: "Order number",
+  retTryAgain: "Try again",
+  retViewOrder: "View my order",
+  retBackToBooks: "Back to books",
 
   // Delivery
   areaLabel: "Delivery area",
@@ -774,6 +936,7 @@ const EN = {
   stepCreating: "Placing order…",
   stepInitiating: "Submitting…",
   stepPaying: "Submitting…",
+  stepRedirecting: "Opening secure payment…",
   stepConfirming: "Submitting details…",
   genericErr: "Something went wrong. Please try again.",
   network: "Could not reach the server. Check your connection.",
@@ -912,6 +1075,40 @@ const BN: Copy = {
   codStep3: "বই হাতে পাওয়ার সময় কুরিয়ারকে নগদ টাকা দেবেন।",
   manualNotConfiguredUseCod:
     "অনলাইন পেমেন্ট এখনো চালু হয়নি — ক্যাশ অন ডেলিভারি বেছে নিন।",
+  manualNotConfiguredUseGateway:
+    "Send Money এখনো চালু হয়নি — এখনই পেমেন্ট অপশনটি ব্যবহার করুন।",
+
+  // Hosted gateway (bKash / SSLCommerz)
+  payNow: "এখনই পেমেন্ট করুন",
+  gatewayTitle: "সাথে সাথে পেমেন্ট",
+  gatewayText: "বিকাশ বা কার্ড দিয়ে নিরাপদ পেজে পেমেন্ট করুন। অর্ডার সাথে সাথেই কনফার্ম হবে।",
+  gatewayBadge: "ইনস্ট্যান্ট",
+  gatewaySecureNote: "পেমেন্টটি প্রোভাইডারের নিজস্ব নিরাপদ পেজে সম্পন্ন হবে।",
+  gatewayHowTitle: "সাথে সাথে পেমেন্ট যেভাবে কাজ করে",
+  gatewayStep1: "আমরা আপনাকে পেমেন্ট প্রোভাইডারের নিরাপদ পেজে নিয়ে যাব।",
+  gatewayStep2: "সেখানে ওয়ালেট পিন বা কার্ড দিয়ে পেমেন্ট সম্পন্ন করুন।",
+  gatewayStep3: "সাথে সাথেই ফিরে আসবেন এবং অর্ডার কনফার্ম হয়ে যাবে — যাচাইয়ের অপেক্ষা নেই।",
+  gatewayPickHeading: "পেমেন্ট প্রোভাইডার বেছে নিন",
+  gatewayPickSubtitle: "দুটোই নিরাপদ। যেটি পছন্দ সেটি বেছে নিন।",
+  gatewayBkash: "বিকাশ",
+  gatewayBkashText: "সরাসরি আপনার বিকাশ ওয়ালেট থেকে পেমেন্ট করুন।",
+  gatewaySsl: "কার্ড ও অন্যান্য ওয়ালেট",
+  gatewaySslText: "SSLCommerz-এর মাধ্যমে কার্ড, নগদ, রকেট ও ইন্টারনেট ব্যাংকিং।",
+  gatewaySandboxNote: "টেস্ট মোড — আসল কোনো টাকা কাটা হবে না।",
+
+  // Payment return screen (back from the gateway)
+  retLoading: "আপনার পেমেন্ট নিশ্চিত করা হচ্ছে…",
+  retSuccessTitle: "পেমেন্ট সফল হয়েছে!",
+  retSuccessSub: "আপনার পেমেন্ট সম্পন্ন হয়েছে এবং অর্ডার কনফার্ম হয়েছে।",
+  retFailTitle: "পেমেন্ট সম্পন্ন হয়নি",
+  retFailSub:
+    "কোনো টাকা কাটা হয়নি। আবার চেষ্টা করতে পারেন, অথবা ক্যাশ অন ডেলিভারিতে অর্ডার করতে পারেন।",
+  retCancelTitle: "পেমেন্ট বাতিল হয়েছে",
+  retCancelSub: "আপনি পেমেন্ট বাতিল করেছেন, তাই কোনো টাকা কাটা হয়নি। অর্ডারটি এখনো অপেক্ষায় আছে।",
+  retRefLabel: "অর্ডার নম্বর",
+  retTryAgain: "আবার চেষ্টা করুন",
+  retViewOrder: "আমার অর্ডার দেখুন",
+  retBackToBooks: "বই দেখুন",
 
   // Delivery
   areaLabel: "ডেলিভারি এলাকা",
@@ -933,6 +1130,7 @@ const BN: Copy = {
   stepCreating: "অর্ডার তৈরি হচ্ছে…",
   stepInitiating: "সাবমিট হচ্ছে…",
   stepPaying: "সাবমিট হচ্ছে…",
+  stepRedirecting: "নিরাপদ পেমেন্ট পেজ খোলা হচ্ছে…",
   stepConfirming: "তথ্য সাবমিট হচ্ছে…",
   genericErr: "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।",
   network: "সার্ভারে সংযোগ করা যায়নি। ইন্টারনেট চেক করুন।",
@@ -1087,6 +1285,40 @@ function payModeLabels(S: Copy) {
     onlineTitle: S.onlineTitle,
     onlineText: S.onlineText,
     codUnavailable: S.codUnavailable,
+    gatewayTitle: S.gatewayTitle,
+    gatewayText: S.gatewayText,
+    gatewayBadge: S.gatewayBadge,
+  };
+}
+
+function gatewayLabels(S: Copy) {
+  return {
+    heading: S.gatewayPickHeading,
+    subtitle: S.gatewayPickSubtitle,
+    bkash: S.gatewayBkash,
+    bkashText: S.gatewayBkashText,
+    sslcommerz: S.gatewaySsl,
+    sslcommerzText: S.gatewaySslText,
+    sandboxNote: S.gatewaySandboxNote,
+  };
+}
+
+// Copy for the /payment/return screen. Exported so the return route can render
+// in the buyer's language without duplicating the dictionary.
+export function paymentReturnLabels(isBengali: boolean) {
+  const S = isBengali ? BN : EN;
+  return {
+    loading: S.retLoading,
+    successTitle: S.retSuccessTitle,
+    successSub: S.retSuccessSub,
+    failTitle: S.retFailTitle,
+    failSub: S.retFailSub,
+    cancelTitle: S.retCancelTitle,
+    cancelSub: S.retCancelSub,
+    refLabel: S.retRefLabel,
+    tryAgain: S.retTryAgain,
+    viewOrder: S.retViewOrder,
+    backToBooks: S.retBackToBooks,
   };
 }
 

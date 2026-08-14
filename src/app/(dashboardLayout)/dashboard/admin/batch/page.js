@@ -13,9 +13,9 @@ import { useConfirm } from '@/components/shared/ConfirmModal';
 const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 
 const inputClass =
-  'w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 ' +
-  'focus:outline-none focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/15 transition';
-const modalLabel = 'block text-xs font-semibold text-gray-600 mb-1';
+  'w-full px-3 py-2 rounded-lg border border-dash-line bg-dash-card text-sm text-dash-ink3 ' +
+  'focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition';
+const modalLabel = 'block text-xs font-semibold text-dash-ink4 mb-1';
 
 // Status is derived purely from dates (matches the backend) — shown read-only.
 const computeBatchStatus = (start, end) => {
@@ -196,9 +196,9 @@ export default function AllBatchesPage() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'completed': return 'bg-gray-100 text-gray-500 border-gray-200';
-      case 'upcoming': return 'bg-[#FEF6E7] text-[#c9871a] border-[#F0DFB4]';
-      default: return 'bg-gray-50 text-gray-600 border-gray-200';
+      case 'completed': return 'bg-dash-soft2 text-dash-mute border-dash-line';
+      case 'upcoming': return 'bg-brand-soft text-brand-ink border-brand-line';
+      default: return 'bg-dash-soft text-dash-ink4 border-dash-line';
     }
   };
 
@@ -222,30 +222,30 @@ export default function AllBatchesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <FiLoader className="animate-spin text-[#F3A522]" size={28} />
+        <FiLoader className="animate-spin text-brand" size={28} />
       </div>
     );
   }
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="h-[3px] w-full bg-gradient-to-r from-[#F3A522] via-[#e2941c] to-[#9AA0A8] rounded-full"></div>
+      <div className="h-[3px] w-full bg-gradient-to-r from-brand via-brand-strong to-dash-steel rounded-full"></div>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 outfit">All Batches</h1>
-          <p className="text-sm text-gray-400 mt-0.5 work">{batches.length} batches • {unassigned.length} unassigned students</p>
+          <h1 className="text-2xl font-bold text-dash-ink outfit">All Batches</h1>
+          <p className="text-sm text-dash-mute2 mt-0.5 work">{batches.length} batches • {unassigned.length} unassigned students</p>
         </div>
         <div className="flex gap-2">
           {unassigned.length > 0 && (
             <button onClick={() => setAssignModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FEF6E7] text-[#a5680f] border border-[#F0DFB4] text-sm font-semibold hover:bg-[#F5E8CB] transition">
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-soft text-brand-deep border border-brand-line text-sm font-semibold hover:bg-brand-line transition">
               <FiUsers size={15} /> Assign Students ({unassigned.length})
             </button>
           )}
           <Link href="/dashboard/admin/batch/create"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white text-sm font-bold hover:shadow-lg hover:shadow-[#F3A522]/25 transition shadow-sm">
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-hover text-white text-sm font-bold hover:shadow-lg hover:shadow-brand/25 transition shadow-sm">
             <FiPlus size={15} /> Create Batch
           </Link>
         </div>
@@ -254,14 +254,14 @@ export default function AllBatchesPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <FiSearch className="absolute left-3 top-2.5 text-gray-300" size={15} />
+          <FiSearch className="absolute left-3 top-2.5 text-dash-faint" size={15} />
           <input type="text" placeholder="Search batches..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-100 text-sm focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/15 outline-none bg-white shadow-sm transition" />
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-dash-line-soft text-sm focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none bg-dash-card shadow-sm transition" />
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1 bg-dash-soft2 rounded-xl p-1">
           {['all', 'active', 'upcoming', 'completed'].map(s => (
             <button key={s} onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ${filterStatus === s ? 'bg-white text-[#c9871a] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ${filterStatus === s ? 'bg-dash-card text-brand-ink shadow-sm' : 'text-dash-mute hover:text-dash-ink3'}`}>
               {s}
             </button>
           ))}
@@ -271,33 +271,33 @@ export default function AllBatchesPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          ['Total Batches', batches.length, 'text-gray-900'],
+          ['Total Batches', batches.length, 'text-dash-ink'],
           ['Active', batches.filter(b => b.status === 'active').length, 'text-emerald-600'],
-          ['Upcoming', batches.filter(b => b.status === 'upcoming').length, 'text-[#c9871a]'],
-          ['Unassigned Students', unassigned.length, 'text-gray-500'],
+          ['Upcoming', batches.filter(b => b.status === 'upcoming').length, 'text-brand-ink'],
+          ['Unassigned Students', unassigned.length, 'text-dash-mute'],
         ].map(([label, val, cls]) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div key={label} className="bg-dash-card rounded-xl border border-dash-line-soft p-4 shadow-sm">
             <p className={`text-2xl font-bold outfit ${cls}`}>{val}</p>
-            <p className="text-xs text-gray-400 mt-0.5 work">{label}</p>
+            <p className="text-xs text-dash-mute2 mt-0.5 work">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-dash-card rounded-xl border border-dash-line-soft shadow-sm overflow-hidden">
         {filteredBatches.length === 0 ? (
           <div className="p-16 text-center">
-            <FiBook className="mx-auto text-gray-200 mb-4" size={40} />
-            <h3 className="text-lg font-bold text-gray-700 mb-1 outfit">No Batches Found</h3>
-            <p className="text-sm text-gray-400">Create your first batch to get started.</p>
+            <FiBook className="mx-auto text-dash-soft3 mb-4" size={40} />
+            <h3 className="text-lg font-bold text-dash-ink3 mb-1 outfit">No Batches Found</h3>
+            <p className="text-sm text-dash-mute2">Create your first batch to get started.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#FEF6E7]/40 border-b border-gray-100">
+                <tr className="bg-brand-soft/40 border-b border-dash-line-soft">
                   {['Batch ID', 'Course', 'Branch', 'Students', 'Duration', 'Status', 'Actions'].map((h, i) => (
-                    <th key={h} className={`px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider ${i === 0 || i === 1 ? 'text-left' : 'text-center'}`}>{h}</th>
+                    <th key={h} className={`px-5 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider ${i === 0 || i === 1 ? 'text-left' : 'text-center'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -305,34 +305,34 @@ export default function AllBatchesPage() {
                 {filteredBatches.map(batch => {
                   const studentCount = getStudentCount(batch._id);
                   return (
-                    <tr key={batch._id} className="border-b border-gray-100 last:border-0 hover:bg-[#FEF6E7]/20 transition">
+                    <tr key={batch._id} className="border-b border-dash-line-soft last:border-0 hover:bg-brand-soft/20 transition">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-[#FEF6E7] flex items-center justify-center shrink-0">
-                            <FiHash size={14} className="text-[#c9871a]" />
+                          <div className="w-8 h-8 rounded-lg bg-brand-soft flex items-center justify-center shrink-0">
+                            <FiHash size={14} className="text-brand-ink" />
                           </div>
                           <div>
-                            <p className="font-bold text-gray-800">{batch.id}</p>
-                            {batch.name && <p className="text-[11px] text-gray-400 truncate max-w-[150px]">{batch.name}</p>}
+                            <p className="font-bold text-dash-ink2">{batch.id}</p>
+                            {batch.name && <p className="text-[11px] text-dash-mute2 truncate max-w-[150px]">{batch.name}</p>}
                           </div>
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-medium text-gray-700 truncate max-w-[200px]">{batch.courseId?.title || batch.courseName}</p>
+                        <p className="font-medium text-dash-ink3 truncate max-w-[200px]">{batch.courseId?.title || batch.courseName}</p>
                       </td>
                       <td className="px-5 py-4 text-center">
                         {batch.branch ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
-                            <FiMapPin size={11} className="text-[#c9871a]" /> {batch.branch}
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-dash-ink4">
+                            <FiMapPin size={11} className="text-brand-ink" /> {batch.branch}
                           </span>
-                        ) : <span className="text-gray-300 text-xs">—</span>}
+                        ) : <span className="text-dash-faint text-xs">—</span>}
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <span className="inline-flex items-center gap-1 text-gray-700 font-semibold">
-                          <FiUsers size={13} className="text-gray-400" /> {studentCount}/{batch.maxStudents || 50}
+                        <span className="inline-flex items-center gap-1 text-dash-ink3 font-semibold">
+                          <FiUsers size={13} className="text-dash-mute2" /> {studentCount}/{batch.maxStudents || 50}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-center text-gray-500">
+                      <td className="px-5 py-4 text-center text-dash-mute">
                         <div className="text-[11px]">
                           <span>{batch.startDate ? new Date(batch.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '-'}</span>
                           <span className="mx-1">→</span>
@@ -345,11 +345,11 @@ export default function AllBatchesPage() {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-1.5">
                           <button onClick={() => openEdit(batch)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#c9871a] hover:bg-[#FEF6E7] transition" title="Edit">
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-brand-ink hover:bg-brand-soft transition" title="Edit">
                             <FiEdit2 size={14} />
                           </button>
                           <button onClick={() => handleDelete(batch.id)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition" title="Delete">
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-rose-600 hover:bg-rose-50 transition" title="Delete">
                             <FiTrash2 size={14} />
                           </button>
                         </div>
@@ -366,8 +366,8 @@ export default function AllBatchesPage() {
       {/* ═══ Edit Modal ═══ */}
       {editModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditModal(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-[#F3A522] to-[#d88f13]">
+          <div className="bg-dash-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-brand to-brand-hover">
               <h2 className="text-base font-bold text-white outfit">Edit Batch: {editModal.id}</h2>
               <button onClick={() => setEditModal(null)} className="text-white/70 hover:text-white transition"><FiX size={20} /></button>
             </div>
@@ -410,8 +410,8 @@ export default function AllBatchesPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={modalLabel}>Status <span className="font-normal text-gray-300">(auto from dates)</span></label>
-                  <div className={`${inputClass} bg-gray-50 capitalize text-gray-600 flex items-center`}>
+                  <label className={modalLabel}>Status <span className="font-normal text-dash-faint">(auto from dates)</span></label>
+                  <div className={`${inputClass} bg-dash-soft capitalize text-dash-ink4 flex items-center`}>
                     {computeBatchStatus(editForm.startDate, editForm.endDate)}
                   </div>
                 </div>
@@ -424,7 +424,7 @@ export default function AllBatchesPage() {
                 <label className={modalLabel}>Class Time</label>
                 <TimeRangePicker value={editForm.classTime || ''} onChange={(v) => setEditForm({ ...editForm, classTime: v })} />
                 {editForm.classTime && editForm.classTime.trim() !== '-' && (
-                  <p className="text-[11px] text-[#c9871a] mt-1.5 font-medium">{editForm.classTime}</p>
+                  <p className="text-[11px] text-brand-ink mt-1.5 font-medium">{editForm.classTime}</p>
                 )}
               </div>
               <div>
@@ -435,7 +435,7 @@ export default function AllBatchesPage() {
                     return (
                       <button key={day} type="button" onClick={() => toggleEditDay(day)}
                         className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition border ${
-                          isSelected ? 'bg-[#F3A522] text-white border-[#F3A522]' : 'bg-white text-gray-500 border-gray-200 hover:border-[#F3A522]/40'
+                          isSelected ? 'bg-brand text-white border-brand' : 'bg-dash-card text-dash-mute border-dash-line hover:border-brand/40'
                         }`}>
                         {isSelected && <FiCheck size={10} className="inline mr-0.5" />}
                         {day.slice(0, 3)}
@@ -446,9 +446,9 @@ export default function AllBatchesPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
-              <button onClick={() => setEditModal(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
-              <button onClick={handleEdit} disabled={saving} className="flex-1 py-2.5 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:shadow-lg hover:shadow-[#F3A522]/25 transition">
+            <div className="flex gap-3 px-6 py-4 border-t border-dash-line-soft">
+              <button onClick={() => setEditModal(null)} className="flex-1 py-2.5 border border-dash-line rounded-xl text-sm font-semibold text-dash-ink4 hover:bg-dash-soft transition">Cancel</button>
+              <button onClick={handleEdit} disabled={saving} className="flex-1 py-2.5 bg-gradient-to-r from-brand to-brand-hover text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:shadow-lg hover:shadow-brand/25 transition">
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
@@ -459,8 +459,8 @@ export default function AllBatchesPage() {
       {/* ═══ Assign Batch Modal ═══ */}
       {assignModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAssignModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-[#F3A522] to-[#d88f13]">
+          <div className="bg-dash-card rounded-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-brand to-brand-hover">
               <div>
                 <h2 className="text-base font-bold text-white outfit">Assign Student to Batch</h2>
                 <p className="text-xs text-white/80">{unassigned.length} students without a batch</p>
@@ -492,7 +492,7 @@ export default function AllBatchesPage() {
                   return (
                     <>
                       <select value={selectedBatchForAssign} onChange={e => setSelectedBatchForAssign(e.target.value)}
-                        disabled={!selectedEnrollment} className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-300`}>
+                        disabled={!selectedEnrollment} className={`${inputClass} disabled:bg-dash-soft disabled:text-dash-faint`}>
                         <option value="">{selectedEnrollment ? 'Choose batch...' : 'Select a student first'}</option>
                         {matching.map(b => {
                           const count = getStudentCount(b._id);
@@ -514,8 +514,8 @@ export default function AllBatchesPage() {
               </div>
             </div>
             <div className="flex gap-3 px-6 pb-6">
-              <button onClick={() => setAssignModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
-              <button onClick={handleAssignBatch} disabled={saving} className="flex-1 py-2.5 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:shadow-lg hover:shadow-[#F3A522]/25 transition">
+              <button onClick={() => setAssignModal(false)} className="flex-1 py-2.5 border border-dash-line rounded-xl text-sm font-semibold text-dash-ink4 hover:bg-dash-soft transition">Cancel</button>
+              <button onClick={handleAssignBatch} disabled={saving} className="flex-1 py-2.5 bg-gradient-to-r from-brand to-brand-hover text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:shadow-lg hover:shadow-brand/25 transition">
                 {saving ? 'Assigning...' : 'Assign Batch'}
               </button>
             </div>

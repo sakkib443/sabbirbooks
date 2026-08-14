@@ -166,8 +166,17 @@ function CodBody({
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          {/* Straight to this order's tracking page — the buyer's next question
+              is "where is my parcel?", and making them find their own order in
+              a list first is a step for nothing. `orderId` is the Mongo _id the
+              tracking route needs; the ?ref fallback (order NUMBER, highlighted
+              in the list) only matters if a future flow stops carrying the id. */}
           <Link
-            href="/dashboard/user"
+            href={
+              result.orderId
+                ? `/dashboard/user/orders/${result.orderId}`
+                : `/dashboard/user/orders?ref=${encodeURIComponent(result.reference)}`
+            }
             className={cn(buttonVariants({ variant: "accent", size: "lg" }), "flex-1", bn)}
           >
             <LuReceipt /> {L.viewMyOrders}
@@ -201,7 +210,14 @@ function PendingBody({
         : L.pendingBookDigitalSub;
   const continueHref = result.itemKind === "course" ? "/courses" : "/books";
   const continueLabel = result.itemKind === "course" ? L.continueCourses : L.continueBooks;
-  const myHref = result.itemKind === "course" ? "/dashboard/user/payments" : "/dashboard/user";
+  // A book order is tracked on the orders pages; a course purchase has no
+  // parcel to follow, so it keeps going to the payment history.
+  const myHref =
+    result.itemKind === "course"
+      ? "/dashboard/user/payments"
+      : result.orderId
+        ? `/dashboard/user/orders/${result.orderId}`
+        : `/dashboard/user/orders?ref=${encodeURIComponent(result.reference)}`;
 
   return (
     <div className="mx-auto max-w-xl">

@@ -14,24 +14,24 @@ const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replac
 const hdrs = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 
 const inputClass =
-  'w-full px-3.5 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 ' +
-  'placeholder:text-gray-300 focus:outline-none focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/15 transition-all';
-const labelClass = 'block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5';
+  'w-full px-3.5 py-2.5 rounded-lg border border-dash-line bg-dash-card text-sm text-dash-ink3 ' +
+  'placeholder:text-dash-faint focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition-all';
+const labelClass = 'block text-[10px] font-bold text-dash-mute2 uppercase tracking-wider mb-1.5';
 
 const SectionHead = ({ icon: Icon, title, hint }) => (
-  <div className="px-5 py-3.5 border-b border-gray-100 bg-[#FEF6E7]/40 flex items-center gap-2.5">
-    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center text-white shrink-0">
+  <div className="px-5 py-3.5 border-b border-dash-line-soft bg-brand-soft/40 flex items-center gap-2.5">
+    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center text-white shrink-0">
       <Icon size={14} />
     </div>
     <div>
-      <h2 className="text-sm font-bold text-gray-800 outfit">{title}</h2>
-      {hint && <p className="text-[10px] text-gray-400 work">{hint}</p>}
+      <h2 className="text-sm font-bold text-dash-ink2 outfit">{title}</h2>
+      {hint && <p className="text-[10px] text-dash-mute2 work">{hint}</p>}
     </div>
   </div>
 );
 
 const Card = ({ children }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">{children}</div>
+  <div className="bg-dash-card rounded-2xl border border-dash-line-soft shadow-sm overflow-hidden">{children}</div>
 );
 
 export default function CreateBatchPage() {
@@ -124,18 +124,18 @@ export default function CreateBatchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] p-4 md:p-6">
+    <div className="min-h-screen bg-dash-cream p-4 md:p-6">
       {/* Gold hairline */}
-      <div className="h-[3px] w-full bg-gradient-to-r from-[#F3A522] via-[#e2941c] to-[#9AA0A8] rounded-full mb-5"></div>
+      <div className="h-[3px] w-full bg-gradient-to-r from-brand via-brand-strong to-dash-steel rounded-full mb-5"></div>
 
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
-        <Link href="/dashboard/admin/batch" className="w-10 h-10 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-500 hover:text-[#c9871a] hover:border-[#F3A522]/40 transition">
+        <Link href="/dashboard/admin/batch" className="w-10 h-10 rounded-xl bg-dash-card border border-dash-line-soft shadow-sm flex items-center justify-center text-dash-mute hover:text-brand-ink hover:border-brand/40 transition">
           <FiArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 outfit">Create New Batch</h1>
-          <p className="text-xs text-gray-400 work">Set up a new batch with course, branch, mentor & schedule</p>
+          <h1 className="text-xl font-bold text-dash-ink outfit">Create New Batch</h1>
+          <p className="text-xs text-dash-mute2 work">Set up a new batch with course, branch, mentor & schedule</p>
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export default function CreateBatchPage() {
             <div className="p-5">
               {/* Search */}
               <div className="relative mb-3">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={15} />
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-faint" size={15} />
                 <input
                   type="text"
                   value={courseSearch}
@@ -160,9 +160,9 @@ export default function CreateBatchPage() {
               </div>
 
               {courses.length === 0 ? (
-                <p className="text-sm text-gray-400 flex items-center gap-2 py-4"><FiLoader className="animate-spin" size={14} /> Loading courses...</p>
+                <p className="text-sm text-dash-mute2 flex items-center gap-2 py-4"><FiLoader className="animate-spin" size={14} /> Loading courses...</p>
               ) : filteredCourses.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No course matches “{courseSearch}”</p>
+                <p className="text-sm text-dash-mute2 text-center py-6">No course matches “{courseSearch}”</p>
               ) : (
                 <div className="grid gap-2 max-h-[240px] overflow-y-auto pr-1 custom-scroll">
                   {filteredCourses.map(course => {
@@ -171,20 +171,20 @@ export default function CreateBatchPage() {
                       <button key={course._id} type="button" onClick={() => handleCourseChange(course._id)}
                         className={`w-full flex items-center gap-3 p-2.5 rounded-lg border text-left transition-all ${
                           active
-                            ? 'border-[#F3A522] bg-[#FEF6E7]/60 ring-2 ring-[#F3A522]/20'
-                            : 'border-gray-100 hover:border-[#F3A522]/40 hover:bg-[#FEF6E7]/30'
+                            ? 'border-brand bg-brand-soft/60 ring-2 ring-brand/20'
+                            : 'border-dash-line-soft hover:border-brand/40 hover:bg-brand-soft/30'
                         }`}>
-                        <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#F3A522] to-[#d88f13]">
+                        <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-brand to-brand-hover">
                           {course.image && <img src={course.image} alt="" className="w-full h-full object-cover" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-semibold truncate ${active ? 'text-[#a5680f]' : 'text-gray-700'}`}>
+                          <p className={`text-xs font-semibold truncate ${active ? 'text-brand-deep' : 'text-dash-ink3'}`}>
                             {course.title}
                           </p>
-                          {course.type && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 mt-0.5 inline-block">{course.type}</span>}
+                          {course.type && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-dash-soft2 text-dash-mute mt-0.5 inline-block">{course.type}</span>}
                         </div>
                         {active && (
-                          <div className="w-5 h-5 rounded-full bg-[#F3A522] flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 rounded-full bg-brand flex items-center justify-center flex-shrink-0">
                             <FiCheck size={10} className="text-white" />
                           </div>
                         )}
@@ -210,7 +210,7 @@ export default function CreateBatchPage() {
               <div>
                 <label className={labelClass}>Mentor (optional)</label>
                 {mentors.length === 0 ? (
-                  <p className="text-sm text-gray-400 flex items-center gap-2 py-2"><FiLoader className="animate-spin" size={14} /> Loading...</p>
+                  <p className="text-sm text-dash-mute2 flex items-center gap-2 py-2"><FiLoader className="animate-spin" size={14} /> Loading...</p>
                 ) : (
                   <select value={form.mentorId} onChange={e => setForm({ ...form, mentorId: e.target.value })} className={inputClass}>
                     <option value="">Select Mentor</option>
@@ -233,7 +233,7 @@ export default function CreateBatchPage() {
                   <input type="text" value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} required
                     placeholder="e.g., WEB-01, PYT-02"
                     className={`${inputClass} font-mono uppercase`} />
-                  <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><FiInfo size={9} /> Enter a unique ID manually.</p>
+                  <p className="text-[10px] text-dash-mute2 mt-1 flex items-center gap-1"><FiInfo size={9} /> Enter a unique ID manually.</p>
                 </div>
                 <div>
                   <label className={labelClass}>Batch Name</label>
@@ -267,7 +267,7 @@ export default function CreateBatchPage() {
                 <label className={labelClass}>Class Time</label>
                 <TimeRangePicker value={form.classTime} onChange={(v) => setForm({ ...form, classTime: v })} />
                 {form.classTime && form.classTime.trim() !== '-' && (
-                  <p className="text-[11px] text-[#c9871a] mt-1.5 font-medium">{form.classTime}</p>
+                  <p className="text-[11px] text-brand-ink mt-1.5 font-medium">{form.classTime}</p>
                 )}
               </div>
               <div>
@@ -279,8 +279,8 @@ export default function CreateBatchPage() {
                       <button key={day} type="button" onClick={() => toggleDay(day)}
                         className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all border ${
                           isSelected
-                            ? 'bg-[#F3A522] text-white border-[#F3A522] shadow-sm shadow-[#F3A522]/20'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-[#F3A522]/40 hover:text-[#c9871a]'
+                            ? 'bg-brand text-white border-brand shadow-sm shadow-brand/20'
+                            : 'bg-dash-card text-dash-mute border-dash-line hover:border-brand/40 hover:text-brand-ink'
                         }`}>
                         {isSelected && <FiCheck size={11} className="inline mr-1" />}
                         {day.slice(0, 3)}
@@ -289,7 +289,7 @@ export default function CreateBatchPage() {
                   })}
                 </div>
                 {form.classDays.length > 0 && (
-                  <p className="text-[10px] text-[#c9871a] mt-2 font-medium">Selected: {form.classDays.join(', ')}</p>
+                  <p className="text-[10px] text-brand-ink mt-2 font-medium">Selected: {form.classDays.join(', ')}</p>
                 )}
               </div>
             </div>
@@ -298,11 +298,11 @@ export default function CreateBatchPage() {
           {/* ── Actions ── */}
           <div className="flex items-center gap-3">
             <Link href="/dashboard/admin/batch"
-              className="px-5 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">
+              className="px-5 py-2.5 rounded-lg border border-dash-line text-sm font-semibold text-dash-ink4 hover:bg-dash-soft transition">
               Cancel
             </Link>
             <button type="submit" disabled={loading || !form.courseId || !form.id.trim()}
-              className="flex items-center gap-2 px-7 py-2.5 rounded-lg bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white text-sm font-bold hover:shadow-lg hover:shadow-[#F3A522]/25 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-sm">
+              className="flex items-center gap-2 px-7 py-2.5 rounded-lg bg-gradient-to-r from-brand to-brand-hover text-white text-sm font-bold hover:shadow-lg hover:shadow-brand/25 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-sm">
               {loading ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />}
               {loading ? 'Creating...' : 'Create Batch'}
             </button>
@@ -311,57 +311,57 @@ export default function CreateBatchPage() {
 
         {/* ═══ Preview — Right col ═══ */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden sticky top-6">
-            <div className="px-5 py-3.5 border-b border-gray-100 bg-[#FEF6E7]/40">
-              <h3 className="text-sm font-bold text-gray-800 outfit">Preview</h3>
+          <div className="bg-dash-card rounded-2xl border border-dash-line-soft shadow-sm overflow-hidden sticky top-6">
+            <div className="px-5 py-3.5 border-b border-dash-line-soft bg-brand-soft/40">
+              <h3 className="text-sm font-bold text-dash-ink2 outfit">Preview</h3>
             </div>
             <div className="p-5">
               {selectedCourse ? (
                 <div className="space-y-4">
-                  <div className="h-24 rounded-lg overflow-hidden bg-gradient-to-br from-[#F3A522] to-[#d88f13]">
+                  <div className="h-24 rounded-lg overflow-hidden bg-gradient-to-br from-brand to-brand-hover">
                     {selectedCourse.image && <img src={selectedCourse.image} alt="" className="w-full h-full object-cover" />}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-800 text-sm outfit">{selectedCourse.title}</p>
+                    <p className="font-bold text-dash-ink2 text-sm outfit">{selectedCourse.title}</p>
                     {selectedCourse.type && (
-                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#FEF6E7] text-[#c9871a] mt-1 inline-block">{selectedCourse.type}</span>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-brand-soft text-brand-ink mt-1 inline-block">{selectedCourse.type}</span>
                     )}
                   </div>
 
                   {selectedMentor && (
-                    <div className="flex items-center gap-2 p-2.5 bg-[#FEF6E7]/50 rounded-lg border border-[#F0DFB4]">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex-shrink-0">
+                    <div className="flex items-center gap-2 p-2.5 bg-brand-soft/50 rounded-lg border border-brand-line">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-brand to-brand-hover flex-shrink-0">
                         {selectedMentor.image
                           ? <img src={selectedMentor.image} alt="" className="w-full h-full object-cover" />
                           : <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs">{selectedMentor.name?.charAt(0)}</div>}
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[#a5680f]">{selectedMentor.name}</p>
-                        <p className="text-[10px] text-[#c9871a]">{selectedMentor.designation}</p>
+                        <p className="text-xs font-semibold text-brand-deep">{selectedMentor.name}</p>
+                        <p className="text-[10px] text-brand-ink">{selectedMentor.designation}</p>
                       </div>
                     </div>
                   )}
 
-                  <div className="border-t border-gray-100 pt-3 space-y-2">
+                  <div className="border-t border-dash-line-soft pt-3 space-y-2">
                     {[
-                      ['Batch ID', form.id.trim() || '—', 'font-mono text-[#c9871a] font-bold'],
+                      ['Batch ID', form.id.trim() || '—', 'font-mono text-brand-ink font-bold'],
                       ['Branch', form.branch || '—'],
                       ['Start', form.startDate || '—'],
                       ['End', form.endDate || '—'],
                       ['Capacity', `${form.maxStudents} students`],
-                      ...(form.classTime && form.classTime.trim() !== '-' ? [['Time', form.classTime, 'text-[#c9871a] font-semibold']] : []),
+                      ...(form.classTime && form.classTime.trim() !== '-' ? [['Time', form.classTime, 'text-brand-ink font-semibold']] : []),
                     ].map(([k, v, cls]) => (
                       <div key={k} className="flex justify-between text-xs">
-                        <span className="text-gray-400">{k}</span>
-                        <span className={`font-semibold text-gray-700 ${cls || ''}`}>{v}</span>
+                        <span className="text-dash-mute2">{k}</span>
+                        <span className={`font-semibold text-dash-ink3 ${cls || ''}`}>{v}</span>
                       </div>
                     ))}
                     {form.classDays.length > 0 && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <span className="text-[10px] text-gray-400">Class Days</span>
+                      <div className="pt-2 border-t border-dash-line-soft">
+                        <span className="text-[10px] text-dash-mute2">Class Days</span>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {form.classDays.map(d => (
-                            <span key={d} className="text-[9px] font-bold bg-[#FEF6E7] text-[#c9871a] px-1.5 py-0.5 rounded">{d.slice(0, 3)}</span>
+                            <span key={d} className="text-[9px] font-bold bg-brand-soft text-brand-ink px-1.5 py-0.5 rounded">{d.slice(0, 3)}</span>
                           ))}
                         </div>
                       </div>
@@ -370,11 +370,11 @@ export default function CreateBatchPage() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <div className="w-12 h-12 rounded-full bg-[#FEF6E7] flex items-center justify-center mx-auto mb-3">
-                    <FiBook className="text-[#F3A522]" size={18} />
+                  <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-3">
+                    <FiBook className="text-brand" size={18} />
                   </div>
-                  <p className="text-xs text-gray-400 font-medium">Select a course</p>
-                  <p className="text-[10px] text-gray-300 mt-0.5">Preview will appear here</p>
+                  <p className="text-xs text-dash-mute2 font-medium">Select a course</p>
+                  <p className="text-[10px] text-dash-faint mt-0.5">Preview will appear here</p>
                 </div>
               )}
             </div>

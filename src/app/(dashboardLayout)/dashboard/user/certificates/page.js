@@ -56,7 +56,7 @@ export default function UserCertificatesPage() {
 
             const html2canvas = (await import('html2canvas')).default;
             const canvas = await html2canvas(tempDiv.firstChild, {
-                scale: 3, useCORS: true, backgroundColor: '#ffffff',
+                scale: 3, useCORS: true, backgroundColor: 'var(--dash-card)',
                 width: 1120, height: 790,
             });
 
@@ -79,8 +79,8 @@ export default function UserCertificatesPage() {
         <div className="poppins space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-slate-900 outfit">My Certificates</h1>
-                <p className="text-sm text-slate-500 mt-1">View, download and verify your earned certificates</p>
+                <h1 className="text-2xl font-bold text-dash-ink outfit">My Certificates</h1>
+                <p className="text-sm text-dash-mute mt-1">View, download and verify your earned certificates</p>
             </div>
 
             {/* Stats */}
@@ -88,18 +88,18 @@ export default function UserCertificatesPage() {
                 {[
                     { label: 'Earned Certificates', value: activeCerts.length, icon: FiAward, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                     { label: 'Pending', value: pendingCerts.length, icon: FiClock, color: 'text-amber-600', bg: 'bg-amber-50' },
-                    { label: 'Total Issued', value: certificates.length, icon: FiCheckCircle, color: 'text-[#c9871a]', bg: 'bg-[#FEF6E7]' },
+                    { label: 'Total Issued', value: certificates.length, icon: FiCheckCircle, color: 'text-brand-ink', bg: 'bg-brand-soft' },
                 ].map(s => {
                     const Icon = s.icon;
                     return (
-                        <div key={s.label} className="bg-white rounded-xl border border-slate-200/60 p-5 shadow-sm">
+                        <div key={s.label} className="bg-dash-card rounded-xl border border-dash-line/60 p-5 shadow-sm">
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-xl ${s.bg} flex items-center justify-center`}>
                                     <Icon className={`${s.color} text-xl`} />
                                 </div>
                                 <div>
                                     <p className={`text-2xl font-bold ${s.color}`}>{loading ? '—' : s.value}</p>
-                                    <p className="text-sm text-slate-500">{s.label}</p>
+                                    <p className="text-sm text-dash-mute">{s.label}</p>
                                 </div>
                             </div>
                         </div>
@@ -109,16 +109,16 @@ export default function UserCertificatesPage() {
 
             {/* Loading */}
             {loading ? (
-                <div className="bg-white rounded-2xl border border-slate-200/60 p-16 text-center shadow-sm">
-                    <FiLoader className="animate-spin text-[#F3A522] mx-auto mb-3" size={28} />
-                    <p className="text-sm text-slate-400">Loading certificates...</p>
+                <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-16 text-center shadow-sm">
+                    <FiLoader className="animate-spin text-brand mx-auto mb-3" size={28} />
+                    <p className="text-sm text-dash-mute2">Loading certificates...</p>
                 </div>
             ) : (
                 <>
                     {/* Active Certificates */}
-                    <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                            <FiAward className="text-[#F3A522]" />
+                    <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-6 shadow-sm">
+                        <h2 className="text-lg font-bold text-dash-ink2 mb-6 flex items-center gap-2">
+                            <FiAward className="text-brand" />
                             Earned Certificates
                         </h2>
 
@@ -127,28 +127,28 @@ export default function UserCertificatesPage() {
                                 <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <FiAward className="text-3xl text-amber-500" />
                                 </div>
-                                <h3 className="text-base font-semibold text-slate-700 mb-2">No Certificates Yet</h3>
-                                <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
+                                <h3 className="text-base font-semibold text-dash-ink3 mb-2">No Certificates Yet</h3>
+                                <p className="text-dash-mute text-sm mb-6 max-w-md mx-auto">
                                     Complete your course to earn a certificate. Once your instructor grants eligibility, your certificate will appear here!
                                 </p>
                                 <Link href="/dashboard/user/courses"
-                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white font-semibold rounded-xl hover:shadow-lg transition text-sm">
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand to-brand-hover text-white font-semibold rounded-xl hover:shadow-lg transition text-sm">
                                     Browse My Courses
                                 </Link>
                             </div>
                         ) : (
                             <div className="grid md:grid-cols-2 gap-4">
                                 {activeCerts.map(cert => (
-                                    <div key={cert._id || cert.id} className="bg-gradient-to-br from-[#FEF6E7]/80 to-[#FEF6E7]/50 rounded-xl border border-emerald-200/60 p-5 hover:shadow-md transition-all group">
+                                    <div key={cert._id || cert.id} className="bg-gradient-to-br from-brand-soft/80 to-brand-soft/50 rounded-xl border border-emerald-200/60 p-5 hover:shadow-md transition-all group">
                                         {/* Certificate Header */}
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                                                     <FiAward size={22} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-bold text-slate-800">{cert.courseName || 'Certificate'}</h3>
-                                                    <p className="text-[11px] text-slate-500">Batch: {cert.batchNumber || cert.batchId || '—'}</p>
+                                                    <h3 className="text-sm font-bold text-dash-ink2">{cert.courseName || 'Certificate'}</h3>
+                                                    <p className="text-[11px] text-dash-mute">Batch: {cert.batchNumber || cert.batchId || '—'}</p>
                                                 </div>
                                             </div>
                                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
@@ -157,23 +157,23 @@ export default function UserCertificatesPage() {
                                         </div>
 
                                         {/* Certificate Details */}
-                                        <div className="bg-white/70 rounded-lg p-3 mb-3">
+                                        <div className="bg-dash-card/70 rounded-lg p-3 mb-3">
                                             <div className="grid grid-cols-2 gap-2 text-[11px]">
                                                 <div>
-                                                    <p className="text-slate-400">Certificate ID</p>
-                                                    <p className="text-slate-700 font-semibold font-mono">{cert.id}</p>
+                                                    <p className="text-dash-mute2">Certificate ID</p>
+                                                    <p className="text-dash-ink3 font-semibold font-mono">{cert.id}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-slate-400">Issue Date</p>
-                                                    <p className="text-slate-700 font-semibold">{formatDate(cert.issueDate)}</p>
+                                                    <p className="text-dash-mute2">Issue Date</p>
+                                                    <p className="text-dash-ink3 font-semibold">{formatDate(cert.issueDate)}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-slate-400">Student</p>
-                                                    <p className="text-slate-700 font-semibold">{cert.studentName || '—'}</p>
+                                                    <p className="text-dash-mute2">Student</p>
+                                                    <p className="text-dash-ink3 font-semibold">{cert.studentName || '—'}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-slate-400">Duration</p>
-                                                    <p className="text-slate-700 font-semibold">{formatDate(cert.startDate)} - {formatDate(cert.endDate)}</p>
+                                                    <p className="text-dash-mute2">Duration</p>
+                                                    <p className="text-dash-ink3 font-semibold">{formatDate(cert.startDate)} - {formatDate(cert.endDate)}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -181,7 +181,7 @@ export default function UserCertificatesPage() {
                                         {/* Actions */}
                                         <div className="flex items-center gap-2">
                                             <button onClick={() => setViewCert(cert)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#a5680f] bg-[#FEF6E7] border border-[#F0DFB4] rounded-lg hover:bg-[#FEF6E7] transition">
+                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-deep bg-brand-soft border border-brand-line rounded-lg hover:bg-brand-soft transition">
                                                 <FiEye size={12} /> View Certificate
                                             </button>
                                             <button onClick={() => quickDownloadPDF(cert)} disabled={quickDownloading === (cert._id || cert.id)}
@@ -197,8 +197,8 @@ export default function UserCertificatesPage() {
 
                     {/* Pending Certificates */}
                     {pendingCerts.length > 0 && (
-                        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
-                            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-6 shadow-sm">
+                            <h2 className="text-lg font-bold text-dash-ink2 mb-4 flex items-center gap-2">
                                 <FiClock className="text-amber-500" />
                                 Pending Certificates
                             </h2>
@@ -210,8 +210,8 @@ export default function UserCertificatesPage() {
                                                 <FiClock className="text-amber-600" size={18} />
                                             </div>
                                             <div>
-                                                <h3 className="text-sm font-semibold text-slate-800">{cert.courseName || 'Certificate'}</h3>
-                                                <p className="text-[11px] text-slate-500">ID: {cert.id} • Batch: {cert.batchNumber || '—'}</p>
+                                                <h3 className="text-sm font-semibold text-dash-ink2">{cert.courseName || 'Certificate'}</h3>
+                                                <p className="text-[11px] text-dash-mute">ID: {cert.id} • Batch: {cert.batchNumber || '—'}</p>
                                             </div>
                                         </div>
                                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
@@ -225,8 +225,8 @@ export default function UserCertificatesPage() {
 
                     {/* Revoked */}
                     {revokedCerts.length > 0 && (
-                        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
-                            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-6 shadow-sm">
+                            <h2 className="text-lg font-bold text-dash-ink2 mb-4 flex items-center gap-2">
                                 <FiAlertCircle className="text-red-500" />
                                 Revoked Certificates
                             </h2>
@@ -238,8 +238,8 @@ export default function UserCertificatesPage() {
                                                 <FiAlertCircle className="text-red-500" size={18} />
                                             </div>
                                             <div>
-                                                <h3 className="text-sm font-semibold text-slate-800">{cert.courseName || 'Certificate'}</h3>
-                                                <p className="text-[11px] text-slate-500">ID: {cert.id}</p>
+                                                <h3 className="text-sm font-semibold text-dash-ink2">{cert.courseName || 'Certificate'}</h3>
+                                                <p className="text-[11px] text-dash-mute">ID: {cert.id}</p>
                                             </div>
                                         </div>
                                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">

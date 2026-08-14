@@ -30,13 +30,13 @@ const TABS = [
   { id: 'social', label: 'Social & WhatsApp', icon: FiShare2 },
 ];
 
-const inp = 'w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F3A522]/15 focus:border-[#F3A522]';
-const lbl = 'text-[10px] font-bold text-slate-500 uppercase block mb-1';
+const inp = 'w-full px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand';
+const lbl = 'text-[10px] font-bold text-dash-mute uppercase block mb-1';
 
 // Small labelled field
 const Field = ({ label, value, onChange, textarea, placeholder, bn }) => (
   <div>
-    <label className={`${lbl} ${bn ? 'text-[#c9871a]' : ''}`}>{label}{bn ? ' (বাংলা)' : ''}</label>
+    <label className={`${lbl} ${bn ? 'text-brand-ink' : ''}`}>{label}{bn ? ' (বাংলা)' : ''}</label>
     {textarea
       ? <textarea rows={2} value={value || ''} onChange={e => onChange(e.target.value)} className={`${inp} ${bn ? 'hind-siliguri' : ''}`} placeholder={placeholder} />
       : <input value={value || ''} onChange={e => onChange(e.target.value)} className={`${inp} ${bn ? 'hind-siliguri' : ''}`} placeholder={placeholder} />}
@@ -44,8 +44,8 @@ const Field = ({ label, value, onChange, textarea, placeholder, bn }) => (
 );
 
 const Card = ({ title, children }) => (
-  <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-6">
-    {title && <h3 className="text-sm font-bold text-slate-700 mb-4">{title}</h3>}
+  <div className="bg-dash-card rounded-2xl border border-dash-line/70 shadow-sm p-6">
+    {title && <h3 className="text-sm font-bold text-dash-ink3 mb-4">{title}</h3>}
     {children}
   </div>
 );
@@ -87,30 +87,30 @@ export default function ContactContentPage() {
   const addBranch = () => setC(prev => ({ ...prev, branches: [...prev.branches, { nameEn: '', nameBn: '', addressEn: '', addressBn: '', phones: [''] }] }));
   const delBranch = (i) => setC(prev => ({ ...prev, branches: prev.branches.filter((_, idx) => idx !== i) }));
 
-  if (loading) return <div className="flex justify-center py-24"><FiLoader className="animate-spin text-[#F3A522]" size={30} /></div>;
+  if (loading) return <div className="flex justify-center py-24"><FiLoader className="animate-spin text-brand" size={30} /></div>;
 
   return (
-    <div className="p-6 lg:p-8 min-h-screen bg-slate-50 space-y-6">
+    <div className="p-6 lg:p-8 min-h-screen bg-dash-soft space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold text-[#c9871a] uppercase tracking-wider flex items-center gap-1.5"><FiGlobe size={12} /> Site Content</p>
-          <h1 className="text-2xl font-bold text-slate-900 outfit">Contact Page</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Edit each section of the public Contact page. Changes go live after save.</p>
+          <p className="text-[11px] font-bold text-brand-ink uppercase tracking-wider flex items-center gap-1.5"><FiGlobe size={12} /> Site Content</p>
+          <h1 className="text-2xl font-bold text-dash-ink outfit">Contact Page</h1>
+          <p className="text-sm text-dash-mute mt-0.5">Edit each section of the public Contact page. Changes go live after save.</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href="/contact" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:border-[#F3A522] hover:text-[#c9871a] transition"><FiExternalLink size={14} /> Preview</a>
-          <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white text-sm font-bold shadow-lg shadow-[#F3A522]/20 hover:shadow-xl disabled:opacity-50 transition">
+          <a href="/contact" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-dash-line bg-dash-card text-sm font-semibold text-dash-ink4 hover:border-brand hover:text-brand-ink transition"><FiExternalLink size={14} /> Preview</a>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-hover text-white text-sm font-bold shadow-lg shadow-brand/20 hover:shadow-xl disabled:opacity-50 transition">
             {saving ? <FiLoader className="animate-spin" size={15} /> : <FiSave size={15} />} Save Changes
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1.5 bg-white rounded-xl border border-slate-200/70 p-1.5 shadow-sm w-fit">
+      <div className="flex flex-wrap gap-1.5 bg-dash-card rounded-xl border border-dash-line/70 p-1.5 shadow-sm w-fit">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition ${tab === t.id ? 'bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition ${tab === t.id ? 'bg-gradient-to-r from-brand to-brand-hover text-white shadow-sm' : 'text-dash-mute hover:bg-dash-soft'}`}>
             <t.icon size={14} /> {t.label}
           </button>
         ))}
@@ -152,7 +152,7 @@ export default function ContactContentPage() {
           {c.branches.map((b, i) => (
             <Card key={i}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><span className="w-6 h-6 rounded-lg bg-[#FEF6E7] text-[#c9871a] flex items-center justify-center text-xs font-black">{i + 1}</span> Branch {i + 1}</h3>
+                <h3 className="text-sm font-bold text-dash-ink3 flex items-center gap-2"><span className="w-6 h-6 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center text-xs font-black">{i + 1}</span> Branch {i + 1}</h3>
                 <button onClick={() => delBranch(i)} className="text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg"><FiTrash2 size={15} /></button>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
@@ -167,15 +167,15 @@ export default function ContactContentPage() {
                   {b.phones.map((p, pi) => (
                     <div key={pi} className="flex gap-2">
                       <input value={p} onChange={e => setBranchPhone(i, pi, e.target.value)} className={`${inp} font-mono`} placeholder="01700000000" />
-                      <button onClick={() => delBranchPhone(i, pi)} className="px-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"><FiX size={15} /></button>
+                      <button onClick={() => delBranchPhone(i, pi)} className="px-2.5 text-dash-mute2 hover:text-rose-500 hover:bg-rose-50 rounded-lg"><FiX size={15} /></button>
                     </div>
                   ))}
                 </div>
-                <button onClick={() => addBranchPhone(i)} className="mt-2 text-xs font-bold text-[#c9871a] hover:underline inline-flex items-center gap-1"><FiPlus size={12} /> Add phone</button>
+                <button onClick={() => addBranchPhone(i)} className="mt-2 text-xs font-bold text-brand-ink hover:underline inline-flex items-center gap-1"><FiPlus size={12} /> Add phone</button>
               </div>
             </Card>
           ))}
-          <button onClick={addBranch} className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-[#F3A522] hover:text-[#c9871a] text-sm font-bold inline-flex items-center justify-center gap-2 transition"><FiPlus size={15} /> Add Branch</button>
+          <button onClick={addBranch} className="w-full py-3 rounded-2xl border-2 border-dashed border-dash-line text-dash-mute hover:border-brand hover:text-brand-ink text-sm font-bold inline-flex items-center justify-center gap-2 transition"><FiPlus size={15} /> Add Branch</button>
         </div>
       )}
 
@@ -184,7 +184,7 @@ export default function ContactContentPage() {
         <Card title="Google Map embed">
           <Field label="Map embed URL (Google Maps → Share → Embed → copy the src)" value={c.map.embedUrl} onChange={v => set('map', 'embedUrl', v)} placeholder="https://www.google.com/maps?q=...&output=embed" />
           {c.map.embedUrl && (
-            <div className="mt-4 rounded-xl overflow-hidden border border-slate-100">
+            <div className="mt-4 rounded-xl overflow-hidden border border-dash-line-soft">
               <iframe src={c.map.embedUrl} width="100%" height="240" className="border-0" loading="lazy" title="Map preview" />
             </div>
           )}

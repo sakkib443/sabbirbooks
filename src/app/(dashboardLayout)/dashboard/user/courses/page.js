@@ -109,10 +109,10 @@ export default function UserCoursesPage() {
             <div className="min-h-[70vh] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative w-12 h-12">
-                        <div className="absolute inset-0 border-[3px] border-slate-100 rounded-full" />
-                        <div className="absolute inset-0 border-[3px] border-transparent border-t-[#F3A522] rounded-full animate-spin" />
+                        <div className="absolute inset-0 border-[3px] border-dash-line-soft rounded-full" />
+                        <div className="absolute inset-0 border-[3px] border-transparent border-t-brand rounded-full animate-spin" />
                     </div>
-                    <p className="text-sm text-slate-400 font-medium">Loading your courses...</p>
+                    <p className="text-sm text-dash-mute2 font-medium">Loading your courses...</p>
                 </div>
             </div>
         );
@@ -121,7 +121,7 @@ export default function UserCoursesPage() {
     const completedCount = Object.values(courseProgress).filter(p => p.overallPercent === 100).length;
 
     const statCards = [
-        { label: 'Enrolled', value: enrolledCourses.length, icon: FiBook, iconBg: 'bg-[#FEF6E7]', iconColor: 'text-[#F3A522]', bar: 'from-[#F3A522] to-[#d88f13]' },
+        { label: 'Enrolled', value: enrolledCourses.length, icon: FiBook, iconBg: 'bg-brand-soft', iconColor: 'text-brand', bar: 'from-brand to-brand-hover' },
         { label: 'In Progress', value: enrolledCourses.filter(e => e.status === 'active').length, icon: FiPlay, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', bar: 'from-blue-400 to-blue-500' },
         { label: 'Completed', value: completedCount, icon: FiCheckCircle, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', bar: 'from-emerald-400 to-emerald-500' },
         { label: 'Pending', value: enrolledCourses.filter(e => e.status === 'pending').length, icon: FiAlertCircle, iconBg: 'bg-orange-50', iconColor: 'text-orange-500', bar: 'from-amber-400 to-orange-500' },
@@ -132,12 +132,12 @@ export default function UserCoursesPage() {
             {/* ═══════ Header ═══════ */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                    <h1 className="outfit text-2xl lg:text-3xl font-bold text-slate-900">My Courses</h1>
-                    <p className="text-slate-500 text-sm mt-1">Manage and continue your learning journey</p>
+                    <h1 className="outfit text-2xl lg:text-3xl font-bold text-dash-ink">My Courses</h1>
+                    <p className="text-dash-mute text-sm mt-1">Manage and continue your learning journey</p>
                 </div>
                 <Link
                     href="/courses"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#e0941c] text-white rounded-xl text-sm font-semibold hover:bg-[#e0941c] shadow-sm hover:shadow-md hover:shadow-[#F3A522]/20 transition-all active:scale-[0.98] whitespace-nowrap"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-strong text-white rounded-xl text-sm font-semibold hover:bg-brand-strong shadow-sm hover:shadow-md hover:shadow-brand/20 transition-all active:scale-[0.98] whitespace-nowrap"
                 >
                     <FiSearch size={15} />
                     Browse Catalog
@@ -151,7 +151,7 @@ export default function UserCoursesPage() {
                     return (
                         <div
                             key={card.label}
-                            className="group relative bg-white rounded-2xl border border-slate-200/70 p-4 sm:p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden"
+                            className="group relative bg-dash-card rounded-2xl border border-dash-line/70 p-4 sm:p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden"
                         >
                             <div className={`absolute top-0 left-0 h-1 w-full bg-gradient-to-r ${card.bar} opacity-70`} />
                             <div className="flex items-center gap-3">
@@ -159,8 +159,8 @@ export default function UserCoursesPage() {
                                     <Icon className={card.iconColor} size={20} />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-2xl font-bold text-slate-900 outfit tabular-nums leading-none">{card.value}</p>
-                                    <p className="text-xs text-slate-500 font-medium mt-1">{card.label}</p>
+                                    <p className="text-2xl font-bold text-dash-ink outfit tabular-nums leading-none">{card.value}</p>
+                                    <p className="text-xs text-dash-mute font-medium mt-1">{card.label}</p>
                                 </div>
                             </div>
                         </div>
@@ -169,30 +169,30 @@ export default function UserCoursesPage() {
             </div>
 
             {/* ═══════ Enrolled Courses ═══════ */}
-            <div className="bg-white rounded-2xl border border-slate-200/70 p-5 sm:p-6 shadow-sm">
+            <div className="bg-dash-card rounded-2xl border border-dash-line/70 p-5 sm:p-6 shadow-sm">
                 {/* Toolbar */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-                    <h2 className="outfit text-lg font-bold text-slate-800 flex items-center gap-2.5">
-                        <div className="w-1.5 h-5 bg-gradient-to-b from-[#F3A522] to-[#d88f13] rounded-full" />
+                    <h2 className="outfit text-lg font-bold text-dash-ink2 flex items-center gap-2.5">
+                        <div className="w-1.5 h-5 bg-gradient-to-b from-brand to-brand-hover rounded-full" />
                         Enrolled Courses
-                        <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{filteredEnrolled.length}</span>
+                        <span className="text-xs font-semibold text-dash-mute2 bg-dash-soft2 px-2 py-0.5 rounded-full">{filteredEnrolled.length}</span>
                     </h2>
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         {/* Search */}
                         <div className="relative flex-1 sm:w-56">
-                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-mute2" size={15} />
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search courses..."
-                                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-[#F3A522] focus:ring-2 focus:ring-[#F0DFB4] outline-none transition placeholder:text-slate-400"
+                                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-dash-line bg-dash-soft/60 focus:bg-dash-card focus:border-brand focus:ring-2 focus:ring-brand-line outline-none transition placeholder:text-dash-mute2"
                             />
                         </div>
 
                         {/* Filter tabs */}
-                        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
+                        <div className="flex items-center gap-1 p-1 bg-dash-soft2 rounded-xl">
                             {[
                                 { id: 'all', label: 'All' },
                                 { id: 'active', label: 'Active' },
@@ -203,8 +203,8 @@ export default function UserCoursesPage() {
                                     key={tab.id}
                                     onClick={() => setFilter(tab.id)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === tab.id
-                                        ? 'bg-white text-[#F3A522] shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                        ? 'bg-dash-card text-brand shadow-sm'
+                                        : 'text-dash-mute hover:text-dash-ink3'
                                         }`}
                                 >
                                     {tab.label}
@@ -216,18 +216,18 @@ export default function UserCoursesPage() {
 
                 {filteredEnrolled.length === 0 ? (
                     <div className="text-center py-16">
-                        <div className="w-20 h-20 bg-[#FEF6E7] rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <FiBook className="text-3xl text-[#e0a53a]" />
+                        <div className="w-20 h-20 bg-brand-soft rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <FiBook className="text-3xl text-brand-strong" />
                         </div>
-                        <h3 className="text-lg font-semibold text-slate-700 mb-2">No Courses Found</h3>
-                        <p className="text-slate-500 mb-6 max-w-md mx-auto text-sm">
+                        <h3 className="text-lg font-semibold text-dash-ink3 mb-2">No Courses Found</h3>
+                        <p className="text-dash-mute mb-6 max-w-md mx-auto text-sm">
                             {filter !== 'all' || searchTerm
                                 ? 'No courses match your current filter or search.'
                                 : "You haven't enrolled in any courses yet. Browse our catalog and start your learning journey!"}
                         </p>
                         <Link
                             href="/courses"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#F3A522]/20 transition"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand to-brand-hover text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-brand/20 transition"
                         >
                             <FiSearch size={18} />
                             Browse Courses
@@ -249,13 +249,13 @@ export default function UserCoursesPage() {
                             const recordedLabel = isComplete ? 'Review Course' : percent > 0 ? 'Continue Learning' : 'Start Course';
 
                             return (
-                                <div key={enrollment._id} className="bg-white rounded-2xl border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col">
+                                <div key={enrollment._id} className="bg-dash-card rounded-2xl border border-dash-line/70 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col">
                                     {/* Thumbnail with overlay */}
                                     <div className="h-36 relative overflow-hidden">
                                         {course.image ? (
                                             <img src={course.image} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                         ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center">
+                                            <div className="w-full h-full bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center">
                                                 <FiBook className="text-white/70" size={30} />
                                             </div>
                                         )}
@@ -266,7 +266,7 @@ export default function UserCoursesPage() {
                                             ? 'bg-emerald-500/90 text-white'
                                             : isPending
                                                 ? 'bg-orange-500/90 text-white'
-                                                : 'bg-white/90 text-slate-700'
+                                                : 'bg-dash-card/90 text-dash-ink3'
                                             }`}>
                                             {isComplete ? '✓ Completed' : isPending ? '⏳ Pending' : '● Active'}
                                         </div>
@@ -290,28 +290,28 @@ export default function UserCoursesPage() {
                                         {isRecorded ? (
                                             /* ── RECORDED: progress + Continue/Start/Review ── */
                                             <>
-                                                <div className="flex items-center gap-3 text-xs text-slate-400 mb-4">
+                                                <div className="flex items-center gap-3 text-xs text-dash-mute2 mb-4">
                                                     {course.durationMonth ? (
                                                         <span className="flex items-center gap-1">
                                                             <FiClock size={11} /> {course.durationMonth} mo
                                                         </span>
                                                     ) : null}
                                                     {progress ? (
-                                                        <span className="flex items-center gap-1 text-[#c9871a]">
+                                                        <span className="flex items-center gap-1 text-brand-ink">
                                                             <FiCheckCircle size={11} /> {progress.completedLessons}/{progress.totalLessons} lessons
                                                         </span>
                                                     ) : null}
                                                 </div>
                                                 <div className="mb-4">
                                                     <div className="flex justify-between text-[11px] mb-1.5">
-                                                        <span className="text-slate-400 font-medium">Progress</span>
-                                                        <span className={`font-bold ${isComplete ? 'text-emerald-500' : 'text-[#c9871a]'}`}>{percent}%</span>
+                                                        <span className="text-dash-mute2 font-medium">Progress</span>
+                                                        <span className={`font-bold ${isComplete ? 'text-emerald-500' : 'text-brand-ink'}`}>{percent}%</span>
                                                     </div>
-                                                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className="w-full h-1.5 bg-dash-soft2 rounded-full overflow-hidden">
                                                         <div
                                                             className={`h-full rounded-full transition-all duration-700 ease-out ${isComplete
                                                                 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
-                                                                : 'bg-gradient-to-r from-[#F3A522] to-[#d88f13]'
+                                                                : 'bg-gradient-to-r from-brand to-brand-hover'
                                                                 }`}
                                                             style={{ width: `${percent}%` }}
                                                         />
@@ -328,7 +328,7 @@ export default function UserCoursesPage() {
                                                             href={dest.href}
                                                             className={`w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 ${isComplete
                                                                 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
-                                                                : 'bg-[#FEF6E7] text-[#c9871a] border border-[#F0DFB4]/60 hover:bg-gradient-to-r hover:from-[#F3A522] hover:to-[#d88f13] hover:text-white hover:border-[#F3A522]'
+                                                                : 'bg-brand-soft text-brand-ink border border-brand-line/60 hover:bg-gradient-to-r hover:from-brand hover:to-brand-hover hover:text-white hover:border-brand'
                                                                 }`}
                                                         >
                                                             <FiPlay size={12} />
@@ -343,28 +343,28 @@ export default function UserCoursesPage() {
                                             <>
                                                 <div className="grid grid-cols-2 gap-2 mb-3">
                                                     {course.durationMonth ? (
-                                                        <div className="rounded-lg bg-slate-50/70 border border-slate-100 p-2.5">
-                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Duration</p>
-                                                            <p className="text-xs font-bold text-slate-700 mt-0.5 flex items-center gap-1">
-                                                                <FiClock size={11} className="text-slate-400" />
+                                                        <div className="rounded-lg bg-dash-soft/70 border border-dash-line-soft p-2.5">
+                                                            <p className="text-[9px] font-bold text-dash-mute2 uppercase tracking-wider">Duration</p>
+                                                            <p className="text-xs font-bold text-dash-ink3 mt-0.5 flex items-center gap-1">
+                                                                <FiClock size={11} className="text-dash-mute2" />
                                                                 {course.durationMonth} {course.durationMonth === 1 ? 'month' : 'months'}
                                                             </p>
                                                         </div>
                                                     ) : null}
                                                     {course.lectures ? (
-                                                        <div className="rounded-lg bg-slate-50/70 border border-slate-100 p-2.5">
-                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Lectures</p>
-                                                            <p className="text-xs font-bold text-slate-700 mt-0.5 flex items-center gap-1">
-                                                                <FiLayers size={11} className="text-slate-400" />
+                                                        <div className="rounded-lg bg-dash-soft/70 border border-dash-line-soft p-2.5">
+                                                            <p className="text-[9px] font-bold text-dash-mute2 uppercase tracking-wider">Lectures</p>
+                                                            <p className="text-xs font-bold text-dash-ink3 mt-0.5 flex items-center gap-1">
+                                                                <FiLayers size={11} className="text-dash-mute2" />
                                                                 {course.lectures}
                                                             </p>
                                                         </div>
                                                     ) : null}
                                                     {course.totalExam ? (
-                                                        <div className="rounded-lg bg-slate-50/70 border border-slate-100 p-2.5">
-                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Exams</p>
-                                                            <p className="text-xs font-bold text-slate-700 mt-0.5 flex items-center gap-1">
-                                                                <FiFileText size={11} className="text-slate-400" />
+                                                        <div className="rounded-lg bg-dash-soft/70 border border-dash-line-soft p-2.5">
+                                                            <p className="text-[9px] font-bold text-dash-mute2 uppercase tracking-wider">Exams</p>
+                                                            <p className="text-xs font-bold text-dash-ink3 mt-0.5 flex items-center gap-1">
+                                                                <FiFileText size={11} className="text-dash-mute2" />
                                                                 {course.totalExam}
                                                             </p>
                                                         </div>
@@ -372,8 +372,8 @@ export default function UserCoursesPage() {
                                                 </div>
 
                                                 {mentor && (
-                                                    <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-[#FEF6E7]/50 border border-[#F0DFB4]/70">
-                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex-shrink-0 flex items-center justify-center">
+                                                    <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-brand-soft/50 border border-brand-line/70">
+                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-brand to-brand-hover flex-shrink-0 flex items-center justify-center">
                                                             {mentor.image ? (
                                                                 <img src={mentor.image} alt="" className="w-full h-full object-cover" />
                                                             ) : (
@@ -383,8 +383,8 @@ export default function UserCoursesPage() {
                                                             )}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">Mentor</p>
-                                                            <p className="text-[11px] font-bold text-slate-700 truncate">{mentor.name}</p>
+                                                            <p className="text-[9px] text-dash-mute2 uppercase tracking-wider font-bold">Mentor</p>
+                                                            <p className="text-[11px] font-bold text-dash-ink3 truncate">{mentor.name}</p>
                                                         </div>
                                                     </div>
                                                 )}
@@ -398,7 +398,7 @@ export default function UserCoursesPage() {
                                                     ) : (
                                                         <Link
                                                             href={dest.href}
-                                                            className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 bg-[#FEF6E7] text-[#c9871a] border border-[#F0DFB4]/60 hover:bg-gradient-to-r hover:from-[#F3A522] hover:to-[#d88f13] hover:text-white hover:border-[#F3A522]"
+                                                            className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 bg-brand-soft text-brand-ink border border-brand-line/60 hover:bg-gradient-to-r hover:from-brand hover:to-brand-hover hover:text-white hover:border-brand"
                                                         >
                                                             <DestIcon size={12} />
                                                             {dest.label}

@@ -55,3 +55,20 @@ export function uploadMedia(file, onProgress) {
 export const isImageFile = file =>
   Boolean(file) &&
   (file.type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(file.name || ''));
+
+/**
+ * Same guard for PDFs.
+ *
+ * The name check is not redundant with the MIME check: a file dragged off the
+ * Windows desktop often arrives with an empty `type`, so trusting MIME alone
+ * would reject a perfectly good PDF.
+ */
+export const isPdfFile = file =>
+  Boolean(file) && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || ''));
+
+/** Human-readable file size for upload UIs. */
+export const formatFileSize = bytes => {
+  if (!bytes) return '';
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+};

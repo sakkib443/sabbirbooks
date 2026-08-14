@@ -79,7 +79,7 @@ export default function CoursesPage() {
     switch (status) {
       case 'published': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'draft': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'archived': return 'bg-slate-100 text-slate-500 border-slate-200';
+      case 'archived': return 'bg-dash-soft2 text-dash-mute border-dash-line';
       default: return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     }
   };
@@ -93,14 +93,14 @@ export default function CoursesPage() {
 
   // Loading Skeleton
   const CourseSkeleton = () => (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div className="h-40 bg-slate-200 animate-pulse"></div>
+    <div className="bg-dash-card rounded-xl border border-dash-line overflow-hidden">
+      <div className="h-40 bg-dash-soft3 animate-pulse"></div>
       <div className="p-4 space-y-3">
-        <div className="h-4 bg-slate-200 rounded animate-pulse w-3/4"></div>
-        <div className="h-3 bg-slate-200 rounded animate-pulse w-1/2"></div>
+        <div className="h-4 bg-dash-soft3 rounded animate-pulse w-3/4"></div>
+        <div className="h-3 bg-dash-soft3 rounded animate-pulse w-1/2"></div>
         <div className="flex gap-2 pt-2">
-          <div className="h-8 bg-slate-200 rounded animate-pulse flex-1"></div>
-          <div className="h-8 bg-slate-200 rounded animate-pulse flex-1"></div>
+          <div className="h-8 bg-dash-soft3 rounded animate-pulse flex-1"></div>
+          <div className="h-8 bg-dash-soft3 rounded animate-pulse flex-1"></div>
         </div>
       </div>
     </div>
@@ -111,11 +111,11 @@ export default function CoursesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 outfit">Course Management</h1>
-          <p className="text-slate-500 text-sm work">Manage and monitor your academic courses</p>
+          <h1 className="text-2xl font-bold text-dash-ink2 outfit">Course Management</h1>
+          <p className="text-dash-mute text-sm work">Manage and monitor your academic courses</p>
         </div>
         <Link href="/dashboard/admin/course/create">
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-[#9AA0A8] hover:bg-[#e68a47] text-white font-medium text-sm rounded-xl shadow-lg shadow-orange-200 transition-all hover:scale-105">
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-dash-steel hover:bg-[#e68a47] text-white font-medium text-sm rounded-xl shadow-lg shadow-orange-200 transition-all hover:scale-105">
             <FiPlus size={16} />
             Create Course
           </button>
@@ -123,36 +123,36 @@ export default function CoursesPage() {
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center gap-4 bg-dash-card p-4 rounded-xl border border-dash-line">
         {/* Search */}
         <div className="relative flex-1">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-mute2" />
           <input
             placeholder="Search courses..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-[#41bfb8]/20 focus:border-[#41bfb8] outline-none text-sm transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-dash-line focus:ring-2 focus:ring-aqua/20 focus:border-aqua outline-none text-sm transition-all"
           />
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+        <div className="flex items-center gap-1 p-1 bg-dash-soft2 rounded-lg">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-[#41bfb8]' : 'text-slate-500'}`}
+            className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-dash-card shadow-sm text-aqua' : 'text-dash-mute'}`}
           >
             <FiGrid size={18} />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-[#41bfb8]' : 'text-slate-500'}`}
+            className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-dash-card shadow-sm text-aqua' : 'text-dash-mute'}`}
           >
             <FiList size={18} />
           </button>
         </div>
 
         {/* Status Filter */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+        <div className="flex items-center gap-1 p-1 bg-dash-soft2 rounded-lg">
           {[
             { id: 'all', label: 'All' },
             { id: 'published', label: 'Published' },
@@ -163,7 +163,7 @@ export default function CoursesPage() {
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                statusFilter === tab.id ? 'bg-white shadow-sm text-[#41bfb8]' : 'text-slate-500 hover:text-slate-700'
+                statusFilter === tab.id ? 'bg-dash-card shadow-sm text-aqua' : 'text-dash-mute hover:text-dash-ink3'
               }`}
             >
               {tab.label}
@@ -172,9 +172,9 @@ export default function CoursesPage() {
         </div>
 
         {/* Stats */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg">
-          <FiBook className="text-[#41bfb8]" />
-          <span className="text-sm font-medium text-slate-700">{filtered.length}/{courses.length} Courses</span>
+        <div className="flex items-center gap-2 px-4 py-2 bg-dash-soft rounded-lg">
+          <FiBook className="text-aqua" />
+          <span className="text-sm font-medium text-dash-ink3">{filtered.length}/{courses.length} Courses</span>
         </div>
       </div>
 
@@ -184,15 +184,15 @@ export default function CoursesPage() {
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => <CourseSkeleton key={i} />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
-          <FiBook className="mx-auto text-4xl text-slate-300 mb-4" />
-          <h3 className="text-lg font-bold text-slate-800">No Courses Found</h3>
-          <p className="text-slate-500 text-sm mt-1">Try adjusting your search query</p>
+        <div className="text-center py-16 bg-dash-card rounded-xl border border-dash-line">
+          <FiBook className="mx-auto text-4xl text-dash-faint mb-4" />
+          <h3 className="text-lg font-bold text-dash-ink2">No Courses Found</h3>
+          <p className="text-dash-mute text-sm mt-1">Try adjusting your search query</p>
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((course) => (
-            <div key={course._id} className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300">
+            <div key={course._id} className="group bg-dash-card rounded-xl border border-dash-line overflow-hidden hover:shadow-lg transition-all duration-300">
               {/* Image */}
               <div className="relative h-40 overflow-hidden">
                 <img
@@ -201,46 +201,46 @@ export default function CoursesPage() {
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
                 <div className="absolute top-3 left-3 flex gap-1.5">
-                  <span className="px-2.5 py-1 bg-[#41bfb8] text-white text-[10px] font-bold uppercase rounded-md">
+                  <span className="px-2.5 py-1 bg-aqua text-white text-[10px] font-bold uppercase rounded-md">
                     {course.type}
                   </span>
                   <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md border ${getStatusBadge(course.status || 'published')}`}>
                     {course.status || 'published'}
                   </span>
                 </div>
-                <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-white/90 backdrop-blur rounded text-xs font-bold text-[#9AA0A8]">
-                  <FiStar size={10} fill="#9AA0A8" />
+                <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-dash-card/90 backdrop-blur rounded text-xs font-bold text-dash-steel">
+                  <FiStar size={10} fill="var(--dash-steel)" />
                   {course.rating}
                 </div>
               </div>
 
               {/* Content */}
               <div className="p-4">
-                <h3 className="text-sm font-bold text-slate-800 line-clamp-2 mb-2 outfit">{course.title}</h3>
+                <h3 className="text-sm font-bold text-dash-ink2 line-clamp-2 mb-2 outfit">{course.title}</h3>
 
-                <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
-                  <FiUser className="text-[#41bfb8]" />
+                <div className="flex items-center gap-2 text-xs text-dash-mute mb-3">
+                  <FiUser className="text-aqua" />
                   <span className="truncate">{course.instructorName || course.mentor?.name || 'Unknown'}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-4">
+                <div className="flex items-center justify-between text-xs text-dash-mute mb-4">
                   <span>{course.lectures} Lectures</span>
                   <span>{course.durationMonth} Months</span>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                  <span className="text-lg font-bold text-slate-800">{course.fee}</span>
-                  <span className="text-xs text-slate-400">{course.totalStudentsEnroll} enrolled</span>
+                <div className="flex items-center justify-between pt-3 border-t border-dash-line-soft">
+                  <span className="text-lg font-bold text-dash-ink2">{course.fee}</span>
+                  <span className="text-xs text-dash-mute2">{course.totalStudentsEnroll} enrolled</span>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex border-t border-slate-100">
+              <div className="flex border-t border-dash-line-soft">
                 <select
                   value={course.status || 'published'}
                   onChange={(e) => handleStatusToggle(course._id, e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 py-3 text-xs font-bold bg-transparent text-slate-500 hover:bg-slate-50 text-center cursor-pointer outline-none"
+                  className="flex-1 py-3 text-xs font-bold bg-transparent text-dash-mute hover:bg-dash-soft text-center cursor-pointer outline-none"
                 >
                   <option value="published">✓ Published</option>
                   <option value="draft">◌ Draft</option>
@@ -248,13 +248,13 @@ export default function CoursesPage() {
                 </select>
                 <Link
                   href={`/dashboard/admin/course/edit/${course._id}`}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 text-amber-600 hover:bg-amber-50 text-xs font-bold transition-colors border-l border-slate-100"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 text-amber-600 hover:bg-amber-50 text-xs font-bold transition-colors border-l border-dash-line-soft"
                 >
                   <FiEdit2 size={14} /> Edit
                 </Link>
                 <button
                   onClick={() => handleDelete(course._id)}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors border-l border-slate-100"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors border-l border-dash-line-soft"
                 >
                   <FiTrash2 size={14} /> Delete
                 </button>
@@ -263,21 +263,21 @@ export default function CoursesPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+        <div className="bg-dash-card rounded-xl border border-dash-line divide-y divide-dash-line-soft">
           {filtered.map((course) => (
-            <div key={course._id} className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors">
+            <div key={course._id} className="flex items-center gap-4 p-4 hover:bg-dash-soft transition-colors">
               <img src={course.image} alt={course.title} className="w-20 h-14 object-cover rounded-lg" />
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-slate-800 truncate">{course.title}</h3>
-                <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
+                <h3 className="text-sm font-bold text-dash-ink2 truncate">{course.title}</h3>
+                <div className="flex items-center gap-4 text-xs text-dash-mute mt-1">
                   <span>{course.type}</span>
                   <span>{course.lectures} Lectures</span>
                   <span>{course.durationMonth} Months</span>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-800">{course.fee}</p>
-                <p className="text-xs text-slate-400">{course.totalStudentsEnroll} enrolled</p>
+                <p className="text-sm font-bold text-dash-ink2">{course.fee}</p>
+                <p className="text-xs text-dash-mute2">{course.totalStudentsEnroll} enrolled</p>
               </div>
               <div className="flex items-center gap-2">
                 <Link

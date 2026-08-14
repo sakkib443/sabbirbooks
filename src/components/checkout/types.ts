@@ -3,16 +3,23 @@
 // book (GET /api/books/:slug), plus the Order returned by /api/orders.
 
 export type CheckoutType = "course" | "book";
-// Demo gateways (kept for later re-enable; SSLCommerz is deferred for now).
+// The hosted gateways. Real when the server reports credentials for them
+// (GET /api/payment/gateways); a built-in demo stand-in otherwise.
 export type PaymentMethod = "bkash" | "sslcommerz";
 
 // Manual payment — the mobile wallet the buyer used to Send Money.
 export type ManualChannel = "bkash" | "rocket" | "nagad";
 
 // How the buyer pays.
-//   online → Send Money now, submit the TrxID, admin verifies
-//   cod    → hand cash to the courier when the parcel arrives
-export type PayMode = "online" | "cod";
+//   gateway → hosted bKash/SSLCommerz checkout, settles instantly
+//   online  → Send Money by hand now, submit the TrxID, admin verifies
+//   cod     → hand cash to the courier when the parcel arrives
+//
+// "online" keeps its original meaning of the MANUAL flow. Renaming it to
+// something clearer would have been tidier, but it is the live revenue path and
+// the name is load-bearing in CheckoutView, the success screen and the admin
+// order queue — a rename buys nothing and risks the one flow that must not break.
+export type PayMode = "gateway" | "online" | "cod";
 
 // Courier zone; drives the delivery charge.
 export type DeliveryArea = "inside-dhaka" | "outside-dhaka";
@@ -137,6 +144,11 @@ export type SuccessResult =
       itemKind: CheckoutType;
       title: string;
       reference: string; // order number / enrollment ref
+      // Mongo _id, book orders only. `reference` is the human-facing order
+      // number, which the tracking route cannot look up — carrying the id
+      // lets the success screen link straight at the order instead of
+      // dropping the buyer on a list to find it themselves.
+      orderId?: string;
       amount: number;
       channel: ManualChannel;
       isPrintedBook?: boolean;
@@ -146,6 +158,7 @@ export type SuccessResult =
       kind: "cod";
       title: string;
       reference: string; // order number
+      orderId?: string; // Mongo _id — see the note on `manual` above
       amount: number; // what the courier will collect
       deliveryCharge: number;
       supportPhone?: string;
@@ -158,6 +171,10 @@ export type CheckoutStep =
   | "creating"
   | "initiating"
   | "paying"
+  // Handing the browser over to the gateway's hosted page. The button stays in
+  // this state until navigation happens, so nobody clicks Pay twice while the
+  // redirect is in flight and ends up with two orders.
+  | "redirecting"
   | "confirming"
   | "done";
 

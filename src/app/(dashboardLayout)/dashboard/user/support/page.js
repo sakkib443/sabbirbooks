@@ -75,8 +75,8 @@ export default function UserSupportPage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-slate-900">Help & Support</h1>
-                <p className="text-slate-500 text-sm mt-1">Get help with your courses and account</p>
+                <h1 className="text-2xl font-bold text-dash-ink">Help & Support</h1>
+                <p className="text-dash-mute text-sm mt-1">Get help with your courses and account</p>
             </div>
 
             {/* Contact Methods */}
@@ -86,16 +86,16 @@ export default function UserSupportPage() {
                     return (
                         <div
                             key={index}
-                            className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#F3A522]/30 transition"
+                            className="bg-dash-card rounded-xl border border-dash-line p-5 hover:shadow-md hover:border-brand/30 transition"
                         >
                             <div className="flex items-start gap-4">
                                 <div className={`w-12 h-12 rounded-xl ${method.bg} flex items-center justify-center`}>
                                     <Icon className={method.color} size={22} />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-slate-800">{method.title}</h3>
-                                    <p className="text-sm text-slate-700 font-medium mt-1">{method.value}</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">{method.subtext}</p>
+                                    <h3 className="font-semibold text-dash-ink2">{method.title}</h3>
+                                    <p className="text-sm text-dash-ink3 font-medium mt-1">{method.value}</p>
+                                    <p className="text-xs text-dash-mute mt-0.5">{method.subtext}</p>
                                 </div>
                             </div>
                         </div>
@@ -105,9 +105,9 @@ export default function UserSupportPage() {
 
             <div className="grid lg:grid-cols-2 gap-6">
                 {/* FAQs */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                    <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <FiHelpCircle className="text-[#F3A522]" />
+                <div className="bg-dash-card rounded-2xl border border-dash-line p-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-dash-ink2 mb-6 flex items-center gap-2">
+                        <FiHelpCircle className="text-brand" />
                         Frequently Asked Questions
                     </h2>
 
@@ -115,21 +115,21 @@ export default function UserSupportPage() {
                         {faqs.map((faq) => (
                             <div
                                 key={faq.id}
-                                className="border border-slate-200 rounded-xl overflow-hidden"
+                                className="border border-dash-line rounded-xl overflow-hidden"
                             >
                                 <button
                                     onClick={() => setExpandedFaq(expandedFaq === faq.id ? null : faq.id)}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition"
+                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-dash-soft transition"
                                 >
-                                    <span className="font-medium text-slate-800">{faq.question}</span>
+                                    <span className="font-medium text-dash-ink2">{faq.question}</span>
                                     {expandedFaq === faq.id ? (
-                                        <FiChevronUp className="text-[#F3A522]" />
+                                        <FiChevronUp className="text-brand" />
                                     ) : (
-                                        <FiChevronDown className="text-slate-400" />
+                                        <FiChevronDown className="text-dash-mute2" />
                                     )}
                                 </button>
                                 {expandedFaq === faq.id && (
-                                    <div className="px-4 pb-4 text-sm text-slate-600 border-t border-slate-100 pt-3">
+                                    <div className="px-4 pb-4 text-sm text-dash-ink4 border-t border-dash-line-soft pt-3">
                                         {faq.answer}
                                     </div>
                                 )}
@@ -140,7 +140,7 @@ export default function UserSupportPage() {
                     {/* More Help Link */}
                     <a
                         href="/help"
-                        className="mt-6 flex items-center justify-center gap-2 text-[#F3A522] font-medium hover:underline"
+                        className="mt-6 flex items-center justify-center gap-2 text-brand font-medium hover:underline"
                     >
                         View All FAQs
                         <FiExternalLink size={14} />
@@ -148,32 +148,32 @@ export default function UserSupportPage() {
                 </div>
 
                 {/* Submit Ticket */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                    <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <FiMessageCircle className="text-[#F3A522]" />
+                <div className="bg-dash-card rounded-2xl border border-dash-line p-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-dash-ink2 mb-6 flex items-center gap-2">
+                        <FiMessageCircle className="text-brand" />
                         Submit a Support Ticket
                     </h2>
 
                     <form onSubmit={handleSubmitTicket} className="space-y-4">
                         {/* Subject */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Subject</label>
+                            <label className="block text-sm font-medium text-dash-ink3 mb-2">Subject</label>
                             <input
                                 type="text"
                                 value={ticketForm.subject}
                                 onChange={(e) => setTicketForm({ ...ticketForm, subject: e.target.value })}
                                 placeholder="Brief description of your issue"
-                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/20 outline-none"
+                                className="w-full px-4 py-2.5 rounded-xl border border-dash-line focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
                             />
                         </div>
 
                         {/* Category */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
+                            <label className="block text-sm font-medium text-dash-ink3 mb-2">Category</label>
                             <select
                                 value={ticketForm.category}
                                 onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })}
-                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/20 outline-none"
+                                className="w-full px-4 py-2.5 rounded-xl border border-dash-line focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
                             >
                                 <option value="general">General Inquiry</option>
                                 <option value="course">Course Related</option>
@@ -185,20 +185,20 @@ export default function UserSupportPage() {
 
                         {/* Message */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Message</label>
+                            <label className="block text-sm font-medium text-dash-ink3 mb-2">Message</label>
                             <textarea
                                 value={ticketForm.message}
                                 onChange={(e) => setTicketForm({ ...ticketForm, message: e.target.value })}
                                 placeholder="Describe your issue in detail..."
                                 rows={5}
-                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#F3A522] focus:ring-2 focus:ring-[#F3A522]/20 outline-none resize-none"
+                                className="w-full px-4 py-2.5 rounded-xl border border-dash-line focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none resize-none"
                             />
                         </div>
 
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            className="w-full py-3 bg-gradient-to-r from-[#F3A522] to-[#d88f13] text-white font-semibold rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-gradient-to-r from-brand to-brand-hover text-white font-semibold rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2"
                         >
                             <FiSend size={18} />
                             Submit Ticket

@@ -141,7 +141,7 @@ export default function EnrollmentsPage() {
     active: 'bg-emerald-50 text-emerald-600 border-emerald-300',
     completed: 'bg-blue-50 text-blue-600 border-blue-300',
     dropout: 'bg-red-50 text-red-500 border-red-300',
-    inactive: 'bg-slate-100 text-slate-500 border-slate-300',
+    inactive: 'bg-dash-soft2 text-dash-mute border-dash-line-strong',
   }[s] || 'bg-emerald-50 text-emerald-600 border-emerald-300');
 
   const handleDeleteEnrollment = async (enrollmentId) => {
@@ -190,8 +190,8 @@ export default function EnrollmentsPage() {
   return (
     <div className="poppins space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 outfit">Enrollments</h1>
-        <p className="text-sm text-slate-500 mt-1">Active students — manage batches & track progress</p>
+        <h1 className="text-2xl font-bold text-dash-ink outfit">Enrollments</h1>
+        <p className="text-sm text-dash-mute mt-1">Active students — manage batches & track progress</p>
       </div>
 
       {/* Stats */}
@@ -204,14 +204,14 @@ export default function EnrollmentsPage() {
           { label: 'No Batch', value: withoutBatch, icon: FiHash, color: 'text-amber-600', bg: 'bg-amber-50' },
           { label: 'Courses', value: courseSet.size, icon: FiBook, color: 'text-blue-600', bg: 'bg-blue-50' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-slate-200/60 p-4 shadow-sm">
+          <div key={s.label} className="bg-dash-card rounded-xl border border-dash-line/60 p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center`}>
                 <s.icon size={18} className={s.color} />
               </div>
               <div>
                 <p className={`text-xl font-semibold ${s.color}`}>{s.value}</p>
-                <p className="text-sm text-slate-400">{s.label}</p>
+                <p className="text-sm text-dash-mute2">{s.label}</p>
               </div>
             </div>
           </div>
@@ -222,15 +222,15 @@ export default function EnrollmentsPage() {
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <FiSearch className="absolute left-3 top-3 text-slate-400" size={16} />
+            <FiSearch className="absolute left-3 top-3 text-dash-mute2" size={16} />
             <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by student or course..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200/60 text-sm focus:border-teal-400 outline-none bg-white shadow-sm" />
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-dash-line/60 text-sm focus:border-teal-400 outline-none bg-dash-card shadow-sm" />
           </div>
-          <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+          <div className="flex gap-1 bg-dash-soft2 rounded-xl p-1">
             {['all', 'unassigned', 'assigned'].map(s => (
               <button key={s} onClick={() => setFilterBatch(s)}
-                className={`px-3 py-2 rounded-lg text-sm capitalize transition ${filterBatch === s ? 'bg-white text-teal-600 shadow-sm font-medium' : 'text-slate-500'}`}>
+                className={`px-3 py-2 rounded-lg text-sm capitalize transition ${filterBatch === s ? 'bg-dash-card text-teal-600 shadow-sm font-medium' : 'text-dash-mute'}`}>
                 {s}
               </button>
             ))}
@@ -239,41 +239,41 @@ export default function EnrollmentsPage() {
 
         {/* Advanced Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-slate-400 flex items-center gap-1"><FiFilter size={13} /> Filters:</span>
+          <span className="text-sm text-dash-mute2 flex items-center gap-1"><FiFilter size={13} /> Filters:</span>
 
           {/* Course Type */}
           <div className="relative">
-            <FiGlobe size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-slate-400" />
+            <FiGlobe size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-dash-mute2" />
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-              className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition ${filterType !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-white text-slate-600 border-slate-200'
+              className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition ${filterType !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-dash-card text-dash-ink4 border-dash-line'
                 }`}>
               <option value="all">All Types</option>
               <option value="online">Online</option>
               <option value="offline">Offline</option>
               <option value="recorded">Recorded</option>
             </select>
-            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-slate-300" />
+            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-dash-faint" />
           </div>
 
           {/* Course */}
           <div className="relative">
-            <FiBookOpen size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-slate-400" />
+            <FiBookOpen size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-dash-mute2" />
             <select value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)}
-              className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition max-w-[220px] truncate ${filterCourse !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-white text-slate-600 border-slate-200'
+              className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition max-w-[220px] truncate ${filterCourse !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-dash-card text-dash-ink4 border-dash-line'
                 }`}>
               <option value="all">All Courses</option>
               {courseList.map(c => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
             </select>
-            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-slate-300" />
+            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-dash-faint" />
           </div>
 
           {/* Student Status */}
           <div className="relative">
-            <FiUserCheck size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-slate-400" />
+            <FiUserCheck size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-dash-mute2" />
             <select value={filterStudentStatus} onChange={(e) => setFilterStudentStatus(e.target.value)}
-              className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition ${filterStudentStatus !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-white text-slate-600 border-slate-200'
+              className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition ${filterStudentStatus !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-dash-card text-dash-ink4 border-dash-line'
                 }`}>
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -281,7 +281,7 @@ export default function EnrollmentsPage() {
               <option value="dropout">Dropout</option>
               <option value="inactive">Inactive</option>
             </select>
-            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-slate-300" />
+            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-dash-faint" />
           </div>
 
           {/* Clear */}
@@ -292,19 +292,19 @@ export default function EnrollmentsPage() {
             </button>
           )}
 
-          <span className="ml-auto text-sm text-slate-400">{filtered.length} of {enrollments.length} enrollments</span>
+          <span className="ml-auto text-sm text-dash-mute2">{filtered.length} of {enrollments.length} enrollments</span>
         </div>
       </div>
 
       {/* Table */}
       {loading ? (
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100">
+                <tr className="bg-dash-soft/80 border-b border-dash-line-soft">
                   {['Student', 'Course', 'Enrolled', 'Progress', 'Status', 'Batch'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-sm font-medium text-slate-500">{h}</th>
+                    <th key={h} className="text-left px-5 py-3 text-sm font-medium text-dash-mute">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -313,24 +313,24 @@ export default function EnrollmentsPage() {
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-16 text-center shadow-sm">
-          <FiUsers className="mx-auto text-slate-300 mb-3" size={36} />
-          <h3 className="font-medium text-slate-600 text-base">No Enrollments Found</h3>
-          <p className="text-sm text-slate-400 mt-1">Active enrollments will appear here after orders are approved.</p>
+        <div className="bg-dash-card rounded-2xl border border-dash-line/60 p-16 text-center shadow-sm">
+          <FiUsers className="mx-auto text-dash-faint mb-3" size={36} />
+          <h3 className="font-medium text-dash-ink4 text-base">No Enrollments Found</h3>
+          <p className="text-sm text-dash-mute2 mt-1">Active enrollments will appear here after orders are approved.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Student</th>
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Course</th>
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Enrolled</th>
-                  <th className="text-center px-5 py-3 text-sm font-medium text-slate-500">Progress</th>
-                  <th className="text-center px-5 py-3 text-sm font-medium text-slate-500">Status</th>
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Batch</th>
-                  <th className="text-center px-5 py-3 text-sm font-medium text-slate-500">Action</th>
+                <tr className="bg-dash-soft/80 border-b border-dash-line-soft">
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Student</th>
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Course</th>
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Enrolled</th>
+                  <th className="text-center px-5 py-3 text-sm font-medium text-dash-mute">Progress</th>
+                  <th className="text-center px-5 py-3 text-sm font-medium text-dash-mute">Status</th>
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Batch</th>
+                  <th className="text-center px-5 py-3 text-sm font-medium text-dash-mute">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -362,7 +362,7 @@ export default function EnrollmentsPage() {
                   };
 
                   return (
-                    <tr key={enrollment._id} className="border-b border-slate-100 hover:bg-slate-50/40 transition h-[56px]">
+                    <tr key={enrollment._id} className="border-b border-dash-line-soft hover:bg-dash-soft/40 transition h-[56px]">
                       {/* Student */}
                       <td className="px-5 py-3">
                         <Link href={`/dashboard/admin/user/${student._id || ''}`} className="flex items-center gap-2.5 group">
@@ -370,22 +370,22 @@ export default function EnrollmentsPage() {
                             {studentName.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm text-slate-700 group-hover:text-teal-600 transition truncate max-w-[150px]">
+                            <p className="text-sm text-dash-ink3 group-hover:text-teal-600 transition truncate max-w-[150px]">
                               {studentName}
                             </p>
-                            <p className="text-xs text-slate-400 truncate max-w-[150px]">{student.email}</p>
+                            <p className="text-xs text-dash-mute2 truncate max-w-[150px]">{student.email}</p>
                           </div>
                         </Link>
                       </td>
 
                       {/* Course */}
                       <td className="px-5 py-3">
-                        <p className="text-sm text-slate-700 truncate max-w-[180px]">{course.title || 'Course'}</p>
+                        <p className="text-sm text-dash-ink3 truncate max-w-[180px]">{course.title || 'Course'}</p>
                       </td>
 
                       {/* Enrolled */}
                       <td className="px-5 py-3">
-                        <span className="text-sm text-slate-500">
+                        <span className="text-sm text-dash-mute">
                           {new Date(enrollment.enrolledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                       </td>
@@ -393,13 +393,13 @@ export default function EnrollmentsPage() {
                       {/* Progress */}
                       <td className="px-5 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <div className="w-20 h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="w-20 h-2 rounded-full bg-dash-soft2 overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${pct >= 80 ? 'bg-emerald-500' : pct >= 40 ? 'bg-teal-500' : 'bg-amber-400'}`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          <span className="text-sm text-slate-600 w-8">{pct}%</span>
+                          <span className="text-sm text-dash-ink4 w-8">{pct}%</span>
                         </div>
                       </td>
 
@@ -434,7 +434,7 @@ export default function EnrollmentsPage() {
                               disabled={assigning === enrollment._id}
                               className={`appearance-none px-3 py-1.5 pr-7 rounded-md text-sm cursor-pointer outline-none transition disabled:opacity-50 border ${currentBatchId
                                   ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-teal-300'
+                                  : 'bg-dash-soft text-dash-mute border-dash-line hover:border-teal-300'
                                 }`}
                             >
                               <option value="">— Select Batch —</option>
@@ -485,21 +485,21 @@ export default function EnrollmentsPage() {
       {/* ══════ Transfer Modal ══════ */}
       {transferModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-800">🔄 Course Transfer</h3>
-              <button onClick={() => setTransferModal(null)} className="p-2 hover:bg-slate-100 rounded-lg"><FiX size={18} /></button>
+          <div className="bg-dash-card rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-dash-line-soft">
+              <h3 className="text-lg font-bold text-dash-ink2">🔄 Course Transfer</h3>
+              <button onClick={() => setTransferModal(null)} className="p-2 hover:bg-dash-soft2 rounded-lg"><FiX size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="bg-slate-50 rounded-lg p-3">
-                <p className="text-xs text-slate-400">Student</p>
-                <p className="text-sm font-bold text-slate-700">{`${transferModal.studentId?.firstName || ''} ${transferModal.studentId?.lastName || ''}`.trim()}</p>
-                <p className="text-xs text-slate-400 mt-1">Current Course: <span className="text-slate-600 font-medium">{transferModal.courseId?.title || '—'}</span></p>
+              <div className="bg-dash-soft rounded-lg p-3">
+                <p className="text-xs text-dash-mute2">Student</p>
+                <p className="text-sm font-bold text-dash-ink3">{`${transferModal.studentId?.firstName || ''} ${transferModal.studentId?.lastName || ''}`.trim()}</p>
+                <p className="text-xs text-dash-mute2 mt-1">Current Course: <span className="text-dash-ink4 font-medium">{transferModal.courseId?.title || '—'}</span></p>
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500 mb-1 block">New Course *</label>
+                <label className="text-xs font-bold text-dash-mute mb-1 block">New Course *</label>
                 <select value={transferCourseId} onChange={e => { setTransferCourseId(e.target.value); setTransferBatchId(''); }}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400">
+                  className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400">
                   <option value="">— Select Course —</option>
                   {allCourses.filter(c => c._id !== transferModal.courseId?._id).map(c => (
                     <option key={c._id} value={c._id}>{c.title}</option>
@@ -508,9 +508,9 @@ export default function EnrollmentsPage() {
               </div>
               {transferCourseId && (
                 <div>
-                  <label className="text-xs font-bold text-slate-500 mb-1 block">New Batch (optional)</label>
+                  <label className="text-xs font-bold text-dash-mute mb-1 block">New Batch (optional)</label>
                   <select value={transferBatchId} onChange={e => setTransferBatchId(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400">
+                    className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400">
                     <option value="">— Select Batch —</option>
                     {getBatchesForTransferCourse(transferCourseId).map(b => (
                       <option key={b._id} value={b._id}>{b.name || b.id} — {b.courseName}</option>
@@ -522,8 +522,8 @@ export default function EnrollmentsPage() {
                 ⚠️ Transfer করলে student-এর পুরানো batch assignment ও progress reset হয়ে যাবে।
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100">
-              <button onClick={() => setTransferModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-dash-line-soft">
+              <button onClick={() => setTransferModal(null)} className="px-4 py-2 text-sm text-dash-ink4 hover:bg-dash-soft2 rounded-lg">Cancel</button>
               <button onClick={handleTransfer} disabled={!transferCourseId || transferring}
                 className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-bold hover:bg-violet-700 disabled:opacity-50 transition">
                 {transferring ? <FiLoader className="animate-spin" size={14} /> : <FiRefreshCw size={14} />}

@@ -91,7 +91,7 @@ export default function FeedbackPage() {
           <FiStar
             key={i}
             size={16}
-            className={i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+            className={i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-dash-faint'}
           />
         ))}
       </div>
@@ -102,28 +102,28 @@ export default function FeedbackPage() {
     <div className="p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Feedback & Reviews</h1>
-        <p className="text-slate-600 mt-2">Manage student reviews and course feedback</p>
+        <h1 className="text-3xl font-bold text-dash-ink">Feedback & Reviews</h1>
+        <p className="text-dash-ink4 mt-2">Manage student reviews and course feedback</p>
       </div>
 
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         {/* Search */}
         <div className="flex-1 relative">
-          <FiSearch className="absolute left-3 top-3.5 text-slate-400" size={20} />
+          <FiSearch className="absolute left-3 top-3.5 text-dash-mute2" size={20} />
           <input
             type="text"
             placeholder="Search feedback..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-dash-line-strong focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition"
           />
         </div>
 
         {/* Filter */}
         <div className="flex gap-3">
           <div className="relative">
-            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition">
+            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dash-line-strong text-dash-ink3 hover:bg-dash-soft transition">
               <FiFilter size={18} />
               <span>Rating</span>
               <FiChevronDown size={16} />
@@ -134,20 +134,20 @@ export default function FeedbackPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-slate-600 text-sm">Total Feedback</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">87</p>
+        <div className="bg-dash-card rounded-lg border border-dash-line p-4">
+          <p className="text-dash-ink4 text-sm">Total Feedback</p>
+          <p className="text-2xl font-bold text-dash-ink mt-1">87</p>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-slate-600 text-sm">Avg Rating</p>
+        <div className="bg-dash-card rounded-lg border border-dash-line p-4">
+          <p className="text-dash-ink4 text-sm">Avg Rating</p>
           <p className="text-2xl font-bold text-yellow-500 mt-1">4.6/5</p>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-slate-600 text-sm">Published</p>
+        <div className="bg-dash-card rounded-lg border border-dash-line p-4">
+          <p className="text-dash-ink4 text-sm">Published</p>
           <p className="text-2xl font-bold text-green-600 mt-1">78</p>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-slate-600 text-sm">Pending</p>
+        <div className="bg-dash-card rounded-lg border border-dash-line p-4">
+          <p className="text-dash-ink4 text-sm">Pending</p>
           <p className="text-2xl font-bold text-yellow-600 mt-1">9</p>
         </div>
       </div>
@@ -157,13 +157,13 @@ export default function FeedbackPage() {
         {feedbacks.map((feedback) => (
           <div
             key={feedback.id}
-            className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition"
+            className="bg-dash-card rounded-xl border border-dash-line p-6 shadow-sm hover:shadow-md transition"
           >
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
               <div>
-                <p className="font-semibold text-slate-900">{feedback.userName}</p>
-                <p className="text-sm text-slate-600 mt-1">{feedback.course}</p>
+                <p className="font-semibold text-dash-ink">{feedback.userName}</p>
+                <p className="text-sm text-dash-ink4 mt-1">{feedback.course}</p>
               </div>
               <span
                 className={`inline-flex px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusColor(
@@ -177,23 +177,23 @@ export default function FeedbackPage() {
             {/* Rating */}
             <div className="flex items-center gap-3 mb-4">
               {getRatingStars(feedback.rating)}
-              <span className="text-sm font-medium text-slate-700">
+              <span className="text-sm font-medium text-dash-ink3">
                 {feedback.rating}.0 out of 5
               </span>
             </div>
 
             {/* Message */}
-            <p className="text-slate-600 leading-relaxed italic">
+            <p className="text-dash-ink4 leading-relaxed italic">
               &quot;{feedback.message || "No message provided"}&quot;
             </p>
 
             {/* Footer */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pt-4 border-t border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pt-4 border-t border-dash-line">
               <div className="flex items-center gap-4">
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-dash-ink4">
                   Submitted: {feedback.submittedDate}
                 </span>
-                <span className="flex items-center gap-1 text-sm text-slate-600">
+                <span className="flex items-center gap-1 text-sm text-dash-ink4">
                   <FiMessageSquare size={16} />
                   {feedback.helpful} found helpful
                 </span>
@@ -217,22 +217,22 @@ export default function FeedbackPage() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-6 flex items-center justify-between bg-white rounded-lg border border-slate-200 px-6 py-4">
-        <p className="text-sm text-slate-600">Showing 1 to 5 of 87 results</p>
+      <div className="mt-6 flex items-center justify-between bg-dash-card rounded-lg border border-dash-line px-6 py-4">
+        <p className="text-sm text-dash-ink4">Showing 1 to 5 of 87 results</p>
         <div className="flex gap-2">
-          <button className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+          <button className="px-3 py-2 rounded-lg border border-dash-line-strong text-dash-ink4 hover:bg-dash-soft transition">
             Previous
           </button>
           <button className="px-3 py-2 rounded-lg btn-gradient text-white">
             1
           </button>
-          <button className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+          <button className="px-3 py-2 rounded-lg border border-dash-line-strong text-dash-ink4 hover:bg-dash-soft transition">
             2
           </button>
-          <button className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+          <button className="px-3 py-2 rounded-lg border border-dash-line-strong text-dash-ink4 hover:bg-dash-soft transition">
             3
           </button>
-          <button className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+          <button className="px-3 py-2 rounded-lg border border-dash-line-strong text-dash-ink4 hover:bg-dash-soft transition">
             Next
           </button>
         </div>

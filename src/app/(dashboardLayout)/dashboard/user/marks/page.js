@@ -49,72 +49,72 @@ export default function StudentMarksPage() {
 
   const gradeInfo = getGrade(overallPct);
 
-  if (loading) return <div className="p-6 min-h-screen bg-slate-50 flex items-center justify-center"><FiLoader className="animate-spin text-[#F3A522]" size={30} /></div>;
+  if (loading) return <div className="p-6 min-h-screen bg-dash-soft flex items-center justify-center"><FiLoader className="animate-spin text-brand" size={30} /></div>;
 
   return (
     <div className="space-y-6">
-      <div className="mb-2"><h1 className="text-2xl font-bold text-slate-900">Marks Sheet</h1></div>
+      <div className="mb-2"><h1 className="text-2xl font-bold text-dash-ink">Marks Sheet</h1></div>
 
       {/* Overall Summary */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 mb-8">
+      <div className="bg-dash-card rounded-2xl border border-dash-line/60 shadow-sm p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-slate-800 text-lg">Overall Performance</h2>
+          <h2 className="font-bold text-dash-ink2 text-lg">Overall Performance</h2>
           <div className={`w-16 h-16 rounded-full ${gradeInfo.bg} flex items-center justify-center`}>
             <span className={`text-2xl font-bold ${gradeInfo.color}`}>{gradeInfo.grade}</span>
           </div>
         </div>
         <div className="grid grid-cols-4 gap-4 mb-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-slate-900">{obtainedAll}/{totalAll}</p>
-            <p className="text-xs text-slate-500">Total Marks</p>
+            <p className="text-2xl font-bold text-dash-ink">{obtainedAll}/{totalAll}</p>
+            <p className="text-xs text-dash-mute">Total Marks</p>
           </div>
           <div className="text-center">
             <p className={`text-2xl font-bold ${gradeInfo.color}`}>{overallPct}%</p>
-            <p className="text-xs text-slate-500">Average</p>
+            <p className="text-xs text-dash-mute">Average</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-600">{results.filter(r => r.status === 'graded').length}</p>
-            <p className="text-xs text-slate-500">Exams</p>
+            <p className="text-xs text-dash-mute">Exams</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-purple-600">{submissions.length}</p>
-            <p className="text-xs text-slate-500">Assignments</p>
+            <p className="text-xs text-dash-mute">Assignments</p>
           </div>
         </div>
-        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+        <div className="w-full h-3 bg-dash-soft2 rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all duration-700 ${overallPct >= 60 ? 'bg-emerald-500' : overallPct >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
             style={{ width: `${overallPct}%` }} />
         </div>
       </div>
 
       {/* Exam Results */}
-      <h2 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><FiBook className="text-[#F3A522]" /> Exam Results</h2>
-      <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden mb-8">
+      <h2 className="font-bold text-dash-ink2 mb-3 flex items-center gap-2"><FiBook className="text-brand" /> Exam Results</h2>
+      <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm overflow-hidden mb-8">
         {results.length === 0 ? (
-          <p className="text-center text-slate-500 py-8 text-sm">No exam results</p>
+          <p className="text-center text-dash-mute py-8 text-sm">No exam results</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="text-left px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Exam</th>
-                <th className="text-left px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Course</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Type</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Obtained</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">%</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Grade</th>
+              <tr className="bg-dash-soft/80 border-b border-dash-line-soft">
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Exam</th>
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Course</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Type</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Obtained</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Total</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">%</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Grade</th>
               </tr>
             </thead>
             <tbody>
               {results.map(r => {
                 const g = getGrade(r.percentage);
                 return (
-                  <tr key={r._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition">
-                    <td className="px-4 py-3 font-medium text-slate-800">{r.examId?.title}</td>
-                    <td className="px-4 py-3 text-slate-500">{r.examId?.courseId?.title}</td>
-                    <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-500">{r.examId?.type}</span></td>
+                  <tr key={r._id} className="border-b border-dash-line-soft last:border-0 hover:bg-dash-soft/50 transition">
+                    <td className="px-4 py-3 font-medium text-dash-ink2">{r.examId?.title}</td>
+                    <td className="px-4 py-3 text-dash-mute">{r.examId?.courseId?.title}</td>
+                    <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-dash-soft2 rounded-md text-[10px] font-bold text-dash-mute">{r.examId?.type}</span></td>
                     <td className="px-4 py-3 text-center font-bold">{r.obtainedMarks}</td>
-                    <td className="px-4 py-3 text-center text-slate-500">{r.totalMarks}</td>
+                    <td className="px-4 py-3 text-center text-dash-mute">{r.totalMarks}</td>
                     <td className={`px-4 py-3 text-center font-bold ${g.color}`}>{r.percentage}%</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${g.bg} ${g.color}`}>{r.grade || 'Pending'}</span>
@@ -128,20 +128,20 @@ export default function StudentMarksPage() {
       </div>
 
       {/* Assignment Results */}
-      <h2 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><FiBarChart2 className="text-purple-600" /> Assignment Results</h2>
-      <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
+      <h2 className="font-bold text-dash-ink2 mb-3 flex items-center gap-2"><FiBarChart2 className="text-purple-600" /> Assignment Results</h2>
+      <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm overflow-hidden">
         {submissions.length === 0 ? (
-          <p className="text-center text-slate-500 py-8 text-sm">No graded assignments</p>
+          <p className="text-center text-dash-mute py-8 text-sm">No graded assignments</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="text-left px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Assignment</th>
-                <th className="text-left px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Course</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Obtained</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">%</th>
-                <th className="text-left px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Feedback</th>
+              <tr className="bg-dash-soft/80 border-b border-dash-line-soft">
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Assignment</th>
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Course</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Obtained</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Total</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">%</th>
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-dash-mute2 uppercase tracking-wider">Feedback</th>
               </tr>
             </thead>
             <tbody>
@@ -149,13 +149,13 @@ export default function StudentMarksPage() {
                 const pct = s.assignmentId?.totalMarks > 0 ? Math.round((s.marks / s.assignmentId.totalMarks) * 100) : 0;
                 const g = getGrade(pct);
                 return (
-                  <tr key={s._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition">
-                    <td className="px-4 py-3 font-medium text-slate-800">{s.assignmentId?.title}</td>
-                    <td className="px-4 py-3 text-slate-500">{s.assignmentId?.courseId?.title}</td>
+                  <tr key={s._id} className="border-b border-dash-line-soft last:border-0 hover:bg-dash-soft/50 transition">
+                    <td className="px-4 py-3 font-medium text-dash-ink2">{s.assignmentId?.title}</td>
+                    <td className="px-4 py-3 text-dash-mute">{s.assignmentId?.courseId?.title}</td>
                     <td className="px-4 py-3 text-center font-bold">{s.marks}</td>
-                    <td className="px-4 py-3 text-center text-slate-500">{s.assignmentId?.totalMarks}</td>
+                    <td className="px-4 py-3 text-center text-dash-mute">{s.assignmentId?.totalMarks}</td>
                     <td className={`px-4 py-3 text-center font-bold ${g.color}`}>{pct}%</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{s.feedback || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-dash-mute">{s.feedback || '-'}</td>
                   </tr>
                 );
               })}

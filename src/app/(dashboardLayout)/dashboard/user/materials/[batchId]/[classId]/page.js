@@ -155,7 +155,7 @@ export default function ClassDetailPage({ params }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <FiLoader className="animate-spin text-[#F3A522]" size={28} />
+        <FiLoader className="animate-spin text-brand" size={28} />
       </div>
     );
   }
@@ -164,13 +164,13 @@ export default function ClassDetailPage({ params }) {
     return (
       <div className="space-y-4">
         <Link href={`/dashboard/user/materials/${batchId}`}
-          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-[#c9871a]">
+          className="inline-flex items-center gap-1 text-sm text-dash-mute hover:text-brand-ink">
           <FiArrowLeft size={14} /> Back to class folders
         </Link>
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-          <FiFolder className="mx-auto text-slate-300 mb-3" size={32} />
-          <h3 className="text-base font-bold text-slate-700">Class not found</h3>
-          <p className="text-sm text-slate-500 mt-1">This class may have been removed or you don&apos;t have access.</p>
+        <div className="bg-dash-card rounded-2xl border border-dash-line p-12 text-center">
+          <FiFolder className="mx-auto text-dash-faint mb-3" size={32} />
+          <h3 className="text-base font-bold text-dash-ink3">Class not found</h3>
+          <p className="text-sm text-dash-mute mt-1">This class may have been removed or you don&apos;t have access.</p>
         </div>
       </div>
     );
@@ -192,63 +192,63 @@ export default function ClassDetailPage({ params }) {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-500 flex-wrap">
-        <Link href="/dashboard/user/materials" className="hover:text-[#c9871a] transition">All Courses</Link>
-        <span className="text-slate-300">/</span>
-        <Link href={`/dashboard/user/materials/${batchId}`} className="hover:text-[#c9871a] transition truncate max-w-[200px]">
+      <div className="flex items-center gap-2 text-sm text-dash-mute flex-wrap">
+        <Link href="/dashboard/user/materials" className="hover:text-brand-ink transition">All Courses</Link>
+        <span className="text-dash-faint">/</span>
+        <Link href={`/dashboard/user/materials/${batchId}`} className="hover:text-brand-ink transition truncate max-w-[200px]">
           {course?.title || 'Course'}
         </Link>
-        <span className="text-slate-300">/</span>
-        <span className="text-slate-700 font-semibold truncate max-w-[200px]">{classData.title}</span>
+        <span className="text-dash-faint">/</span>
+        <span className="text-dash-ink3 font-semibold truncate max-w-[200px]">{classData.title}</span>
       </div>
 
       {/* Top Prev/Next class navigation */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         {prevClass ? (
           <Link href={`/dashboard/user/materials/${batchId}/${prevClass._id}`}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#F0DFB4] hover:bg-[#FEF6E7]/50 transition text-sm group max-w-[45%]">
-            <FiArrowLeft size={14} className="text-slate-400 group-hover:text-[#c9871a] group-hover:-translate-x-1 transition flex-shrink-0" />
+            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-dash-card border border-dash-line hover:border-brand-line hover:bg-brand-soft/50 transition text-sm group max-w-[45%]">
+            <FiArrowLeft size={14} className="text-dash-mute2 group-hover:text-brand-ink group-hover:-translate-x-1 transition flex-shrink-0" />
             <div className="text-left min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Previous Class</p>
-              <p className="text-xs font-semibold text-slate-700 truncate group-hover:text-[#a5680f]">
-                <span className="text-[#c9871a] font-mono mr-1">{classNumberFrom(prevClass.title, classes.indexOf(prevClass))}</span>
+              <p className="text-[10px] text-dash-mute2 uppercase tracking-wider font-bold">Previous Class</p>
+              <p className="text-xs font-semibold text-dash-ink3 truncate group-hover:text-brand-deep">
+                <span className="text-brand-ink font-mono mr-1">{classNumberFrom(prevClass.title, classes.indexOf(prevClass))}</span>
                 {prevClass.title}
               </p>
             </div>
           </Link>
         ) : (
-          <span className="px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-400 max-w-[45%]">
+          <span className="px-3 sm:px-4 py-2.5 rounded-xl bg-dash-soft border border-dash-line-soft text-xs text-dash-mute2 max-w-[45%]">
             ◁ No previous class
           </span>
         )}
-        <span className="text-[11px] text-slate-400 font-semibold tabular-nums hidden sm:inline">
+        <span className="text-[11px] text-dash-mute2 font-semibold tabular-nums hidden sm:inline">
           {idx >= 0 ? idx + 1 : 1} / {classes.length}
         </span>
         {nextClass ? (
           <Link href={`/dashboard/user/materials/${batchId}/${nextClass._id}`}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#F0DFB4] hover:bg-[#FEF6E7]/50 transition text-sm group max-w-[45%]">
+            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-dash-card border border-dash-line hover:border-brand-line hover:bg-brand-soft/50 transition text-sm group max-w-[45%]">
             <div className="text-right min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Next Class</p>
-              <p className="text-xs font-semibold text-slate-700 truncate group-hover:text-[#a5680f]">
-                <span className="text-[#c9871a] font-mono mr-1">{classNumberFrom(nextClass.title, classes.indexOf(nextClass))}</span>
+              <p className="text-[10px] text-dash-mute2 uppercase tracking-wider font-bold">Next Class</p>
+              <p className="text-xs font-semibold text-dash-ink3 truncate group-hover:text-brand-deep">
+                <span className="text-brand-ink font-mono mr-1">{classNumberFrom(nextClass.title, classes.indexOf(nextClass))}</span>
                 {nextClass.title}
               </p>
             </div>
-            <FiArrowLeft size={14} className="text-slate-400 group-hover:text-[#c9871a] rotate-180 group-hover:translate-x-1 transition flex-shrink-0" />
+            <FiArrowLeft size={14} className="text-dash-mute2 group-hover:text-brand-ink rotate-180 group-hover:translate-x-1 transition flex-shrink-0" />
           </Link>
         ) : (
-          <span className="px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-400 max-w-[45%]">
+          <span className="px-3 sm:px-4 py-2.5 rounded-xl bg-dash-soft border border-dash-line-soft text-xs text-dash-mute2 max-w-[45%]">
             No next class ▷
           </span>
         )}
       </div>
 
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex items-start gap-4 flex-wrap">
+      <div className="bg-dash-card rounded-2xl border border-dash-line/60 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-dash-line-soft flex items-start gap-4 flex-wrap">
           {/* Class number badge */}
           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0 ${
-            isCompleted ? 'bg-gradient-to-br from-[#F3A522] to-[#d88f13]'
+            isCompleted ? 'bg-gradient-to-br from-brand to-brand-hover'
             : isOngoing ? 'bg-gradient-to-br from-amber-500 to-orange-600'
             : 'bg-gradient-to-br from-blue-500 to-indigo-600'
           }`}>
@@ -257,7 +257,7 @@ export default function ClassDetailPage({ params }) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF6E7] text-[#a5680f] text-[11px] font-mono font-bold border border-[#F0DFB4]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-soft text-brand-deep text-[11px] font-mono font-bold border border-brand-line">
                 <FiHash size={10} /> {batch?.id}
               </span>
               {classData.status && (
@@ -272,22 +272,22 @@ export default function ClassDetailPage({ params }) {
               {classData.type && (
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
                   classData.type === 'live' ? 'bg-red-50 text-red-600 border border-red-200'
-                  : classData.type === 'offline' ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                  : classData.type === 'offline' ? 'bg-dash-soft2 text-dash-ink4 border border-dash-line'
                   : 'bg-violet-50 text-violet-600 border border-violet-200'
                 }`}>
                   {classData.type === 'live' ? '🔴 Live' : classData.type === 'offline' ? '📍 Offline' : '📹 Recorded'}
                 </span>
               )}
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{classData.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-dash-ink">{classData.title}</h1>
             {classData.topic && (
-              <p className="text-sm text-slate-600 mt-1">{classData.topic}</p>
+              <p className="text-sm text-dash-ink4 mt-1">{classData.topic}</p>
             )}
           </div>
         </div>
 
         {/* Meta row */}
-        <div className="px-6 py-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600 bg-slate-50/40">
+        <div className="px-6 py-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-dash-ink4 bg-dash-soft/40">
           {classDate && (
             <span className="flex items-center gap-1.5">
               <FiCalendar size={12} className="text-blue-500" />
@@ -320,27 +320,27 @@ export default function ClassDetailPage({ params }) {
         <div className="grid sm:grid-cols-2 gap-3">
           {classData.meetingLink && (
             <a href={classData.meetingLink} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 bg-white rounded-xl border border-blue-200/60 hover:border-blue-400 hover:shadow-md transition group">
+              className="flex items-center gap-3 p-4 bg-dash-card rounded-xl border border-blue-200/60 hover:border-blue-400 hover:shadow-md transition group">
               <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                 <FiLink size={18} className="text-blue-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition">
+                <p className="text-sm font-bold text-dash-ink2 group-hover:text-blue-600 transition">
                   {classData.meetingPlatform === 'zoom' ? 'Zoom' : classData.meetingPlatform === 'meet' ? 'Google Meet' : classData.meetingPlatform === 'teams' ? 'MS Teams' : 'Meeting'} Link
                 </p>
-                <p className="text-[11px] text-slate-400 truncate">{classData.meetingLink}</p>
+                <p className="text-[11px] text-dash-mute2 truncate">{classData.meetingLink}</p>
               </div>
-              <FiExternalLink size={14} className="text-slate-300 group-hover:text-blue-500 transition" />
+              <FiExternalLink size={14} className="text-dash-faint group-hover:text-blue-500 transition" />
             </a>
           )}
           {classData.venue && (
-            <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200/60">
+            <div className="flex items-center gap-3 p-4 bg-dash-card rounded-xl border border-dash-line/60">
               <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
                 <FiMapPin size={18} className="text-amber-500" />
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-800">Venue</p>
-                <p className="text-xs text-slate-500">{classData.venue}</p>
+                <p className="text-sm font-bold text-dash-ink2">Venue</p>
+                <p className="text-xs text-dash-mute">{classData.venue}</p>
               </div>
             </div>
           )}
@@ -350,16 +350,16 @@ export default function ClassDetailPage({ params }) {
       {/* ── Recordings ── */}
       {recs.length > 0 && (
         <section>
-          <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-dash-ink3 mb-3 flex items-center gap-2">
             <FiVideo className="text-blue-500" size={16} />
-            Class Recordings <span className="text-xs text-slate-400 font-medium">({recs.length})</span>
+            Class Recordings <span className="text-xs text-dash-mute2 font-medium">({recs.length})</span>
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {recs.map((r, i) => (
               <button key={i} onClick={() => openViewer(r.url, r.title || `Recording ${i + 1}`)}
-                className="text-left bg-white rounded-xl border border-blue-200/60 hover:border-blue-400 hover:shadow-md transition group overflow-hidden">
+                className="text-left bg-dash-card rounded-xl border border-blue-200/60 hover:border-blue-400 hover:shadow-md transition group overflow-hidden">
                 <div className="aspect-video bg-gradient-to-br from-blue-500 to-indigo-700 relative flex items-center justify-center">
-                  <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <div className="w-14 h-14 rounded-full bg-dash-card/95 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                     <FiPlay size={20} className="text-blue-600 ml-1" />
                   </div>
                   <span className="absolute bottom-2 right-2 text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-black/40 text-white backdrop-blur-sm">
@@ -367,10 +367,10 @@ export default function ClassDetailPage({ params }) {
                   </span>
                 </div>
                 <div className="p-3">
-                  <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition truncate">
+                  <p className="text-sm font-bold text-dash-ink2 group-hover:text-blue-600 transition truncate">
                     {r.title || `Recording ${i + 1}`}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Click to watch</p>
+                  <p className="text-[11px] text-dash-mute2 mt-0.5">Click to watch</p>
                 </div>
               </button>
             ))}
@@ -381,9 +381,9 @@ export default function ClassDetailPage({ params }) {
       {/* ── Materials ── */}
       {mats.length > 0 && (
         <section>
-          <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-dash-ink3 mb-3 flex items-center gap-2">
             <FiFileText className="text-emerald-500" size={16} />
-            Materials &amp; Documents <span className="text-xs text-slate-400 font-medium">({mats.length})</span>
+            Materials &amp; Documents <span className="text-xs text-dash-mute2 font-medium">({mats.length})</span>
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {mats.map((m, i) => {
@@ -391,18 +391,18 @@ export default function ClassDetailPage({ params }) {
               const iconBg = t === 'pdf' ? 'bg-red-50 text-red-600'
                 : ['youtube','gdrive','video','vimeo'].includes(t) ? 'bg-blue-50 text-blue-600'
                 : t === 'image' ? 'bg-emerald-50 text-emerald-600'
-                : 'bg-slate-50 text-slate-500';
+                : 'bg-dash-soft text-dash-mute';
               return (
                 <button key={i} onClick={() => openViewer(m.fileUrl, m.title || `Material ${i + 1}`, m.fileType)}
-                  className="text-left bg-white rounded-xl border border-slate-200/60 hover:border-[#F0DFB4] hover:shadow-md transition group p-4 flex items-center gap-3">
+                  className="text-left bg-dash-card rounded-xl border border-dash-line/60 hover:border-brand-line hover:shadow-md transition group p-4 flex items-center gap-3">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
                     <FiFileText size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 group-hover:text-[#c9871a] transition truncate">
+                    <p className="text-sm font-bold text-dash-ink2 group-hover:text-brand-ink transition truncate">
                       {m.title || `Material ${i + 1}`}
                     </p>
-                    <p className="text-[11px] text-slate-400">{getFileLabel(m.fileUrl)} • Open</p>
+                    <p className="text-[11px] text-dash-mute2">{getFileLabel(m.fileUrl)} • Open</p>
                   </div>
                 </button>
               );
@@ -414,46 +414,46 @@ export default function ClassDetailPage({ params }) {
       {/* ── Notes ── */}
       {classData.notes && (
         <section>
-          <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-dash-ink3 mb-3 flex items-center gap-2">
             📝 Notes / Instructions
           </h2>
           <div className="bg-amber-50/40 border border-amber-100 rounded-xl p-4">
-            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{classData.notes}</p>
+            <p className="text-sm text-dash-ink3 whitespace-pre-wrap leading-relaxed">{classData.notes}</p>
           </div>
         </section>
       )}
 
       {/* No content */}
       {recs.length === 0 && mats.length === 0 && !classData.meetingLink && !classData.venue && !classData.notes && (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
-          <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-3">
-            <FiFolder className="text-slate-300" size={20} />
+        <div className="bg-dash-card rounded-2xl border border-dashed border-dash-line p-10 text-center">
+          <div className="w-12 h-12 rounded-full bg-dash-soft flex items-center justify-center mx-auto mb-3">
+            <FiFolder className="text-dash-faint" size={20} />
           </div>
-          <p className="text-sm font-semibold text-slate-600">Nothing here yet</p>
-          <p className="text-xs text-slate-400 mt-1">Your mentor will add recordings &amp; materials after class.</p>
+          <p className="text-sm font-semibold text-dash-ink4">Nothing here yet</p>
+          <p className="text-xs text-dash-mute2 mt-1">Your mentor will add recordings &amp; materials after class.</p>
         </div>
       )}
 
       {/* Prev / Next nav */}
-      <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
+      <div className="flex items-center justify-between gap-3 pt-4 border-t border-dash-line-soft">
         {prevClass ? (
           <Link href={`/dashboard/user/materials/${batchId}/${prevClass._id}`}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-[#F0DFB4] hover:bg-[#FEF6E7]/50 transition text-sm group">
-            <FiArrowLeft size={14} className="text-slate-400 group-hover:text-[#c9871a] group-hover:-translate-x-1 transition" />
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dash-line hover:border-brand-line hover:bg-brand-soft/50 transition text-sm group">
+            <FiArrowLeft size={14} className="text-dash-mute2 group-hover:text-brand-ink group-hover:-translate-x-1 transition" />
             <div className="text-left">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Previous</p>
-              <p className="text-xs font-semibold text-slate-700 truncate max-w-[200px]">{prevClass.title}</p>
+              <p className="text-[10px] text-dash-mute2 uppercase tracking-wider font-bold">Previous</p>
+              <p className="text-xs font-semibold text-dash-ink3 truncate max-w-[200px]">{prevClass.title}</p>
             </div>
           </Link>
         ) : <span />}
         {nextClass ? (
           <Link href={`/dashboard/user/materials/${batchId}/${nextClass._id}`}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-[#F0DFB4] hover:bg-[#FEF6E7]/50 transition text-sm group ml-auto">
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dash-line hover:border-brand-line hover:bg-brand-soft/50 transition text-sm group ml-auto">
             <div className="text-right">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Next</p>
-              <p className="text-xs font-semibold text-slate-700 truncate max-w-[200px]">{nextClass.title}</p>
+              <p className="text-[10px] text-dash-mute2 uppercase tracking-wider font-bold">Next</p>
+              <p className="text-xs font-semibold text-dash-ink3 truncate max-w-[200px]">{nextClass.title}</p>
             </div>
-            <FiArrowLeft size={14} className="text-slate-400 group-hover:text-[#c9871a] rotate-180 group-hover:translate-x-1 transition" />
+            <FiArrowLeft size={14} className="text-dash-mute2 group-hover:text-brand-ink rotate-180 group-hover:translate-x-1 transition" />
           </Link>
         ) : <span className="ml-auto" />}
       </div>
@@ -465,37 +465,37 @@ export default function ClassDetailPage({ params }) {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={(e) => { if (e.target === e.currentTarget) closeViewer(); }}>
-            <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+            <div className={`bg-dash-card rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
               isFullscreen ? 'w-full h-full rounded-none' : 'w-full max-w-5xl max-h-[92vh]'
             }`}>
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 flex-shrink-0">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-dash-line-soft flex-shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    ['youtube','gdrive','video','vimeo'].includes(type) ? 'bg-blue-50' : type === 'pdf' ? 'bg-red-50' : 'bg-slate-50'
+                    ['youtube','gdrive','video','vimeo'].includes(type) ? 'bg-blue-50' : type === 'pdf' ? 'bg-red-50' : 'bg-dash-soft'
                   }`}>
                     {['youtube','gdrive','video','vimeo'].includes(type)
                       ? <FiVideo size={16} className="text-blue-500" />
-                      : <FiFileText size={16} className="text-slate-500" />
+                      : <FiFileText size={16} className="text-dash-mute" />
                     }
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-slate-800 truncate">{title}</h3>
-                    <p className="text-[11px] text-slate-400">{getFileLabel(url)}</p>
+                    <h3 className="text-sm font-bold text-dash-ink2 truncate">{title}</h3>
+                    <p className="text-[11px] text-dash-mute2">{getFileLabel(url)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <a href={url} download target="_blank" rel="noopener noreferrer"
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-[#c9871a] hover:bg-[#FEF6E7] rounded-lg transition"
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-dash-mute hover:text-brand-ink hover:bg-brand-soft rounded-lg transition"
                     onClick={(e) => e.stopPropagation()}>
                     <FiDownload size={13} /> Open
                   </a>
                   <button onClick={() => setIsFullscreen(!isFullscreen)}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-400 hover:text-slate-600">
+                    className="p-2 hover:bg-dash-soft2 rounded-lg transition text-dash-mute2 hover:text-dash-ink4">
                     {isFullscreen ? <FiMinimize2 size={16} /> : <FiMaximize2 size={16} />}
                   </button>
                   <button onClick={closeViewer}
-                    className="p-2 hover:bg-rose-50 rounded-lg transition text-slate-400 hover:text-rose-500">
+                    className="p-2 hover:bg-rose-50 rounded-lg transition text-dash-mute2 hover:text-rose-500">
                     <FiX size={18} />
                   </button>
                 </div>
@@ -520,7 +520,7 @@ export default function ClassDetailPage({ params }) {
                 {type === 'pdf' && (
                   <iframe
                     src={getPdfRenderUrl(url)}
-                    className="w-full h-full absolute inset-0 bg-white"
+                    className="w-full h-full absolute inset-0 bg-dash-card"
                     frameBorder="0"
                     title={title}
                   />
@@ -532,7 +532,7 @@ export default function ClassDetailPage({ params }) {
                 )}
                 {(type === 'link' || type === 'unknown') && (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8">
-                    <FiLink size={32} className="text-slate-400" />
+                    <FiLink size={32} className="text-dash-mute2" />
                     <p className="text-white/90 text-base font-bold">{title}</p>
                     <p className="text-white/50 text-sm text-center max-w-md">
                       Trying inline preview — if it doesn&apos;t load, use Open above.

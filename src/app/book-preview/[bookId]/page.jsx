@@ -22,6 +22,7 @@ import {
   FiEdit3,
   FiFileText,
   FiImage,
+  FiInfo,
   FiList,
   FiLoader,
   FiPlus,
@@ -64,7 +65,7 @@ function matchesQuery(text, q) {
   return (text || '').toLowerCase().includes(q.toLowerCase());
 }
 
-/** Divider that names each block of the answer card. */
+/** Divider that names each block of the question card. */
 function SectionLabel({ icon, children }) {
   return (
     <div className="flex items-center gap-2 mb-3">
@@ -287,6 +288,15 @@ export default function BookPreviewPlayerPage() {
   const activeQuestion = questions[activeQIndex];
   const bookTitle = tree?.book?.title || 'বুক প্রিভিউ';
 
+  // Each block renders only when it has something in it, so a question can
+  // carry any combination of the four without leaving an orphan heading.
+  // Mirrors /b/[code] — admin must preview exactly what the reader gets.
+  const hasImages = (activeQuestion?.images?.length ?? 0) > 0;
+  const hasVideos = (activeQuestion?.videos?.length ?? 0) > 0;
+  const hasFiles = (activeQuestion?.attachments?.length ?? 0) > 0;
+  const hasExtra = Boolean(activeQuestion?.answerHtml?.trim());
+  const hasAnything = hasImages || hasVideos || hasExtra || hasFiles;
+
   const crumb = [
     activePart?.title,
     activeChapter && `${activeChapter.chapterNo ?? ''} ${activeChapter.title}`.trim(),
@@ -464,23 +474,17 @@ export default function BookPreviewPlayerPage() {
                     Question {activeQIndex + 1} of {questions.length}
                   </p>
 
-                  {/* Answer → figures → video → downloads. This is the order a
-                      reader wants and the order the printed book implies; the
-                      video used to open the card, before the answer itself. */}
+                  {/* Reading order, deliberately: figures → video → extra info
+                      → downloads. The reader reaching this content by QR is
+                      holding the printed book, which already carries the real
+                      answer; the text here is only supplementary, so what paper
+                      cannot show — pictures, then video — goes first. This card
+                      used to lead with that text back when it was treated as
+                      THE answer. Don't move it back up without first changing
+                      what it is. Keep in step with /b/[code]. */}
                   <div className="rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50 overflow-hidden">
                     <div className="px-5 lg:px-7 py-6 space-y-6">
-                      {activeQuestion.answerHtml?.trim() ? (
-                        <div
-                          className="sb-answer prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: activeQuestion.answerHtml }}
-                        />
-                      ) : (
-                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
-                          <p className="text-sm text-slate-400">উত্তরটি এখনো যোগ করা হয়নি।</p>
-                        </div>
-                      )}
-
-                      {activeQuestion.images?.length > 0 && (
+                      {hasImages && (
                         <section>
                           <SectionLabel icon={<FiImage size={13} />}>
                             ছবি ({activeQuestion.images.length})
@@ -515,7 +519,7 @@ export default function BookPreviewPlayerPage() {
                         </section>
                       )}
 
-                      {activeQuestion.videos?.length > 0 && (
+                      {hasVideos && (
                         <section>
                           <SectionLabel icon={<FiVideo size={13} />}>
                             ভিডিও ({activeQuestion.videos.length})
@@ -562,7 +566,23 @@ export default function BookPreviewPlayerPage() {
                         </section>
                       )}
 
-                      {activeQuestion.attachments?.length > 0 && (
+                      {/* Deliberately not labelled "উত্তর" — the answer is on the
+                          paper page in the reader's hands. This is what did not
+                          fit there. */}
+                      {hasExtra && (
+                        <section>
+                          <SectionLabel icon={<FiInfo size={13} />}>অতিরিক্ত তথ্য</SectionLabel>
+                          <p className="text-xs text-slate-400 mb-3">
+                            মূল উত্তরটি বইয়ের পাতাতেই আছে — এখানে বাড়তি ব্যাখ্যা ও তথ্য।
+                          </p>
+                          <div
+                            className="sb-answer prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: activeQuestion.answerHtml }}
+                          />
+                        </section>
+                      )}
+
+                      {hasFiles && (
                         <section>
                           <SectionLabel icon={<FiFileText size={13} />}>
                             ফাইল ({activeQuestion.attachments.length})
@@ -585,6 +605,16 @@ export default function BookPreviewPlayerPage() {
                             ))}
                           </div>
                         </section>
+                      )}
+
+                      {/* Nothing attached at all — one line, so the card isn't an
+                          empty white box. */}
+                      {!hasAnything && (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
+                          <p className="text-sm text-slate-400">
+                            এই প্রশ্নে এখনো ছবি, ভিডিও বা অতিরিক্ত তথ্য যোগ করা হয়নি।
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>

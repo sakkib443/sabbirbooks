@@ -23,11 +23,21 @@ import {
   refreshAccessToken,
   clearSession,
 } from "@/lib/session";
+import { can, homeRouteFor, mergeStoredUser } from "@/lib/permissions";
 
-const ProtectedRoute = ({ children, role, allowedRoles = [] }) => {
+/**
+ * @param role/allowedRoles  which roles may enter this dashboard shell
+ * @param requireCapabilities  capabilities the user must ALSO hold. This is the
+ *   client half of the same rule the server enforces — the server is still the
+ *   one that says no (403), this just avoids rendering a page that would only
+ *   fill up with failed requests.
+ */
+const ProtectedRoute = ({ children, role, allowedRoles = [], requireCapabilities = [] }) => {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
+  // Serialised so a fresh array literal on every render does not re-run the check.
+  const requiredCaps = requireCapabilities.join(",");
 
   const toLogin = useCallback(
     (reason) => {
@@ -40,7 +50,7 @@ const ProtectedRoute = ({ children, role, allowedRoles = [] }) => {
 
   const checkAuth = useCallback(async () => {
     let token = getToken();
-    const user = getUser();
+    let user = getUser();
 
     if (!token || !user) {
       toLogin();
@@ -60,6 +70,12 @@ const ProtectedRoute = ({ children, role, allowedRoles = [] }) => {
 
     // Confirm with the server. This goes through the patched fetch, so a 401
     // here has already survived one refresh-and-retry.
+    //
+    // It is also where authorization gets refreshed: the response carries the
+    // role and the capability list the SERVER resolved, which we write back over
+    // the stored user. That is what makes a permission change take effect on the
+    // next page load instead of at token expiry — and it means the sidebar and
+    // this guard are reading the same list the API routes enforce.
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -68,39 +84,44 @@ const ProtectedRoute = ({ children, role, allowedRoles = [] }) => {
         toLogin("session_expired");
         return;
       }
+      const body = await res.json().catch(() => null);
+      const fresh = body?.data;
+      if (fresh?.role) {
+        user =
+          mergeStoredUser({
+            role: fresh.role,
+            capabilities: Array.isArray(fresh.capabilities) ? fresh.capabilities : undefined,
+            permissions: fresh.permissions,
+          }) || user;
+      }
     } catch {
       // Server unreachable — let a locally-valid token through rather than
-      // locking someone out of the panel because the API blipped.
+      // locking someone out of the panel because the API blipped. Every request
+      // the page then makes is still checked server-side.
     }
 
     const userRole = user.role || "student";
-
-    if (userRole === "superAdmin" || userRole === "admin") {
-      setIsAuthorized(true);
-      setChecking(false);
-      return;
-    }
+    const requiredCapList = requiredCaps ? requiredCaps.split(",") : [];
 
     const requiredRoles = allowedRoles.length > 0 ? allowedRoles : role ? [role] : [];
     const normalize = (r) => (r === "user" || r === "student" ? "student" : r);
     const normalizedUserRole = normalize(userRole);
     const normalizedRequired = requiredRoles.map(normalize);
 
-    if (normalizedRequired.length > 0 && !normalizedRequired.includes(normalizedUserRole)) {
-      switch (userRole) {
-        case "trainingManager":
-          router.replace("/dashboard/training-manager");
-          break;
-        case "mentor":
-          router.replace("/dashboard/mentor");
-          break;
-        case "user":
-        case "student":
-          router.replace("/dashboard/user");
-          break;
-        default:
-          router.replace("/login");
-      }
+    // superAdmin/admin still clear every ROLE gate — but a capability gate is
+    // checked for everyone, so a shell can be narrowed without special cases.
+    const roleOk =
+      userRole === "superAdmin" ||
+      userRole === "admin" ||
+      normalizedRequired.length === 0 ||
+      normalizedRequired.includes(normalizedUserRole);
+
+    if (!roleOk || !can(user, ...requiredCapList)) {
+      const home = homeRouteFor(userRole);
+      // Bounce to the user's own landing page — never to a route that does not
+      // exist. (trainingManager used to be sent to /dashboard/training-manager,
+      // which 404'd.) If that IS this page, fall back to login rather than loop.
+      router.replace(home === window.location.pathname ? "/login" : home);
       return;
     }
 
@@ -108,9 +129,10 @@ const ProtectedRoute = ({ children, role, allowedRoles = [] }) => {
     setChecking(false);
     // allowedRoles is a fresh array literal on every render at most call sites,
     // so it is intentionally not a dependency — including it re-runs the whole
-    // check (and its /auth/me call) on every single render.
+    // check (and its /auth/me call) on every single render. requiredCaps is a
+    // joined string precisely so it CAN be one.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, role, toLogin]);
+  }, [router, role, toLogin, requiredCaps]);
 
   useEffect(() => {
     checkAuth();

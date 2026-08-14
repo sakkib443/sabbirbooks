@@ -18,10 +18,10 @@ const getToken = () => localStorage.getItem('token') || '';
 
 const DetailRow = ({ icon: Icon, label, value, mono }) => (
   <div className="flex items-start gap-2">
-    <Icon size={13} className="text-slate-300 mt-0.5 shrink-0" />
+    <Icon size={13} className="text-dash-faint mt-0.5 shrink-0" />
     <div className="min-w-0">
-      <p className="text-[10px] text-slate-400 uppercase tracking-wider">{label}</p>
-      <p className={`text-sm text-slate-700 break-words ${mono ? 'font-mono' : ''}`}>{value || '—'}</p>
+      <p className="text-[10px] text-dash-mute2 uppercase tracking-wider">{label}</p>
+      <p className={`text-sm text-dash-ink3 break-words ${mono ? 'font-mono' : ''}`}>{value || '—'}</p>
     </div>
   </div>
 );
@@ -222,20 +222,20 @@ export default function OrdersPage() {
     cancelled: 'bg-red-50 text-red-500 border-red-300',
     completed: 'bg-blue-50 text-blue-600 border-blue-300',
     deleted: 'bg-rose-100 text-rose-600 border-rose-400',
-  }[s] || 'bg-slate-100 text-slate-500 border-slate-300');
+  }[s] || 'bg-dash-soft2 text-dash-mute border-dash-line-strong');
 
   const getPaymentColor = (s) => ({
     paid: 'bg-emerald-50 text-emerald-600 border-emerald-300',
     pending: 'bg-amber-50 text-amber-600 border-amber-300',
     failed: 'bg-red-50 text-red-500 border-red-300',
-  }[s] || 'bg-slate-100 text-slate-500 border-slate-300');
+  }[s] || 'bg-dash-soft2 text-dash-mute border-dash-line-strong');
 
   const getInstColor = (s) => ({
     paid: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     due: 'bg-amber-50 text-amber-600 border-amber-200',
     overdue: 'bg-red-50 text-red-500 border-red-200',
     upcoming: 'bg-blue-50 text-blue-500 border-blue-200',
-  }[s] || 'bg-slate-50 text-slate-500 border-slate-200');
+  }[s] || 'bg-dash-soft text-dash-mute border-dash-line');
 
   // ── Model A money helper: paid = admission(if paid) + paid installments; due = agreedTotal − paid ──
   const parseFee = (v) => parseInt(String(v ?? '').replace(/[^0-9]/g, '')) || 0;
@@ -287,8 +287,8 @@ export default function OrdersPage() {
   return (
     <div className="poppins space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 outfit">Orders</h1>
-        <p className="text-sm text-slate-500 mt-1">All course purchase orders & payment tracking</p>
+        <h1 className="text-2xl font-bold text-dash-ink outfit">Orders</h1>
+        <p className="text-sm text-dash-mute mt-1">All course purchase orders & payment tracking</p>
       </div>
 
       {/* Stats */}
@@ -296,19 +296,19 @@ export default function OrdersPage() {
         {loading ? (
           <>{[1,2,3,4].map(i => <SkeletonCard key={i} />)}</>
         ) : [
-          { label: 'Total Orders', value: orders.length, icon: FiShoppingCart, color: 'text-slate-700', bg: 'bg-slate-100' },
+          { label: 'Total Orders', value: orders.length, icon: FiShoppingCart, color: 'text-dash-ink3', bg: 'bg-dash-soft2' },
           { label: 'Pending', value: pendingOrders.length, icon: FiClock, color: 'text-amber-600', bg: 'bg-amber-50' },
           { label: 'Collected', value: `৳${totalRevenue.toLocaleString()}`, icon: FiDollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           { label: 'Due Amount', value: `৳${dueAmount.toLocaleString()}`, icon: FiAlertCircle, color: 'text-red-500', bg: 'bg-red-50' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-slate-200/60 p-4 shadow-sm">
+          <div key={s.label} className="bg-dash-card rounded-xl border border-dash-line/60 p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center`}>
                 <s.icon size={18} className={s.color} />
               </div>
               <div>
                 <p className={`text-xl font-semibold ${s.color}`}>{s.value}</p>
-                <p className="text-sm text-slate-400">{s.label}</p>
+                <p className="text-sm text-dash-mute2">{s.label}</p>
               </div>
             </div>
           </div>
@@ -319,15 +319,15 @@ export default function OrdersPage() {
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <FiSearch className="absolute left-3 top-3 text-slate-400" size={16} />
+            <FiSearch className="absolute left-3 top-3 text-dash-mute2" size={16} />
             <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name, course, or transaction ID..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200/60 text-sm focus:border-teal-400 outline-none bg-white shadow-sm" />
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-dash-line/60 text-sm focus:border-teal-400 outline-none bg-dash-card shadow-sm" />
           </div>
-          <div className="flex gap-1 bg-slate-100 rounded-xl p-1 flex-wrap">
+          <div className="flex gap-1 bg-dash-soft2 rounded-xl p-1 flex-wrap">
             {['all', 'pending', 'active', 'installment', 'cancelled', 'deleted'].map(s => (
               <button key={s} onClick={() => setFilterStatus(s)}
-                className={`px-3 py-2 rounded-lg text-sm capitalize transition ${filterStatus === s ? 'bg-white text-teal-600 shadow-sm font-medium' : 'text-slate-500'}`}>
+                className={`px-3 py-2 rounded-lg text-sm capitalize transition ${filterStatus === s ? 'bg-dash-card text-teal-600 shadow-sm font-medium' : 'text-dash-mute'}`}>
                 {s === 'installment' ? '📋 Installment' : s === 'deleted' ? '🗑️ Deleted' : s}
               </button>
             ))}
@@ -336,36 +336,36 @@ export default function OrdersPage() {
 
         {/* Advanced Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-slate-400 flex items-center gap-1"><FiFilter size={13} /> Filters:</span>
+          <span className="text-sm text-dash-mute2 flex items-center gap-1"><FiFilter size={13} /> Filters:</span>
 
           {/* Course Type */}
           <div className="relative">
-            <FiGlobe size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-slate-400" />
+            <FiGlobe size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-dash-mute2" />
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
               className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition ${
-                filterType !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-white text-slate-600 border-slate-200'
+                filterType !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-dash-card text-dash-ink4 border-dash-line'
               }`}>
               <option value="all">All Types</option>
               <option value="online">Online</option>
               <option value="offline">Offline</option>
               <option value="recorded">Recorded</option>
             </select>
-            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-slate-300" />
+            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-dash-faint" />
           </div>
 
           {/* Course */}
           <div className="relative">
-            <FiBookOpen size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-slate-400" />
+            <FiBookOpen size={13} className="absolute left-2.5 top-[8px] pointer-events-none text-dash-mute2" />
             <select value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)}
               className={`appearance-none pl-8 pr-7 py-1.5 rounded-lg border text-sm cursor-pointer outline-none transition max-w-[220px] truncate ${
-                filterCourse !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-white text-slate-600 border-slate-200'
+                filterCourse !== 'all' ? 'bg-teal-50 text-teal-600 border-teal-200' : 'bg-dash-card text-dash-ink4 border-dash-line'
               }`}>
               <option value="all">All Courses</option>
               {courseList.map(c => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
             </select>
-            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-slate-300" />
+            <FiChevronDown size={12} className="absolute right-2 top-[9px] pointer-events-none text-dash-faint" />
           </div>
 
           {/* Clear all filters */}
@@ -376,19 +376,19 @@ export default function OrdersPage() {
             </button>
           )}
 
-          <span className="ml-auto text-sm text-slate-400">{filtered.length} of {orders.length} orders</span>
+          <span className="ml-auto text-sm text-dash-mute2">{filtered.length} of {orders.length} orders</span>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
+      <div className="bg-dash-card rounded-xl border border-dash-line/60 shadow-sm overflow-hidden">
         {loading ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100">
+                <tr className="bg-dash-soft/80 border-b border-dash-line-soft">
                   {['Student','Course','Amount','TXN ID','Payment','Status','Installment','Date','Actions'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-sm font-medium text-slate-500">{h}</th>
+                    <th key={h} className="text-left px-5 py-3 text-sm font-medium text-dash-mute">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -397,23 +397,23 @@ export default function OrdersPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-16 text-center">
-            <FiShoppingCart className="mx-auto text-slate-300 mb-3" size={36} />
-            <h3 className="font-medium text-slate-600 text-base">No Orders Found</h3>
+            <FiShoppingCart className="mx-auto text-dash-faint mb-3" size={36} />
+            <h3 className="font-medium text-dash-ink4 text-base">No Orders Found</h3>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Student</th>
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Course</th>
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Amount</th>
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">TXN ID / Method</th>
-                  <th className="text-center px-5 py-3 text-sm font-medium text-slate-500">Payment</th>
-                  <th className="text-center px-5 py-3 text-sm font-medium text-slate-500">Status</th>
-                  <th className="text-center px-5 py-3 text-sm font-medium text-slate-500">Installment</th>
-                  <th className="text-left px-5 py-3 text-sm font-medium text-slate-500">Date & Time</th>
-                  <th className="text-right px-5 py-3 text-sm font-medium text-slate-500">Actions</th>
+                <tr className="bg-dash-soft/80 border-b border-dash-line-soft">
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Student</th>
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Course</th>
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Amount</th>
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">TXN ID / Method</th>
+                  <th className="text-center px-5 py-3 text-sm font-medium text-dash-mute">Payment</th>
+                  <th className="text-center px-5 py-3 text-sm font-medium text-dash-mute">Status</th>
+                  <th className="text-center px-5 py-3 text-sm font-medium text-dash-mute">Installment</th>
+                  <th className="text-left px-5 py-3 text-sm font-medium text-dash-mute">Date & Time</th>
+                  <th className="text-right px-5 py-3 text-sm font-medium text-dash-mute">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -432,7 +432,7 @@ export default function OrdersPage() {
 
                   return (
                     <React.Fragment key={order._id}>
-                      <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition">
+                      <tr className="border-b border-dash-line-soft hover:bg-dash-soft/50 transition">
                         {/* Student */}
                         <td className="px-5 py-3.5">
                           <Link href={`/dashboard/admin/user/${student._id || ''}`} className="flex items-center gap-2.5 group">
@@ -440,24 +440,24 @@ export default function OrdersPage() {
                               {studentName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm text-slate-700 group-hover:text-teal-600 transition truncate max-w-[140px]">
+                              <p className="text-sm text-dash-ink3 group-hover:text-teal-600 transition truncate max-w-[140px]">
                                 {studentName}
                               </p>
-                              <p className="text-xs text-slate-400 truncate max-w-[140px]">{student.email}</p>
+                              <p className="text-xs text-dash-mute2 truncate max-w-[140px]">{student.email}</p>
                             </div>
                           </Link>
                         </td>
 
                         {/* Course */}
                         <td className="px-5 py-3.5">
-                          <p className="text-sm text-slate-700 truncate max-w-[160px]">{course.title || 'Course'}</p>
+                          <p className="text-sm text-dash-ink3 truncate max-w-[160px]">{course.title || 'Course'}</p>
                         </td>
 
                         {/* Amount — paid so far + remaining due */}
                         <td className="px-5 py-3.5">
                           {(() => { const m = orderMoney(order); return (
                             <>
-                              <span className="text-sm font-medium text-slate-700">৳{m.shownPaid.toLocaleString()}</span>
+                              <span className="text-sm font-medium text-dash-ink3">৳{m.shownPaid.toLocaleString()}</span>
                               {m.due > 0 && <p className="text-[11px] text-red-400">৳{m.due.toLocaleString()} due</p>}
                             </>
                           ); })()}
@@ -467,13 +467,13 @@ export default function OrdersPage() {
                         <td className="px-5 py-3.5">
                           {payment.transactionId ? (
                             <div>
-                              <p className="font-mono text-sm text-slate-600">{payment.transactionId}</p>
-                              <p className="text-xs text-slate-400 capitalize">
+                              <p className="font-mono text-sm text-dash-ink4">{payment.transactionId}</p>
+                              <p className="text-xs text-dash-mute2 capitalize">
                                 {payment.method}{payment.gatewayData?.paymentType ? ` · ${payment.gatewayData.paymentType}` : ''}
                               </p>
                             </div>
                           ) : (
-                            <span className="text-sm text-slate-400 capitalize">{payment.method || '—'}</span>
+                            <span className="text-sm text-dash-mute2 capitalize">{payment.method || '—'}</span>
                           )}
                         </td>
 
@@ -513,14 +513,14 @@ export default function OrdersPage() {
                               <FiChevronDown size={11} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                             </button>
                           ) : (
-                            <span className="text-sm text-slate-300">—</span>
+                            <span className="text-sm text-dash-faint">—</span>
                           )}
                         </td>
 
                         {/* Date + Time */}
                         <td className="px-5 py-3.5">
-                          <p className="text-sm text-slate-600">{orderDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                          <p className="text-xs text-slate-400">{orderDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                          <p className="text-sm text-dash-ink4">{orderDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-xs text-dash-mute2">{orderDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
                         </td>
 
                         {/* Actions */}
@@ -529,7 +529,7 @@ export default function OrdersPage() {
                             <button
                               onClick={() => { setEditMode(false); setDetailsOrder(order); }}
                               title="View order details"
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-[#c9871a] hover:bg-[#FEF6E7] transition border border-transparent hover:border-[#F0DFB4]"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-brand-ink hover:bg-brand-soft transition border border-transparent hover:border-brand-line"
                             >
                               <FiEye size={15} />
                             </button>
@@ -540,7 +540,7 @@ export default function OrdersPage() {
                                   ✓ Approve
                                 </button>
                                 <button onClick={() => handleStatusChange(order._id, 'cancelled')} disabled={processing === order._id}
-                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition">
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-rose-500 hover:bg-rose-50 transition">
                                   <FiX size={16} />
                                 </button>
                               </>
@@ -553,7 +553,7 @@ export default function OrdersPage() {
                               onClick={() => handleDeleteOrder(order._id)}
                               disabled={processing === order._id}
                               title="Permanently delete this order"
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition border border-transparent hover:border-red-200 disabled:opacity-50"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-red-600 hover:bg-red-50 transition border border-transparent hover:border-red-200 disabled:opacity-50"
                             >
                               <FiTrash2 size={15} />
                             </button>
@@ -564,9 +564,9 @@ export default function OrdersPage() {
                       {/* Installment Detail */}
                       {isExpanded && totalInst > 0 && (
                         <tr>
-                          <td colSpan={9} className="bg-slate-50/70 px-5 py-4 border-b border-slate-100">
+                          <td colSpan={9} className="bg-dash-soft/70 px-5 py-4 border-b border-dash-line-soft">
                             <div className="ml-12">
-                              <p className="text-sm font-medium text-slate-500 mb-3">Installment Plan</p>
+                              <p className="text-sm font-medium text-dash-mute mb-3">Installment Plan</p>
                               <div className="space-y-2">
                                 {inst.map((item, idx) => (
                                   <div key={item._id} className={`flex items-center gap-4 p-3 rounded-xl border ${getInstColor(item.status)}`}>
@@ -582,7 +582,7 @@ export default function OrdersPage() {
                                         Paid: {new Date(item.paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} {new Date(item.paidDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                       </span>
                                     )}
-                                    {item.transactionId && <span className="font-mono text-xs text-slate-500">TXN: {item.transactionId}</span>}
+                                    {item.transactionId && <span className="font-mono text-xs text-dash-mute">TXN: {item.transactionId}</span>}
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium uppercase border ${getInstColor(item.status)}`}>
                                       {item.status}
                                     </span>
@@ -627,9 +627,9 @@ export default function OrdersPage() {
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { setEditMode(false); setDetailsOrder(null); }}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-dash-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#F3A522] to-[#d88f13] shrink-0">
+              <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-brand to-brand-hover shrink-0">
                 <div>
                   <h3 className="text-white font-bold text-lg outfit">Order Details</h3>
                   <p className="text-white/80 text-xs font-mono">#{String(o._id).slice(-8).toUpperCase()}</p>
@@ -650,17 +650,17 @@ export default function OrdersPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase border ${getStatusColor(o.status)}`}>{o.status}</span>
                   <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase border ${getPaymentColor(p.status)}`}>Payment: {p.status || '—'}</span>
-                  {c.type && <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-[#FEF6E7] text-[#c9871a] border border-[#F0DFB4]">{c.type}</span>}
+                  {c.type && <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-brand-soft text-brand-ink border border-brand-line">{c.type}</span>}
                 </div>
 
                 {/* Student */}
-                <div className="rounded-xl border border-slate-100 p-4">
-                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><FiUser size={12} /> Student</h4>
+                <div className="rounded-xl border border-dash-line-soft p-4">
+                  <h4 className="text-[11px] font-bold text-dash-mute2 uppercase tracking-wider mb-3 flex items-center gap-1.5"><FiUser size={12} /> Student</h4>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center text-white font-bold text-lg outfit shrink-0">{name.charAt(0).toUpperCase()}</div>
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center text-white font-bold text-lg outfit shrink-0">{name.charAt(0).toUpperCase()}</div>
                     <div>
-                      <p className="font-bold text-slate-800">{name}</p>
-                      <p className="text-xs text-slate-400 capitalize">{s.gender || '—'}</p>
+                      <p className="font-bold text-dash-ink2">{name}</p>
+                      <p className="text-xs text-dash-mute2 capitalize">{s.gender || '—'}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -671,41 +671,41 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Course */}
-                <div className="rounded-xl border border-slate-100 p-4">
-                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><FiBookOpen size={12} /> Course</h4>
+                <div className="rounded-xl border border-dash-line-soft p-4">
+                  <h4 className="text-[11px] font-bold text-dash-mute2 uppercase tracking-wider mb-3 flex items-center gap-1.5"><FiBookOpen size={12} /> Course</h4>
                   <div className="flex items-center gap-3">
-                    <div className="w-16 h-11 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                    <div className="w-16 h-11 rounded-lg overflow-hidden bg-dash-soft2 shrink-0">
                       {c.image && <img src={c.image} alt="" className="w-full h-full object-cover" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-slate-800 truncate">{c.title || 'Course'}</p>
-                      <p className="text-xs text-slate-400 flex items-center gap-1"><FiCalendar size={11} /> Ordered: {fmtDateTime(o.createdAt || o.enrolledAt)}</p>
+                      <p className="font-bold text-dash-ink2 truncate">{c.title || 'Course'}</p>
+                      <p className="text-xs text-dash-mute2 flex items-center gap-1"><FiCalendar size={11} /> Ordered: {fmtDateTime(o.createdAt || o.enrolledAt)}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Payment — edit form (admin) vs read-only view */}
                 {editMode && editForm ? (
-                  <div className="rounded-xl border border-[#F0DFB4] bg-[#FEF6E7]/40 p-4 space-y-3">
-                    <h4 className="text-[11px] font-bold text-[#c9871a] uppercase tracking-wider flex items-center gap-1.5"><FiEdit2 size={12} /> Edit Payment</h4>
+                  <div className="rounded-xl border border-brand-line bg-brand-soft/40 p-4 space-y-3">
+                    <h4 className="text-[11px] font-bold text-brand-ink uppercase tracking-wider flex items-center gap-1.5"><FiEdit2 size={12} /> Edit Payment</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Total Fee (৳)</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Total Fee (৳)</label>
                         <input type="number" min="0" value={editForm.customFee}
                           onChange={e => setEditForm({ ...editForm, customFee: e.target.value })}
                           placeholder={`Default: ${total}`}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522]" />
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Amount Paid / Sent (৳)</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Amount Paid / Sent (৳)</label>
                         <input type="number" min="0" value={editForm.amount}
                           onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F3A522]/20 focus:border-[#F3A522]" />
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Method</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Method</label>
                         <select value={editForm.method} onChange={e => setEditForm({ ...editForm, method: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none bg-white">
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none bg-dash-card">
                           <option value="manual">Manual (bank/mobile)</option>
                           <option value="cash">Hand Cash</option>
                           <option value="bkash">bKash</option>
@@ -714,9 +714,9 @@ export default function OrdersPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Payment Status</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Payment Status</label>
                         <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none bg-white">
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none bg-dash-card">
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
                           <option value="failed">Failed</option>
@@ -724,22 +724,22 @@ export default function OrdersPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Transaction ID</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Transaction ID</label>
                         <input type="text" value={editForm.transactionId}
                           onChange={e => setEditForm({ ...editForm, transactionId: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none font-mono" />
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none font-mono" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Paid From (number)</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Paid From (number)</label>
                         <input type="text" value={editForm.senderNumber}
                           onChange={e => setEditForm({ ...editForm, senderNumber: e.target.value })}
                           placeholder="01XXXXXXXXX"
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none" />
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Payment Via</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Payment Via</label>
                         <select value={editForm.paymentType} onChange={e => setEditForm({ ...editForm, paymentType: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none bg-white">
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none bg-dash-card">
                           <option value="">—</option>
                           <option value="bkash">bKash</option>
                           <option value="nagad">Nagad</option>
@@ -748,16 +748,16 @@ export default function OrdersPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Sent At</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Sent At</label>
                         <input type="datetime-local" value={editForm.sentAt}
                           onChange={e => setEditForm({ ...editForm, sentAt: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none" />
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Notes</label>
+                        <label className="text-[10px] font-bold text-dash-mute uppercase">Notes</label>
                         <input type="text" value={editForm.notes}
                           onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none" />
+                          className="w-full mt-1 px-3 py-2 text-sm border border-dash-line rounded-lg focus:outline-none" />
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pt-1">
@@ -766,7 +766,7 @@ export default function OrdersPage() {
                         {savingEdit ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />} Save Changes
                       </button>
                       <button onClick={() => setEditMode(false)} disabled={savingEdit}
-                        className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-50 transition">
+                        className="px-4 py-2 border border-dash-line text-dash-ink4 text-sm font-semibold rounded-lg hover:bg-dash-soft transition">
                         Cancel
                       </button>
                     </div>
@@ -774,8 +774,8 @@ export default function OrdersPage() {
                 ) : (
                   <>
                     {/* Payment */}
-                    <div className="rounded-xl border border-slate-100 p-4">
-                      <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><FiCreditCard size={12} /> Payment</h4>
+                    <div className="rounded-xl border border-dash-line-soft p-4">
+                      <h4 className="text-[11px] font-bold text-dash-mute2 uppercase tracking-wider mb-3 flex items-center gap-1.5"><FiCreditCard size={12} /> Payment</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <DetailRow icon={FiCreditCard} label="Method" value={`${p.method || '—'}${p.gatewayData?.paymentType ? ` · ${p.gatewayData.paymentType}` : ''}`} />
                         <DetailRow icon={FiPhone} label="Paid from (number)" value={p.gatewayData?.senderNumber} />
@@ -786,9 +786,9 @@ export default function OrdersPage() {
 
                     {/* Amount summary */}
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-center">
-                        <p className="text-lg font-bold text-slate-800 outfit">৳{total.toLocaleString()}</p>
-                        <p className="text-[11px] text-slate-400">Total</p>
+                      <div className="rounded-xl bg-dash-soft border border-dash-line-soft p-3 text-center">
+                        <p className="text-lg font-bold text-dash-ink2 outfit">৳{total.toLocaleString()}</p>
+                        <p className="text-[11px] text-dash-mute2">Total</p>
                       </div>
                       <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center">
                         <p className="text-lg font-bold text-emerald-600 outfit">৳{paid.toLocaleString()}</p>
@@ -804,8 +804,8 @@ export default function OrdersPage() {
 
                 {/* Installments */}
                 {hasInst && (
-                  <div className="rounded-xl border border-slate-100 p-4">
-                    <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  <div className="rounded-xl border border-dash-line-soft p-4">
+                    <h4 className="text-[11px] font-bold text-dash-mute2 uppercase tracking-wider mb-3">
                       Installments ({inst.filter(i => i.status === 'paid').length}/{inst.length} paid)
                     </h4>
                     <div className="space-y-1.5">
@@ -823,7 +823,7 @@ export default function OrdersPage() {
 
               {/* Footer actions */}
               {!editMode && (
-              <div className="flex items-center gap-2 px-6 py-4 border-t border-slate-100 shrink-0">
+              <div className="flex items-center gap-2 px-6 py-4 border-t border-dash-line-soft shrink-0">
                 {o.status === 'pending' && (
                   <>
                     <button
@@ -834,7 +834,7 @@ export default function OrdersPage() {
                     </button>
                     <button
                       onClick={() => { handleStatusChange(o._id, 'cancelled'); setDetailsOrder(null); }}
-                      className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-50 transition"
+                      className="px-4 py-2.5 border border-dash-line text-dash-ink4 text-sm font-semibold rounded-lg hover:bg-dash-soft transition"
                     >
                       Cancel Order
                     </button>

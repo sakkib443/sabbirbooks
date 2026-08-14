@@ -9,6 +9,7 @@ import {
     FiArrowLeft, FiHelpCircle, FiCalendar, FiCreditCard,
     FiFileText, FiClipboard, FiBarChart2, FiBell,
     FiCheckSquare, FiChevronLeft, FiFolder, FiTrendingUp, FiHeadphones,
+    FiShoppingBag,
 } from 'react-icons/fi';
 
 const UserSidebar = () => {
@@ -50,6 +51,7 @@ const UserSidebar = () => {
                 { title: 'Overview', href: '/dashboard/user', icon: FiHome, exact: true },
                 { title: 'My Courses', href: '/dashboard/user/courses', icon: FiBook },
                 { title: 'My Book', href: '/dashboard/user/my-book', icon: FiFileText },
+                { title: 'আমার অর্ডার', href: '/dashboard/user/orders', icon: FiShoppingBag },
                 { title: 'My Progress', href: '/dashboard/user/my-progress', icon: FiTrendingUp },
                 { title: 'Course Materials', href: '/dashboard/user/materials', icon: FiFolder },
                 { title: 'Schedule', href: '/dashboard/user/schedule', icon: FiCalendar },
@@ -76,7 +78,7 @@ const UserSidebar = () => {
             {/* Mobile Toggle */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="lg:hidden fixed top-4 left-4 z-[60] w-10 h-10 rounded-xl bg-white shadow-lg border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-all"
+                className="lg:hidden fixed top-4 left-4 z-[60] w-10 h-10 rounded-xl bg-dash-card shadow-lg border border-dash-line flex items-center justify-center text-dash-ink3 hover:bg-dash-soft active:scale-95 transition-all"
                 aria-label="Toggle menu"
             >
                 {isOpen ? <FiX size={18} /> : <FiMenu size={18} />}
@@ -86,30 +88,30 @@ const UserSidebar = () => {
             <aside
                 className={`fixed top-0 left-0 h-screen transition-all duration-300 ease-in-out z-[50]
                     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-                    ${sidebarWidth} bg-white border-r border-slate-200/80`}
+                    ${sidebarWidth} bg-dash-card border-r border-dash-line/80`}
             >
                 <div className="flex flex-col h-full">
                     {/* Header */}
-                    <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-4 h-16 border-b border-slate-100`}>
+                    <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-4 h-16 border-b border-dash-line-soft`}>
                         {!collapsed && (
                             <Link href="/" className="flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/20">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center shadow-md shadow-brand/20">
                                     <span className="text-white font-black text-xs">{brandInitials}</span>
                                 </div>
                                 <div className="leading-tight">
-                                    <p className="text-base font-bold text-slate-800">{brandName}</p>
-                                    <p className="text-[11px] text-slate-400 -mt-0.5">Academy</p>
+                                    <p className="text-base font-bold text-dash-ink2">{brandName}</p>
+                                    <p className="text-[11px] text-dash-mute2 -mt-0.5">Academy</p>
                                 </div>
                             </Link>
                         )}
                         {collapsed && (
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center shadow-md shadow-[#F3A522]/20">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center shadow-md shadow-brand/20">
                                 <span className="text-white font-black text-xs">{brandInitials}</span>
                             </div>
                         )}
                         <button
                             onClick={() => setCollapsed(!collapsed)}
-                            className="hidden lg:flex w-6 h-6 rounded-md border border-slate-200 items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+                            className="hidden lg:flex w-6 h-6 rounded-md border border-dash-line items-center justify-center text-dash-mute2 hover:text-dash-ink4 hover:bg-dash-soft transition-all"
                         >
                             <FiChevronLeft size={12} className={`transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`} />
                         </button>
@@ -120,11 +122,11 @@ const UserSidebar = () => {
                         {menuGroups.map((group) => (
                             <div key={group.label}>
                                 {!collapsed && (
-                                    <p className="px-3 mb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.12em]">
+                                    <p className="px-3 mb-2 text-[11px] font-semibold text-dash-mute2 uppercase tracking-[0.12em]">
                                         {group.label}
                                     </p>
                                 )}
-                                {collapsed && <div className="mb-2 border-t border-slate-100" />}
+                                {collapsed && <div className="mb-2 border-t border-dash-line-soft" />}
                                 <div className="space-y-0.5">
                                     {group.items.map((item) => {
                                         const Icon = item.icon;
@@ -141,16 +143,16 @@ const UserSidebar = () => {
                                                 className={`group relative flex items-center gap-3 rounded-lg transition-all duration-200
                                                     ${collapsed ? 'justify-center px-0 py-2.5 mx-1' : 'px-3 py-[9px]'}
                                                     ${active
-                                                        ? 'bg-[#FEF6E7] text-[#a5680f]'
-                                                        : 'text-slate-500 hover:text-[#c9871a] hover:bg-[#FEF6E7]/60'
+                                                        ? 'bg-brand-soft text-brand-deep'
+                                                        : 'text-dash-mute hover:text-brand-ink hover:bg-brand-soft/60'
                                                     }`}
                                             >
                                                 {active && (
-                                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#F3A522] rounded-r-full" />
+                                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-brand rounded-r-full" />
                                                 )}
                                                 <Icon
                                                     size={collapsed ? 18 : 16}
-                                                    className={`flex-shrink-0 transition-colors ${active ? 'text-[#c9871a]' : 'text-slate-400 group-hover:text-slate-600'}`}
+                                                    className={`flex-shrink-0 transition-colors ${active ? 'text-brand-ink' : 'text-dash-mute2 group-hover:text-dash-ink4'}`}
                                                     strokeWidth={active ? 2.5 : 2}
                                                 />
                                                 {!collapsed && (
@@ -167,11 +169,11 @@ const UserSidebar = () => {
                     </nav>
 
                     {/* User + Logout */}
-                    <div className="border-t border-slate-100 p-3">
+                    <div className="border-t border-dash-line-soft p-3">
                         {/* Back to site */}
                         <Link
                             href="/"
-                            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-[#c9871a] hover:bg-[#FEF6E7] transition-all mb-1 ${collapsed ? 'justify-center' : ''}`}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-dash-mute2 hover:text-brand-ink hover:bg-brand-soft transition-all mb-1 ${collapsed ? 'justify-center' : ''}`}
                             title="Back to Website"
                         >
                             <FiArrowLeft size={15} />
@@ -180,17 +182,17 @@ const UserSidebar = () => {
 
                         {/* User info */}
                         {!collapsed && (
-                            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-50 mt-1">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#F3A522] to-[#d88f13] flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-dash-soft mt-1">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
                                     {userName.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-semibold text-slate-700 truncate">{userName}</p>
-                                    <p className="text-[11px] text-slate-400 truncate">{userEmail}</p>
+                                    <p className="text-sm font-semibold text-dash-ink3 truncate">{userName}</p>
+                                    <p className="text-[11px] text-dash-mute2 truncate">{userEmail}</p>
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all flex-shrink-0"
+                                    className="w-7 h-7 rounded-md flex items-center justify-center text-dash-mute2 hover:text-rose-500 hover:bg-rose-50 transition-all flex-shrink-0"
                                     title="Logout"
                                 >
                                     <FiLogOut size={14} />
@@ -200,7 +202,7 @@ const UserSidebar = () => {
                         {collapsed && (
                             <button
                                 onClick={handleLogout}
-                                className="w-full flex justify-center py-2.5 text-slate-400 hover:text-rose-500 transition-all"
+                                className="w-full flex justify-center py-2.5 text-dash-mute2 hover:text-rose-500 transition-all"
                                 title="Logout"
                             >
                                 <FiLogOut size={16} />

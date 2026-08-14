@@ -19,6 +19,7 @@ import {
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import ImagePicker, { MultiImagePicker } from '@/components/shared/ImagePicker';
+import PdfPicker from '@/components/shared/PdfPicker';
 
 const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -52,13 +53,13 @@ const EMPTY = {
 };
 
 const inputCls =
-  'w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#F3A522]/25 focus:border-[#F3A522] outline-none transition-all';
+  'w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none transition-all';
 const Card = ({ children }) => (
-  <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">{children}</div>
+  <div className="bg-dash-card rounded-xl border border-dash-line p-5 sm:p-6">{children}</div>
 );
 const Label = ({ icon: Icon, children }) => (
-  <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2.5">
-    {Icon && <Icon className="text-[#F3A522]" />} {children}
+  <label className="flex items-center gap-2 text-sm font-bold text-dash-ink3 mb-2.5">
+    {Icon && <Icon className="text-brand" />} {children}
   </label>
 );
 
@@ -190,15 +191,15 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard/admin/books"
-            className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+            className="p-2 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
           >
             <FiArrowLeft />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-2xl font-bold text-dash-ink2">
               {mode === 'create' ? 'Add New Book' : 'Edit Book'}
             </h1>
-            <p className="text-slate-500 text-sm">
+            <p className="text-dash-mute text-sm">
               {mode === 'create'
                 ? 'Add a new book to the store catalog'
                 : 'Update this book’s catalog details'}
@@ -208,7 +209,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
         <button
           onClick={handleSubmit}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#F3A522] text-white font-semibold rounded-lg hover:bg-[#d88f13] transition-all shadow-lg shadow-[#F3A522]/20 disabled:opacity-50"
+          className="flex items-center gap-2 px-5 py-2.5 bg-brand text-white font-semibold rounded-lg hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
         >
           <FiSave />
           {saving ? 'Saving...' : mode === 'create' ? 'Create Book' : 'Save Changes'}
@@ -223,7 +224,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
             <input
               type="text" name="title" value={form.title} onChange={handleChange}
               placeholder="e.g. Guyton and Hall Textbook of Medical Physiology"
-              className={`${inputCls} ${errors.title ? 'border-red-400' : 'border-slate-200'}`}
+              className={`${inputCls} ${errors.title ? 'border-red-400' : 'border-dash-line'}`}
             />
             {err('title')}
 
@@ -233,9 +234,9 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 type="text" name="slug" value={form.slug}
                 onChange={(e) => { setSlugTouched(true); set('slug', e.target.value); }}
                 placeholder="guyton-and-hall-physiology"
-                className={`${inputCls} font-mono text-sm ${errors.slug ? 'border-red-400' : 'border-slate-200'}`}
+                className={`${inputCls} font-mono text-sm ${errors.slug ? 'border-red-400' : 'border-dash-line'}`}
               />
-              <p className="text-[11px] text-slate-400 mt-1">Auto-generated from the title; edit if needed. Must be unique.</p>
+              <p className="text-[11px] text-dash-mute2 mt-1">Auto-generated from the title; edit if needed. Must be unique.</p>
               {err('slug')}
             </div>
 
@@ -244,7 +245,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
               <input
                 type="text" name="author" value={form.author} onChange={handleChange}
                 placeholder="Author name"
-                className={`${inputCls} ${errors.author ? 'border-red-400' : 'border-slate-200'}`}
+                className={`${inputCls} ${errors.author ? 'border-red-400' : 'border-dash-line'}`}
               />
               {err('author')}
             </div>
@@ -254,7 +255,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
               <textarea
                 name="description" value={form.description} onChange={handleChange}
                 rows={6} placeholder="Describe the book, its contents and who it is for..."
-                className={`${inputCls} resize-none ${errors.description ? 'border-red-400' : 'border-slate-200'}`}
+                className={`${inputCls} resize-none ${errors.description ? 'border-red-400' : 'border-dash-line'}`}
               />
               {err('description')}
             </div>
@@ -265,20 +266,20 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
             <Label icon={FiDollarSign}>Pricing</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <span className="text-xs font-medium text-slate-500">Price (৳)</span>
+                <span className="text-xs font-medium text-dash-mute">Price (৳)</span>
                 <input
                   type="number" name="price" min="0" value={form.price} onChange={handleChange}
                   placeholder="0"
-                  className={`${inputCls} mt-1 ${errors.price ? 'border-red-400' : 'border-slate-200'}`}
+                  className={`${inputCls} mt-1 ${errors.price ? 'border-red-400' : 'border-dash-line'}`}
                 />
                 {err('price')}
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-500">Offer Price (৳)</span>
+                <span className="text-xs font-medium text-dash-mute">Offer Price (৳)</span>
                 <input
                   type="number" name="offerPrice" min="0" value={form.offerPrice} onChange={handleChange}
                   placeholder="Optional discounted price"
-                  className={`${inputCls} mt-1 ${errors.offerPrice ? 'border-red-400' : 'border-slate-200'}`}
+                  className={`${inputCls} mt-1 ${errors.offerPrice ? 'border-red-400' : 'border-dash-line'}`}
                 />
                 {err('offerPrice')}
               </div>
@@ -290,20 +291,20 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
             <Label icon={FiBook}>Format & Availability</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <span className="text-xs font-medium text-slate-500">Format</span>
+                <span className="text-xs font-medium text-dash-mute">Format</span>
                 <select
                   name="format" value={form.format} onChange={handleChange}
-                  className={`${inputCls} mt-1 border-slate-200`}
+                  className={`${inputCls} mt-1 border-dash-line`}
                 >
                   <option value="printed">Printed (physical)</option>
                   <option value="digital">Digital (PDF / e-book)</option>
                 </select>
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-500">Language</span>
+                <span className="text-xs font-medium text-dash-mute">Language</span>
                 <select
                   name="language" value={form.language} onChange={handleChange}
-                  className={`${inputCls} mt-1 border-slate-200`}
+                  className={`${inputCls} mt-1 border-dash-line`}
                 >
                   <option value="both">Both (Bn + En)</option>
                   <option value="bn">Bengali</option>
@@ -314,27 +315,27 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
 
             {form.format === 'printed' ? (
               <div className="mt-4">
-                <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
+                <span className="text-xs font-medium text-dash-mute flex items-center gap-1.5">
                   <FiBox size={12} /> Stock (copies)
                 </span>
                 <input
                   type="number" name="stock" min="0" value={form.stock} onChange={handleChange}
                   placeholder="Number of copies in stock"
-                  className={`${inputCls} mt-1 ${errors.stock ? 'border-red-400' : 'border-slate-200'}`}
+                  className={`${inputCls} mt-1 ${errors.stock ? 'border-red-400' : 'border-dash-line'}`}
                 />
                 {err('stock')}
               </div>
             ) : (
               <div className="mt-4">
-                <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
+                <span className="text-xs font-medium text-dash-mute flex items-center gap-1.5">
                   <FiLock size={12} /> Secure File URL
                 </span>
                 <input
                   type="text" name="secureFileUrl" value={form.secureFileUrl} onChange={handleChange}
                   placeholder="https://.../secure-book.pdf"
-                  className={`${inputCls} mt-1 ${errors.secureFileUrl ? 'border-red-400' : 'border-slate-200'}`}
+                  className={`${inputCls} mt-1 ${errors.secureFileUrl ? 'border-red-400' : 'border-dash-line'}`}
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-dash-mute2 mt-1">
                   {mode === 'edit'
                     ? 'Hidden for security — leave blank to keep the current file, or paste a new URL to replace it.'
                     : 'The purchasable file. Never shown on public pages.'}
@@ -347,7 +348,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
           {/* Preview material */}
           <Card>
             <Label icon={FiFileText}>Preview Material (optional)</Label>
-            <span className="text-xs font-medium text-slate-500">Preview images</span>
+            <span className="text-xs font-medium text-dash-mute">Preview images</span>
             <div className="mt-1.5">
               <MultiImagePicker
                 value={form.previewImages}
@@ -362,21 +363,29 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 onChange={(e) => setPreviewInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addPreview())}
                 placeholder="অথবা লিংক বসান: https://.../sample-page.jpg"
-                className={`${inputCls} border-slate-200 text-sm`}
+                className={`${inputCls} border-dash-line text-sm`}
               />
               <button
                 type="button" onClick={addPreview}
-                className="px-4 py-2.5 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors shrink-0"
+                className="px-4 py-2.5 bg-dash-soft2 rounded-lg text-dash-ink4 hover:bg-dash-soft3 transition-colors shrink-0"
               >
                 <FiPlus />
               </button>
             </div>
             <div className="mt-4">
-              <span className="text-xs font-medium text-slate-500">Preview PDF URL</span>
+              <span className="text-xs font-medium text-dash-mute">Preview PDF</span>
+              <div className="mt-1.5">
+                <PdfPicker
+                  value={form.previewPdfUrl}
+                  onChange={(url) => set('previewPdfUrl', url)}
+                  onError={(msg) => showToast('error', msg)}
+                  label="নমুনা পাতার PDF"
+                />
+              </div>
               <input
                 type="text" name="previewPdfUrl" value={form.previewPdfUrl} onChange={handleChange}
-                placeholder="https://.../preview.pdf"
-                className={`${inputCls} mt-1 ${errors.previewPdfUrl ? 'border-red-400' : 'border-slate-200'}`}
+                placeholder="অথবা লিংক বসান: https://.../preview.pdf"
+                className={`${inputCls} mt-2 text-sm ${errors.previewPdfUrl ? 'border-red-400' : 'border-dash-line'}`}
               />
               {err('previewPdfUrl')}
             </div>
@@ -402,7 +411,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
             <input
               type="text" name="category" value={form.category} onChange={handleChange}
               list="book-categories" placeholder="e.g. Physiology"
-              className={`${inputCls} ${errors.category ? 'border-red-400' : 'border-slate-200'}`}
+              className={`${inputCls} ${errors.category ? 'border-red-400' : 'border-dash-line'}`}
             />
             <datalist id="book-categories">
               {CATEGORY_SUGGESTIONS.map((c) => <option key={c} value={c} />)}
@@ -412,10 +421,10 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
 
           <Card>
             <Label icon={FiStar}>Publishing</Label>
-            <span className="text-xs font-medium text-slate-500">Status</span>
+            <span className="text-xs font-medium text-dash-mute">Status</span>
             <select
               name="status" value={form.status} onChange={handleChange}
-              className={`${inputCls} mt-1 border-slate-200`}
+              className={`${inputCls} mt-1 border-dash-line`}
             >
               <option value="published">Published</option>
               <option value="draft">Draft</option>
@@ -424,9 +433,9 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
             <label className="flex items-center gap-3 cursor-pointer mt-4">
               <input
                 type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange}
-                className="w-5 h-5 rounded border-slate-300 text-[#F3A522] focus:ring-[#F3A522]"
+                className="w-5 h-5 rounded border-dash-line-strong text-brand focus:ring-brand"
               />
-              <span className="text-sm font-medium text-slate-700">Featured book</span>
+              <span className="text-sm font-medium text-dash-ink3">Featured book</span>
             </label>
           </Card>
         </div>

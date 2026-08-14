@@ -238,12 +238,12 @@ export default function CreateClassPage({ params }) {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href={`/dashboard/mentor/batch-materials/${batchId}`}
-          className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition">
+          className="w-10 h-10 rounded-xl bg-dash-soft2 flex items-center justify-center text-dash-mute hover:bg-dash-soft3 transition">
           <FiArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-slate-800 outfit">Create Class Folder</h1>
-          <p className="text-sm text-slate-500">{batch?.name || batch?.courseName || 'Batch'} <code className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">{batch?.id}</code></p>
+          <h1 className="text-xl font-bold text-dash-ink2 outfit">Create Class Folder</h1>
+          <p className="text-sm text-dash-mute">{batch?.name || batch?.courseName || 'Batch'} <code className="text-[10px] bg-dash-soft2 px-1.5 py-0.5 rounded">{batch?.id}</code></p>
         </div>
       </div>
 
@@ -252,60 +252,60 @@ export default function CreateClassPage({ params }) {
       )}
 
       {/* Full Page Form */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-dash-card rounded-2xl border border-dash-line shadow-sm overflow-hidden">
 
         {/* Section 1: Basic Info */}
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-6 border-b border-dash-line-soft">
           <h4 className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-4 flex items-center gap-1.5">
             <FiFolder size={12} /> Basic Information
           </h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Class Title *</label>
+              <label className="text-xs font-bold text-dash-mute mb-1 block">Class Title *</label>
               <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g. Class 01 - Introduction" className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
+                placeholder="e.g. Class 01 - Introduction" className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Date *</label>
+              <label className="text-xs font-bold text-dash-mute mb-1 block">Date *</label>
               <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
+                className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20" />
             </div>
           </div>
           <div className="mt-3">
-            <label className="text-xs font-bold text-slate-500 mb-1 block">Topics / কি কি শেখানো হবে *</label>
+            <label className="text-xs font-bold text-dash-mute mb-1 block">Topics / কি কি শেখানো হবে *</label>
             <textarea value={form.topic} onChange={e => setForm({ ...form, topic: e.target.value })} rows={2}
               placeholder="e.g. HTML Structure, CSS Selectors, Flexbox Layout, Responsive Design..."
-              className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
+              className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
           </div>
         </div>
 
         {/* Section 2: Schedule */}
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-6 border-b border-dash-line-soft">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h4 className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
               <FiClock size={12} /> Schedule & Class Type
             </h4>
             {batch?.classTime && (
-              <span className="text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                Batch default: <span className="font-bold text-slate-700">{batch.classTime}</span>
+              <span className="text-[10px] text-dash-mute bg-dash-soft px-2 py-1 rounded-md border border-dash-line-soft">
+                Batch default: <span className="font-bold text-dash-ink3">{batch.classTime}</span>
               </span>
             )}
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Start Time</label>
+              <label className="text-xs font-bold text-dash-mute mb-1 block">Start Time</label>
               <input type="time" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+                className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">End Time</label>
+              <label className="text-xs font-bold text-dash-mute mb-1 block">End Time</label>
               <input type="time" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+                className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Class Type</label>
+              <label className="text-xs font-bold text-dash-mute mb-1 block">Class Type</label>
               <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400">
+                className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400">
                 <option value="live">🔴 Live Online</option>
                 <option value="offline">📍 Offline</option>
                 <option value="recorded">📹 Pre-Recorded</option>
@@ -315,20 +315,20 @@ export default function CreateClassPage({ params }) {
         </div>
 
         {/* Section 3: Meeting Link */}
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-6 border-b border-dash-line-soft">
           <h4 className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-4 flex items-center gap-1.5">
             <FiLink size={12} /> Meeting Link & Venue (optional)
           </h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Meeting / Zoom Link</label>
+              <label className="text-xs font-bold text-dash-mute mb-1 block">Meeting / Zoom Link</label>
               <input type="url" value={form.meetingLink} onChange={e => setForm({ ...form, meetingLink: e.target.value })}
-                placeholder="https://zoom.us/j/..." className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+                placeholder="https://zoom.us/j/..." className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Platform</label>
+              <label className="text-xs font-bold text-dash-mute mb-1 block">Platform</label>
               <select value={form.meetingPlatform} onChange={e => setForm({ ...form, meetingPlatform: e.target.value })}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400">
+                className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400">
                 <option value="zoom">Zoom</option>
                 <option value="meet">Google Meet</option>
                 <option value="teams">MS Teams</option>
@@ -337,14 +337,14 @@ export default function CreateClassPage({ params }) {
             </div>
           </div>
           <div className="mt-3">
-            <label className="text-xs font-bold text-slate-500 mb-1 block">Venue (Offline ক্লাসের জন্য)</label>
+            <label className="text-xs font-bold text-dash-mute mb-1 block">Venue (Offline ক্লাসের জন্য)</label>
             <input type="text" value={form.venue} onChange={e => setForm({ ...form, venue: e.target.value })}
-              placeholder="Room 301, Aptech Learning HQ" className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400" />
+              placeholder="Room 301, Aptech Learning HQ" className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400" />
           </div>
         </div>
 
         {/* Section 4: Recordings (multi) */}
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-6 border-b border-dash-line-soft">
           <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
             <FiVideo size={12} /> Class Recordings (optional, multiple supported)
           </h4>
@@ -353,10 +353,10 @@ export default function CreateClassPage({ params }) {
           {form.recordings.length > 0 && (
             <div className="space-y-2 mb-4">
               {form.recordings.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                <div key={i} className="flex items-center gap-2 px-3 py-2.5 bg-dash-soft rounded-lg border border-dash-line">
                   <FiVideo size={13} className="text-red-500 flex-shrink-0" />
-                  <span className="text-sm text-slate-700 font-medium flex-1 truncate">{r.title}</span>
-                  <span className="text-[10px] text-slate-400 truncate max-w-[200px]" title={r.url}>{r.url}</span>
+                  <span className="text-sm text-dash-ink3 font-medium flex-1 truncate">{r.title}</span>
+                  <span className="text-[10px] text-dash-mute2 truncate max-w-[200px]" title={r.url}>{r.url}</span>
                   <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700"><FiExternalLink size={12} /></a>
                   <button type="button" onClick={() => removeRecording(i)} className="text-rose-400 hover:text-rose-600"><FiTrash2 size={12} /></button>
                 </div>
@@ -371,23 +371,23 @@ export default function CreateClassPage({ params }) {
               <input type="text" value={newRecording.title}
                 onChange={e => setNewRecording({ ...newRecording, title: e.target.value })}
                 placeholder="Title (e.g. Part 1)"
-                className="px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-rose-400 bg-white" />
+                className="px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:border-rose-400 bg-dash-card" />
               <input type="url" value={newRecording.url}
                 onChange={e => setNewRecording({ ...newRecording, url: e.target.value })}
                 placeholder="https://youtube.com/... or drive.google.com link"
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addRecording(); } }}
-                className="px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-rose-400 bg-white" />
+                className="px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:border-rose-400 bg-dash-card" />
               <button type="button" onClick={addRecording}
                 className="px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-bold hover:bg-rose-600 transition flex items-center justify-center gap-1">
                 <FiPlus size={14} /> Add
               </button>
             </div>
-            <p className="text-[10px] text-slate-400 mt-2">ক্লাস শেষে একাধিক recording link এখানে যোগ করুন (YouTube, Drive, ইত্যাদি)। পরে edit করেও যোগ করা যাবে।</p>
+            <p className="text-[10px] text-dash-mute2 mt-2">ক্লাস শেষে একাধিক recording link এখানে যোগ করুন (YouTube, Drive, ইত্যাদি)। পরে edit করেও যোগ করা যাবে।</p>
           </div>
         </div>
 
         {/* Section 5: Materials — Upload + Link */}
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-6 border-b border-dash-line-soft">
           <h4 className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-4 flex items-center gap-1.5">
             <FiFileText size={12} /> Materials & Documents (optional)
           </h4>
@@ -396,10 +396,10 @@ export default function CreateClassPage({ params }) {
           {form.materials.length > 0 && (
             <div className="space-y-2 mb-4">
               {form.materials.map((m, i) => (
-                <div key={i} className="flex items-center gap-2 px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                <div key={i} className="flex items-center gap-2 px-3 py-2.5 bg-dash-soft rounded-lg border border-dash-line">
                   <FiFileText size={13} className="text-teal-500 flex-shrink-0" />
-                  <span className="text-sm text-slate-700 font-medium flex-1 truncate">{m.title}</span>
-                  <span className="text-[9px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold">{m.fileType}</span>
+                  <span className="text-sm text-dash-ink3 font-medium flex-1 truncate">{m.title}</span>
+                  <span className="text-[9px] bg-dash-soft3 text-dash-mute px-1.5 py-0.5 rounded uppercase font-bold">{m.fileType}</span>
                   <a href={m.fileUrl} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700"><FiExternalLink size={12} /></a>
                   <button onClick={() => removeMaterial(i)} className="text-rose-400 hover:text-rose-600"><FiTrash2 size={12} /></button>
                 </div>
@@ -426,9 +426,9 @@ export default function CreateClassPage({ params }) {
 
             {/* Divider */}
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase">or add by link</span>
-              <div className="flex-1 h-px bg-slate-200" />
+              <div className="flex-1 h-px bg-dash-soft3" />
+              <span className="text-[10px] font-bold text-dash-mute2 uppercase">or add by link</span>
+              <div className="flex-1 h-px bg-dash-soft3" />
             </div>
 
             {/* Add by Link */}
@@ -436,12 +436,12 @@ export default function CreateClassPage({ params }) {
               <label className="text-[11px] font-bold text-blue-600 mb-2 block">🔗 Add Link (Google Drive, GitHub, etc.)</label>
               <div className="grid grid-cols-3 gap-3">
                 <input type="text" value={newMaterial.title} onChange={e => setNewMaterial({ ...newMaterial, title: e.target.value })}
-                  placeholder="Title (e.g. Slides)" className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 bg-white" />
+                  placeholder="Title (e.g. Slides)" className="px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 bg-dash-card" />
                 <input type="url" value={newMaterial.fileUrl} onChange={e => setNewMaterial({ ...newMaterial, fileUrl: e.target.value })}
-                  placeholder="URL (drive, github, etc)" className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 bg-white" />
+                  placeholder="URL (drive, github, etc)" className="px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 bg-dash-card" />
                 <div className="flex gap-2">
                   <select value={newMaterial.fileType} onChange={e => setNewMaterial({ ...newMaterial, fileType: e.target.value })}
-                    className="flex-1 px-2 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 bg-white">
+                    className="flex-1 px-2 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 bg-dash-card">
                     <option value="pdf">PDF</option><option value="ppt">PPT</option><option value="doc">DOC</option>
                     <option value="zip">ZIP</option><option value="link">Link</option><option value="video">Video</option>
                   </select>
@@ -456,17 +456,17 @@ export default function CreateClassPage({ params }) {
         </div>
 
         {/* Section 6: Notes */}
-        <div className="p-6 border-b border-slate-100">
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">📝 Notes / Instructions (optional)</h4>
+        <div className="p-6 border-b border-dash-line-soft">
+          <h4 className="text-xs font-bold text-dash-mute uppercase tracking-wider mb-4">📝 Notes / Instructions (optional)</h4>
           <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3}
             placeholder="Prerequisites, homework, preparation, guidelines..."
-            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
+            className="w-full px-3 py-2.5 border border-dash-line rounded-lg text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 resize-none" />
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between p-6 bg-slate-50">
+        <div className="flex items-center justify-between p-6 bg-dash-soft">
           <Link href={`/dashboard/mentor/batch-materials/${batchId}`}
-            className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">
+            className="px-4 py-2.5 text-sm font-medium text-dash-ink4 hover:bg-dash-soft2 rounded-lg transition">
             Cancel
           </Link>
           <button onClick={handleSave} disabled={saving}

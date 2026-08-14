@@ -116,6 +116,54 @@ export async function apiLogin(params: {
   };
 }
 
+// ── Sign in with Google ───────────────────────────────────────────────────────
+//
+// The OAuth client id, or "" when Google sign-in is switched off.
+//
+// NEXT_PUBLIC_* is INLINED AT BUILD TIME, so this is a constant in the bundle,
+// not a runtime lookup: with the variable unset the value is "", every caller
+// short-circuits, and no Google script is ever fetched. That is the state the
+// app ships in today and it must stay silent — no button, no console noise, no
+// half-rendered widget. Setting the variable and rebuilding is the whole
+// switch-on step on the client side.
+//
+// It must be the SAME id the server has as GOOGLE_CLIENT_ID: the server
+// verifies every token's `audience` against it, so a mismatch fails every
+// sign-in with a 401.
+export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+
+export const isGoogleSignInEnabled = (): boolean => GOOGLE_CLIENT_ID.length > 0;
+
+// Exchanges Google's ID token for a Sabbir Book session.
+//
+// `credential` is the raw JWT that Google Identity Services hands the browser.
+// It is the ONLY thing sent — no email, no name, no id. The server will not
+// believe anything we claim about the user; it verifies the token against
+// Google's signing keys and reads the identity out of the verified payload.
+// (The endpoint this replaced took an email in the body and trusted it, which
+// let anyone log in as anyone. See sabbirbooks_server user.route.ts.)
+//
+// Sends x-device-id so the 2-device limit applies exactly as on password login.
+export async function apiGoogleSignIn(credential: string): Promise<ApiResult<LoginData>> {
+  const deviceId = getDeviceId();
+  const res = await fetch(`${API_BASE_URL}/user/google-signin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-device-id": deviceId,
+    },
+    body: JSON.stringify({ credential }),
+  });
+  const json = await readJson(res);
+  return {
+    ok: res.ok,
+    success: Boolean(json.success),
+    message: typeof json.message === "string" ? json.message : undefined,
+    data: json.data as LoginData | undefined,
+    raw: json,
+  };
+}
+
 // ── Register ───────────────────────────────────────────────────────────────────
 // Backend requires firstName + lastName + email + password (4–20 chars).
 // phoneNumber is optional. No device header needed for registration.

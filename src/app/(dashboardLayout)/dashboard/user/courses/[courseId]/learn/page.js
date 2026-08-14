@@ -192,9 +192,9 @@ export default function CoursePlayerPage() {
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative w-12 h-12">
                         <div className="absolute inset-0 border-[3px] border-slate-800 rounded-full" />
-                        <div className="absolute inset-0 border-[3px] border-transparent border-t-[#F3A522] rounded-full animate-spin" />
+                        <div className="absolute inset-0 border-[3px] border-transparent border-t-brand rounded-full animate-spin" />
                     </div>
-                    <p className="text-slate-500 text-sm font-medium">Loading course...</p>
+                    <p className="text-dash-mute text-sm font-medium">Loading course...</p>
                 </div>
             </div>
         );
@@ -203,10 +203,10 @@ export default function CoursePlayerPage() {
     if (!course || allLessons.length === 0) {
         return (
             <div className="min-h-screen bg-[#0f0f0f] flex flex-col items-center justify-center text-white">
-                <FiBook size={48} className="text-slate-700 mb-4" />
+                <FiBook size={48} className="text-dash-ink3 mb-4" />
                 <h2 className="text-xl font-bold mb-2">No Lessons Available</h2>
-                <p className="text-slate-500 mb-6">This course doesn&apos;t have any lessons yet.</p>
-                <Link href="/dashboard/user/courses" className="px-5 py-2.5 bg-[#e0941c] rounded-xl text-sm font-bold hover:bg-[#e0941c] transition">
+                <p className="text-dash-mute mb-6">This course doesn&apos;t have any lessons yet.</p>
+                <Link href="/dashboard/user/courses" className="px-5 py-2.5 bg-brand-strong rounded-xl text-sm font-bold hover:bg-brand-strong transition">
                     Back to Courses
                 </Link>
             </div>
@@ -226,7 +226,7 @@ export default function CoursePlayerPage() {
             <header className="bg-[#181818] border-b border-[#282828] h-14 flex items-center px-4 gap-3 flex-shrink-0 z-30">
                 <Link
                     href="/dashboard/user/courses"
-                    className="flex items-center gap-2 text-slate-400 hover:text-white transition text-sm font-medium"
+                    className="flex items-center gap-2 text-dash-mute2 hover:text-white transition text-sm font-medium"
                 >
                     <FiArrowLeft size={18} />
                     <span className="hidden sm:inline">Back</span>
@@ -245,15 +245,15 @@ export default function CoursePlayerPage() {
                     <div className="flex items-center gap-2">
                         <div className="w-32 h-1.5 bg-[#333] rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-[#F3A522] rounded-full transition-all duration-700"
+                                className="h-full bg-brand rounded-full transition-all duration-700"
                                 style={{ width: `${overallProgress}%` }}
                             />
                         </div>
-                        <span className="text-xs text-slate-400 font-semibold tabular-nums min-w-[36px]">
+                        <span className="text-xs text-dash-mute2 font-semibold tabular-nums min-w-[36px]">
                             {overallProgress}%
                         </span>
                     </div>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-dash-mute">
                         {completedCount}/{allLessons.length} lessons
                     </span>
                 </div>
@@ -261,7 +261,7 @@ export default function CoursePlayerPage() {
                 {/* Sidebar Toggle */}
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#282828] transition"
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-white hover:bg-[#282828] transition"
                     title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
                 >
                     <FiList size={18} />
@@ -303,7 +303,7 @@ export default function CoursePlayerPage() {
                         ) : currentLesson?.type === 'text' ? (
                             <div className="bg-[#181818] p-8 lg:p-12 min-h-[40vh]">
                                 <div className="max-w-3xl mx-auto prose prose-invert">
-                                    <div className="text-slate-300 text-base leading-relaxed whitespace-pre-wrap">
+                                    <div className="text-dash-faint text-base leading-relaxed whitespace-pre-wrap">
                                         {currentLesson.textContent || 'No content available.'}
                                     </div>
                                 </div>
@@ -311,10 +311,10 @@ export default function CoursePlayerPage() {
                         ) : (
                             <div className="bg-[#181818] p-12 min-h-[40vh] flex flex-col items-center justify-center">
                                 <div className="w-20 h-20 bg-[#282828] rounded-2xl flex items-center justify-center mb-4">
-                                    <FiFileText className="text-slate-500" size={28} />
+                                    <FiFileText className="text-dash-mute" size={28} />
                                 </div>
                                 <h3 className="text-white text-lg font-bold mb-1">{currentLesson?.title}</h3>
-                                <p className="text-slate-500 text-sm">{currentLesson?.type === 'quiz' ? 'Quiz' : 'Assignment'} coming soon</p>
+                                <p className="text-dash-mute text-sm">{currentLesson?.type === 'quiz' ? 'Quiz' : 'Assignment'} coming soon</p>
                             </div>
                         )}
                     </div>
@@ -325,12 +325,12 @@ export default function CoursePlayerPage() {
                         <div className="px-5 lg:px-8 py-5 border-b border-[#1e1e1e]">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
-                                    <p className="text-[#F3A522] text-xs font-semibold uppercase tracking-wider mb-1">
+                                    <p className="text-brand text-xs font-semibold uppercase tracking-wider mb-1">
                                         {currentLesson?.moduleTitle}
                                     </p>
                                     <h2 className="text-white text-xl font-bold">{currentLesson?.title}</h2>
                                     {currentLesson?.description && (
-                                        <p className="text-slate-400 text-sm mt-2 leading-relaxed max-w-2xl">
+                                        <p className="text-dash-mute2 text-sm mt-2 leading-relaxed max-w-2xl">
                                             {currentLesson.description}
                                         </p>
                                     )}
@@ -339,14 +339,14 @@ export default function CoursePlayerPage() {
                                     <button
                                         onClick={goPrev}
                                         disabled={currentIndex === 0}
-                                        className="w-10 h-10 rounded-lg bg-[#1e1e1e] text-slate-400 flex items-center justify-center hover:bg-[#282828] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+                                        className="w-10 h-10 rounded-lg bg-[#1e1e1e] text-dash-mute2 flex items-center justify-center hover:bg-[#282828] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
                                     >
                                         <FiChevronLeft size={18} />
                                     </button>
                                     <button
                                         onClick={goNext}
                                         disabled={currentIndex === allLessons.length - 1}
-                                        className="w-10 h-10 rounded-lg bg-[#e0941c] text-white flex items-center justify-center hover:bg-[#e0941c] disabled:opacity-30 disabled:cursor-not-allowed transition"
+                                        className="w-10 h-10 rounded-lg bg-brand-strong text-white flex items-center justify-center hover:bg-brand-strong disabled:opacity-30 disabled:cursor-not-allowed transition"
                                     >
                                         <FiChevronRight size={18} />
                                     </button>
@@ -354,7 +354,7 @@ export default function CoursePlayerPage() {
                             </div>
 
                             {/* Lesson Counter */}
-                            <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
+                            <div className="mt-3 flex items-center gap-4 text-xs text-dash-mute">
                                 <span className="flex items-center gap-1.5">
                                     <FiPlay size={11} /> Lesson {currentIndex + 1} of {allLessons.length}
                                 </span>
@@ -374,8 +374,8 @@ export default function CoursePlayerPage() {
                                         key={tab}
                                         onClick={() => setActiveTab(tab.toLowerCase())}
                                         className={`px-4 py-3 text-sm font-medium border-b-2 transition ${activeTab === tab.toLowerCase()
-                                            ? 'text-[#e0a53a] border-[#F3A522]'
-                                            : 'text-slate-500 border-transparent hover:text-slate-300'
+                                            ? 'text-brand-strong border-brand'
+                                            : 'text-dash-mute border-transparent hover:text-dash-faint'
                                             }`}
                                     >
                                         {tab}
@@ -389,7 +389,7 @@ export default function CoursePlayerPage() {
                             {activeTab === 'overview' && (
                                 <div className="max-w-3xl">
                                     <h3 className="text-white font-semibold mb-3">About this lesson</h3>
-                                    <p className="text-slate-400 text-sm leading-relaxed">
+                                    <p className="text-dash-mute2 text-sm leading-relaxed">
                                         {currentLesson?.description || 'No description available for this lesson.'}
                                     </p>
                                 </div>
@@ -406,19 +406,19 @@ export default function CoursePlayerPage() {
                                                     rel="noopener noreferrer"
                                                     className="flex items-center gap-3 p-4 bg-[#1e1e1e] rounded-xl hover:bg-[#282828] transition group"
                                                 >
-                                                    <div className="w-10 h-10 bg-[#282828] rounded-lg flex items-center justify-center group-hover:bg-[#F3A522]/20 transition">
-                                                        <FiFileText className="text-slate-400 group-hover:text-[#e0a53a]" size={16} />
+                                                    <div className="w-10 h-10 bg-[#282828] rounded-lg flex items-center justify-center group-hover:bg-brand/20 transition">
+                                                        <FiFileText className="text-dash-mute2 group-hover:text-brand-strong" size={16} />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm text-slate-300 truncate font-medium">{mat.title}</p>
-                                                        <p className="text-xs text-slate-500 uppercase">{mat.fileType}</p>
+                                                        <p className="text-sm text-dash-faint truncate font-medium">{mat.title}</p>
+                                                        <p className="text-xs text-dash-mute uppercase">{mat.fileType}</p>
                                                     </div>
-                                                    <FiDownload className="text-slate-600 group-hover:text-[#e0a53a]" size={14} />
+                                                    <FiDownload className="text-dash-ink4 group-hover:text-brand-strong" size={14} />
                                                 </a>
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-slate-500 text-sm">No materials available for this lesson.</p>
+                                        <p className="text-dash-mute text-sm">No materials available for this lesson.</p>
                                     )}
                                 </div>
                             )}
@@ -431,16 +431,16 @@ export default function CoursePlayerPage() {
                     {/* Sidebar Header */}
                     <div className="h-14 px-4 flex items-center justify-between border-b border-[#282828] flex-shrink-0">
                         <div className="flex items-center gap-2">
-                            <FiBook size={15} className="text-[#F3A522]" />
+                            <FiBook size={15} className="text-brand" />
                             <h3 className="text-white font-semibold text-sm">Course Content</h3>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-slate-500 font-medium">
+                            <span className="text-[11px] text-dash-mute font-medium">
                                 {completedCount}/{allLessons.length}
                             </span>
                             <button
                                 onClick={() => setSidebarOpen(false)}
-                                className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#282828]"
+                                className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-white hover:bg-[#282828]"
                             >
                                 <FiX size={16} />
                             </button>
@@ -462,7 +462,7 @@ export default function CoursePlayerPage() {
                                     >
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[11px] font-bold text-slate-600 tabular-nums">
+                                                <span className="text-[11px] font-bold text-dash-ink4 tabular-nums">
                                                     {String(modIdx + 1).padStart(2, '0')}
                                                 </span>
                                                 <p className="text-[13px] text-slate-200 font-semibold truncate">
@@ -470,19 +470,19 @@ export default function CoursePlayerPage() {
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-2 mt-1 ml-7">
-                                                <span className="text-[11px] text-slate-500">{modLessons.length} lessons</span>
+                                                <span className="text-[11px] text-dash-mute">{modLessons.length} lessons</span>
                                                 {modCompleted > 0 && (
                                                     <>
-                                                        <span className="text-[11px] text-slate-600">·</span>
-                                                        <span className="text-[11px] text-[#F3A522] font-medium">{modCompleted} done</span>
+                                                        <span className="text-[11px] text-dash-ink4">·</span>
+                                                        <span className="text-[11px] text-brand font-medium">{modCompleted} done</span>
                                                     </>
                                                 )}
                                             </div>
                                         </div>
                                         {expandedModules[mod._id] ? (
-                                            <FiChevronUp className="text-slate-500" size={14} />
+                                            <FiChevronUp className="text-dash-mute" size={14} />
                                         ) : (
-                                            <FiChevronDown className="text-slate-500" size={14} />
+                                            <FiChevronDown className="text-dash-mute" size={14} />
                                         )}
                                     </button>
 
@@ -500,29 +500,29 @@ export default function CoursePlayerPage() {
                                                         onClick={() => { goToLesson(lesson); setSidebarOpen(window.innerWidth >= 1024); }}
                                                         className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all group
                                                             ${isActive
-                                                                ? 'bg-[#F3A522]/10 border-l-[3px] border-[#F3A522]'
+                                                                ? 'bg-brand/10 border-l-[3px] border-brand'
                                                                 : 'hover:bg-[#1a1a1a] border-l-[3px] border-transparent'
                                                             }`}
                                                     >
                                                         {/* Status Icon */}
                                                         <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold transition
                                                             ${isCompleted
-                                                                ? 'bg-[#F3A522]/20 text-[#e0a53a]'
+                                                                ? 'bg-brand/20 text-brand-strong'
                                                                 : isActive
-                                                                    ? 'bg-[#F3A522] text-white'
-                                                                    : 'bg-[#222] text-slate-500 group-hover:bg-[#2a2a2a]'
+                                                                    ? 'bg-brand text-white'
+                                                                    : 'bg-[#222] text-dash-mute group-hover:bg-[#2a2a2a]'
                                                             }`}>
                                                             {isCompleted ? <FiCheck size={13} /> : isActive ? <FiPlay size={11} /> : lesIdx + 1}
                                                         </div>
 
                                                         {/* Lesson Info */}
                                                         <div className="flex-1 min-w-0">
-                                                            <p className={`text-[13px] truncate ${isActive ? 'text-white font-semibold' : isCompleted ? 'text-slate-500' : 'text-slate-300'}`}>
+                                                            <p className={`text-[13px] truncate ${isActive ? 'text-white font-semibold' : isCompleted ? 'text-dash-mute' : 'text-dash-faint'}`}>
                                                                 {lesson.title}
                                                             </p>
                                                             <div className="flex items-center gap-2 mt-0.5">
-                                                                <FiVideo size={10} className="text-slate-600" />
-                                                                <span className="text-[11px] text-slate-600">
+                                                                <FiVideo size={10} className="text-dash-ink4" />
+                                                                <span className="text-[11px] text-dash-ink4">
                                                                     {lesson.videoDuration ? `${Math.round(lesson.videoDuration / 60)} min` : 'Video'}
                                                                 </span>
                                                             </div>
@@ -530,7 +530,7 @@ export default function CoursePlayerPage() {
 
                                                         {/* Progress */}
                                                         {isCompleted && (
-                                                            <FiCheckCircle size={14} className="text-[#F3A522] flex-shrink-0" />
+                                                            <FiCheckCircle size={14} className="text-brand flex-shrink-0" />
                                                         )}
                                                         {progress && !isCompleted && progress.watchedPercent > 0 && (
                                                             <div className="w-6 h-6 relative flex-shrink-0">

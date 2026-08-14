@@ -19,7 +19,9 @@ import { Button, cn } from "@/components/ui";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import { apiLogin, persistSession } from "@/components/auth/authClient";
+import { apiLogin, persistSession, type LoginData } from "@/components/auth/authClient";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { homeRouteFor } from "@/lib/permissions";
 
 type Mode = "email" | "phone";
 
@@ -51,6 +53,7 @@ export default function LoginPage() {
         forgotNote: "পাসওয়ার্ড রিসেট শীঘ্রই আসছে — সহায়তার জন্য যোগাযোগ করুন।",
         submit: "লগইন করুন",
         submitting: "লগইন হচ্ছে...",
+        or: "অথবা",
         noAccount: "অ্যাকাউন্ট নেই?",
         register: "রেজিস্টার করুন",
         deviceNote: "নিরাপত্তার জন্য প্রতিটি অ্যাকাউন্ট সর্বোচ্চ ২টি ডিভাইসে ব্যবহার করা যায়।",
@@ -78,6 +81,7 @@ export default function LoginPage() {
         forgotNote: "Password reset is coming soon — please contact support for help.",
         submit: "Log in",
         submitting: "Logging in...",
+        or: "or",
         noAccount: "Don't have an account?",
         register: "Create one",
         deviceNote: "For your security, each account can be used on up to 2 devices.",
@@ -115,6 +119,34 @@ export default function LoginPage() {
     reset({ identifier: "", password: "" });
   };
 
+  // Where a freshly signed-in user goes. Extracted UNCHANGED from onSubmit so
+  // the Google button lands on exactly the same rules as the password form —
+  // two copies of this would drift, and the copy that drifted would be the one
+  // that sends an admin to the student dashboard.
+  // The caller has already persisted the session; this only navigates.
+  const goAfterLogin = (data: LoginData) => {
+    // Redirect by role into the matching dashboard shell.
+    // homeRouteFor is the same map the route guard bounces with, so login and
+    // a rejected page can never disagree. It also fixes the old bug where a
+    // trainingManager fell into the `else` branch and landed on the student
+    // dashboard (and the guard sent them to a /dashboard/training-manager
+    // route that has never existed).
+    const role = (data.user as { role?: string } | undefined)?.role;
+    const roleDest = homeRouteFor(role);
+    // A reader who scanned a book QR while logged out is sent here with
+    // ?redirect=/b/<code> and must land back on that topic, not on their
+    // dashboard. Read at submit time from window rather than through
+    // useSearchParams, which would force this page behind a Suspense
+    // boundary and break static prerendering.
+    // Only same-origin paths are honoured: "//evil.com" is a
+    // protocol-relative URL, so a leading "/" alone is not enough.
+    const wanted = new URLSearchParams(window.location.search).get("redirect");
+    const dest =
+      wanted && wanted.startsWith("/") && !wanted.startsWith("//") ? wanted : roleDest;
+    router.push(dest);
+    router.refresh();
+  };
+
   const onSubmit = async (values: LoginForm) => {
     setApiError("");
     try {
@@ -125,26 +157,7 @@ export default function LoginPage() {
       });
       if (result.ok && result.success && result.data) {
         persistSession(result.data);
-        // Redirect by role into the matching dashboard shell.
-        const role = (result.data.user as { role?: string } | undefined)?.role;
-        const roleDest =
-          role === "admin" || role === "superAdmin"
-            ? "/dashboard/admin"
-            : role === "mentor"
-            ? "/dashboard/mentor"
-            : "/dashboard/user";
-        // A reader who scanned a book QR while logged out is sent here with
-        // ?redirect=/b/<code> and must land back on that topic, not on their
-        // dashboard. Read at submit time from window rather than through
-        // useSearchParams, which would force this page behind a Suspense
-        // boundary and break static prerendering.
-        // Only same-origin paths are honoured: "//evil.com" is a
-        // protocol-relative URL, so a leading "/" alone is not enough.
-        const wanted = new URLSearchParams(window.location.search).get("redirect");
-        const dest =
-          wanted && wanted.startsWith("/") && !wanted.startsWith("//") ? wanted : roleDest;
-        router.push(dest);
-        router.refresh();
+        goAfterLogin(result.data);
         return;
       }
       setApiError(result.message || S.generic);
@@ -254,6 +267,21 @@ export default function LoginPage() {
           <span>{S.deviceNote}</span>
         </div>
       </form>
+
+      {/* Sign in with Google.
+          Renders nothing at all unless NEXT_PUBLIC_GOOGLE_CLIENT_ID is set at
+          build time, so with the variable absent this page is byte-for-byte the
+          form above. Outside the <form> so a stray Enter cannot submit through
+          it. The session is already stored by the time onSuccess runs. */}
+      <div className="mt-6">
+        <GoogleSignInButton
+          bengali={isBengali}
+          intent="signin"
+          dividerLabel={S.or}
+          onSuccess={goAfterLogin}
+          onError={setApiError}
+        />
+      </div>
 
       <p className={cn("mt-6 text-center text-sm text-muted-foreground", bn)}>
         {S.noAccount}{" "}

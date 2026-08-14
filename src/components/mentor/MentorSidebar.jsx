@@ -100,7 +100,7 @@ const MentorSidebar = () => {
       {/* Mobile Toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-[60] w-10 h-10 rounded-xl bg-white shadow-lg border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-all"
+        className="lg:hidden fixed top-4 left-4 z-[60] w-10 h-10 rounded-xl bg-dash-card shadow-lg border border-dash-line flex items-center justify-center text-dash-ink3 hover:bg-dash-soft active:scale-95 transition-all"
         aria-label="Toggle menu"
       >
         {isOpen ? <FiX size={18} /> : <FiMenu size={18} />}
@@ -110,18 +110,18 @@ const MentorSidebar = () => {
       <aside
         className={`fixed top-0 left-0 h-screen transition-all duration-300 ease-in-out z-[50]
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${sidebarWidth} bg-white border-r border-slate-200/80`}
+          ${sidebarWidth} bg-dash-card border-r border-dash-line/80`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-4 h-16 border-b border-slate-100`}>
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-4 h-16 border-b border-dash-line-soft`}>
             {!collapsed && (
               <Link href="/" className="flex items-center gap-2.5 group">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0d9488] to-[#14b8a6] flex items-center justify-center shadow-md shadow-teal-500/20">
                   <span className="text-white font-black text-xs">{brandInitials}</span>
                 </div>
                 <div className="leading-tight">
-                  <p className="text-base font-bold text-slate-800">{brandName}</p>
+                  <p className="text-base font-bold text-dash-ink2">{brandName}</p>
                   <p className="text-[10px] text-teal-600 font-semibold -mt-0.5">Mentor Panel</p>
                 </div>
               </Link>
@@ -133,7 +133,7 @@ const MentorSidebar = () => {
             )}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden lg:flex w-6 h-6 rounded-md border border-slate-200 items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+              className="hidden lg:flex w-6 h-6 rounded-md border border-dash-line items-center justify-center text-dash-mute2 hover:text-dash-ink4 hover:bg-dash-soft transition-all"
             >
               <FiChevronLeft size={12} className={`transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`} />
             </button>
@@ -141,7 +141,7 @@ const MentorSidebar = () => {
 
           {/* Mentor Profile Card */}
           {!collapsed && (
-            <Link href="/dashboard/mentor/profile" className="mx-3 mt-3 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-slate-50 to-teal-50 border border-slate-100 hover:border-teal-200 transition-all group">
+            <Link href="/dashboard/mentor/profile" className="mx-3 mt-3 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-dash-soft to-teal-50 border border-dash-line-soft hover:border-teal-200 transition-all group">
               <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
                 {userImage ? (
                   <img src={userImage} alt={userName} className="w-full h-full object-cover" />
@@ -152,7 +152,7 @@ const MentorSidebar = () => {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-800 truncate group-hover:text-teal-700 transition">{userName}</p>
+                <p className="text-sm font-bold text-dash-ink2 truncate group-hover:text-teal-700 transition">{userName}</p>
                 <p className="text-[10px] text-teal-600 font-medium truncate">{designation}</p>
               </div>
             </Link>
@@ -176,11 +176,11 @@ const MentorSidebar = () => {
             {menuGroups.map((group) => (
               <div key={group.label}>
                 {!collapsed && (
-                  <p className="px-3 mb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em]">
+                  <p className="px-3 mb-2 text-[10px] font-semibold text-dash-mute2 uppercase tracking-[0.12em]">
                     {group.label}
                   </p>
                 )}
-                {collapsed && <div className="mb-2 border-t border-slate-100" />}
+                {collapsed && <div className="mb-2 border-t border-dash-line-soft" />}
                 <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const Icon = item.icon;
@@ -194,10 +194,10 @@ const MentorSidebar = () => {
                         return (
                           <div key={item.title} className="relative group/sub">
                             <div
-                              className={`flex justify-center px-0 py-2.5 mx-1 rounded-lg transition-all cursor-pointer ${activeSub ? 'bg-teal-50 text-teal-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                              className={`flex justify-center px-0 py-2.5 mx-1 rounded-lg transition-all cursor-pointer ${activeSub ? 'bg-teal-50 text-teal-700' : 'text-dash-mute hover:text-dash-ink2 hover:bg-dash-soft'}`}
                               title={item.title}
                             >
-                              <Icon size={18} className={activeSub ? 'text-teal-600' : 'text-slate-400'} />
+                              <Icon size={18} className={activeSub ? 'text-teal-600' : 'text-dash-mute2'} />
                             </div>
                           </div>
                         );
@@ -208,24 +208,24 @@ const MentorSidebar = () => {
                           <button
                             onClick={() => toggleMenu(item.title)}
                             className={`group w-full flex items-center justify-between px-3 py-[9px] rounded-lg transition-all
-                              ${activeSub ? 'bg-teal-50 text-teal-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                              ${activeSub ? 'bg-teal-50 text-teal-700' : 'text-dash-mute hover:text-dash-ink2 hover:bg-dash-soft'}`}
                           >
                             <span className="flex items-center gap-3">
-                              <Icon size={16} className={activeSub ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'} strokeWidth={activeSub ? 2.5 : 2} />
+                              <Icon size={16} className={activeSub ? 'text-teal-600' : 'text-dash-mute2 group-hover:text-dash-ink4'} strokeWidth={activeSub ? 2.5 : 2} />
                               <span className={`text-[14px] ${activeSub ? 'font-semibold' : 'font-medium'}`}>{item.title}</span>
                             </span>
-                            <FiChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
+                            <FiChevronDown size={14} className={`text-dash-mute2 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
                           </button>
 
                           <div className={`overflow-hidden transition-all duration-200 ${isMenuOpen ? 'max-h-40' : 'max-h-0'}`}>
-                            <div className="ml-7 mt-1 pl-3 border-l-2 border-slate-100 space-y-0.5">
+                            <div className="ml-7 mt-1 pl-3 border-l-2 border-dash-line-soft space-y-0.5">
                               {item.submenu.map((sub) => (
                                 <Link
                                   key={sub.href}
                                   href={sub.href}
                                   onClick={() => setIsOpen(false)}
                                   className={`flex items-center px-3 py-[7px] rounded-lg text-[13px] transition-all
-                                    ${isActive(sub.href) ? 'bg-teal-500 text-white font-semibold shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                                    ${isActive(sub.href) ? 'bg-teal-500 text-white font-semibold shadow-sm' : 'text-dash-mute hover:bg-dash-soft hover:text-dash-ink2'}`}
                                 >
                                   {sub.title}
                                 </Link>
@@ -246,14 +246,14 @@ const MentorSidebar = () => {
                         title={collapsed ? item.title : undefined}
                         className={`group relative flex items-center gap-3 rounded-lg transition-all duration-200
                           ${collapsed ? 'justify-center px-0 py-2.5 mx-1' : 'px-3 py-[9px]'}
-                          ${active ? 'bg-teal-50 text-teal-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                          ${active ? 'bg-teal-50 text-teal-700' : 'text-dash-mute hover:text-dash-ink2 hover:bg-dash-soft'}`}
                       >
                         {active && (
                           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-teal-500 rounded-r-full" />
                         )}
                         <Icon
                           size={collapsed ? 18 : 16}
-                          className={`flex-shrink-0 transition-colors ${active ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'}`}
+                          className={`flex-shrink-0 transition-colors ${active ? 'text-teal-600' : 'text-dash-mute2 group-hover:text-dash-ink4'}`}
                           strokeWidth={active ? 2.5 : 2}
                         />
                         {!collapsed && (
@@ -270,10 +270,10 @@ const MentorSidebar = () => {
           </nav>
 
           {/* User + Logout */}
-          <div className="border-t border-slate-100 p-3">
+          <div className="border-t border-dash-line-soft p-3">
             <Link
               href="/"
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-all mb-1 ${collapsed ? 'justify-center' : ''}`}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-dash-mute2 hover:text-teal-600 hover:bg-teal-50 transition-all mb-1 ${collapsed ? 'justify-center' : ''}`}
               title="Back to Website"
             >
               <FiArrowLeft size={15} />
@@ -281,7 +281,7 @@ const MentorSidebar = () => {
             </Link>
 
             {!collapsed && (
-              <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-50 mt-1">
+              <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-dash-soft mt-1">
                 <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 shadow-sm">
                   {userImage ? (
                     <img src={userImage} alt={userName} className="w-full h-full object-cover" />
@@ -292,12 +292,12 @@ const MentorSidebar = () => {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-700 truncate">{userName}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{userEmail}</p>
+                  <p className="text-sm font-semibold text-dash-ink3 truncate">{userName}</p>
+                  <p className="text-[11px] text-dash-mute2 truncate">{userEmail}</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all flex-shrink-0"
+                  className="w-7 h-7 rounded-md flex items-center justify-center text-dash-mute2 hover:text-rose-500 hover:bg-rose-50 transition-all flex-shrink-0"
                   title="Logout"
                 >
                   <FiLogOut size={14} />
@@ -307,7 +307,7 @@ const MentorSidebar = () => {
             {collapsed && (
               <button
                 onClick={handleLogout}
-                className="w-full flex justify-center py-2.5 text-slate-400 hover:text-rose-500 transition-all"
+                className="w-full flex justify-center py-2.5 text-dash-mute2 hover:text-rose-500 transition-all"
                 title="Logout"
               >
                 <FiLogOut size={16} />
