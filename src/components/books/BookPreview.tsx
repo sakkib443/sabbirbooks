@@ -6,12 +6,25 @@ import {
   LuImages,
   LuFileText,
   LuExternalLink,
+  LuBookOpen,
   LuX,
   LuChevronLeft,
   LuChevronRight,
   LuZoomIn,
 } from "react-icons/lu";
 import { cn } from "@/components/ui";
+
+// A sample PDF may be a direct `.pdf`, a Cloudinary *raw* upload (which needs a
+// `.pdf` suffix before a browser will render it), or some other URL that only a
+// viewer can embed. Same normaliser the dashboard materials viewer uses, so the
+// embed behaves identically everywhere in the app.
+const getPdfRenderUrl = (url: string): string => {
+  if (!url) return url;
+  const lower = url.toLowerCase();
+  if (lower.endsWith(".pdf") || lower.includes(".pdf?") || lower.includes(".pdf#")) return url;
+  if (lower.includes("res.cloudinary.com") && lower.includes("/raw/upload/")) return url + ".pdf";
+  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+};
 
 export interface BookPreviewLabels {
   heading: string;
@@ -20,6 +33,7 @@ export interface BookPreviewLabels {
   pdfTitle: string;
   pdfDesc: string;
   openPdf: string;
+  readALittle: string;
   close: string;
   prev: string;
   next: string;
@@ -42,9 +56,11 @@ export function BookPreview({
 }) {
   const gallery = images.filter(Boolean);
   const [active, setActive] = useState<number | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
   const isOpen = active !== null;
 
   const close = useCallback(() => setActive(null), []);
+  const closePdf = useCallback(() => setPdfOpen(false), []);
   const step = useCallback(
     (dir: 1 | -1) =>
       setActive((i) => {
@@ -54,13 +70,16 @@ export function BookPreview({
     [gallery.length]
   );
 
-  // Keyboard navigation + body scroll lock while the lightbox is open.
+  // Keyboard + body scroll lock while EITHER overlay is open (image lightbox or
+  // the in-page PDF viewer). Arrow keys only page the image gallery.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen && !pdfOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-      else if (e.key === "ArrowRight") step(1);
-      else if (e.key === "ArrowLeft") step(-1);
+      if (e.key === "Escape") {
+        close();
+        closePdf();
+      } else if (isOpen && e.key === "ArrowRight") step(1);
+      else if (isOpen && e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -69,7 +88,7 @@ export function BookPreview({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [isOpen, close, step]);
+  }, [isOpen, pdfOpen, close, closePdf, step]);
 
   if (gallery.length === 0 && !pdfUrl) return null;
 
@@ -114,32 +133,63 @@ export function BookPreview({
         </div>
       )}
 
-      {/* Sample PDF */}
+      {/* Sample PDF — an in-page peek at the first page that opens a full viewer
+          on the SAME page (no new tab), mirroring the image thumbnails above. */}
       {pdfUrl && (
-        <div className="mt-5 flex flex-col items-start gap-4 rounded-2xl border border-border bg-surface-soft p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
-              <LuFileText className="text-xl" />
-            </span>
-            <div>
-              <p className={cn("font-heading text-sm font-semibold text-foreground", bn)}>
-                {labels.pdfTitle}
-              </p>
-              <p className={cn("mt-0.5 text-sm text-muted-foreground", bn)}>{labels.pdfDesc}</p>
+        <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-surface-soft">
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                <LuFileText className="text-xl" />
+              </span>
+              <div>
+                <p className={cn("font-heading text-sm font-semibold text-foreground", bn)}>
+                  {labels.pdfTitle}
+                </p>
+                <p className={cn("mt-0.5 text-sm text-muted-foreground", bn)}>{labels.pdfDesc}</p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setPdfOpen(true)}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-2 rounded-xl border border-primary/40 bg-transparent px-5 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary-soft hover:border-primary",
+                bn
+              )}
+            >
+              <LuBookOpen className="text-sm" />
+              {labels.readALittle}
+            </button>
           </div>
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "inline-flex shrink-0 items-center gap-2 rounded-xl border border-primary/40 bg-transparent px-5 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary-soft hover:border-primary",
-              bn
-            )}
+
+          {/* First-page peek. The iframe is inert (pointer-events-none); the whole
+              tile is the button, so a tap anywhere opens the reader. */}
+          <button
+            type="button"
+            onClick={() => setPdfOpen(true)}
+            aria-label={labels.readALittle}
+            className="group relative block w-full border-t border-border"
           >
-            <LuExternalLink className="text-sm" />
-            {labels.openPdf}
-          </a>
+            <div className="relative h-56 w-full overflow-hidden bg-primary-soft sm:h-72">
+              <iframe
+                src={`${getPdfRenderUrl(pdfUrl)}#toolbar=0&navpanes=0&view=FitH`}
+                title={labels.pdfTitle}
+                aria-hidden="true"
+                tabIndex={-1}
+                className="pointer-events-none absolute inset-0 h-full w-full"
+              />
+              <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-center bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent p-4 pt-20">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full bg-card/95 px-4 py-2 text-sm font-semibold text-primary shadow-card transition-transform group-hover:-translate-y-0.5",
+                    bn
+                  )}
+                >
+                  <LuBookOpen /> {labels.readALittle}
+                </span>
+              </span>
+            </div>
+          </button>
         </div>
       )}
 
@@ -200,6 +250,50 @@ export function BookPreview({
               </figcaption>
             )}
           </figure>
+        </div>
+      )}
+
+      {/* In-page PDF viewer — opens over the page, not on a separate route. */}
+      {pdfOpen && pdfUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex flex-col bg-foreground/85 p-3 backdrop-blur-sm animate-fade-up sm:p-6"
+          onClick={closePdf}
+          role="dialog"
+          aria-modal="true"
+          aria-label={labels.pdfTitle}
+        >
+          <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 pb-2 text-card">
+            <p className={cn("truncate text-sm font-semibold", bn)}>{labels.pdfTitle}</p>
+            <div className="flex items-center gap-2">
+              {/* Fallback for the rare browser that will not embed a PDF inline. */}
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  "hidden items-center gap-1.5 rounded-lg bg-card/15 px-3 py-1.5 text-xs font-medium text-card transition-colors hover:bg-card/25 sm:inline-flex",
+                  bn
+                )}
+              >
+                <LuExternalLink className="text-xs" /> {labels.openPdf}
+              </a>
+              <button
+                type="button"
+                onClick={closePdf}
+                aria-label={labels.close}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-foreground shadow-card transition-colors hover:bg-card"
+              >
+                <LuX className="text-lg" />
+              </button>
+            </div>
+          </div>
+          <div
+            className="mx-auto w-full max-w-4xl flex-1 overflow-hidden rounded-xl bg-card shadow-glow"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <iframe src={getPdfRenderUrl(pdfUrl)} title={labels.pdfTitle} className="h-full w-full" />
+          </div>
         </div>
       )}
     </section>

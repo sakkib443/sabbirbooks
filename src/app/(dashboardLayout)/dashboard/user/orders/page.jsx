@@ -52,7 +52,7 @@ function OrdersList() {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch(`${API}/orders/my`, { headers: authHeaders() });
+        const res = await fetch(`${API}/orders/my`, { headers: authHeaders(), cache: 'no-store' });
         const body = await res.json().catch(() => ({}));
         if (!alive) return;
         if (!res.ok || !body.success) throw new Error(body.message || 'অর্ডার লোড করা যায়নি');
@@ -155,9 +155,16 @@ function OrderCard({ order, highlight }) {
         {/* Order number + status */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[13px] font-mono font-semibold text-dash-ink2 break-all">
-              {order.orderNumber}
-            </p>
+            <div className="flex items-center gap-2">
+              {order.orderSeq != null && (
+                <span className="inline-flex items-center rounded-md border border-brand/25 bg-brand-soft px-1.5 py-0.5 text-[11px] font-extrabold text-brand-ink shrink-0">
+                  #{order.orderSeq}
+                </span>
+              )}
+              <p className="text-[13px] font-mono font-semibold text-dash-ink2 break-all">
+                {order.orderNumber}
+              </p>
+            </div>
             <p className="text-[11px] text-dash-mute2 mt-0.5">
               {fmtDate(order.createdAt)} · {deliveryTypeLabel(order.deliveryType)}
             </p>

@@ -362,9 +362,15 @@ export default function BookOrdersPage() {
                   onClick={() => setExpanded(isOpen ? null : o._id)}
                   className="w-full flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3.5 text-left hover:bg-dash-soft/70 transition-colors"
                 >
-                  <div className="flex items-center gap-2 min-w-[150px]">
-                    <FiHash className="text-dash-faint" size={14} />
-                    <span className="font-mono text-sm font-semibold text-dash-ink3">{o.orderNumber}</span>
+                  <div className="flex items-center gap-2 min-w-[170px]">
+                    <span
+                      className="inline-flex shrink-0 items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-extrabold text-indigo-700"
+                      title="Order number"
+                    >
+                      #{o.orderSeq ?? '—'}
+                    </span>
+                    <FiHash className="text-dash-faint shrink-0" size={13} />
+                    <span className="font-mono text-xs font-semibold text-dash-ink3 truncate">{o.orderNumber}</span>
                   </div>
                   <div className="min-w-[140px] flex-1">
                     <p className="text-sm font-medium text-dash-ink3 truncate">{buyerName(o.user)}</p>

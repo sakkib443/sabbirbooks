@@ -190,6 +190,12 @@ export const currentCanAny = (...required) => canAny(getStoredUser(), ...require
  * which has never existed — every manager hitting a page they lacked access to
  * got a 404. Managers work inside the admin shell; the sidebar and the server
  * decide what they actually see there.
+ *
+ * A plain buyer (student/user) lands on the storefront `/`, NOT `/dashboard/user`:
+ * the shop's job is selling books, and the course dashboard is empty for someone
+ * who only buys. This is the default LANDING, not an access change — a student can
+ * still open /dashboard/user from the sidebar. It also matches password
+ * registration, which already sends new accounts to `/` (register/page.tsx).
  */
 export const homeRouteFor = (role) => {
   switch (role) {
@@ -202,9 +208,9 @@ export const homeRouteFor = (role) => {
       return '/dashboard/mentor';
     case 'student':
     case 'user':
-      return '/dashboard/user';
+      return '/';
     default:
-      return '/dashboard/user';
+      return '/';
   }
 };
 

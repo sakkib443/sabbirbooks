@@ -116,23 +116,25 @@ const DIGITAL_STEPS = [
   { key: 'access', label: 'অ্যাক্সেস চালু হয়েছে', hint: 'পেমেন্ট নিশ্চিত — এখন পড়া/ডাউনলোড করা যাবে', dateKey: 'confirmedAt', icon: FiUnlock },
 ];
 
-const printedIndex = (status) => {
-  switch (status) {
-    case 'paid':
-    case 'processing':
-    case 'access-granted': // a mixed order whose digital half already opened
-      return 1;
-    case 'shipped':
-      return 2;
-    case 'delivered':
-      return 3;
-    default: // 'pending' and anything unrecognised — the order exists, nothing more
-      return 0;
-  }
+// The current step is driven by the fulfillment TIMESTAMPS the admin stamps —
+// confirmedAt / shippedAt / deliveredAt — not by the payment-coloured `status`
+// string. This is the whole fix for "the tracker sits on 'Order confirmed'
+// before I confirmed it": a COD order stamps confirmedAt only when the admin
+// actually confirms it, so the ladder can never run ahead of that action.
+//
+// The `status` half of each `||` is a fallback for LEGACY rows created before
+// these timestamps existed — and it deliberately excludes payment-only states
+// ('paid'), so a payment landing never counts as a confirmation.
+const printedIndex = (order) => {
+  const s = order?.status;
+  if (order?.deliveredAt || s === 'delivered') return 3;
+  if (order?.shippedAt || s === 'shipped') return 2;
+  if (order?.confirmedAt || s === 'processing' || s === 'access-granted') return 1;
+  return 0; // pending / just placed — awaiting the admin's confirmation
 };
 
-const digitalIndex = (status) =>
-  ['paid', 'processing', 'shipped', 'delivered', 'access-granted'].includes(status) ? 1 : 0;
+const digitalIndex = (order) =>
+  order?.confirmedAt || order?.status === 'access-granted' ? 1 : 0;
 
 /**
  * → { cancelled, cancelledAt, steps: [{ …def, at, state }] }
@@ -147,8 +149,8 @@ export const buildTimeline = (order) => {
 
   const defs = order?.deliveryType === 'digital' ? DIGITAL_STEPS : PRINTED_STEPS;
   const current = order?.deliveryType === 'digital'
-    ? digitalIndex(order?.status)
-    : printedIndex(order?.status);
+    ? digitalIndex(order)
+    : printedIndex(order);
 
   return {
     cancelled: false,
