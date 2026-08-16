@@ -21,9 +21,26 @@ const apiImageHost = (() => {
   }
 })();
 
+// The real backend origin (a *.sslip.io host in prod). The browser never talks
+// to it directly — see src/config/api.js — so the client never has to resolve a
+// host its network might block. Instead the browser hits our own /api and
+// /uploads, and Next proxies them here, server-side, where sslip.io resolves.
+const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000")
+  .replace(/\/api\/?$/i, "")
+  .replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker runtime stage.
   output: "standalone",
+  // Same-origin proxy: keeps the backend's (sslip.io) host off the browser, so
+  // a visitor whose network blocks sslip.io can still reach the API through the
+  // site's own domain.
+  async rewrites() {
+    return [
+      { source: "/api/:path*", destination: `${backendOrigin}/api/:path*` },
+      { source: "/uploads/:path*", destination: `${backendOrigin}/uploads/:path*` },
+    ];
+  },
   images: {
     // Remote hosts allowed for next/image. Extend as new sources are added.
     remotePatterns: [
