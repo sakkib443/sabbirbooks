@@ -33,7 +33,9 @@ const ROLE_BLURB = {
   trainingManager:
     'Runs batches, enrollments, certificates and student accounts. Sees the operational dashboards.',
   contentManager:
-    'Uploads and deletes content only. No orders, no sales figures, no personal data, no settings.',
+    'Adds, edits and deletes content only. No orders, no sales figures, no personal data, no settings.',
+  manager:
+    'Adds and edits content and training operations — but cannot delete anything, and cannot see orders, sales figures or personal details.',
 };
 
 export default function PermissionsMatrixPage() {
@@ -189,6 +191,9 @@ export default function PermissionsMatrixPage() {
           </p>
           <p>
             <b>Content Manager</b> — {ROLE_BLURB.contentManager}
+          </p>
+          <p>
+            <b>Manager</b> — {ROLE_BLURB.manager}
           </p>
           <p className="text-sky-700">
             These toggles are enforced by the API, not just by the menu: an unticked box means the

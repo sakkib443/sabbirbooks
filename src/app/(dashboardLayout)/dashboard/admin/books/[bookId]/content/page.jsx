@@ -36,6 +36,7 @@ import {
   FiEye,
 } from 'react-icons/fi';
 import FileDropZone from '@/components/shared/FileDropZone';
+import { currentCan } from '@/lib/permissions';
 
 // The editor touches window/document on mount, so it must not be part of the
 // server bundle.
@@ -218,6 +219,11 @@ export default function BookContentEditorPage() {
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState('');
+
+  // Read after mount: currentCan() reads localStorage, so deciding during the
+  // server render would hydrate a different tree.
+  const [canDelete, setCanDelete] = useState(false);
+  useEffect(() => setCanDelete(currentCan('records.delete')), []);
 
   const videoInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1401,12 +1407,16 @@ export default function BookContentEditorPage() {
                     >
                       <FiSave className="w-4 h-4" /> {saving ? 'সংরক্ষণ হচ্ছে…' : 'সংরক্ষণ'}
                     </button>
-                    <button
-                      onClick={() => deleteQuestion(activeQuestionId)}
-                      className="text-sm text-red-600 hover:underline"
-                    >
-                      মুছে ফেলুন
-                    </button>
+                    {/* Deleting needs records.delete; the add-and-edit manager
+                        role does not have it, and the API would refuse anyway. */}
+                    {canDelete && (
+                      <button
+                        onClick={() => deleteQuestion(activeQuestionId)}
+                        className="text-sm text-red-600 hover:underline"
+                      >
+                        মুছে ফেলুন
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

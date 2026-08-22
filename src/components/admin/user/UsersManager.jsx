@@ -17,7 +17,7 @@ const jhdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer
 const hdr = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 
 const GROUPS = {
-  staff: { roles: ['superAdmin', 'admin', 'trainingManager', 'contentManager', 'mentor'], title: 'Team & Staff', subtitle: 'Admins, managers and mentors — your internal team.' },
+  staff: { roles: ['superAdmin', 'admin', 'trainingManager', 'contentManager', 'manager', 'mentor'], title: 'Team & Staff', subtitle: 'Admins, managers and mentors — your internal team.' },
   students: { roles: ['student', 'user'], title: 'Students & Users', subtitle: 'Learners and normal users of the platform.' },
 };
 
@@ -26,6 +26,7 @@ const roleStyle = (role) => ({
   admin: { bg: 'bg-gradient-to-r from-red-500 to-rose-600', icon: <FiShield size={12} /> },
   trainingManager: { bg: 'bg-gradient-to-r from-blue-500 to-indigo-600', icon: <FiUsers size={12} /> },
   contentManager: { bg: 'bg-gradient-to-r from-cyan-500 to-sky-600', icon: <FiEdit2 size={12} /> },
+  manager: { bg: 'bg-gradient-to-r from-teal-500 to-emerald-600', icon: <FiEdit2 size={12} /> },
   mentor: { bg: 'bg-gradient-to-r from-purple-500 to-violet-600', icon: <FiUsers size={12} /> },
   student: { bg: 'bg-gradient-to-r from-emerald-500 to-teal-600', icon: <FiUser size={12} /> },
   user: { bg: 'bg-gradient-to-r from-emerald-500 to-teal-600', icon: <FiUser size={12} /> },
@@ -198,7 +199,7 @@ export default function UsersManager({ group = 'students' }) {
     ? [
       { label: 'Total Staff', value: users.filter(inGroup).length, icon: FiUsers, c: 'text-dash-ink3', b: 'bg-dash-soft2' },
       { label: 'Admins', value: count('admin') + count('superAdmin'), icon: FiShield, c: 'text-red-600', b: 'bg-red-50' },
-      { label: 'Managers', value: count('trainingManager') + count('contentManager'), icon: FiUsers, c: 'text-blue-600', b: 'bg-blue-50' },
+      { label: 'Managers', value: count('trainingManager') + count('contentManager') + count('manager'), icon: FiUsers, c: 'text-blue-600', b: 'bg-blue-50' },
       { label: 'Mentors', value: count('mentor'), icon: FiUsers, c: 'text-purple-600', b: 'bg-purple-50' },
     ]
     : [
@@ -208,7 +209,7 @@ export default function UsersManager({ group = 'students' }) {
       { label: 'Pending', value: users.filter(u => inGroup(u) && u.status === 'pending').length, icon: FiClock, c: 'text-amber-600', b: 'bg-amber-50' },
     ];
 
-  const roleOpts = group === 'staff' ? ['admin', 'trainingManager', 'contentManager', 'mentor'] : ['student'];
+  const roleOpts = group === 'staff' ? ['admin', 'trainingManager', 'contentManager', 'manager', 'mentor'] : ['student'];
   const statusOpts = ['active', 'pending', 'blocked'];
 
   return (
@@ -385,6 +386,7 @@ export default function UsersManager({ group = 'students' }) {
                     { r: 'admin', label: 'Admin', only: !isSuperAdmin },
                     { r: 'trainingManager', label: 'Training Manager' },
                     { r: 'contentManager', label: 'Content Manager' },
+                    { r: 'manager', label: 'Manager' },
                     { r: 'mentor', label: 'Mentor' },
                   ].map(o => (
                     <button key={o.r} type="button" disabled={o.only} onClick={() => setStaffRole(o.r)}

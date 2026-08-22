@@ -31,10 +31,17 @@
 export const CAPABILITIES = [
   {
     key: 'content.write',
-    label: 'Content — upload & delete',
+    label: 'Content — add & edit',
     group: 'Content',
     description:
-      'Create, edit and delete books, book content (QR topics), blogs, courses, lessons, categories, notices, partners, mentor profiles and site pages.',
+      'Create and edit books, book content (QR topics), blogs, courses, lessons, categories, notices, partners, mentor profiles and site pages. Deleting is a separate permission.',
+  },
+  {
+    key: 'records.delete',
+    label: 'Delete — content & records',
+    group: 'Content',
+    description:
+      'Permanently remove books, book content (QR topics), blogs, courses, lessons, categories, notices, partners, mentor profiles, batches, certificates and coupons. Without this a manager can still add and edit everything, but never delete.',
   },
   {
     key: 'training.manage',
@@ -93,14 +100,15 @@ export const CAPABILITY_KEYS = CAPABILITIES.map((c) => c.key);
 /** Never grantable — handing this to a manager would let them escalate themselves. */
 export const GRANTABLE_CAPABILITIES = CAPABILITY_KEYS.filter((k) => k !== 'staff.manage');
 
-/** The two kinds of manager whose permissions an admin can edit. */
-export const MANAGER_ROLES = ['trainingManager', 'contentManager'];
+/** The three kinds of manager whose permissions an admin can edit. */
+export const MANAGER_ROLES = ['trainingManager', 'contentManager', 'manager'];
 
 export const ROLE_LABELS = {
   superAdmin: 'Super Admin',
   admin: 'Admin',
   trainingManager: 'Training Manager',
   contentManager: 'Content Manager',
+  manager: 'Manager',
   mentor: 'Mentor',
   student: 'Student',
   user: 'Student',
@@ -110,9 +118,18 @@ export const ROLE_LABELS = {
 export const ROLE_DEFAULT_CAPABILITIES = {
   superAdmin: [...CAPABILITY_KEYS],
   admin: [...CAPABILITY_KEYS],
-  trainingManager: ['content.write', 'training.manage', 'users.read', 'users.write', 'analytics.read'],
-  contentManager: ['content.write'],
-  mentor: ['content.write', 'training.manage', 'analytics.read'],
+  trainingManager: [
+    'content.write',
+    'records.delete',
+    'training.manage',
+    'users.read',
+    'users.write',
+    'analytics.read',
+  ],
+  contentManager: ['content.write', 'records.delete'],
+  mentor: ['content.write', 'records.delete', 'training.manage', 'analytics.read'],
+  // Adds and edits, but never deletes and never sees orders, sales or people.
+  manager: ['content.write', 'training.manage'],
   student: [],
 };
 
@@ -203,6 +220,7 @@ export const homeRouteFor = (role) => {
     case 'admin':
     case 'trainingManager':
     case 'contentManager':
+    case 'manager':
       return '/dashboard/admin';
     case 'mentor':
       return '/dashboard/mentor';
