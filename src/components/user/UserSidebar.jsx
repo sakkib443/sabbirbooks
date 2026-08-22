@@ -49,8 +49,8 @@ const UserSidebar = () => {
             label: 'Main',
             items: [
                 { title: 'Overview', href: '/dashboard/user', icon: FiHome, exact: true },
-                { title: 'My Courses', href: '/dashboard/user/courses', icon: FiBook },
                 { title: 'My Book', href: '/dashboard/user/my-book', icon: FiFileText },
+                { title: 'My Courses', href: '/dashboard/user/courses', icon: FiBook },
                 { title: 'আমার অর্ডার', href: '/dashboard/user/orders', icon: FiShoppingBag },
                 { title: 'My Progress', href: '/dashboard/user/my-progress', icon: FiTrendingUp },
                 { title: 'Course Materials', href: '/dashboard/user/materials', icon: FiFolder },

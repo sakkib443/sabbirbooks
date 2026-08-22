@@ -78,6 +78,17 @@ const AdminSidebar = () => {
       ],
     },
     {
+      label: 'Book Store',
+      items: [
+        { title: 'All Books', href: '/dashboard/admin/books', icon: FiBook, exact: true, need: ['content.write'] },
+        { title: 'Add Book', href: '/dashboard/admin/books/create', icon: FiPlus, need: ['content.write'] },
+        { title: 'Book Content (QR)', href: '/dashboard/admin/book-content', icon: FiGrid, need: ['content.write'] },
+        { title: 'Book Preview', href: '/dashboard/admin/book-preview', icon: FiEye, need: ['content.write'] },
+        // Book Orders is the "who is buying" screen — orders.read, not content.
+        { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag, need: ['orders.read'] },
+      ],
+    },
+    {
       label: 'Course Management',
       items: [
         {
@@ -134,18 +145,7 @@ const AdminSidebar = () => {
         },
         { title: 'Certifications', href: '/dashboard/admin/certification', icon: FiAward, need: ['training.manage'] },
       ],
-    },
-    {
-      label: 'Book Store',
-      items: [
-        { title: 'All Books', href: '/dashboard/admin/books', icon: FiBook, exact: true, need: ['content.write'] },
-        { title: 'Add Book', href: '/dashboard/admin/books/create', icon: FiPlus, need: ['content.write'] },
-        { title: 'Book Content (QR)', href: '/dashboard/admin/book-content', icon: FiGrid, need: ['content.write'] },
-        { title: 'Book Preview', href: '/dashboard/admin/book-preview', icon: FiEye, need: ['content.write'] },
-        // Book Orders is the "who is buying" screen — orders.read, not content.
-        { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag, need: ['orders.read'] },
-      ],
-    },
+    },
     {
       label: 'Communication',
       items: [

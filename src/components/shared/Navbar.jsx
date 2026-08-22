@@ -11,6 +11,8 @@ import { cn, buttonVariants } from "@/components/ui";
 // Name and logo come from site settings so they can be changed from the admin
 // panel — see components/shared/Brand.
 import { BrandMark, Wordmark } from "./Brand";
+import UserMenu from "./UserMenu";
+import { ROLE_LABELS } from "@/lib/permissions";
 
 const Navbar = () => {
   const [isSticky, setIsSticky] = useState(false);
@@ -49,11 +51,19 @@ const Navbar = () => {
   };
 
   const isAdmin = user && (user.role === "admin" || user.role === "superAdmin");
-  const dashHref = isAdmin
-    ? "/dashboard/admin"
-    : user?.role === "mentor"
-      ? "/dashboard/mentor"
-      : "/dashboard/user";
+  // Where this account's PANEL lives. Deliberately not homeRouteFor(), which
+  // answers a different question — it sends a plain buyer to the storefront `/`
+  // after login, and a menu entry labelled "Dashboard" must not do that.
+  // The old ternary knew only admin/superAdmin/mentor, so every manager role
+  // fell through to /dashboard/user, a panel they do not work in.
+  const userRole = user?.role === "user" ? "student" : user?.role;
+  const dashHref = !user
+    ? "/login"
+    : ["admin", "superAdmin", "trainingManager", "contentManager", "manager"].includes(userRole)
+      ? "/dashboard/admin"
+      : userRole === "mentor"
+        ? "/dashboard/mentor"
+        : "/dashboard/user";
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
   const bn = language === "bn" ? "hind-siliguri" : "";
 
@@ -127,6 +137,30 @@ const Navbar = () => {
           </nav>
           {user ? (
             <div className="space-y-2">
+              {/* Same question the avatar answers on desktop: who is this? */}
+              <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  {user.image || user.profileImage || user.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.image || user.profileImage || user.avatar}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    (user.firstName?.[0] || user.email?.[0] || "?").toUpperCase()
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <p className={cn("truncate text-sm font-semibold text-foreground", bn)}>
+                    {[user.firstName, user.lastName].filter(Boolean).join(" ") || user.email}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {ROLE_LABELS[user.role === "user" ? "student" : user.role] || user.email}
+                  </p>
+                </div>
+              </div>
               <Link
                 href={dashHref}
                 onClick={closeMobileMenu}
@@ -207,22 +241,12 @@ const Navbar = () => {
             </div>
 
             {user ? (
-              <div className="hidden items-center gap-2 lg:flex">
-                <Link
-                  href={dashHref}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), bn)}
-                >
-                  <HiOutlineUserCircle className="text-lg" />
-                  {isAdmin ? t("navbar.admin", "Admin Panel") : t("navbar.dashboard", "Dashboard")}
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className={cn(buttonVariants({ variant: "primary", size: "sm" }), bn)}
-                >
-                  {t("navbar.logout", "Logout")}
-                </button>
-              </div>
+              <UserMenu
+                user={user}
+                dashHref={dashHref}
+                onLogout={handleLogout}
+                className={cn("hidden lg:block", bn)}
+              />
             ) : (
               <Link
                 href="/login"
