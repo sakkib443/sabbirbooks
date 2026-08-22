@@ -8,8 +8,12 @@
  * and opening it in a new tab, which loses their place in the topic.
  */
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LuChevronLeft, LuDownload, LuX } from "react-icons/lu";
+
+// Below this, treat a touch as a tap or wobble rather than a swipe. Small
+// enough to feel responsive on a phone, large enough to survive shaky hands.
+const SWIPE_THRESHOLD_PX = 45;
 
 export default function Lightbox({
   images,
@@ -48,15 +52,58 @@ export default function Lightbox({
     };
   }, [go, onClose]);
 
+  // Swipe: horizontal changes image, vertical closes. Dominant axis wins so a
+  // diagonal flick reads as whichever it was more of. Tracked with refs (touch
+  // start) and state (live offset) so the image tugs under the finger and then
+  // snaps back on a partial swipe.
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+    setDrag({ dx: 0, dy: 0 });
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart.current) return;
+    const t = e.touches[0];
+    setDrag({ dx: t.clientX - touchStart.current.x, dy: t.clientY - touchStart.current.y });
+  };
+  const onTouchEnd = () => {
+    const start = touchStart.current;
+    const d = drag;
+    touchStart.current = null;
+    setDrag(null);
+    if (!start || !d) return;
+
+    const absX = Math.abs(d.dx);
+    const absY = Math.abs(d.dy);
+    if (absX < SWIPE_THRESHOLD_PX && absY < SWIPE_THRESHOLD_PX) return;
+
+    if (absX > absY) {
+      go(d.dx < 0 ? 1 : -1);
+    } else {
+      // Up OR down closes — either flick is a "get out" gesture.
+      onClose();
+    }
+  };
+
   const src = images[index];
   if (!src) return null;
 
+  const dragStyle = drag
+    ? { transform: `translate(${drag.dx}px, ${drag.dy}px)`, transition: "none" as const }
+    : { transform: "translate(0,0)", transition: "transform 180ms ease-out" };
+
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/95 flex flex-col"
+      className="fixed inset-0 z-[100] bg-black/95 flex flex-col select-none"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       <div className="flex items-center justify-between px-4 py-3 text-slate-300 shrink-0">
         <span className="text-sm tabular-nums">
@@ -88,7 +135,9 @@ export default function Lightbox({
         <img
           src={src}
           alt={`ছবি ${index + 1}`}
-          className="max-h-full max-w-full object-contain select-none"
+          className="max-h-full max-w-full object-contain select-none touch-pan-y"
+          draggable={false}
+          style={dragStyle}
           onClick={(e) => e.stopPropagation()}
         />
       </div>

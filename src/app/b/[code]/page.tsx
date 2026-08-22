@@ -127,6 +127,18 @@ export default function BookTopicScanPage() {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  // Populated the first time the reader reaches the last question of the
+  // current topic — the API call happens then rather than at page load so a
+  // reader who never finishes the topic never triggers it.
+  const [nextTopic, setNextTopic] = useState<{
+    qrCode: string;
+    topicNo?: string;
+    topicTitle?: string;
+    chapterNo?: string;
+    chapterTitle?: string;
+    allowed: boolean;
+  } | null>(null);
+  const [loadingNext, setLoadingNext] = useState(false);
 
   const load = useCallback(async () => {
     if (!code) return;
@@ -163,6 +175,7 @@ export default function BookTopicScanPage() {
 
       setState({ kind: "ok", data: body.data });
       setActiveIndex(0);
+      setNextTopic(null);
     } catch {
       setState({ kind: "error", message: "Network error — check your connection" });
     }
@@ -171,6 +184,33 @@ export default function BookTopicScanPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Fetch the next topic once, when the reader lands on the last question. If
+  // the topic has no questions at all, treat "on the empty topic" as being at
+  // the end and fetch too.
+  useEffect(() => {
+    if (state.kind !== "ok") return;
+    const totalQuestions = state.data.questions.length;
+    const atEnd = totalQuestions === 0 || activeIndex === totalQuestions - 1;
+    if (!atEnd || nextTopic || loadingNext) return;
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
+    const topicId = state.data.topic._id;
+
+    setLoadingNext(true);
+    fetch(`${API_BASE_URL}/book-content/next-topic/${topicId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(body => {
+        if (body.success && body.data) setNextTopic(body.data);
+      })
+      .catch(() => {
+        // Silent — the button just won't appear; the topic is still readable.
+      })
+      .finally(() => setLoadingNext(false));
+  }, [state, activeIndex, nextTopic, loadingNext]);
 
   // ─── Loading ──────────────────────────────────────────────
   if (state.kind === "loading") {
@@ -329,6 +369,35 @@ export default function BookTopicScanPage() {
               <p className="text-slate-400 text-sm">
                 এই টপিকে এখনো কোনো প্রশ্ন যোগ করা হয়নি।
               </p>
+              {nextTopic && (
+                <div className="mt-6 max-w-md mx-auto">
+                  {nextTopic.allowed ? (
+                    <Link
+                      href={`/b/${nextTopic.qrCode}`}
+                      className="w-full flex items-center justify-between gap-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-4 transition"
+                    >
+                      <span className="flex flex-col items-start min-w-0">
+                        <span className="text-[11px] uppercase tracking-wide opacity-70">
+                          পরবর্তী টপিক
+                        </span>
+                        <span className="text-sm truncate">
+                          {nextTopic.chapterNo ? `${nextTopic.chapterNo}. ` : ""}
+                          {nextTopic.topicNo ? `${nextTopic.topicNo} ` : ""}
+                          {nextTopic.topicTitle}
+                        </span>
+                      </span>
+                      <LuChevronLeft className="w-5 h-5 rotate-180 shrink-0" />
+                    </Link>
+                  ) : (
+                    <div className="w-full flex items-center gap-3 rounded-xl bg-[#1c1c1c] border border-[#282828] text-slate-400 px-5 py-4">
+                      <LuLock className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="text-sm">
+                        পরবর্তী টপিকটি দেখতে বইটি কিনতে হবে।
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             active && (
@@ -511,6 +580,40 @@ export default function BookTopicScanPage() {
                     পরের <LuChevronLeft className="w-4 h-4 rotate-180" />
                   </button>
                 </div>
+
+                {/* Next topic — only shown on the last question. Cross-topic
+                    navigation is deliberately absent everywhere else so a
+                    reader stays inside the scanned scope; the button appears
+                    once they have actually finished the topic. */}
+                {activeIndex === questions.length - 1 && nextTopic && (
+                  <div className="mt-6">
+                    {nextTopic.allowed ? (
+                      <Link
+                        href={`/b/${nextTopic.qrCode}`}
+                        className="w-full flex items-center justify-between gap-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-4 transition"
+                      >
+                        <span className="flex flex-col items-start min-w-0">
+                          <span className="text-[11px] uppercase tracking-wide opacity-70">
+                            পরবর্তী টপিক
+                          </span>
+                          <span className="text-sm truncate">
+                            {nextTopic.chapterNo ? `${nextTopic.chapterNo}. ` : ""}
+                            {nextTopic.topicNo ? `${nextTopic.topicNo} ` : ""}
+                            {nextTopic.topicTitle}
+                          </span>
+                        </span>
+                        <LuChevronLeft className="w-5 h-5 rotate-180 shrink-0" />
+                      </Link>
+                    ) : (
+                      <div className="w-full flex items-center gap-3 rounded-xl bg-[#1c1c1c] border border-[#282828] text-slate-400 px-5 py-4">
+                        <LuLock className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="text-sm">
+                          পরবর্তী টপিকটি দেখতে বইটি কিনতে হবে।
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </article>
             )
           )}

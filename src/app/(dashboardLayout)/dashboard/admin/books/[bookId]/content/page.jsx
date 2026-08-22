@@ -585,7 +585,7 @@ export default function BookContentEditorPage() {
         level === 'part'
           ? { title: '', titleBn: '', order: '' }
           : level === 'chapter'
-          ? { chapterNo: '', title: '', titleBn: '', order: '' }
+          ? { chapterNo: '', title: '', titleBn: '', order: '', isFree: false }
           : { topicNo: '', title: '', titleBn: '', order: '' },
     });
   };
@@ -602,6 +602,7 @@ export default function BookContentEditorPage() {
         title: node.title || '',
         titleBn: node.titleBn || '',
         order: node.order ?? '',
+        isFree: Boolean(node.isFree),
       },
     });
   };
@@ -634,6 +635,7 @@ export default function BookContentEditorPage() {
           [level === 'chapter' ? 'chapterNo' : 'topicNo']:
             (level === 'chapter' ? values.chapterNo : values.topicNo)?.trim() || undefined,
         }),
+        ...(level === 'chapter' ? { isFree: Boolean(values.isFree) } : {}),
         ...(values.order !== '' && values.order !== undefined
           ? { order: Number(values.order) }
           : {}),
@@ -691,48 +693,9 @@ export default function BookContentEditorPage() {
     }
   };
 
-  const deleteNode = async (level, node) => {
-    const label = level === 'part' ? 'বোর্ড' : level === 'chapter' ? 'অধ্যায়' : 'টপিক';
-    const warn =
-      level === 'topic'
-        ? `"${node.title}" টপিকটি মুছে ফেলবেন? ছাপা QR কোডটি আর কাজ করবে না।`
-        : `"${node.title}" ${label} এবং এর ভেতরের সবকিছু মুছে ফেলবেন?`;
-    if (!window.confirm(warn)) return;
-    try {
-      const res = await fetch(`${API}/book-content/${level}s/${node._id}`, {
-        method: 'DELETE',
-        headers: hdrs(),
-      });
-      const body = await res.json();
-      if (!res.ok || !body.success) throw new Error(body.message || 'ডিলিট ব্যর্থ');
-
-      // Clear editor if the currently-open topic was deleted (directly or by
-      // deleting its ancestor chapter/part).
-      if (level === 'topic' && activeTopic?._id === node._id) {
-        setActiveTopic(null);
-        setQuestions([]);
-        setDraft(null);
-        setActiveQuestionId(null);
-      }
-      if (level === 'chapter' && activeTopic?.chapterId === node._id) {
-        setActiveTopic(null);
-        setQuestions([]);
-        setDraft(null);
-        setActiveQuestionId(null);
-      }
-      if (level === 'part' && activeTopic?.partId === node._id) {
-        setActiveTopic(null);
-        setQuestions([]);
-        setDraft(null);
-        setActiveQuestionId(null);
-      }
-
-      await loadTree();
-    } catch (err) {
-      setFlash(err.message);
-      setTimeout(() => setFlash(''), 3000);
-    }
-  };
+  // Part/chapter/topic have no delete: once created they carry (or transitively
+  // carry) a QR code that may already be printed. Editing text is fine — the
+  // QR does not change.
 
   if (loading) {
     return <div className="p-8 text-dash-mute">লোড হচ্ছে…</div>;
@@ -845,17 +808,10 @@ export default function BookContentEditorPage() {
                     </button>
                     <button
                       onClick={() => openEdit('part', part)}
-                      title="বোর্ড এডিট"
+                      title="বোর্ড এডিট (QR অক্ষত থাকবে)"
                       className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
                     >
                       <FiEdit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteNode('part', part)}
-                      title="বোর্ড ডিলিট"
-                      className="p-1.5 rounded hover:bg-red-100 text-dash-mute hover:text-red-700"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -883,6 +839,11 @@ export default function BookContentEditorPage() {
                             {chapter.chapterNo ? `${chapter.chapterNo}. ` : ''}
                             {chapter.title}
                           </span>
+                          {chapter.isFree && (
+                            <span className="ml-1 shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 uppercase tracking-wide">
+                              ফ্রি
+                            </span>
+                          )}
                         </button>
                         <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 touch-always-visible transition">
                           <button
@@ -899,17 +860,10 @@ export default function BookContentEditorPage() {
                           </button>
                           <button
                             onClick={() => openEdit('chapter', chapter)}
-                            title="অধ্যায় এডিট"
+                            title="অধ্যায় এডিট (QR অক্ষত থাকবে)"
                             className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
                           >
                             <FiEdit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => deleteNode('chapter', chapter)}
-                            title="অধ্যায় ডিলিট"
-                            className="p-1.5 rounded hover:bg-red-100 text-dash-mute hover:text-red-700"
-                          >
-                            <FiTrash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -955,17 +909,10 @@ export default function BookContentEditorPage() {
                               <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 touch-always-visible transition">
                                 <button
                                   onClick={() => openEdit('topic', topic)}
-                                  title="টপিক এডিট"
+                                  title="টপিক এডিট (QR অক্ষত থাকবে)"
                                   className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
                                 >
                                   <FiEdit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => deleteNode('topic', topic)}
-                                  title="টপিক ডিলিট"
-                                  className="p-1.5 rounded hover:bg-red-100 text-dash-mute hover:text-red-700"
-                                >
-                                  <FiTrash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -1635,6 +1582,26 @@ export default function BookContentEditorPage() {
                   className="w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                 />
               </div>
+
+              {nodeModal.level === 'chapter' && (
+                <label className="flex items-start gap-2.5 rounded-lg border border-dash-line-strong bg-dash-soft/50 px-3 py-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(nodeModal.values.isFree)}
+                    onChange={e =>
+                      setNodeModal(m => ({
+                        ...m,
+                        values: { ...m.values, isFree: e.target.checked },
+                      }))
+                    }
+                    className="mt-0.5 accent-emerald-600"
+                  />
+                  <span className="text-xs text-dash-ink4">
+                    <span className="font-medium text-dash-ink2">ফ্রি অধ্যায়</span> — এই অধ্যায়ের QR
+                    স্ক্যান করলে যেকোনো সাইন-ইন করা ইউজার বই না কিনেই দেখতে পারবে (স্যাম্পল/ট্রায়াল হিসেবে)।
+                  </span>
+                </label>
+              )}
 
               {nodeError && (
                 <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
