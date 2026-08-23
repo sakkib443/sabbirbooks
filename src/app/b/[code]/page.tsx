@@ -26,6 +26,7 @@ import {
   LuLoaderCircle,
   LuLock,
   LuTriangleAlert,
+  LuTruck,
   LuVideo,
   LuX,
 } from "react-icons/lu";
@@ -82,6 +83,9 @@ type State =
   | { kind: "loading" }
   | { kind: "ok"; data: ScanData }
   | { kind: "locked"; book: LockedBook | null }
+  // Bought, paid, but the parcel hasn't arrived. Same zero content as
+  // "locked" — a different screen so the buyer isn't told to buy again.
+  | { kind: "awaiting"; book: LockedBook | null }
   | { kind: "notfound" }
   | { kind: "error"; message: string };
 
@@ -160,7 +164,10 @@ export default function BookTopicScanPage() {
         return;
       }
       if (res.status === 403) {
-        setState({ kind: "locked", book: body.book ?? null });
+        setState({
+          kind: body.code === "BOOK_AWAITING_DELIVERY" ? "awaiting" : "locked",
+          book: body.book ?? null,
+        });
         return;
       }
       if (res.status === 404) {
@@ -255,6 +262,36 @@ export default function BookTopicScanPage() {
             className="inline-flex items-center justify-center w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-3 transition"
           >
             বইটি কিনুন
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Bought, but the parcel hasn't landed ─────────────────
+  if (state.kind === "awaiting") {
+    const book = state.book;
+    return (
+      <div className="min-h-screen bg-[#0f0f0f] text-slate-200 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-14 h-14 rounded-full bg-sky-500/10 flex items-center justify-center mx-auto mb-5">
+            <LuTruck className="w-6 h-6 text-sky-400" />
+          </div>
+          <h1 className="text-lg font-semibold text-white mb-2">বইটি এখনো পৌঁছায়নি</h1>
+          <p className="text-sm text-slate-400 mb-2">
+            আপনার অর্ডারটি আমরা পেয়েছি। বইটি হাতে পাওয়ার পর QR কোডের কনটেন্ট খুলে যাবে।
+          </p>
+          <p className="text-xs text-slate-500 mb-6">
+            আবার কিনতে হবে না — ডেলিভারি সম্পন্ন হলেই এই কোডটি কাজ করবে।
+          </p>
+
+          {book && <p className="text-white font-medium mb-6">{book.title}</p>}
+
+          <Link
+            href="/dashboard/user/orders"
+            className="inline-flex items-center justify-center w-full rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-medium px-5 py-3 transition"
+          >
+            অর্ডারের অবস্থা দেখুন
           </Link>
         </div>
       </div>
