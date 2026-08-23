@@ -65,7 +65,6 @@ type ScanData = {
   chapter: { chapterNo?: string; title: string } | null;
   topic: { _id: string; topicNo?: string; title: string; isImplicit: boolean; qrCode: string };
   questions: Question[];
-  answeredCount: number;
   totalCount: number;
 };
 
@@ -448,7 +447,11 @@ export default function BookTopicScanPage() {
                               src={src}
                               alt={`ছবি ${i + 1}`}
                               loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                              draggable={false}
+                              onContextMenu={(e) => e.preventDefault()}
+                              onDragStart={(e) => e.preventDefault()}
+                              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300 select-none"
+                              style={{ WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
                             />
                             <span className="absolute top-1.5 left-1.5 text-[10px] font-medium bg-black/60 text-white rounded px-1.5 py-0.5">
                               {i + 1}
@@ -625,7 +628,7 @@ export default function BookTopicScanPage() {
             <div className="px-4 py-3 border-b border-[#282828]">
               <p className="text-xs uppercase tracking-wide text-slate-500">এই টপিকের প্রশ্ন</p>
               <p className="text-sm text-slate-300 mt-0.5">
-                {data.answeredCount} / {data.totalCount} উত্তর দেওয়া হয়েছে
+                মোট {data.totalCount} টি
               </p>
             </div>
             <div className="max-h-[60vh] overflow-y-auto py-1">

@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LuChevronLeft, LuDownload, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuX } from "react-icons/lu";
 
 // Below this, treat a touch as a tap or wobble rather than a swipe. Small
 // enough to feel responsive on a phone, large enough to survive shaky hands.
@@ -109,25 +109,18 @@ export default function Lightbox({
         <span className="text-sm tabular-nums">
           {index + 1} / {images.length}
         </span>
-        <div className="flex items-center gap-1">
-          <a
-            href={src}
-            download
-            onClick={(e) => e.stopPropagation()}
-            className="p-2 rounded-lg hover:bg-white/10 transition"
-            title="ছবিটি ডাউনলোড করুন"
-          >
-            <LuDownload className="w-5 h-5" />
-          </a>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/10 transition"
-            title="বন্ধ করুন"
-          >
-            <LuX className="w-5 h-5" />
-          </button>
-        </div>
+        {/* Download button intentionally omitted — figures are protected
+            content. Right-click Save and long-press Save Image are blocked on
+            the image below; a determined user can still screenshot, but the
+            casual "save it" path is closed. */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 rounded-lg hover:bg-white/10 transition"
+          title="বন্ধ করুন"
+        >
+          <LuX className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="flex-1 flex items-center justify-center min-h-0 px-2 pb-4">
@@ -137,8 +130,10 @@ export default function Lightbox({
           alt={`ছবি ${index + 1}`}
           className="max-h-full max-w-full object-contain select-none touch-pan-y"
           draggable={false}
-          style={dragStyle}
           onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
+          style={{ ...dragStyle, WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
         />
       </div>
 
