@@ -172,8 +172,16 @@ export async function apiRegister(params: {
   lastName: string;
   email: string;
   phoneNumber?: string;
+  whatsappNumber: string;
+  /** Directory id, when the student picked from the list. */
+  medicalCollege?: string;
+  /** The name — either the picked college's, or what they typed if unlisted. */
+  medicalCollegeName?: string;
   password: string;
 }): Promise<ApiResult> {
+  // The body is spelled out field by field on purpose: this is the one place
+  // that decides what leaves the browser, so a field added to the form but not
+  // here would be silently dropped rather than half-saved.
   const res = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -182,6 +190,9 @@ export async function apiRegister(params: {
       lastName: params.lastName,
       email: params.email,
       phoneNumber: params.phoneNumber || undefined,
+      whatsappNumber: params.whatsappNumber,
+      medicalCollege: params.medicalCollege || undefined,
+      medicalCollegeName: params.medicalCollegeName || undefined,
       password: params.password,
     }),
   });

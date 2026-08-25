@@ -21,12 +21,40 @@ import {
   LuTag,
   LuLanguages,
   LuShoppingCart,
+  LuCalendarClock,
 } from "react-icons/lu";
 import { useLanguage } from "@/context/LanguageContext";
 import { Container, Badge, buttonVariants, cn } from "@/components/ui";
 import API_BASE_URL from "@/config/api";
 import { Book, formatBDT, discountPercent, bookCheckoutHref } from "@/components/books/types";
 import { BookPreview } from "@/components/books/BookPreview";
+
+// The public /api/books payload carries the pre-order fields too. They are
+// declared here rather than on the shared Book type because only this page and
+// checkout read them, and checkout keeps its own copy.
+type BookDetail = Book & {
+  isPreOrder?: boolean;
+  preOrderDiscountPercent?: number;
+  preOrderNote?: string;
+  expectedReleaseDate?: string;
+};
+
+// A release date in the reader's language. Guarded because a build without full
+// ICU throws on an unknown locale, and a date label is not worth a blank page.
+const formatReleaseDate = (iso: string | undefined, isBengali: boolean): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat(isBengali ? "bn-BD" : "en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(0, 10);
+  }
+};
 
 const copy = {
   en: {
@@ -47,6 +75,12 @@ const copy = {
     orderNow: "Order now",
     buyNow: "Buy now",
     unavailable: "Currently unavailable",
+    preOrderBadge: (pct: number) => `Pre-order · ${pct}% off`,
+    preOrderCta: "Pre-order now",
+    preOrderAvailability: "Pre-order open",
+    preOrderNoteFallback: "Not printed yet — order now at the pre-order price.",
+    preOrderShipOn: (d: string) => `Delivery starts ${d}`,
+    preOrderPriceNote: (p: string, pct: number) => `${p} at checkout — ${pct}% pre-order discount`,
     aboutHeading: "About this book",
     detailsHeading: "Details",
     category: "Category",
@@ -90,6 +124,12 @@ const copy = {
     orderNow: "অর্ডার করুন",
     buyNow: "কিনুন",
     unavailable: "এই মুহূর্তে অনুপলব্ধ",
+    preOrderBadge: (pct: number) => `প্রি-অর্ডার · ${pct}% ছাড়`,
+    preOrderCta: "প্রি-অর্ডার করুন",
+    preOrderAvailability: "প্রি-অর্ডার চলছে",
+    preOrderNoteFallback: "বইটি এখনো ছাপা হয়নি — প্রি-অর্ডার দামে এখনই অর্ডার করুন।",
+    preOrderShipOn: (d: string) => `${d} থেকে ডেলিভারি শুরু`,
+    preOrderPriceNote: (p: string, pct: number) => `চেকআউটে ${p} — ${pct}% প্রি-অর্ডার ছাড়`,
     aboutHeading: "এই বই সম্পর্কে",
     detailsHeading: "বিস্তারিত",
     category: "ক্যাটাগরি",
@@ -125,7 +165,7 @@ export default function BookDetailPage() {
   const params = useParams<{ slug: string }>();
   const slug = Array.isArray(params?.slug) ? params.slug[0] : params?.slug;
 
-  const [book, setBook] = useState<Book | null>(null);
+  const [book, setBook] = useState<BookDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
 
@@ -139,7 +179,7 @@ export default function BookDetailPage() {
         const res = await fetch(`${API_BASE_URL}/books/${slug}`, { cache: "no-store" });
         if (!res.ok) throw new Error("not found");
         const json = await res.json();
-        const data: Book | null = json?.data ?? (json?.slug ? json : null);
+        const data: BookDetail | null = json?.data ?? (json?.slug ? json : null);
         if (!data) throw new Error("empty");
         if (active) setBook(data);
       } catch {
@@ -191,19 +231,52 @@ export default function BookDetailPage() {
     book.offerPrice && book.price ? formatBDT(book.price - book.offerPrice) : null;
 
   const stock = book.stock ?? 0;
-  const printedOutOfStock = !isDigital && stock <= 0;
-  const printedLowStock = !isDigital && stock > 0 && stock <= 10;
+  // A pre-order is sold before the print run exists, so `stock: 0` is its normal
+  // state rather than a reason to hide the button — the server takes the order
+  // regardless. Reading it as out of stock would leave the feature unreachable
+  // from the only page that sells the book.
+  const isPreOrder = book.isPreOrder === true;
+  const printedOutOfStock = !isDigital && !isPreOrder && stock <= 0;
+  const printedLowStock = !isDigital && !isPreOrder && stock > 0 && stock <= 10;
 
-  const ctaLabel = printedOutOfStock ? S.unavailable : isDigital ? S.buyNow : S.orderNow;
+  // Clamped exactly as the server clamps it before pricing an order, so the
+  // percent on this badge is the percent the invoice actually gives.
+  const rawPct = Number(book.preOrderDiscountPercent ?? 25);
+  const preOrderPct =
+    isPreOrder && Number.isFinite(rawPct) ? Math.min(90, Math.max(0, rawPct)) : 0;
+  // Same effective unit price the checkout summary uses, and the server's rule
+  // of rounding the DISCOUNT rather than the price.
+  const basePrice = book.price ?? 0;
+  const offer = book.offerPrice ?? 0;
+  const unitPrice = offer > 0 && offer < basePrice ? offer : basePrice;
+  const preOrderPrice =
+    preOrderPct > 0 ? unitPrice - Math.round((unitPrice * preOrderPct) / 100) : null;
+  const releaseDate = formatReleaseDate(book.expectedReleaseDate, isBengali);
+
+  const ctaLabel = printedOutOfStock
+    ? S.unavailable
+    : isPreOrder
+      ? S.preOrderCta
+      : isDigital
+        ? S.buyNow
+        : S.orderNow;
 
   const details = [
     book.category && { icon: <LuTag />, label: S.category, value: book.category },
     { icon: isDigital ? <LuMonitorSmartphone /> : <LuBookMarked />, label: S.format, value: isDigital ? S.digital : S.printed },
     book.language && { icon: <LuLanguages />, label: S.language, value: S.langMap[book.language] ?? book.language },
     {
-      icon: isDigital ? <LuCircleCheck /> : printedOutOfStock ? <LuTriangleAlert /> : <LuCircleCheck />,
+      icon: isPreOrder ? <LuCalendarClock /> : isDigital ? <LuCircleCheck /> : printedOutOfStock ? <LuTriangleAlert /> : <LuCircleCheck />,
       label: S.availability,
-      value: isDigital ? S.instantAccess : printedOutOfStock ? S.outOfStock : printedLowStock ? S.lowStock(stock) : S.inStock,
+      value: isPreOrder
+        ? S.preOrderAvailability
+        : isDigital
+          ? S.instantAccess
+          : printedOutOfStock
+            ? S.outOfStock
+            : printedLowStock
+              ? S.lowStock(stock)
+              : S.inStock,
     },
   ].filter(Boolean) as { icon: ReactNode; label: string; value: string }[];
 
@@ -258,10 +331,19 @@ export default function BookDetailPage() {
                     {isDigital ? <LuMonitorSmartphone /> : <LuBookMarked />}
                     {isDigital ? S.digital : S.printed}
                   </Badge>
-                  {discount && (
-                    <Badge variant="coral" className="absolute right-3 top-3 bg-card/90 backdrop-blur">
-                      -{discount}% {S.off}
+                  {/* The pre-order badge wins the corner over the offer-price
+                      one: a book you cannot have yet is the more important fact,
+                      and the pre-order discount is the bigger of the two. */}
+                  {isPreOrder ? (
+                    <Badge variant="coral" className={cn("absolute right-3 top-3 bg-card/90 backdrop-blur", bn)}>
+                      <LuCalendarClock /> {S.preOrderBadge(preOrderPct)}
                     </Badge>
+                  ) : (
+                    discount && (
+                      <Badge variant="coral" className="absolute right-3 top-3 bg-card/90 backdrop-blur">
+                        -{discount}% {S.off}
+                      </Badge>
+                    )
                   )}
                 </div>
               </div>
@@ -299,12 +381,21 @@ export default function BookDetailPage() {
                   </Badge>
                 )}
               </div>
+              {/* The discount is applied by the server at checkout, not baked
+                  into the listed price — say what will actually be charged so
+                  the number on this page and the number on the invoice are the
+                  same number. */}
+              {preOrderPrice !== null && (
+                <p className={cn("mt-2 text-sm font-semibold text-coral", bn)}>
+                  {S.preOrderPriceNote(formatBDT(preOrderPrice) ?? "", preOrderPct)}
+                </p>
+              )}
 
               {/* Availability note */}
               <div
                 className={cn(
                   "mt-5 flex items-start gap-3 rounded-xl border p-4",
-                  printedOutOfStock
+                  printedOutOfStock || isPreOrder
                     ? "border-coral/30 bg-coral/10"
                     : "border-border bg-surface-soft"
                 )}
@@ -312,28 +403,49 @@ export default function BookDetailPage() {
                 <span
                   className={cn(
                     "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                    isDigital
-                      ? "bg-accent-soft text-accent"
-                      : printedOutOfStock
-                        ? "bg-coral/15 text-coral"
-                        : "bg-primary-soft text-primary"
+                    isPreOrder
+                      ? "bg-coral/15 text-coral"
+                      : isDigital
+                        ? "bg-accent-soft text-accent"
+                        : printedOutOfStock
+                          ? "bg-coral/15 text-coral"
+                          : "bg-primary-soft text-primary"
                   )}
                 >
-                  {isDigital ? <LuMonitorSmartphone /> : printedOutOfStock ? <LuTriangleAlert /> : <LuTruck />}
+                  {isPreOrder ? (
+                    <LuCalendarClock />
+                  ) : isDigital ? (
+                    <LuMonitorSmartphone />
+                  ) : printedOutOfStock ? (
+                    <LuTriangleAlert />
+                  ) : (
+                    <LuTruck />
+                  )}
                 </span>
                 <div>
                   <p className={cn("text-sm font-semibold text-foreground", bn)}>
-                    {isDigital
-                      ? S.instantAccess
-                      : printedOutOfStock
-                        ? S.outOfStock
-                        : printedLowStock
-                          ? S.lowStock(stock)
-                          : S.inStock}
+                    {isPreOrder
+                      ? S.preOrderAvailability
+                      : isDigital
+                        ? S.instantAccess
+                        : printedOutOfStock
+                          ? S.outOfStock
+                          : printedLowStock
+                            ? S.lowStock(stock)
+                            : S.inStock}
                   </p>
                   <p className={cn("mt-0.5 text-sm text-muted-foreground", bn)}>
-                    {isDigital ? S.instantNote : S.printedNote}
+                    {isPreOrder
+                      ? book.preOrderNote?.trim() || S.preOrderNoteFallback
+                      : isDigital
+                        ? S.instantNote
+                        : S.printedNote}
                   </p>
+                  {isPreOrder && releaseDate && (
+                    <p className={cn("mt-1 text-sm font-semibold text-coral", bn)}>
+                      {S.preOrderShipOn(releaseDate)}
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -21,6 +21,7 @@ import { Button, cn } from "@/components/ui";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import CollegePicker from "@/components/auth/CollegePicker";
 import {
   apiRegister,
   apiLogin,
@@ -52,6 +53,10 @@ export default function RegisterPage() {
         phone: "ফোন নম্বর",
         phoneOptional: "(ঐচ্ছিক)",
         phonePh: "01XXXXXXXXX",
+        whatsapp: "WhatsApp নম্বর",
+        whatsappPh: "01XXXXXXXXX — অর্ডারের খবর এখানেই যাবে",
+        college: "মেডিকেল কলেজ",
+        collegePh: "কলেজ বেছে নিন",
         password: "পাসওয়ার্ড",
         passwordPh: "৪–২০ অক্ষর",
         confirm: "পাসওয়ার্ড নিশ্চিত করুন",
@@ -66,6 +71,8 @@ export default function RegisterPage() {
         login: "লগইন করুন",
         deviceNote: "নিরাপত্তার জন্য প্রতিটি অ্যাকাউন্ট সর্বোচ্চ ২টি ডিভাইসে ব্যবহার করা যায়।",
         errFirst: "নামের প্রথম অংশ দিন",
+        errWhatsapp: "সঠিক WhatsApp নম্বর দিন, যেমন 01712345678",
+        errCollege: "আপনার মেডিকেল কলেজ বেছে নিন",
         errLast: "নামের শেষ অংশ দিন",
         errEmail: "সঠিক ইমেইল দিন",
         errPwMin: "পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে",
@@ -89,6 +96,10 @@ export default function RegisterPage() {
         phone: "Phone number",
         phoneOptional: "(optional)",
         phonePh: "01XXXXXXXXX",
+        whatsapp: "WhatsApp number",
+        whatsappPh: "01XXXXXXXXX — order updates go here",
+        college: "Medical college",
+        collegePh: "Choose your college",
         password: "Password",
         passwordPh: "4–20 characters",
         confirm: "Confirm password",
@@ -103,6 +114,8 @@ export default function RegisterPage() {
         login: "Log in",
         deviceNote: "For your security, each account can be used on up to 2 devices.",
         errFirst: "Enter your first name",
+        errWhatsapp: "Enter a valid WhatsApp number, e.g. 01712345678",
+        errCollege: "Choose your medical college",
         errLast: "Enter your last name",
         errEmail: "Enter a valid email address",
         errPwMin: "Password must be at least 4 characters",
@@ -120,6 +133,12 @@ export default function RegisterPage() {
       lastName: z.string().trim().min(1, S.errLast),
       email: z.email(S.errEmail),
       phoneNumber: z.string().trim().optional(),
+      // Required, and matched against the same rule the server enforces so a
+      // typo is caught before the round-trip. Accepts an optional +88/88.
+      whatsappNumber: z
+        .string()
+        .trim()
+        .regex(/^(?:\+?88)?01[3-9]\d{8}$/, S.errWhatsapp),
       password: z.string().min(4, S.errPwMin).max(20, S.errPwMax),
       confirmPassword: z.string().min(1, S.errConfirm),
     })
@@ -138,8 +157,22 @@ export default function RegisterPage() {
     mode: "onSubmit",
   });
 
+  // College selection is a custom control, not a registered input.
+  const [college, setCollege] = useState<{ _id: string; name: string } | null>(null);
+  const [collegeName, setCollegeName] = useState("");
+  const [collegeError, setCollegeError] = useState("");
+
   const onSubmit = async (values: RegisterForm) => {
     setApiError("");
+
+    // The college lives outside react-hook-form (it is a custom picker), so its
+    // one rule is checked here: pick from the list, or type a name.
+    if (!college && !collegeName.trim()) {
+      setCollegeError(S.errCollege);
+      return;
+    }
+    setCollegeError("");
+
     setPhase("creating");
     try {
       const reg = await apiRegister({
@@ -147,6 +180,9 @@ export default function RegisterPage() {
         lastName: values.lastName.trim(),
         email: values.email.trim(),
         phoneNumber: values.phoneNumber?.trim() || undefined,
+        whatsappNumber: values.whatsappNumber.trim(),
+        medicalCollege: college?._id,
+        medicalCollegeName: college?.name || collegeName.trim(),
         password: values.password,
       });
 
@@ -249,6 +285,34 @@ export default function RegisterPage() {
           placeholder={S.phonePh}
           error={errors.phoneNumber?.message}
           {...register("phoneNumber")}
+        />
+
+        {/* Required: this is how the shop actually reaches its customers about
+            an order, so it is asked for at signup rather than chased later. */}
+        <FormField
+          id="whatsappNumber"
+          bengali={isBengali}
+          label={S.whatsapp}
+          icon={<LuPhone className="text-base" />}
+          type="tel"
+          inputMode="tel"
+          placeholder={S.whatsappPh}
+          error={errors.whatsappNumber?.message}
+          {...register("whatsappNumber")}
+        />
+
+        <CollegePicker
+          bengali={isBengali}
+          label={S.college}
+          placeholder={S.collegePh}
+          value={college}
+          customName={collegeName}
+          onChange={(picked: { _id: string; name: string } | null, typed: string) => {
+            setCollege(picked);
+            setCollegeName(typed);
+            setCollegeError("");
+          }}
+          error={collegeError}
         />
 
         <PasswordInput

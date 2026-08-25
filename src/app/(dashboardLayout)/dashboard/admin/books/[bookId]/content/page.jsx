@@ -34,8 +34,18 @@ import {
   FiImage,
   FiChevronLeft,
   FiEye,
+  FiMenu,
+  FiMove,
+  FiHash,
+  FiRotateCcw,
+  FiCheck,
 } from 'react-icons/fi';
+// First framer-motion use in this project — the rest of the app animates with
+// CSS keyframes. It is here for Reorder, which owns the measure/swap/settle
+// dance that hand-rolled drag reordering always gets subtly wrong on touch.
+import { MotionConfig, Reorder, useDragControls } from 'framer-motion';
 import FileDropZone from '@/components/shared/FileDropZone';
+import { useConfirm } from '@/components/shared/ConfirmModal';
 import { currentCan } from '@/lib/permissions';
 
 // The editor touches window/document on mount, so it must not be part of the
@@ -58,6 +68,10 @@ const hdrs = () => ({
 });
 
 const EMPTY_VIDEO = { title: '', url: '', provider: 'youtube' };
+
+// How long the "ফিরিয়ে আনুন" bar stays up after a delete. Long enough to read
+// the toast, notice the mistake and reach for it on a tablet.
+const UNDO_WINDOW_MS = 20000;
 
 // Both halves matter: a file dragged off the desktop sometimes arrives with an
 // empty `type` (Windows does this for less common extensions), and a file
@@ -145,6 +159,127 @@ const nextSerial = questions => {
   return best ? bumpSerial(best.source) : String(questions.length + 1);
 };
 
+/**
+ * The serials this topic would carry if renumbered 1…n down the list as it now
+ * stands, listing only the rows that would actually change.
+ *
+ * Script follows whatever the topic already uses: a book printed with ১২ must
+ * not come back renumbered as 12.
+ */
+const renumberPlan = questions => {
+  const bengali = questions.some(q => /[০-৯]/.test(String(q.questionNo ?? '')));
+  return questions
+    .map((q, i) => ({
+      _id: q._id,
+      from: String(q.questionNo ?? ''),
+      to: bengali ? bengaliDigits(i + 1) : String(i + 1),
+    }))
+    .filter(p => p.from !== p.to);
+};
+
+/**
+ * What a delete would take with it, in words.
+ *
+ * The old window.confirm could only ask "sure?", so an admin clearing out a
+ * numbering mistake had no way to notice they were also deleting an answer
+ * with six figures attached to it.
+ */
+const describeContents = q => {
+  const carried = [];
+  if (q.answerHtml?.trim()) carried.push('লেখা উত্তর');
+  if (q.images?.length) carried.push(`${q.images.length}টি ছবি`);
+  if (q.videos?.length) carried.push(`${q.videos.length}টি ভিডিও`);
+  if (q.attachments?.length) carried.push(`${q.attachments.length}টি ফাইল`);
+  return carried;
+};
+
+/**
+ * One draggable row while the list is being rearranged.
+ *
+ * The gesture starts from the handle alone (`dragListener={false}` plus
+ * dragControls). That is not styling: handing the whole row to the drag makes
+ * framer-motion set `touch-action: pan-x` on it, and a tablet then cannot
+ * scroll the page past a long topic. Confining it to the handle leaves normal
+ * scrolling — and the row's own click — working.
+ */
+function QuestionOrderRow({
+  question,
+  active,
+  canDelete,
+  locked,
+  onOpen,
+  onDelete,
+  onDragStart,
+  onDrop,
+}) {
+  const controls = useDragControls();
+  const answered = Boolean(question.answerHtml?.trim());
+
+  return (
+    <Reorder.Item
+      as="div"
+      value={question}
+      dragListener={false}
+      dragControls={controls}
+      onDragStart={onDragStart}
+      onDragEnd={onDrop}
+      className={`flex items-center gap-2 rounded-lg border bg-dash-card pr-1.5 py-1.5 select-none ${
+        active ? 'border-blue-500 ring-1 ring-blue-200' : 'border-dash-line'
+      }`}
+    >
+      <button
+        type="button"
+        aria-label={`প্রশ্ন ${question.questionNo} সরান`}
+        title={locked ? 'আগের ক্রম সংরক্ষণ হচ্ছে…' : 'ধরে টেনে ক্রম বদলান'}
+        disabled={locked}
+        // A second drag started while the first is still being saved would race
+        // the two writes, and the loser silently wins on the server.
+        onPointerDown={e => {
+          if (!locked) controls.start(e);
+        }}
+        // touch-none on the handle only: without it the browser claims the
+        // gesture as a page scroll before framer-motion ever sees it.
+        className="shrink-0 touch-none p-2 rounded-md text-dash-mute2 hover:text-dash-ink3 hover:bg-dash-soft cursor-grab active:cursor-grabbing disabled:cursor-wait disabled:opacity-40"
+      >
+        <FiMenu className="w-4 h-4" />
+      </button>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex-1 min-w-0 flex items-center gap-2.5 text-left"
+      >
+        <span
+          className={`min-w-9 h-8 px-2 inline-flex items-center justify-center rounded-lg text-sm font-medium border shrink-0 ${
+            active
+              ? 'bg-blue-600 text-white border-blue-600'
+              : answered
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-dash-card text-dash-mute border-dash-line'
+          }`}
+        >
+          {question.questionNo}
+        </span>
+        <span className="flex-1 min-w-0 truncate text-[13px] text-dash-ink4">
+          {question.questionText || <span className="text-dash-mute2">প্রশ্নের লেখা নেই</span>}
+        </span>
+      </button>
+
+      {canDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          title={`প্রশ্ন ${question.questionNo} মুছে ফেলুন`}
+          aria-label={`প্রশ্ন ${question.questionNo} মুছে ফেলুন`}
+          className="shrink-0 p-2 rounded-md text-dash-mute2 hover:text-red-600 hover:bg-red-50 transition"
+        >
+          <FiTrash2 className="w-4 h-4" />
+        </button>
+      )}
+    </Reorder.Item>
+  );
+}
+
 /** Progress for the file currently going up, plus its place in the queue. */
 function UploadBar({ pct, queue }) {
   return (
@@ -218,12 +353,54 @@ export default function BookContentEditorPage() {
 
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [flash, setFlash] = useState('');
+  // The banner carries failures as well as successes — "could not save the new
+  // order" printed in the success green is a message that reads as its own
+  // opposite, so the tone travels with the text.
+  const [flash, setFlash] = useState(null); // { text, tone: 'success' | 'error' }
+  const flashTimer = useRef(null);
+
+  const notify = useCallback((text, tone = 'success', ms = 2500) => {
+    clearTimeout(flashTimer.current);
+    setFlash(text ? { text, tone } : null);
+    if (text && ms) flashTimer.current = setTimeout(() => setFlash(null), ms);
+  }, []);
+
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
 
   // Read after mount: currentCan() reads localStorage, so deciding during the
   // server render would hydrate a different tree.
   const [canDelete, setCanDelete] = useState(false);
   useEffect(() => setCanDelete(currentCan('records.delete')), []);
+
+  const { confirm, confirmNode } = useConfirm();
+
+  // Drag-to-reorder is a mode rather than always-on: these chips are how the
+  // admin navigates 381 questions, and a click that lands as a two-pixel drag
+  // would rewrite a printed book's order by accident.
+  const [reordering, setReordering] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [renumbering, setRenumbering] = useState(false);
+  // The order as it stood when the drag began, to put back if the save fails.
+  const orderBeforeDrag = useRef(null);
+
+  // A delete is soft server-side, so a misclick is recoverable — but only for
+  // as long as the admin is still being offered the way back.
+  const [undo, setUndo] = useState(null); // { id, questionNo, topicId }
+  const [restoring, setRestoring] = useState(false);
+  const undoTimer = useRef(null);
+
+  const armUndo = useCallback(entry => {
+    clearTimeout(undoTimer.current);
+    setUndo(entry);
+    undoTimer.current = setTimeout(() => setUndo(null), UNDO_WINDOW_MS);
+  }, []);
+
+  const dismissUndo = useCallback(() => {
+    clearTimeout(undoTimer.current);
+    setUndo(null);
+  }, []);
+
+  useEffect(() => () => clearTimeout(undoTimer.current), []);
 
   const videoInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -264,7 +441,7 @@ export default function BookContentEditorPage() {
     if (!list.length) return;
 
     setBusyUpload(kind);
-    setFlash('');
+    notify('');
     const failures = [];
     let done = 0;
 
@@ -287,12 +464,9 @@ export default function BookContentEditorPage() {
     setUploadQueue(null);
 
     if (failures.length) {
-      setFlash(
-        `${done}টি আপলোড হয়েছে, ${failures.length}টি হয়নি — ${failures[0]}`
-      );
+      notify(`${done}টি আপলোড হয়েছে, ${failures.length}টি হয়নি — ${failures[0]}`, 'error', 0);
     } else {
-      setFlash(`${done}টি ফাইল আপলোড হয়েছে — সংরক্ষণ করতে ভুলবেন না`);
-      setTimeout(() => setFlash(''), 4000);
+      notify(`${done}টি ফাইল আপলোড হয়েছে — সংরক্ষণ করতে ভুলবেন না`, 'success', 4000);
     }
   };
 
@@ -302,8 +476,10 @@ export default function BookContentEditorPage() {
     const ok = list.filter(f => f.size / (1024 * 1024) <= VIDEO_SOFT_LIMIT_MB);
 
     if (tooBig.length) {
-      setFlash(
-        `${tooBig.length}টি ভিডিও ${VIDEO_SOFT_LIMIT_MB}MB-এর চেয়ে বড় বলে বাদ গেছে (${tooBig[0].name})। বড় ভিডিও ইউটিউবে দিয়ে লিংক বসান।`
+      notify(
+        `${tooBig.length}টি ভিডিও ${VIDEO_SOFT_LIMIT_MB}MB-এর চেয়ে বড় বলে বাদ গেছে (${tooBig[0].name})। বড় ভিডিও ইউটিউবে দিয়ে লিংক বসান।`,
+        'error',
+        0
       );
     }
     if (!ok.length) return;
@@ -340,7 +516,7 @@ export default function BookContentEditorPage() {
   const handleImageUpload = files => {
     const images = Array.from(files || []).filter(isImage);
     if (!images.length) {
-      setFlash('শুধু ছবি ফাইল (JPG, PNG, WebP) দেওয়া যাবে');
+      notify('শুধু ছবি ফাইল (JPG, PNG, WebP) দেওয়া যাবে', 'error', 4000);
       return;
     }
     return uploadMany(images, 'image', (d, data) => ({
@@ -422,6 +598,9 @@ export default function BookContentEditorPage() {
       setActiveTopic(topic);
       setActiveQuestionId(null);
       setDraft(null);
+      // Rearranging is per-topic; carrying the mode across would put the next
+      // topic straight into drag mode nobody asked for.
+      setReordering(false);
       await loadQuestions(topic._id);
     },
     [loadQuestions]
@@ -445,7 +624,7 @@ export default function BookContentEditorPage() {
   const saveQuestion = async () => {
     if (!activeQuestionId || !draft) return;
     setSaving(true);
-    setFlash('');
+    notify('');
     try {
       const res = await fetch(`${API}/book-content/questions/${activeQuestionId}`, {
         method: 'PATCH',
@@ -462,12 +641,11 @@ export default function BookContentEditorPage() {
       if (!res.ok || !body.success) throw new Error(body.message || 'Save failed');
 
       setQuestions(qs => qs.map(q => (q._id === activeQuestionId ? body.data : q)));
-      setFlash('সংরক্ষিত হয়েছে');
+      notify('সংরক্ষিত হয়েছে');
       // Progress counters live on the tree, so it has to be refetched.
       loadTree();
-      setTimeout(() => setFlash(''), 2500);
     } catch (err) {
-      setFlash(err.message);
+      notify(err.message, 'error', 0);
     } finally {
       setSaving(false);
     }
@@ -522,17 +700,190 @@ export default function BookContentEditorPage() {
     }
   };
 
-  // Untouched by the insert work: a delete still leaves its serial gap behind,
-  // and createQuestion is what puts a re-added question back into it.
+  /**
+   * Delete a question, having first said out loud what it contains.
+   *
+   * The delete still leaves its serial gap behind, and createQuestion is what
+   * puts a re-added question back into it.
+   */
   const deleteQuestion = async id => {
-    if (!window.confirm('এই প্রশ্নটি মুছে ফেলবেন?')) return;
-    await fetch(`${API}/book-content/questions/${id}`, { method: 'DELETE', headers: hdrs() });
-    setQuestions(qs => qs.filter(q => q._id !== id));
-    if (activeQuestionId === id) {
+    const q = questions.find(x => String(x._id) === String(id));
+    if (!q) return;
+
+    const carried = describeContents(q);
+    const ok = await confirm({
+      title: `প্রশ্ন ${q.questionNo} মুছে ফেলবেন?`,
+      message: [
+        q.questionText ? `“${q.questionText.slice(0, 80)}${q.questionText.length > 80 ? '…' : ''}”` : '',
+        carried.length
+          ? `এর সাথে ${carried.join(', ')} মুছে যাবে।`
+          : 'এতে এখনো কোনো উত্তর বা ফাইল নেই।',
+        'ভুল হলে সাথে সাথেই “ফিরিয়ে আনুন” চেপে পুরোটা ফেরত পাবেন।',
+      ]
+        .filter(Boolean)
+        .join(' '),
+      confirmText: 'মুছে ফেলুন',
+      cancelText: 'থাক',
+    });
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`${API}/book-content/questions/${id}`, {
+        method: 'DELETE',
+        headers: hdrs(),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.success === false) throw new Error(body.message || 'মুছে ফেলা যায়নি');
+    } catch (err) {
+      notify(err.message, 'error', 0);
+      return;
+    }
+
+    setQuestions(qs => qs.filter(x => String(x._id) !== String(id)));
+    if (String(activeQuestionId) === String(id)) {
       setActiveQuestionId(null);
       setDraft(null);
     }
+    armUndo({ id, questionNo: q.questionNo, topicId: activeTopic?._id });
     loadTree();
+  };
+
+  /**
+   * Put back the question that was just deleted.
+   *
+   * The delete is soft server-side, so this restores the answer and every
+   * attached file with it — and back at its own place in the topic, which is
+   * why the list is refetched rather than having the row pushed onto the end.
+   */
+  const restoreDeleted = async () => {
+    if (!undo) return;
+    const target = undo;
+    dismissUndo();
+    setRestoring(true);
+    try {
+      const res = await fetch(`${API}/book-content/questions/${target.id}/restore`, {
+        method: 'PATCH',
+        headers: hdrs(),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.success) throw new Error(body.message || 'ফিরিয়ে আনা যায়নি');
+
+      if (activeTopic && String(activeTopic._id) === String(target.topicId)) {
+        await loadQuestions(target.topicId);
+      }
+      notify(`প্রশ্ন ${target.questionNo} ফিরে এসেছে`, 'success', 3000);
+      loadTree();
+    } catch (err) {
+      // Hand the button back: the question is still deleted, and a failed undo
+      // that also swallows the offer to retry leaves nothing to do about it.
+      armUndo(target);
+      notify(err.message, 'error', 0);
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  /**
+   * Persist the order the chips are now in.
+   *
+   * Only `order` moves. `questionNo` is the serial printed beside the question
+   * on paper, so a drag must never touch it — renumberSerials below is the one
+   * place that may, and only when asked.
+   */
+  const saveOrder = async (next, previous) => {
+    setSavingOrder(true);
+    try {
+      const res = await fetch(`${API}/book-content/reorder/questions`, {
+        method: 'PATCH',
+        headers: hdrs(),
+        body: JSON.stringify({
+          // The topic the client believes it is reordering. The server refuses
+          // the write if the ids do not all belong to it.
+          scopeId: activeTopic?._id,
+          items: next.map((q, i) => ({ _id: q._id, order: i + 1 })),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.success) throw new Error(body.message || 'ক্রম সংরক্ষণ হয়নি');
+      notify('নতুন ক্রম সংরক্ষিত হয়েছে', 'success', 2000);
+    } catch (err) {
+      // Straight back to where it was. A list left showing an order the server
+      // rejected is worse than not having moved at all.
+      setQuestions(previous);
+      notify(`ক্রম বদলানো যায়নি, আগের ক্রমে ফিরিয়ে আনা হলো — ${err.message}`, 'error', 0);
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const beginDrag = () => {
+    orderBeforeDrag.current = questions;
+  };
+
+  /** Save on drop — there is no separate "save order" button to forget. */
+  const endDrag = () => {
+    const previous = orderBeforeDrag.current;
+    orderBeforeDrag.current = null;
+    if (!previous) return;
+
+    const unmoved =
+      previous.length === questions.length &&
+      previous.every((q, i) => String(q._id) === String(questions[i]._id));
+    if (unmoved) return;
+
+    saveOrder(questions, previous);
+  };
+
+  /**
+   * Renumber the visible serials 1…n down the list as it now stands.
+   *
+   * Deliberately a button of its own, never a side effect of the drag: this is
+   * the number printed next to the question in the physical book, and a reader
+   * holding the paper copy finds nothing if the two stop agreeing.
+   */
+  const renumberSerials = async () => {
+    const planned = renumberPlan(questions);
+    if (!planned.length) {
+      notify('নম্বরগুলো ইতিমধ্যেই ১ থেকে ক্রমানুসারে আছে', 'success', 2500);
+      return;
+    }
+
+    const sample = planned
+      .slice(0, 3)
+      .map(p => `${p.from} → ${p.to}`)
+      .join(', ');
+    const ok = await confirm({
+      title: `${planned.length}টি প্রশ্নের ছাপা নম্বর বদলাবে`,
+      message: `এখনকার ক্রম অনুযায়ী নম্বর ১ থেকে ${questions.length} পর্যন্ত বসবে (${sample}${
+        planned.length > 3 ? ' …' : ''
+      })। এই নম্বরটাই বইয়ের পাতায় প্রশ্নের পাশে ছাপা — ছাপা কপির সাথে না মিললে পাঠক প্রশ্ন খুঁজে পাবে না।`,
+      confirmText: 'নম্বর বসান',
+      cancelText: 'থাক',
+    });
+    if (!ok) return;
+
+    setRenumbering(true);
+    try {
+      // One at a time: a half-applied renumbering has to be visible in the list
+      // the admin is looking at, and the catch below refetches to show exactly
+      // how far it got.
+      for (const p of planned) {
+        const res = await fetch(`${API}/book-content/questions/${p._id}`, {
+          method: 'PATCH',
+          headers: hdrs(),
+          body: JSON.stringify({ questionNo: p.to }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.success) throw new Error(body.message || 'নম্বর বদলানো যায়নি');
+      }
+      await loadQuestions(activeTopic._id);
+      notify(`${planned.length}টি প্রশ্নের নম্বর বদলানো হয়েছে`, 'success', 3000);
+    } catch (err) {
+      await loadQuestions(activeTopic._id);
+      notify(`নম্বর বদলানো সম্পূর্ণ হয়নি — ${err.message}`, 'error', 0);
+    } finally {
+      setRenumbering(false);
+    }
   };
 
   /** Jump to the next question anywhere in the book that still has no answer. */
@@ -541,8 +892,7 @@ export default function BookContentEditorPage() {
     const body = await res.json();
     const next = body.data;
     if (!next) {
-      setFlash('সব প্রশ্নের উত্তর দেওয়া হয়ে গেছে 🎉');
-      setTimeout(() => setFlash(''), 3000);
+      notify('সব প্রশ্নের উত্তর দেওয়া হয়ে গেছে 🎉', 'success', 3000);
       return;
     }
     const topic = allTopics.find(t => String(t._id) === String(next.topicId));
@@ -756,8 +1106,15 @@ export default function BookContentEditorPage() {
       </div>
 
       {flash && (
-        <div className="mb-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-2.5">
-          {flash}
+        <div
+          role="status"
+          className={`mb-4 rounded-lg border text-sm px-4 py-2.5 ${
+            flash.tone === 'error'
+              ? 'bg-red-50 border-red-200 text-red-800'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+          }`}
+        >
+          {flash.text}
         </div>
       )}
 
@@ -955,28 +1312,136 @@ export default function BookContentEditorPage() {
               </div>
 
               {/* Question numbers */}
-              <div className="flex flex-wrap gap-1.5 py-4">
-                {questions.map(q => {
-                  const answered = Boolean(q.answerHtml?.trim());
-                  return (
-                    <button
-                      key={q._id}
-                      onClick={() => openQuestion(q)}
-                      title={q.questionText || `প্রশ্ন ${q.questionNo}`}
-                      className={`min-w-9 h-9 px-2 rounded-lg text-sm font-medium border transition ${
-                        activeQuestionId === q._id
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : answered
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                          : 'bg-dash-card text-dash-mute border-dash-line hover:bg-dash-soft'
-                      }`}
-                    >
-                      {q.questionNo}
-                    </button>
-                  );
-                })}
-                {questions.length === 0 && (
+              <div className="py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-dash-mute">
+                    প্রশ্ন{questions.length > 0 ? ` (${questions.length}টি)` : ''}
+                    {savingOrder && (
+                      <span className="ml-2 normal-case tracking-normal text-dash-mute2">
+                        ক্রম সংরক্ষণ হচ্ছে…
+                      </span>
+                    )}
+                  </p>
+
+                  {/* `|| reordering` so deleting down to a single question
+                      cannot strand the admin inside a mode with no way out. */}
+                  {(questions.length > 1 || reordering) && (
+                    <div className="flex items-center gap-2">
+                      {/* Only offered while rearranging — this rewrites what is
+                          printed on paper, so it does not belong in reach of an
+                          everyday click. */}
+                      {reordering && (
+                        <button
+                          onClick={renumberSerials}
+                          disabled={renumbering || savingOrder}
+                          title="এখনকার ক্রম অনুযায়ী ছাপা নম্বর ১…n বসিয়ে দিন"
+                          className="inline-flex items-center gap-1.5 text-xs rounded-lg border border-amber-300 bg-amber-50 text-amber-800 px-2.5 py-1.5 hover:bg-amber-100 disabled:opacity-50 transition"
+                        >
+                          <FiHash className="w-3.5 h-3.5" />
+                          {renumbering ? 'বসছে…' : `ছাপা নম্বর ১…${questions.length} করুন`}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setReordering(v => !v)}
+                        disabled={savingOrder}
+                        title={
+                          reordering
+                            ? 'সাজানো শেষ করে নম্বরের তালিকায় ফিরুন'
+                            : 'হাতল ধরে টেনে প্রশ্নের ক্রম বদলান'
+                        }
+                        className={`inline-flex items-center gap-1.5 text-xs rounded-lg border px-2.5 py-1.5 transition disabled:opacity-50 ${
+                          reordering
+                            ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                            : 'border-dash-line-strong text-dash-ink4 hover:bg-dash-soft'
+                        }`}
+                      >
+                        {reordering ? (
+                          <>
+                            <FiCheck className="w-3.5 h-3.5" /> সাজানো শেষ
+                          </>
+                        ) : (
+                          <>
+                            <FiMove className="w-3.5 h-3.5" /> ক্রম সাজান
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {questions.length === 0 ? (
                   <p className="text-sm text-dash-mute">এই টপিকে এখনো কোনো প্রশ্ন নেই।</p>
+                ) : reordering ? (
+                  <>
+                    <p className="text-[11px] text-dash-mute mb-2 leading-relaxed">
+                      হাতল <FiMenu className="inline w-3 h-3 -mt-0.5" /> ধরে উপরে-নিচে টানুন — ছেড়ে
+                      দিলেই ক্রম সংরক্ষিত হয়ে যাবে। <strong>ছাপা নম্বর বদলাবে না</strong>, শুধু
+                      দেখানোর ক্রম বদলাবে।
+                    </p>
+                    {/* reducedMotion="user" is the whole prefers-reduced-motion
+                        story for framer: the drag still tracks the finger, but
+                        the reflow and the settle-back stop animating. */}
+                    <MotionConfig reducedMotion="user">
+                      <Reorder.Group
+                        as="div"
+                        axis="y"
+                        values={questions}
+                        onReorder={setQuestions}
+                        className="space-y-1.5"
+                      >
+                        {questions.map(q => (
+                          <QuestionOrderRow
+                            key={q._id}
+                            question={q}
+                            active={String(activeQuestionId) === String(q._id)}
+                            canDelete={canDelete}
+                            locked={savingOrder || renumbering}
+                            onOpen={() => openQuestion(q)}
+                            onDelete={() => deleteQuestion(q._id)}
+                            onDragStart={beginDrag}
+                            onDrop={endDrag}
+                          />
+                        ))}
+                      </Reorder.Group>
+                    </MotionConfig>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap gap-2.5">
+                    {questions.map(q => {
+                      const answered = Boolean(q.answerHtml?.trim());
+                      return (
+                        <div key={q._id} className="relative group">
+                          <button
+                            onClick={() => openQuestion(q)}
+                            title={q.questionText || `প্রশ্ন ${q.questionNo}`}
+                            className={`min-w-9 h-9 px-2 rounded-lg text-sm font-medium border transition ${
+                              activeQuestionId === q._id
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : answered
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                : 'bg-dash-card text-dash-mute border-dash-line hover:bg-dash-soft'
+                            }`}
+                          >
+                            {q.questionNo}
+                          </button>
+                          {/* On the chip, not buried in the form below it: the
+                              shop owner never found the old text link beside
+                              the save button. Dimmed rather than hover-only, so
+                              it is still there to be found on a tablet. */}
+                          {canDelete && (
+                            <button
+                              onClick={() => deleteQuestion(q._id)}
+                              title={`প্রশ্ন ${q.questionNo} মুছে ফেলুন`}
+                              aria-label={`প্রশ্ন ${q.questionNo} মুছে ফেলুন`}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-dash-card border border-red-200 text-red-500 flex items-center justify-center shadow-sm opacity-60 group-hover:opacity-100 focus:opacity-100 hover:bg-red-500 hover:text-white hover:border-red-500 transition"
+                            >
+                              <FiX className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
@@ -1629,6 +2094,38 @@ export default function BookContentEditorPage() {
           </div>
         </div>
       )}
+
+      {/* ─── Undo the last delete ───────────────────────── */}
+      {/* Fixed, not in the page flow: after deleting a chip the admin may well
+          have scrolled on, and an undo they cannot see is no undo at all.
+          z below the confirm modal's 110 so it never covers a dialog. */}
+      {undo && (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 rounded-xl bg-[#14100c] text-white text-sm px-4 py-3 shadow-2xl max-w-[calc(100vw-2rem)]"
+        >
+          <span className="truncate">
+            প্রশ্ন <strong>{undo.questionNo}</strong> মুছে ফেলা হয়েছে
+          </span>
+          <button
+            onClick={restoreDeleted}
+            disabled={restoring}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 font-semibold disabled:opacity-50 transition"
+          >
+            <FiRotateCcw className="w-3.5 h-3.5" />
+            {restoring ? 'ফিরছে…' : 'ফিরিয়ে আনুন'}
+          </button>
+          <button
+            onClick={dismissUndo}
+            aria-label="বন্ধ করুন"
+            className="shrink-0 p-1 text-white/50 hover:text-white transition"
+          >
+            <FiX className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {confirmNode}
     </div>
   );
 }

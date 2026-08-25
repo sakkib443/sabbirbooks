@@ -1,37 +1,71 @@
-"use client";
+import type { Metadata } from 'next';
+import { getLandingBook, getLandingSettings, landingPrice } from '@/lib/landingBook';
+import { PUBLIC_PAGES_ENABLED } from '@/config/site';
+import LandingPage from '@/components/landing/LandingPage';
+import MarketingHome from '@/components/home/MarketingHome';
 
-import { useEffect } from "react";
-import { useDispatch } from "react-redux";
+/**
+ * The public site.
+ *
+ * A SERVER component on purpose. The old homepage was `"use client"`, which
+ * makes `generateMetadata` impossible — and without it a link to this site
+ * posted on Facebook renders as a bare white box. Since the whole point of the
+ * page is to be shared, the data is fetched here and the interactive parts live
+ * in child client components.
+ *
+ * When NEXT_PUBLIC_PUBLIC_PAGES=on, the original multi-section marketing home
+ * comes back instead; nothing about it was deleted.
+ */
 
-import { fetchCoursesData } from "@/redux/CourseSlice";
-import HeroSection from "@/components/home/HeroSection";
-import MedicalCategories from "@/components/home/MedicalCategories";
-import FeaturedCourses from "@/components/home/FeaturedCourses";
-import WhyChooseUs from "@/components/home/WhyChooseUs";
-import FeaturedBooks from "@/components/home/FeaturedBooks";
-import StatsBand from "@/components/home/StatsBand";
-import CtaBand from "@/components/home/CtaBand";
-import Newsletter from "@/components/home/Newsletter";
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getLandingSettings();
+  const book = await getLandingBook(settings);
 
-export default function HomePage() {
-  const dispatch = useDispatch();
+  const brand = settings.brandName || 'Magic Viva';
+  if (!book) {
+    return { title: brand, description: 'মেডিকেল শিক্ষার্থীদের জন্য বই।' };
+  }
 
-  useEffect(() => {
-    // Populate the redux `courses` slice used by <FeaturedCourses />.
-    // Cast because the JS store has no typed AppDispatch yet.
-    dispatch(fetchCoursesData() as never);
-  }, [dispatch]);
+  const price = landingPrice(book);
+  const title = settings.landingHeadline || book.title;
+  const description =
+    settings.landingSubheadline ||
+    (price.percent > 0
+      ? `${price.percent}% ছাড়ে ${book.isPreOrder ? 'প্রি-অর্ডার' : 'অর্ডার'} করুন। ${
+          book.description?.slice(0, 120) || ''
+        }`.trim()
+      : book.description?.slice(0, 160) || brand);
 
-  return (
-    <main>
-      <HeroSection />
-      <MedicalCategories />
-      <FeaturedCourses />
-      <WhyChooseUs />
-      <FeaturedBooks />
-      <StatsBand />
-      <CtaBand />
-      <Newsletter />
-    </main>
-  );
+  // An absolute URL is required — Facebook will not follow a relative one.
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
+  const image = book.coverImage;
+
+  return {
+    title,
+    description,
+    ...(site ? { metadataBase: new URL(site) } : {}),
+    openGraph: {
+      type: 'website',
+      title: `${title} — ${brand}`,
+      description,
+      siteName: brand,
+      locale: 'bn_BD',
+      ...(image ? { images: [{ url: image, width: 1200, height: 630, alt: book.title }] } : {}),
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title: `${title} — ${brand}`,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
+  };
+}
+
+export default async function HomePage() {
+  if (PUBLIC_PAGES_ENABLED) return <MarketingHome />;
+
+  const settings = await getLandingSettings();
+  const book = await getLandingBook(settings);
+
+  return <LandingPage book={book} settings={settings} />;
 }

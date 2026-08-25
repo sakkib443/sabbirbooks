@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -17,6 +17,8 @@ import {
   LuStethoscope,
   LuChevronRight,
   LuPackageX,
+  LuCalendarClock,
+  LuTruck,
 } from "react-icons/lu";
 import { useLanguage } from "@/context/LanguageContext";
 import { Container, Button, buttonVariants, cn } from "@/components/ui";
@@ -31,6 +33,7 @@ import {
   fetchCheckoutOptions,
   fetchCourse,
   fetchGatewayStatus,
+  fetchMe,
   fetchPaymentSettings,
   getStoredUser,
   getToken,
@@ -57,13 +60,26 @@ import {
   DeliveryArea,
   ManualChannel,
   ManualDetails,
+  OrderResult,
   PayMode,
   PaymentSettings,
+  PreOrderInfo,
   ShippingAddress,
   SuccessResult,
   effectiveBookPrice,
   effectiveCoursePrice,
+  formatReleaseDate,
+  preOrderDiscount,
+  preOrderPercent,
 } from "./types";
+import { districtToArea } from "./bdGeo";
+
+// How many copies of an unprinted book one buyer may pre-order.
+//
+// A pre-order has no stock to cap the stepper against, and an uncapped stepper
+// on a book that does not exist yet is how a mis-tap becomes a 200-copy order
+// the shop has to unwind by hand. Bulk buyers phone the shop.
+const PREORDER_MAX_QTY = 10;
 
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
 
@@ -87,7 +103,11 @@ export default function CheckoutView() {
 
   // ── Pay now vs pay the courier, and where the parcel is going ─────────────
   const [payMode, setPayMode] = useState<PayMode>("cod");
-  const [area, setArea] = useState<DeliveryArea>("inside-dhaka");
+  // The zone the buyer picked BY HAND, or null to follow their district. Kept as
+  // "unset" rather than a concrete default so the district can drive the zone
+  // during render — an effect that pushed the district into this state would
+  // fight every click on the toggle and cost a re-render for each keystroke.
+  const [areaChoice, setAreaChoice] = useState<DeliveryArea | null>(null);
   const [options, setOptions] = useState<CheckoutOptions | null>(null);
 
   // Which hosted checkouts the server holds credentials for. Stays null until the
@@ -134,7 +154,15 @@ export default function CheckoutView() {
   const isCourse = type === "course";
   const isPrinted = isBook && book?.format === "printed";
   const stock = book?.stock ?? 0;
-  const outOfStock = isPrinted && stock <= 0;
+  // A pre-order is sold before the print run exists, so `stock: 0` is its normal
+  // state, not a reason to refuse the sale — order.service.ts skips the stock
+  // check for these lines. Gating on stock here would make every pre-order
+  // unbuyable while the server was perfectly willing to take the order.
+  const isPreOrder = isBook && book?.isPreOrder === true;
+  const preOrderPct = preOrderPercent(book);
+  const preOrderReleaseDate = formatReleaseDate(book?.expectedReleaseDate, isBengali);
+  const outOfStock = isPrinted && !isPreOrder && stock <= 0;
+  const maxQty = isPreOrder ? PREORDER_MAX_QTY : Math.max(1, stock);
   // Free courses skip payment entirely (instant enroll); everything else is manual.
   const isFreeCourse = isCourse && !!course && effectiveCoursePrice(course) <= 0;
   const needsPayment = !outOfStock && !isFreeCourse;
@@ -168,16 +196,10 @@ export default function CheckoutView() {
 
   const bookSubtotal = isBook && book ? effectiveBookPrice(book) * quantity : 0;
 
-  // Delivery charge for the selected zone, mirroring the server's rule so the
-  // buyer is never surprised by a different number on the confirmation. The
-  // server recomputes it regardless — this is display, not the source of truth.
-  const deliveryCharge = useMemo(() => {
-    if (!isPrinted || !options) return 0;
-    const freeAbove = options.freeDeliveryAbove || 0;
-    if (freeAbove > 0 && bookSubtotal >= freeAbove) return 0;
-    const base = options.deliveryCharge?.[area] ?? 0;
-    return base + (effectivePayMode === "cod" ? options.codExtraCharge || 0 : 0);
-  }, [isPrinted, options, area, bookSubtotal, effectivePayMode]);
+  // The pre-order discount, computed the way order.service.ts computes it. The
+  // server is still the only authority; this exists so the summary and the
+  // invoice agree, which is the whole reason the summary has a discount row.
+  const discount = isBook && book ? preOrderDiscount(book, quantity) : 0;
 
   // ── Shipping form (only enforced for printed books) ───────────────────────
   const shippingSchema = useMemo(
@@ -187,6 +209,12 @@ export default function CheckoutView() {
         phone: z.string().min(6, S.shipErrPhone),
         address: z.string().min(1, S.shipErrAddress),
         city: z.string().min(1, S.shipErrCity),
+        // District and division stay OPTIONAL. They only ever arrive prefilled,
+        // and a buyer who clears them to ship somewhere we have no district for
+        // must still be able to order — without a district the server keeps the
+        // dearer zone, so an empty one costs the shop nothing.
+        district: z.string().optional(),
+        division: z.string().optional(),
         note: z.string().optional(),
       }),
     [S]
@@ -196,11 +224,66 @@ export default function CheckoutView() {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<ShippingFormValues>({
     resolver: zodResolver(shippingSchema),
     mode: "onSubmit",
   });
+
+  // Where the address came from, when it did not come from the buyer. Held so
+  // the form can say so, and so the notice can vanish the moment either value
+  // is edited.
+  const [prefilled, setPrefilled] = useState<{
+    district: string;
+    division: string;
+    college: string;
+  } | null>(null);
+
+  // useWatch rather than watch(): watch() hands back a function the React
+  // Compiler refuses to memoize, and it would opt this whole 1400-line
+  // component out of compilation to read two fields.
+  const districtValue = (useWatch({ control, name: "district" }) ?? "").trim();
+  const divisionValue = (useWatch({ control, name: "division" }) ?? "").trim();
+  const prefillIntact =
+    !!prefilled &&
+    districtValue === prefilled.district &&
+    divisionValue === prefilled.division;
+
+  // The courier zone the buyer sees selected: their own click if they made one,
+  // otherwise whatever their district implies. With no district this is the
+  // inside-Dhaka default the page has always started on.
+  const area: DeliveryArea =
+    areaChoice ?? (districtValue ? districtToArea(districtValue) : "inside-dhaka");
+
+  // Which zone delivery is actually QUOTED on.
+  //
+  // Mirrors order.service.ts exactly: a district is real geography, so when we
+  // have one it — not the zone toggle — decides the courier zone. Quoting off
+  // the toggle instead would show the cheaper inside-Dhaka rate on an order the
+  // server prices as outside Dhaka, and a total that changes after you press
+  // Pay is the one thing this screen exists to prevent.
+  const quotedArea: DeliveryArea = districtValue ? districtToArea(districtValue) : area;
+
+  // Delivery charge for the quoted zone, mirroring the server's rule so the
+  // buyer is never surprised by a different number on the confirmation. The
+  // server recomputes it regardless — this is display, not the source of truth.
+  //
+  // Deliberately NOT useMemo'd: it is three arithmetic operations, and
+  // hand-memoizing over a derived value is what makes the React Compiler give
+  // up on optimizing this component altogether.
+  const freeDeliveryAbove = options?.freeDeliveryAbove || 0;
+  // Tested against the DISCOUNTED subtotal, which is the number the server hands
+  // to its own quote.
+  const deliveryIsFree =
+    freeDeliveryAbove > 0 && bookSubtotal - discount >= freeDeliveryAbove;
+  const deliveryCharge =
+    !isPrinted || !options || deliveryIsFree
+      ? 0
+      : (options.deliveryCharge?.[quotedArea] ?? 0) +
+        (effectivePayMode === "cod" ? options.codExtraCharge || 0 : 0);
 
   // ── Auth gate + item fetch ────────────────────────────────────────────────
   useEffect(() => {
@@ -230,7 +313,12 @@ export default function CheckoutView() {
         if (!active) return;
         if (!b || !b._id) return setPhase("notfound");
         setBook(b);
-        if (b.format === "printed") setQuantity((q) => Math.min(q, Math.max(1, b.stock ?? 1)));
+        // Stock only caps the quantity for a book that has been printed. A
+        // pre-order's stock is 0 by definition, and clamping to it would pin
+        // every pre-order to a single copy.
+        if (b.format === "printed" && !b.isPreOrder) {
+          setQuantity((q) => Math.min(q, Math.max(1, b.stock ?? 1)));
+        }
         setPhase("ready");
       }
     })();
@@ -283,19 +371,45 @@ export default function CheckoutView() {
     if (!isPrinted && payMode === "cod") setPayMode("online");
   }, [isPrinted, payMode]);
 
-  // Prefill shipping name/phone from the stored user once we know it's a printed book.
+  // Prefill the shipping form from what the shop already knows about the buyer.
+  //
+  // Two sources in this order on purpose: the stored user gives name and phone
+  // with no round trip, so the form is never blank while a request is in
+  // flight; /auth/me then supplies the district and division snapshotted from
+  // the medical college chosen at signup. Only the geography is ever guessed —
+  // the street address is left empty, because a student's college is very often
+  // not where they want a parcel sent.
   useEffect(() => {
     if (!isPrinted) return;
+    let active = true;
     const u = getStoredUser();
-    if (!u) return;
     reset({
-      name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.name || "",
-      phone: u.phoneNumber ?? "",
+      name: u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.name || "" : "",
+      phone: u?.phoneNumber ?? "",
       address: "",
       city: "",
+      district: "",
+      division: "",
       note: "",
     });
-  }, [isPrinted, reset]);
+    void fetchMe().then((me) => {
+      // A staff account, or a student who signed up before colleges existed,
+      // has no district on file — nothing to prefill, and no notice to show.
+      if (!active || !me) return;
+      const district = (me.district ?? "").trim();
+      const division = (me.division ?? "").trim();
+      if (!district && !division) return;
+      // Never overwrite something the buyer has already typed while this call
+      // was in flight.
+      const current = getValues();
+      if (district && !(current.district ?? "").trim()) setValue("district", district);
+      if (division && !(current.division ?? "").trim()) setValue("division", division);
+      setPrefilled({ district, division, college: (me.medicalCollegeName ?? "").trim() });
+    });
+    return () => {
+      active = false;
+    };
+  }, [isPrinted, reset, setValue, getValues]);
 
   // ── Run the end-to-end flow (A: course, B: book) ──────────────────────────
   const validateManual = (): boolean => {
@@ -346,6 +460,18 @@ export default function CheckoutView() {
           });
         }
       } else if (type === "book" && book) {
+        // The order the server sends back is the truth about what was charged.
+        // The ship promise is not on it at all — the note and the date are copy
+        // that only ever lived on the Book — so it is read from there, gated on
+        // the server's own verdict. `?? isPreOrder` covers an order document
+        // written before the field existed: falling back to what the page was
+        // showing beats silently dropping the one thing a pre-order buyer wants
+        // to know.
+        const preOrderFor = (o: OrderResult): PreOrderInfo | undefined =>
+          (o.isPreOrder ?? isPreOrder)
+            ? { note: book.preOrderNote, expectedReleaseDate: book.expectedReleaseDate }
+            : undefined;
+
         if (isGateway) {
           // Hosted checkout. On a real gateway this navigates away and never
           // comes back — the order is settled by the gateway's server-to-server
@@ -368,7 +494,7 @@ export default function CheckoutView() {
           });
 
           if (res.redirected) return; // leaving the page; keep the spinner up
-          setResult({ kind: "book", order: res.order });
+          setResult({ kind: "book", order: res.order, preOrder: preOrderFor(res.order) });
         } else if (isCod) {
           // Nothing is paid now — the order is placed and the courier collects.
           const order = await submitBookCod({
@@ -387,6 +513,7 @@ export default function CheckoutView() {
             deliveryCharge: order.deliveryCharge ?? 0,
             supportPhone: options?.supportPhone,
             deliveryNote: options?.deliveryNote,
+            preOrder: preOrderFor(order),
           });
         } else {
           const order = await submitBookManual({
@@ -406,6 +533,7 @@ export default function CheckoutView() {
             amount: order.total,
             channel: details.channel,
             isPrintedBook: order.deliveryType !== "digital",
+            preOrder: preOrderFor(order),
           });
         }
       } else {
@@ -437,8 +565,17 @@ export default function CheckoutView() {
     }
     if (isPrinted) {
       // Gate the flow behind a valid shipping address, and carry the zone the
-      // delivery charge was quoted for.
-      void handleSubmit((vals) => runCheckout({ ...vals, area }))();
+      // delivery charge was quoted for. Blank district/division are dropped
+      // rather than sent as "": an absent district is what tells the server to
+      // honour the zone toggle instead of deriving one.
+      void handleSubmit((vals) =>
+        runCheckout({
+          ...vals,
+          area,
+          district: vals.district?.trim() || undefined,
+          division: vals.division?.trim() || undefined,
+        })
+      )();
     } else {
       void runCheckout();
     }
@@ -522,6 +659,36 @@ export default function CheckoutView() {
         <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)] lg:gap-8">
           {/* Left: form column */}
           <div className="space-y-6">
+            {/* Pre-order — said plainly and first, because "this book does not
+                exist yet" changes what the buyer is agreeing to. */}
+            {isPreOrder && (
+              <div className="rounded-2xl border border-coral/30 bg-coral/10 p-5 shadow-soft sm:p-6">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-coral/15 text-coral">
+                    <LuCalendarClock className="text-lg" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className={cn("font-heading text-base font-bold text-coral", bn)}>
+                      {S.preOrderBadge(preOrderPct)}
+                    </p>
+                    <p className={cn("mt-1 text-sm text-foreground", bn)}>
+                      {book?.preOrderNote?.trim() || S.preOrderFallback}
+                    </p>
+                    {preOrderReleaseDate && (
+                      <p
+                        className={cn(
+                          "mt-1.5 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground",
+                          bn
+                        )}
+                      >
+                        <LuTruck className="text-coral" /> {S.preOrderShipOn(preOrderReleaseDate)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Quantity (printed books only) */}
             {isPrinted && !outOfStock && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
@@ -530,14 +697,16 @@ export default function CheckoutView() {
                     <h2 className={cn("font-heading text-lg font-bold text-foreground", bn)}>
                       {S.qtyHeading}
                     </h2>
+                    {/* An unprinted book has no stock count worth quoting — a
+                        "0 in stock" line under a book you can buy is nonsense. */}
                     <p className={cn("text-sm text-muted-foreground", bn)}>
-                      {S.inStock(stock)}
+                      {isPreOrder ? S.preOrderQtyNote : S.inStock(stock)}
                     </p>
                   </div>
                   <QuantityStepper
                     value={quantity}
                     min={1}
-                    max={Math.max(1, stock)}
+                    max={maxQty}
                     onChange={setQuantity}
                     disabled={processing}
                     label={S.qtyHeading}
@@ -554,8 +723,40 @@ export default function CheckoutView() {
                 bn={bn}
                 S={shippingLabels(S)}
                 area={area}
-                onAreaChange={setArea}
+                onAreaChange={setAreaChoice}
                 areaCharges={options?.deliveryCharge}
+                prefill={
+                  prefillIntact && prefilled
+                    ? {
+                        text: prefilled.college
+                          ? S.shipPrefilledFrom(prefilled.college)
+                          : S.shipPrefilled,
+                        clearLabel: S.shipPrefillClear,
+                        onClear: () => {
+                          // Pin the zone they were already quoted before the
+                          // district that implied it goes away, or clearing a
+                          // prefilled "চট্টগ্রাম" would silently drop the
+                          // delivery charge back to the inside-Dhaka default.
+                          setAreaChoice(quotedArea);
+                          setValue("district", "");
+                          setValue("division", "");
+                          setPrefilled(null);
+                        },
+                      }
+                    : null
+                }
+                zoneNote={
+                  // Only ever visible when the buyer has overridden the zone
+                  // away from what their district implies. Saying which one the
+                  // charge follows beats letting them believe the toggle moved
+                  // the price when it did not.
+                  area !== quotedArea
+                    ? S.zoneFollowsDistrict(
+                        districtValue,
+                        quotedArea === "inside-dhaka" ? S.insideDhaka : S.outsideDhaka
+                      )
+                    : undefined
+                }
               />
             )}
 
@@ -699,6 +900,9 @@ export default function CheckoutView() {
                 showDelivery={Boolean(isPrinted && !outOfStock)}
                 deliveryCharge={deliveryCharge}
                 isCod={isCod}
+                discount={discount}
+                isPreOrder={isPreOrder}
+                preOrderPercent={preOrderPct}
               />
 
               {!outOfStock && (
@@ -951,6 +1155,14 @@ const EN = {
   inStock: (n: number) => `${n} in stock`,
   outOfStockTitle: "Out of stock",
   outOfStockText: "This printed book is currently unavailable. Please check back later.",
+  // pre-order
+  preOrderBadge: (pct: number) => `Pre-order · ${pct}% off`,
+  preOrderFallback: "This book is not printed yet. Order now at the pre-order price.",
+  preOrderShipOn: (d: string) => `Delivery starts ${d}`,
+  preOrderQtyNote: "Not printed yet — reserved for you",
+  preOrderShipTitle: "About your pre-order",
+  preOrderShipGeneric: "This is a pre-order — we'll ship it as soon as it's printed.",
+  sumPreOrderSaved: "Pre-order discount",
   // order summary
   sumHeading: "Order summary",
   sumCourse: "Course",
@@ -964,6 +1176,8 @@ const EN = {
   sumTotal: "Total",
   sumFree: "Free",
   sumSave: "You save",
+  sumPreOrder: "Pre-order",
+  sumPreOrderDiscount: (pct: number) => `Pre-order discount (${pct}%)`,
   sumDuration: (m: number) => `${m} ${m === 1 ? "month" : "months"} programme`,
   // shipping
   shipHeading: "Shipping address",
@@ -974,8 +1188,18 @@ const EN = {
   shipPhonePh: "01XXXXXXXXX",
   shipAddress: "Address",
   shipAddressPh: "House, road, area",
-  shipCity: "City / District",
-  shipCityPh: "e.g. Dhaka",
+  shipCity: "City / Town",
+  shipCityPh: "e.g. Dhanmondi, Dhaka",
+  shipDistrict: "District",
+  shipDistrictPh: "e.g. ঢাকা",
+  shipDivision: "Division",
+  shipDivisionPh: "e.g. ঢাকা",
+  shipPrefilled: "District and division were filled in from your profile. Shipping somewhere else? Change them.",
+  shipPrefilledFrom: (college: string) =>
+    `District and division were filled in from ${college}. Sending the book home instead? Change them.`,
+  shipPrefillClear: "Different address",
+  zoneFollowsDistrict: (district: string, zone: string) =>
+    `Delivery is charged by district — ${district} counts as ${zone}.`,
   shipNote: "Delivery note",
   shipNotePh: "Landmark or instructions",
   shipOptional: "optional",
@@ -1143,6 +1367,13 @@ const BN: Copy = {
   inStock: (n: number) => `স্টকে ${n} টি আছে`,
   outOfStockTitle: "স্টকে নেই",
   outOfStockText: "এই প্রিন্টেড বইটি এই মুহূর্তে অনুপলব্ধ। পরে আবার দেখুন।",
+  preOrderBadge: (pct: number) => `প্রি-অর্ডার · ${pct}% ছাড়`,
+  preOrderFallback: "বইটি এখনো ছাপা হয়নি। প্রি-অর্ডার দামে এখনই অর্ডার করুন।",
+  preOrderShipOn: (d: string) => `${d} থেকে ডেলিভারি শুরু`,
+  preOrderQtyNote: "এখনো ছাপা হয়নি — আপনার জন্য রাখা থাকবে",
+  preOrderShipTitle: "আপনার প্রি-অর্ডার সম্পর্কে",
+  preOrderShipGeneric: "এটি একটি প্রি-অর্ডার — ছাপা হওয়ার সাথে সাথেই পাঠিয়ে দেওয়া হবে।",
+  sumPreOrderSaved: "প্রি-অর্ডার ছাড়",
   sumHeading: "অর্ডার সারাংশ",
   sumCourse: "কোর্স",
   sumBook: "বই",
@@ -1155,6 +1386,8 @@ const BN: Copy = {
   sumTotal: "সর্বমোট",
   sumFree: "ফ্রি",
   sumSave: "সাশ্রয়",
+  sumPreOrder: "প্রি-অর্ডার",
+  sumPreOrderDiscount: (pct: number) => `প্রি-অর্ডার ছাড় (${pct}%)`,
   sumDuration: (m: number) => `${m} মাসের প্রোগ্রাম`,
   shipHeading: "ডেলিভারি ঠিকানা",
   shipSubtitle: "আপনার প্রিন্টেড বই কোথায় পৌঁছে দেব?",
@@ -1164,8 +1397,19 @@ const BN: Copy = {
   shipPhonePh: "01XXXXXXXXX",
   shipAddress: "ঠিকানা",
   shipAddressPh: "বাসা, রোড, এলাকা",
-  shipCity: "শহর / জেলা",
-  shipCityPh: "যেমন: ঢাকা",
+  shipCity: "শহর / থানা",
+  shipCityPh: "যেমন: ধানমন্ডি, ঢাকা",
+  shipDistrict: "জেলা",
+  shipDistrictPh: "যেমন: ঢাকা",
+  shipDivision: "বিভাগ",
+  shipDivisionPh: "যেমন: ঢাকা",
+  shipPrefilled:
+    "জেলা ও বিভাগ আপনার প্রোফাইল থেকে বসানো হয়েছে। অন্য ঠিকানায় পাঠাতে চাইলে বদলে নিন।",
+  shipPrefilledFrom: (college: string) =>
+    `জেলা ও বিভাগ ${college} অনুযায়ী বসানো হয়েছে। বাড়ির ঠিকানায় পাঠাতে চাইলে বদলে নিন।`,
+  shipPrefillClear: "অন্য ঠিকানা",
+  zoneFollowsDistrict: (district: string, zone: string) =>
+    `ডেলিভারি চার্জ জেলা অনুযায়ী হিসাব হয় — ${district} মানে ${zone}।`,
   shipNote: "ডেলিভারি নোট",
   shipNotePh: "ল্যান্ডমার্ক বা নির্দেশনা",
   shipOptional: "ঐচ্ছিক",
@@ -1251,6 +1495,8 @@ function summaryLabels(S: Copy) {
     delivery: S.deliveryCharge,
     codNote: S.codConfirmNote,
     duration: S.sumDuration,
+    preOrder: S.sumPreOrder,
+    preOrderDiscount: S.sumPreOrderDiscount,
   };
 }
 
@@ -1266,6 +1512,10 @@ function shippingLabels(S: Copy) {
     addressPh: S.shipAddressPh,
     city: S.shipCity,
     cityPh: S.shipCityPh,
+    district: S.shipDistrict,
+    districtPh: S.shipDistrictPh,
+    division: S.shipDivision,
+    divisionPh: S.shipDivisionPh,
     note: S.shipNote,
     notePh: S.shipNotePh,
     optional: S.shipOptional,
@@ -1395,6 +1645,11 @@ function successLabels(S: Copy, bn: string) {
     codNext2: S.codNext2,
     codNext3: S.codNext3,
     codSupport: S.codSupport,
+    // Pre-order
+    preOrderTitle: S.preOrderShipTitle,
+    preOrderShipOn: S.preOrderShipOn,
+    preOrderGeneric: S.preOrderShipGeneric,
+    preOrderSavedLabel: S.sumPreOrderSaved,
     channelName: (id: ManualChannel) => channelName(S, id),
     methodNames: {
       bkash: S.chBkash,

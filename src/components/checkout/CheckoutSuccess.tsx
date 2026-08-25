@@ -13,10 +13,11 @@ import {
   LuReceipt,
   LuClock,
   LuHash,
+  LuCalendarClock,
 } from "react-icons/lu";
 import { Button, buttonVariants, cn } from "@/components/ui";
 import { fetchDownloadUrl } from "./checkoutApi";
-import { ManualChannel, OrderResult, SuccessResult, formatTk } from "./types";
+import { ManualChannel, OrderResult, PreOrderInfo, SuccessResult, formatTk, formatReleaseDate } from "./types";
 
 interface Labels {
   bn: string;
@@ -61,20 +62,69 @@ interface Labels {
   codNext2: string;
   codNext3: string;
   codSupport: string;
+  // Pre-order
+  preOrderTitle: string;
+  preOrderShipOn: (date: string) => string;
+  preOrderGeneric: string;
+  preOrderSavedLabel: string;
+}
+
+// When the book ships, on a confirmation for a book that is not printed yet.
+//
+// This is the question a pre-order buyer has the moment they have paid, and a
+// screen that only says "order placed" answers it with silence. The admin's own
+// wording comes first when there is any; the generic line is the floor, so the
+// buyer is never left to guess whether the parcel is coming tomorrow or in
+// three months.
+function PreOrderNote({
+  preOrder,
+  L,
+  isBengali,
+}: {
+  preOrder: PreOrderInfo;
+  L: Labels;
+  isBengali: boolean;
+}) {
+  const bn = L.bn;
+  const note = preOrder.note?.trim();
+  const date = formatReleaseDate(preOrder.expectedReleaseDate, isBengali);
+
+  return (
+    <div
+      className={cn(
+        "mt-5 flex items-start gap-3 rounded-xl border border-coral/30 bg-coral/10 p-4 text-left",
+        bn
+      )}
+    >
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-coral/15 text-coral">
+        <LuCalendarClock />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">{L.preOrderTitle}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{note || L.preOrderGeneric}</p>
+        {date && (
+          <p className="mt-1 text-sm font-semibold text-foreground">{L.preOrderShipOn(date)}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Labels }) {
   const bn = L.bn;
+  // The screen renders in whichever language the labels came in; the date has to
+  // follow them, and `bn` is the only signal the component is given.
+  const isBengali = Boolean(bn);
 
   // Cash on delivery → nothing has been paid; the screen has to say what is
   // owed and when, or the buyer assumes the purchase is finished.
   if (result.kind === "cod") {
-    return <CodBody result={result} L={L} />;
+    return <CodBody result={result} L={L} isBengali={isBengali} />;
   }
 
   // Manual payment → pending verification screen (distinct from the paid flow).
   if (result.kind === "manual") {
-    return <PendingBody result={result} L={L} />;
+    return <PendingBody result={result} L={L} isBengali={isBengali} />;
   }
 
   const subtitle =
@@ -98,7 +148,12 @@ export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Label
         {result.kind === "course" ? (
           <CourseBody result={result} L={L} />
         ) : (
-          <BookBody order={result.order} L={L} />
+          <BookBody
+            order={result.order}
+            preOrder={result.preOrder}
+            L={L}
+            isBengali={isBengali}
+          />
         )}
       </div>
     </div>
@@ -109,9 +164,11 @@ export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Label
 function CodBody({
   result,
   L,
+  isBengali,
 }: {
   result: Extract<SuccessResult, { kind: "cod" }>;
   L: Labels;
+  isBengali: boolean;
 }) {
   const bn = L.bn;
 
@@ -137,6 +194,8 @@ function CodBody({
             <Row bn={bn} label={L.codCollectLabel} value={formatTk(result.amount)} strong />
           </div>
         </div>
+
+        {result.preOrder && <PreOrderNote preOrder={result.preOrder} L={L} isBengali={isBengali} />}
 
         <div
           className={cn(
@@ -197,9 +256,11 @@ function CodBody({
 function PendingBody({
   result,
   L,
+  isBengali,
 }: {
   result: Extract<SuccessResult, { kind: "manual" }>;
   L: Labels;
+  isBengali: boolean;
 }) {
   const bn = L.bn;
   const subtitle =
@@ -239,6 +300,8 @@ function PendingBody({
             <Row bn={bn} label={L.pendingStatusLabel} value={L.pendingStatusValue} />
           </div>
         </div>
+
+        {result.preOrder && <PreOrderNote preOrder={result.preOrder} L={L} isBengali={isBengali} />}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
@@ -302,7 +365,17 @@ function CourseBody({
 }
 
 // ── Book success body ────────────────────────────────────────────────────────
-function BookBody({ order, L }: { order: OrderResult; L: Labels }) {
+function BookBody({
+  order,
+  preOrder,
+  L,
+  isBengali,
+}: {
+  order: OrderResult;
+  preOrder?: PreOrderInfo;
+  L: Labels;
+  isBengali: boolean;
+}) {
   const bn = L.bn;
   const isDigital = order.deliveryType === "digital";
   const digitalItem = order.items.find((it) => it.format === "digital");
@@ -330,6 +403,13 @@ function BookBody({ order, L }: { order: OrderResult; L: Labels }) {
       <div className="mt-6 rounded-xl border border-border bg-surface-soft p-4 text-left">
         <Row bn={bn} label={L.orderLabel} value={order.orderNumber} mono />
         <div className="mt-2 space-y-2">
+          {/* Straight off the order document, and only when there is one — an
+              order placed before pre-orders existed has no discount field at
+              all, and a "৳0 saved" row would be a claim about it that nobody
+              made. */}
+          {(order.discount ?? 0) > 0 && (
+            <Row bn={bn} label={L.preOrderSavedLabel} value={`−${formatTk(order.discount ?? 0)}`} />
+          )}
           <Row bn={bn} label={L.paidLabel} value={formatTk(order.total)} strong />
           {order.payment?.method && (
             <Row
@@ -381,6 +461,8 @@ function BookBody({ order, L }: { order: OrderResult; L: Labels }) {
           <p className="text-sm text-foreground">{L.shippingNote}</p>
         </div>
       )}
+
+      {preOrder && <PreOrderNote preOrder={preOrder} L={L} isBengali={isBengali} />}
 
       <div className="mt-6">
         <Link

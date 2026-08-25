@@ -1,14 +1,24 @@
 'use client';
 
 /**
- * Upload one file to our own server and get its public URL back.
+ * Upload one PUBLIC file to our own server and get its public URL back.
  *
- * Every admin form that takes an image (book cover, preview pages, site logo)
- * goes through here, so "pick a file from your computer" behaves identically
- * everywhere instead of each screen inventing its own half of the flow.
+ * Every admin form that takes a marketing asset (book cover, preview pages,
+ * sample PDF) goes through here, so "pick a file from your computer" behaves
+ * identically everywhere instead of each screen inventing its own half of the
+ * flow.
  *
- * XHR rather than fetch because these are cover scans and short videos on a
- * home connection, and fetch still cannot report upload progress.
+ * The endpoint is /book-content/upload-public, NOT /book-content/upload. The
+ * latter now stores into the protected directory and hands back an
+ * access-checked URL, which is right for answer figures and videos and wrong
+ * for everything here: a cover has to load for a logged-out shopper and for
+ * Facebook's link-preview crawler, and behind that check both get a 401 and a
+ * broken image. Answer media is uploaded from the content editor and from
+ * RichTextEditor, which call the protected route directly and must keep doing
+ * so — do not "unify" them onto this one.
+ *
+ * XHR rather than fetch because these are cover scans on a home connection, and
+ * fetch still cannot report upload progress.
  */
 
 const API =
@@ -22,13 +32,18 @@ export function uploadMedia(file, onProgress) {
     fd.append('file', file);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${API}/book-content/upload`);
+    xhr.open('POST', `${API}/book-content/upload-public`);
     xhr.setRequestHeader('Authorization', `Bearer ${token()}`);
 
     xhr.upload.onprogress = e => {
       if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
     };
     xhr.onerror = () => reject(new Error('নেটওয়ার্ক সমস্যা — আপলোড হয়নি'));
+    // Without these the promise never settles: the picker keeps spinning at
+    // "আপলোড হচ্ছে 0%" and the admin is told nothing at all, which is how a
+    // dead upload came to look like a frozen form.
+    xhr.onabort = () => reject(new Error('আপলোড বাতিল হয়েছে'));
+    xhr.ontimeout = () => reject(new Error('আপলোড সময়সীমা পেরিয়ে গেছে — আবার চেষ্টা করুন'));
     xhr.onload = () => {
       let body;
       try {
@@ -43,8 +58,20 @@ export function uploadMedia(file, onProgress) {
           )
         );
       }
-      if (xhr.status >= 200 && xhr.status < 300 && body.success) resolve(body.data);
-      else reject(new Error(body.message || 'আপলোড ব্যর্থ হয়েছে'));
+      if (xhr.status >= 200 && xhr.status < 300 && body.success) return resolve(body.data);
+      // Pass the server's own wording through: "missing permission
+      // 'content.write'", "File type not allowed" and an expired token each need
+      // a different fix, and a blanket "আপলোড ব্যর্থ" sent all three to the same
+      // dead end. globalErrorHandler puts the useful half of a validation
+      // failure in errors[], so keep that too, and fall back to the status code
+      // so there is always something to report.
+      const detail = body.errors?.[0]?.message;
+      return reject(
+        new Error(
+          [body.message, detail].filter(Boolean).join(' — ') ||
+            `আপলোড ব্যর্থ (HTTP ${xhr.status})`
+        )
+      );
     };
 
     xhr.send(fd);

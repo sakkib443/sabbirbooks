@@ -13,6 +13,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/components/ui";
 import { BrandMark, useBrand } from "./Brand";
+import { PUBLIC_PAGES_ENABLED } from "@/config/site";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
@@ -20,21 +21,29 @@ const Footer = () => {
   const bn = language === "bn" ? "hind-siliguri" : "";
   const { name: brandName } = useBrand();
 
-  const explore = [
-    { to: "/", label: t("navbar.home") },
-    { to: "/courses", label: t("navbar.courses") },
-    { to: "/books", label: t("navbar.books") },
-    { to: "/about", label: t("navbar.about") },
-    { to: "/contact", label: t("navbar.contact") },
-  ];
+  // Same reasoning as the navbar: while the site is one book page, these routes
+  // all redirect home, and a footer full of links that bounce is worse than a
+  // short one. They return with NEXT_PUBLIC_PUBLIC_PAGES=on.
+  const explore = PUBLIC_PAGES_ENABLED
+    ? [
+        { to: "/", label: t("navbar.home") },
+        { to: "/courses", label: t("navbar.courses") },
+        { to: "/books", label: t("navbar.books") },
+        { to: "/about", label: t("navbar.about") },
+        { to: "/contact", label: t("navbar.contact") },
+      ]
+    : [];
 
-  const subjects = [
-    { key: "anatomy", en: "Anatomy" },
-    { key: "physiology", en: "Physiology" },
-    { key: "pharmacology", en: "Pharmacology" },
-    { key: "pathology", en: "Pathology" },
-    { key: "microbiology", en: "Microbiology" },
-  ];
+  // Subject links point into the course catalogue, which is switched off too.
+  const subjects = PUBLIC_PAGES_ENABLED
+    ? [
+        { key: "anatomy", en: "Anatomy" },
+        { key: "physiology", en: "Physiology" },
+        { key: "pharmacology", en: "Pharmacology" },
+        { key: "pathology", en: "Pathology" },
+        { key: "microbiology", en: "Microbiology" },
+      ]
+    : [];
 
   const socials = [
     { icon: FaFacebookF, href: "#", label: "Facebook" },

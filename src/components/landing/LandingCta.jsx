@@ -1,0 +1,59 @@
+'use client';
+
+/**
+ * The closing ask, plus the two things a hesitant buyer still wants: a phone
+ * number that reaches a human, and confirmation they can pay on delivery.
+ */
+
+import Link from 'next/link';
+import { LuArrowRight, LuBanknote, LuPhone, LuTruck } from 'react-icons/lu';
+import { formatTk } from '@/lib/landingBook';
+
+export default function LandingCta({ book, price, checkoutHref, supportPhone, deliveryNote }) {
+  return (
+    <section className="border-t border-border bg-surface-soft">
+      <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8 lg:py-20">
+        <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground text-balance sm:text-3xl hind-siliguri">
+          {book?.isPreOrder ? 'এখনই প্রি-অর্ডার করে রাখুন' : 'বইটি অর্ডার করুন'}
+        </h2>
+
+        {price.percent > 0 && (
+          <p className="mt-3 text-muted-foreground hind-siliguri">
+            <span className="font-bold text-coral">{price.percent}% ছাড়ে</span>{' '}
+            <span className="font-bold text-foreground">{formatTk(price.payable)}</span>{' '}
+            <span className="line-through">{formatTk(price.price)}</span>
+          </p>
+        )}
+
+        <Link
+          href={checkoutHref}
+          className="group mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground shadow-glow transition-all hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 hind-siliguri"
+        >
+          {book?.isPreOrder ? 'প্রি-অর্ডার করুন' : 'অর্ডার করুন'}
+          <LuArrowRight className="transition-transform group-hover:translate-x-1" />
+        </Link>
+
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground hind-siliguri">
+          <span className="inline-flex items-center gap-2">
+            <LuBanknote className="text-accent" /> ক্যাশ অন ডেলিভারি
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <LuTruck className="text-accent" /> সারা দেশে পৌঁছে যাবে
+          </span>
+          {supportPhone && (
+            <a
+              href={`tel:${supportPhone}`}
+              className="inline-flex items-center gap-2 font-medium text-primary hover:underline"
+            >
+              <LuPhone /> {supportPhone}
+            </a>
+          )}
+        </div>
+
+        {deliveryNote && (
+          <p className="mt-4 text-xs text-muted-foreground hind-siliguri">{deliveryNote}</p>
+        )}
+      </div>
+    </section>
+  );
+}

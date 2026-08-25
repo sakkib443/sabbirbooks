@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { LuBookOpen, LuStethoscope, LuMonitorSmartphone, LuBookMarked } from "react-icons/lu";
+import { LuBookOpen, LuStethoscope, LuMonitorSmartphone, LuBookMarked, LuCalendarClock } from "react-icons/lu";
 import { Badge, cn } from "@/components/ui";
 import {
   CheckoutBook,
@@ -29,6 +29,8 @@ interface Labels {
   delivery: string;
   codNote: string;
   duration: (m: number) => string;
+  preOrder: string;
+  preOrderDiscount: (pct: number) => string;
 }
 
 export function OrderSummary({
@@ -41,6 +43,9 @@ export function OrderSummary({
   deliveryCharge = 0,
   showDelivery = false,
   isCod = false,
+  discount = 0,
+  isPreOrder = false,
+  preOrderPercent = 0,
 }: {
   type: CheckoutType;
   course?: CheckoutCourse | null;
@@ -52,6 +57,12 @@ export function OrderSummary({
   deliveryCharge?: number;
   showDelivery?: boolean;
   isCod?: boolean;
+  // Pre-order discount in taka, computed by the caller with the same rule the
+  // server uses. Passed in rather than derived here so there is exactly one
+  // place in the client that decides what the buyer is charged.
+  discount?: number;
+  isPreOrder?: boolean;
+  preOrderPercent?: number;
 }) {
   // Derive the line item + pricing for whichever product type we're buying.
   const isCourse = type === "course" && !!course;
@@ -75,7 +86,19 @@ export function OrderSummary({
   const qty = isBook ? quantity : 1;
   const subtotal = unit * qty;
   const isFree = unit <= 0;
-  const total = subtotal + (showDelivery ? deliveryCharge : 0);
+  // Same order of operations as the server: delivery is added to the ALREADY
+  // discounted subtotal. Getting this wrong is how a page total comes to
+  // disagree with the invoice.
+  const total = subtotal - discount + (showDelivery ? deliveryCharge : 0);
+  // A discount needs the subtotal spelled out above it, or "−৳275" hangs off
+  // nothing and the arithmetic cannot be followed.
+  const showBreakdown = showDelivery || discount > 0;
+
+  const preOrderBadge = isPreOrder ? (
+    <Badge variant="coral" className={bn}>
+      <LuCalendarClock /> {S.preOrder}
+    </Badge>
+  ) : null;
 
   const kindBadge = isCourse ? (
     <Badge variant="primary" className={bn}>
@@ -113,7 +136,10 @@ export function OrderSummary({
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="mb-1.5">{kindBadge}</div>
+          <div className="mb-1.5 flex flex-wrap gap-1.5">
+            {kindBadge}
+            {preOrderBadge}
+          </div>
           <h3 className={cn("line-clamp-2 font-semibold leading-snug text-foreground", bn)}>
             {title}
           </h3>
@@ -156,29 +182,37 @@ export function OrderSummary({
           </div>
         )}
 
+        {showBreakdown && (
+          <div className="flex items-center justify-between border-t border-border pt-3">
+            <dt className={cn("text-muted-foreground", bn)}>{S.subtotal}</dt>
+            <dd className="font-medium text-foreground">{formatTk(subtotal)}</dd>
+          </div>
+        )}
+
+        {discount > 0 && (
+          <div className="flex items-center justify-between">
+            <dt className={cn("text-accent", bn)}>{S.preOrderDiscount(preOrderPercent)}</dt>
+            <dd className="font-semibold text-accent">−{formatTk(discount)}</dd>
+          </div>
+        )}
+
         {showDelivery && (
-          <>
-            <div className="flex items-center justify-between border-t border-border pt-3">
-              <dt className={cn("text-muted-foreground", bn)}>{S.subtotal}</dt>
-              <dd className="font-medium text-foreground">{formatTk(subtotal)}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className={cn("text-muted-foreground", bn)}>{S.delivery}</dt>
-              <dd className="font-medium text-foreground">
-                {deliveryCharge === 0 ? (
-                  <span className="text-accent">{S.free}</span>
-                ) : (
-                  formatTk(deliveryCharge)
-                )}
-              </dd>
-            </div>
-          </>
+          <div className="flex items-center justify-between">
+            <dt className={cn("text-muted-foreground", bn)}>{S.delivery}</dt>
+            <dd className="font-medium text-foreground">
+              {deliveryCharge === 0 ? (
+                <span className="text-accent">{S.free}</span>
+              ) : (
+                formatTk(deliveryCharge)
+              )}
+            </dd>
+          </div>
         )}
 
         <div className="flex items-center justify-between border-t border-border pt-3">
           <dt className={cn("font-heading text-base font-bold text-foreground", bn)}>{S.total}</dt>
           <dd className="font-heading text-xl font-bold text-primary">
-            {isFree && !showDelivery ? S.free : formatTk(total)}
+            {isFree && !showBreakdown ? S.free : formatTk(total)}
           </dd>
         </div>
 

@@ -11,7 +11,11 @@ const translations = { en, bn };
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguageState] = useState("en");
+  // Bengali by default. Every customer is a Bangladeshi medical student, the
+  // landing page is written in Bengali, and defaulting to English meant a
+  // visitor read a Bengali page and then hit an English checkout. A saved
+  // preference still wins — the toggle is not going anywhere.
+  const [language, setLanguageState] = useState("bn");
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load language preference from localStorage on mount

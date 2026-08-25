@@ -29,6 +29,15 @@ const toFormValues = (b) => ({
   previewPdfUrl: b.previewPdfUrl || '',
   status: b.status || 'published',
   isFeatured: !!b.isFeatured,
+  // Without these the form would fall back to its own defaults and then PATCH
+  // them over the top: editing the price of a pre-order title would quietly
+  // switch the pre-order off and drop its features.
+  isPreOrder: !!b.isPreOrder,
+  preOrderDiscountPercent: b.preOrderDiscountPercent ?? 25,
+  preOrderNote: b.preOrderNote || '',
+  expectedReleaseDate: b.expectedReleaseDate || '',
+  promoVideoUrl: b.promoVideoUrl || '',
+  features: Array.isArray(b.features) ? b.features : [],
 });
 
 export default function EditBookPage() {

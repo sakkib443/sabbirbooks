@@ -228,6 +228,8 @@ const SiteSettingsTab = ({ showToast }) => {
     deliveryChargeInsideDhaka: 120, deliveryChargeOutsideDhaka: 120,
     freeDeliveryAbove: 0, codExtraCharge: 0,
     deliveryNote: '', orderSupportPhone: '',
+    // Landing page
+    landingBookSlug: '', landingHeadline: '', landingSubheadline: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -644,6 +646,64 @@ const SiteSettingsTab = ({ showToast }) => {
           <div>
             <label className="block text-sm font-medium text-dash-ink3 mb-1">অর্ডার হেল্পলাইন</label>
             <input type="text" name="orderSupportPhone" value={settings.orderSupportPhone || ''} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm font-mono" />
+          </div>
+        </div>
+      </div>
+
+      {/* Landing page — which book the public site is about */}
+      <div className="bg-dash-card rounded-xl border border-dash-line p-6 mt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <LuGlobe className="text-brand" />
+          <h2 className="text-lg font-semibold text-dash-ink2">ল্যান্ডিং পেজ</h2>
+        </div>
+        <p className="text-sm text-dash-mute mb-4">
+          ওয়েবসাইটে ঢুকলেই যে পাতাটা দেখা যায়, সেটা কোন বই নিয়ে হবে। ভিডিও, ফিচার আর
+          নমুনা PDF ওই বইয়ের এডিট পাতা থেকে বসাতে হবে।
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-dash-ink3 mb-1">বইয়ের slug</label>
+            <input
+              type="text"
+              name="landingBookSlug"
+              value={settings.landingBookSlug || ''}
+              onChange={handleChange}
+              placeholder="anatomy-magic-viva"
+              className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm font-mono"
+            />
+            <p className="text-[11px] text-dash-mute2 mt-1">
+              খালি রাখলে featured বই, তা-ও না থাকলে সবচেয়ে নতুন বইটি দেখাবে।
+            </p>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-dash-ink3 mb-1">
+              শিরোনাম <span className="text-dash-mute2 font-normal">(খালি রাখলে বইয়ের নাম)</span>
+            </label>
+            <input
+              type="text"
+              name="landingHeadline"
+              value={settings.landingHeadline || ''}
+              onChange={handleChange}
+              placeholder="Anatomy MAGIC VIVA"
+              className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm"
+            />
+          </div>
+          <div className="sm:col-span-3">
+            <label className="block text-sm font-medium text-dash-ink3 mb-1">
+              সংক্ষিপ্ত বর্ণনা{' '}
+              <span className="text-dash-mute2 font-normal">
+                (খালি রাখলে বইয়ের বর্ণনা — ফেসবুকে শেয়ার করলে এটাই দেখাবে)
+              </span>
+            </label>
+            <textarea
+              name="landingSubheadline"
+              rows="2"
+              value={settings.landingSubheadline || ''}
+              onChange={handleChange}
+              placeholder="মাত্র ২৮০ পেজে সম্পূর্ণ ভাইভা কমপ্লিট, সাথে রিটেন ৯০% কাভার।"
+              className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm resize-none"
+            />
           </div>
         </div>
       </div>

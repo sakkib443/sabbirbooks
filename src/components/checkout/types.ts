@@ -90,6 +90,15 @@ export interface CheckoutBook {
   language?: string;
   format?: "printed" | "digital" | string;
   stock?: number;
+
+  // ── Pre-order ──────────────────────────────────────────────────────────
+  // Sold before the print run exists, so `stock` says nothing about whether it
+  // can be bought: the server skips the stock check for these, and the page must
+  // too, or every pre-order reads as "out of stock" and the feature is dead.
+  isPreOrder?: boolean;
+  preOrderDiscountPercent?: number;
+  preOrderNote?: string;
+  expectedReleaseDate?: string;
 }
 
 // ── Shipping address (required for printed books) ──────────────────────────
@@ -98,7 +107,13 @@ export interface ShippingAddress {
   phone: string;
   address: string;
   city: string;
+  // `area` is the courier ZONE that prices delivery; `district` is geography.
+  // Deliberately separate: the server derives the zone from the district when it
+  // has one, and collapsing them would throw away the buyer's real address in
+  // favour of a two-value billing bucket.
   area?: DeliveryArea;
+  district?: string;
+  division?: string;
   note?: string;
 }
 
@@ -120,9 +135,19 @@ export interface OrderResult {
   discount?: number;
   deliveryCharge?: number;
   total: number;
+  isPreOrder?: boolean;
   status: string;
   payment: { status: string; method?: string; transactionId?: string };
   shippingAddress?: ShippingAddress;
+}
+
+// What a pre-order promises the buyer about delivery. Carried onto the success
+// screen because the ORDER has no ship date on it — the date and the note are
+// the admin's marketing copy on the Book, and "when does it arrive?" is the
+// first thing anyone asks after paying for something not yet printed.
+export interface PreOrderInfo {
+  note?: string;
+  expectedReleaseDate?: string;
 }
 
 // Result handed to the success screen once a flow finishes end-to-end.
@@ -137,6 +162,7 @@ export type SuccessResult =
   | {
       kind: "book";
       order: OrderResult;
+      preOrder?: PreOrderInfo;
     }
   | {
       // Manual payment submitted — pending admin verification (course OR book).
@@ -152,6 +178,7 @@ export type SuccessResult =
       amount: number;
       channel: ManualChannel;
       isPrintedBook?: boolean;
+      preOrder?: PreOrderInfo;
     }
   | {
       // Cash on delivery — nothing has been paid yet; the courier collects.
@@ -163,6 +190,7 @@ export type SuccessResult =
       deliveryCharge: number;
       supportPhone?: string;
       deliveryNote?: string;
+      preOrder?: PreOrderInfo;
     };
 
 // Progress steps surfaced on the "Confirm & Pay" button while a flow runs.
@@ -200,3 +228,42 @@ export const effectiveBookPrice = (b: CheckoutBook): number => {
 
 // ৳-prefixed amount, grouped. Whole numbers only (prices here are integers).
 export const formatTk = (v: number): string => "৳" + Math.round(v).toLocaleString("en-US");
+
+// The pre-order discount percent actually in force, clamped exactly as
+// order.service.ts clamps it. The server clamps because the stored number can
+// predate the schema's min/max or have been patched straight into Mongo; if the
+// page did not clamp identically it would quote a discount the invoice refuses
+// to give, which is the one number a buyer checks.
+export const preOrderPercent = (b?: CheckoutBook | null): number => {
+  if (!b?.isPreOrder) return 0;
+  const pct = Number(b.preOrderDiscountPercent ?? 25);
+  if (!Number.isFinite(pct)) return 0;
+  return Math.min(90, Math.max(0, pct));
+};
+
+// What the server will subtract: round the ORDER once, never each line, and
+// price off the same effective unit price the summary already displays.
+export const preOrderDiscount = (b: CheckoutBook | null | undefined, quantity: number): number => {
+  const pct = preOrderPercent(b);
+  if (!b || pct <= 0) return 0;
+  return Math.round((effectiveBookPrice(b) * quantity * pct) / 100);
+};
+
+// A release date in the reader's language.
+//
+// Wrapped because a Node build without full ICU throws RangeError on an unknown
+// locale, and a date label is not worth taking the checkout page down for.
+export const formatReleaseDate = (iso: string | undefined, isBengali: boolean): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat(isBengali ? "bn-BD" : "en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(0, 10);
+  }
+};

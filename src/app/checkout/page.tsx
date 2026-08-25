@@ -3,8 +3,11 @@ import type { Metadata } from "next";
 import { Container } from "@/components/ui";
 import CheckoutView from "@/components/checkout/CheckoutView";
 
+// Just "Checkout" — the root layout appends the brand through its title
+// template, so spelling it here too produced "Checkout · Magic Viva · Magic Viva"
+// in the browser tab.
 export const metadata: Metadata = {
-  title: "Checkout · Magic Viva",
+  title: "Checkout",
   description: "Securely enroll in a course or order a book.",
 };
 

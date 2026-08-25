@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import {
   FiSearch, FiTrash2, FiMail, FiPhone, FiLoader, FiShield, FiUser, FiUsers,
   FiCheck, FiX, FiClock, FiChevronDown, FiPlus, FiUserPlus, FiCopy, FiArrowRight, FiKey,
-  FiEdit2, FiEye, FiEyeOff, FiLock,
+  FiEdit2, FiEye, FiEyeOff, FiLock, FiDownload, FiMapPin,
 } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 import Link from 'next/link';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
@@ -40,6 +41,31 @@ const statusColor = (s) => ({
 
 const label = (r) => ROLE_LABELS[r] || (r ? r.charAt(0).toUpperCase() + r.slice(1) : 'User');
 
+// A blank cell has to read as "nothing recorded", not as a missing value the
+// admin should chase — staff accounts legitimately have no college or WhatsApp.
+const Dash = () => <span className="text-dash-faint">—</span>;
+
+// Stored normalised to the 11 local digits (01XXXXXXXXX); wa.me wants the
+// country code glued on with no '+' or separators.
+const waLink = (n) => {
+  const d = String(n || '').replace(/\D/g, '');
+  return /^01\d{9}$/.test(d) ? `https://wa.me/88${d}` : null;
+};
+
+const uniq = (values) => [...new Set(values.map(v => String(v || '').trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'bn'));
+
+const selectCls = 'px-4 py-2.5 rounded-xl border border-dash-line text-sm text-dash-ink4 bg-dash-card shadow-sm focus:outline-none focus:border-brand';
+
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+
+// CSV-safe: quote/escape any field containing a comma, quote, or newline.
+const esc = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+// The BOM is what makes Excel read the Bengali college and district names as
+// UTF-8 instead of mojibake.
+const toCSV = (headerRow, rows) =>
+  '﻿' + [headerRow.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
+
 export default function UsersManager({ group = 'students' }) {
   const cfg = GROUPS[group] || GROUPS.students;
   const router = useRouter();
@@ -50,6 +76,9 @@ export default function UsersManager({ group = 'students' }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
+  const [filterDivision, setFilterDivision] = useState('all');
+  const [filterDistrict, setFilterDistrict] = useState('all');
+  const [filterCollege, setFilterCollege] = useState('all');
   const [roleDropdown, setRoleDropdown] = useState(null);
   const [statusDropdown, setStatusDropdown] = useState(null);
   const [busyRole, setBusyRole] = useState(null);
@@ -184,13 +213,63 @@ export default function UsersManager({ group = 'students' }) {
     } catch { showToast('error', 'Network error'); } finally { setSavingStudent(false); }
   };
 
-  const list = useMemo(() => users.filter(u => {
-    if (!inGroup(u)) return false;
+  const groupRows = useMemo(() => users.filter(inGroup), [users, group]);
+
+  // Region menus are built from the rows actually loaded rather than from a
+  // fixed list, so they stay empty on the staff page (staff carry no college)
+  // and never offer a choice that would match nothing. Each level narrows the
+  // next; changing a parent resets its children so no combination can strand
+  // the table on zero rows with no visible way back.
+  const divisionOpts = useMemo(() => uniq(groupRows.map(u => u.division)), [groupRows]);
+  const districtOpts = useMemo(
+    () => uniq(groupRows.filter(u => filterDivision === 'all' || u.division === filterDivision).map(u => u.district)),
+    [groupRows, filterDivision],
+  );
+  const collegeOpts = useMemo(
+    () => uniq(groupRows
+      .filter(u => (filterDivision === 'all' || u.division === filterDivision)
+        && (filterDistrict === 'all' || u.district === filterDistrict))
+      .map(u => u.medicalCollegeName)),
+    [groupRows, filterDivision, filterDistrict],
+  );
+
+  const list = useMemo(() => groupRows.filter(u => {
+    const q = search.trim().toLowerCase();
     const name = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
-    const ms = !search || name.includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase()) || u.id?.toLowerCase().includes(search.toLowerCase());
+    const ms = !q || name.includes(q) || u.email?.toLowerCase().includes(q) || u.id?.toLowerCase().includes(q)
+      || (u.whatsappNumber || '').includes(q) || (u.medicalCollegeName || '').toLowerCase().includes(q);
     const mr = filterRole === 'all' || u.role === filterRole;
-    return ms && mr;
-  }), [users, search, filterRole, group]);
+    const mv = filterDivision === 'all' || u.division === filterDivision;
+    const md = filterDistrict === 'all' || u.district === filterDistrict;
+    const mc = filterCollege === 'all' || u.medicalCollegeName === filterCollege;
+    return ms && mr && mv && md && mc;
+  }), [groupRows, search, filterRole, filterDivision, filterDistrict, filterCollege]);
+
+  // Exports exactly what is on screen — the filters ARE the report definition,
+  // so an admin can hand a single college's students to a mentor.
+  const downloadCSV = () => {
+    const headerRow = ['Name', 'ID', 'Email', 'Phone', 'WhatsApp', 'College', 'District', 'Division', 'Role', 'Status', 'Signup Date'];
+    const rows = list.map(u => [
+      `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+      u.id || '',
+      u.email || '',
+      u.phoneNumber || '',
+      u.whatsappNumber || '',
+      u.medicalCollegeName || '',
+      u.district || '',
+      u.division || '',
+      label(u.role),
+      u.status || '',
+      fmtDate(u.createdAt),
+    ]);
+    const blob = new Blob([toCSV(headerRow, rows)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${group}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const count = (r) => users.filter(u => u.role === r).length;
 
@@ -243,16 +322,40 @@ export default function UsersManager({ group = 'students' }) {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
+      <div className="flex flex-col lg:flex-row lg:flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 lg:min-w-[240px]">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-faint" size={15} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email or ID..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, ID, WhatsApp or college..."
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-dash-line text-sm bg-dash-card shadow-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15" />
         </div>
-        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="px-4 py-2.5 rounded-xl border border-dash-line text-sm text-dash-ink4 bg-dash-card shadow-sm focus:outline-none focus:border-brand">
+        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className={selectCls}>
           <option value="all">All roles</option>
           {cfg.roles.map(r => <option key={r} value={r}>{label(r)}</option>)}
         </select>
+        {divisionOpts.length > 0 && (
+          <select value={filterDivision} className={selectCls}
+            onChange={e => { setFilterDivision(e.target.value); setFilterDistrict('all'); setFilterCollege('all'); }}>
+            <option value="all">All divisions</option>
+            {divisionOpts.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
+        {districtOpts.length > 0 && (
+          <select value={filterDistrict} className={selectCls}
+            onChange={e => { setFilterDistrict(e.target.value); setFilterCollege('all'); }}>
+            <option value="all">All districts</option>
+            {districtOpts.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
+        {collegeOpts.length > 0 && (
+          <select value={filterCollege} onChange={e => setFilterCollege(e.target.value)} className={`${selectCls} max-w-[240px]`}>
+            <option value="all">All colleges</option>
+            {collegeOpts.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
+        <button onClick={downloadCSV} disabled={loading || list.length === 0} title="ফিল্টার করা তালিকাটাই CSV-তে যাবে"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dash-line bg-dash-card text-sm font-semibold text-dash-ink4 shadow-sm hover:bg-dash-soft hover:border-brand hover:text-brand-ink transition disabled:opacity-40 disabled:cursor-not-allowed">
+          <FiDownload size={15} /> CSV
+        </button>
       </div>
 
       {/* Table */}
@@ -264,7 +367,8 @@ export default function UsersManager({ group = 'students' }) {
             <table className="w-full">
               <thead>
                 <tr className="bg-dash-soft border-b border-dash-line text-left text-[10px] font-black text-dash-mute uppercase tracking-wider">
-                  <th className="px-5 py-3">User</th><th className="px-5 py-3">Contact</th><th className="px-5 py-3">Role</th>
+                  <th className="px-5 py-3">User</th><th className="px-5 py-3">Contact</th>
+                  <th className="px-5 py-3">WhatsApp</th><th className="px-5 py-3">College</th><th className="px-5 py-3">Role</th>
                   <th className="px-5 py-3 text-center">Status</th><th className="px-5 py-3 text-center">Change Role</th>
                   <th className="px-5 py-3 text-center">Change Status</th><th className="px-5 py-3 text-right">Action</th>
                 </tr>
@@ -287,7 +391,25 @@ export default function UsersManager({ group = 'students' }) {
                       </td>
                       <td className="px-5 py-3">
                         <p className="flex items-center gap-1.5 text-xs text-dash-ink4"><FiMail size={12} className="text-brand-ink" /><span className="truncate max-w-[180px]">{u.email}</span></p>
-                        <p className="flex items-center gap-1.5 text-xs text-dash-mute2 mt-0.5"><FiPhone size={12} />{u.phoneNumber || '—'}</p>
+                        <p className="flex items-center gap-1.5 text-xs text-dash-mute2 mt-0.5"><FiPhone size={12} />{u.phoneNumber || <Dash />}</p>
+                      </td>
+                      <td className="px-5 py-3">
+                        {waLink(u.whatsappNumber) ? (
+                          <a href={waLink(u.whatsappNumber)} target="_blank" rel="noopener noreferrer" title="WhatsApp-এ মেসেজ দিন"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline">
+                            <FaWhatsapp size={13} />{u.whatsappNumber}
+                          </a>
+                        ) : <Dash />}
+                      </td>
+                      <td className="px-5 py-3">
+                        {u.medicalCollegeName ? (
+                          <div className="max-w-[210px]">
+                            <p className="text-xs font-medium text-dash-ink4 truncate" title={u.medicalCollegeName}>{u.medicalCollegeName}</p>
+                            {u.district && (
+                              <p className="flex items-center gap-1 text-[11px] text-dash-mute2 mt-0.5"><FiMapPin size={10} />{u.district}</p>
+                            )}
+                          </div>
+                        ) : <Dash />}
                       </td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-white ${rs.bg}`}>{rs.icon}{label(u.role)}</span>

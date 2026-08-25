@@ -11,6 +11,7 @@ import { cn, buttonVariants } from "@/components/ui";
 // Name and logo come from site settings so they can be changed from the admin
 // panel — see components/shared/Brand.
 import { BrandMark, Wordmark } from "./Brand";
+import { PUBLIC_PAGES_ENABLED } from "@/config/site";
 import UserMenu from "./UserMenu";
 import { ROLE_LABELS } from "@/lib/permissions";
 
@@ -67,13 +68,18 @@ const Navbar = () => {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
   const bn = language === "bn" ? "hind-siliguri" : "";
 
-  const menu = [
-    { href: "/", label: t("navbar.home") },
-    { href: "/courses", label: t("navbar.courses") },
-    { href: "/books", label: t("navbar.books") },
-    { href: "/about", label: t("navbar.about") },
-    { href: "/contact", label: t("navbar.contact") },
-  ];
+  // While the shop is a single book page, the nav has nowhere to go — every one
+  // of these routes redirects home (see src/proxy.ts), and offering links that
+  // bounce is worse than offering none. They come back with the flag.
+  const menu = PUBLIC_PAGES_ENABLED
+    ? [
+        { href: "/", label: t("navbar.home") },
+        { href: "/courses", label: t("navbar.courses") },
+        { href: "/books", label: t("navbar.books") },
+        { href: "/about", label: t("navbar.about") },
+        { href: "/contact", label: t("navbar.contact") },
+      ]
+    : [];
 
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 

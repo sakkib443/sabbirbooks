@@ -145,7 +145,7 @@ const AdminSidebar = () => {
         },
         { title: 'Certifications', href: '/dashboard/admin/certification', icon: FiAward, need: ['training.manage'] },
       ],
-    },
+    },
     {
       label: 'Communication',
       items: [
@@ -172,6 +172,9 @@ const AdminSidebar = () => {
             { title: 'Team / Staff', href: '/dashboard/admin/user/staff', need: ['staff.manage'] },
             { title: 'Permissions', href: '/dashboard/admin/user/permissions', need: ['staff.manage'] },
             { title: 'Students', href: '/dashboard/admin/user/students', need: ['users.read'] },
+            // Directory behind the signup form's college dropdown — reference
+            // data about students' institutions, so it rides with users.write.
+            { title: 'Medical Colleges', href: '/dashboard/admin/medical-colleges', need: ['users.write'] },
           ],
         },
         // No `need`: this page also hosts My Profile and Password, which every

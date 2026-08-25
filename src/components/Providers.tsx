@@ -6,6 +6,7 @@ import { store } from "@/redux/store";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import SessionKeeper from "@/components/auth/SessionKeeper";
+import ProfileGate from "@/components/auth/ProfileGate";
 import ThemeProvider from "@/components/theme/ThemeProvider";
 
 // Client-side app providers. Wraps the tree in the Redux store, the i18n
@@ -26,7 +27,13 @@ export default function Providers({ children }: { children: ReactNode }) {
       <SessionKeeper />
       <ThemeProvider>
         <LanguageProvider>
-          <SettingsProvider>{children}</SettingsProvider>
+          <SettingsProvider>
+            {children}
+            {/* Last child, so it paints over whatever page rendered: a student
+                signed in through Google has no WhatsApp number and must give
+                one before going anywhere. Renders nothing for everyone else. */}
+            <ProfileGate />
+          </SettingsProvider>
         </LanguageProvider>
       </ThemeProvider>
     </Provider>

@@ -75,6 +75,33 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
   }
 }
 
+// The buyer's own record. `district` / `division` are snapshotted onto the user
+// at signup from the medical college they picked, which is the only address
+// hint the shop has before their first order.
+export interface MeProfile {
+  district?: string;
+  division?: string;
+  medicalCollegeName?: string;
+}
+
+// GET /api/auth/me. Returns null on ANY failure — a prefill is a convenience,
+// and a slow or unreachable profile call must leave the buyer with an empty but
+// perfectly usable address form rather than a blocked checkout.
+export async function fetchMe(): Promise<MeProfile | null> {
+  if (!getToken()) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      headers: authHeaders(),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await readJson(res);
+    return (json.data as MeProfile) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // POST helper that throws the server's friendly message on failure.
 async function post<T = Record<string, unknown>>(
   path: string,
