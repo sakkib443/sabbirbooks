@@ -9,6 +9,7 @@
  * reader who is already convinced should not have to scroll past it to buy.
  */
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { LuArrowRight, LuBookOpen, LuPlay, LuShieldCheck, LuTruck } from 'react-icons/lu';
 import { formatTk } from '@/lib/landingBook';
@@ -158,10 +159,15 @@ export default function LandingHero({ book, price, headline, subheadline, checko
                 bought partly on how it looks. */}
             {hasVideo && book?.coverImage && (
               <div className="mt-5 flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-soft">
+                {/* Same 401 risk as the big cover — hide the thumbnail rather
+                    than leave a broken-image glyph beside the title. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={book.coverImage}
                   alt={book.title}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
                   className="h-24 w-[72px] shrink-0 rounded-lg border border-border object-cover"
                 />
                 <div className="min-w-0">
@@ -185,19 +191,31 @@ export default function LandingHero({ book, price, headline, subheadline, checko
 }
 
 function CoverCard({ book }) {
+  // A cover uploaded before the public-media fix is served from the protected
+  // path and answers 401 to anyone who has not bought the book — including
+  // every visitor this page is for. Rather than show a browser's broken-image
+  // glyph on the most important element of the page, fall through to the same
+  // placeholder used when no cover was set at all.
+  const [failed, setFailed] = useState(false);
+  const showCover = Boolean(book?.coverImage) && !failed;
+
   return (
     <div className="relative mx-auto max-w-sm">
       <div className="pointer-events-none absolute -inset-6 rounded-full bg-primary/15 blur-3xl" />
-      {book?.coverImage ? (
+      {showCover ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={book.coverImage}
           alt={book.title}
+          onError={() => setFailed(true)}
           className="relative w-full rounded-2xl border border-border object-contain shadow-card motion-safe:animate-float-soft"
         />
       ) : (
-        <div className="relative flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-border bg-primary-soft text-primary">
+        <div className="relative flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-primary-soft px-6 text-center text-primary">
           <LuBookOpen className="text-6xl" />
+          <span className="font-heading text-lg font-bold text-foreground hind-siliguri">
+            {book?.title}
+          </span>
         </div>
       )}
     </div>

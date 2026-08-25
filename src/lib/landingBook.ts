@@ -66,6 +66,80 @@ export async function getLandingSettings(): Promise<LandingSettings> {
   return (body?.data as LandingSettings) || {};
 }
 
+/** What the book's own QR content adds up to — its table of contents and size. */
+export interface BookOutline {
+  totals: {
+    parts: number;
+    chapters: number;
+    topics: number;
+    questions: number;
+    freeChapters: number;
+  };
+  /** First free topic in the book — what the "read a free chapter" button opens. */
+  firstFreeQrCode?: string;
+  parts: {
+    title: string;
+    titleBn?: string;
+    chapters: {
+      chapterNo?: string;
+      title: string;
+      titleBn?: string;
+      topicCount: number;
+      questionCount: number;
+      isFree: boolean;
+      /** Present only on free chapters — a paid chapter's code is never sent. */
+      freeQrCode?: string;
+    }[];
+  }[];
+}
+
+/**
+ * The book's structure, straight from the content the admin already entered.
+ *
+ * This is the most persuasive thing on the page and it costs the shop nothing to
+ * produce: "১০ অধ্যায় · ৫৯টি QR · ৩৮১টি প্রশ্ন" is a fact about the book, not a
+ * marketing claim, and the chapter list is the table of contents a buyer would
+ * flip to first in a shop. Returns null rather than throwing — a book with no
+ * QR content yet simply hides these sections.
+ */
+export async function getBookOutline(bookSlugOrId: string): Promise<BookOutline | null> {
+  if (!bookSlugOrId) return null;
+  const body = await json(`${API}/api/book-content/outline/${encodeURIComponent(bookSlugOrId)}`);
+  return (body?.data as BookOutline) || null;
+}
+
+/**
+ * The five selling points for this book, as the shop dictated them.
+ *
+ * Used only when the admin has not entered any features. Without a fallback the
+ * whole "why this book" section vanishes, which is exactly the state the live
+ * page was in — a title and a price and nothing else. The admin can override
+ * every one of these from the book form; this is the floor, not the ceiling.
+ */
+export const DEFAULT_FEATURES: LandingFeature[] = [
+  {
+    text: 'এনাটমির মত একটা ভাস্ট সাবজেক্ট মাত্র ২৮০ পেজে সম্পূর্ণ ভাইভা কমপ্লিট, সাথে রিটেন ৯০% কাভার।',
+    weight: 3,
+  },
+  {
+    text: 'নতুন সিলেবাস অনুযায়ী Board-1 এ 70 Cards; Board-2 তে 100 Cards সংবলিত দেশের একমাত্র বই।',
+    weight: 5,
+    highlight: true,
+  },
+  {
+    text: 'সম্পূর্ণ Practical (OSPE, Dissection, Surface Marking, Radiology) এর সমাধান এক জায়গাতেই।',
+    weight: 2,
+  },
+  {
+    text: 'মাত্র ৩ ঘণ্টায় দুই বোর্ডের সমস্ত স্পেশাল ফিগার পড়ে ফেলার সুযোগ।',
+    weight: 2,
+  },
+  {
+    text: 'একটা বইয়ের সাথেই প্রয়োজনীয় সকল ম্যাটেরিয়ালস — ছবি, ভিডিও, এক্সট্রা ইনফরমেশন।',
+    weight: 1,
+  },
+];
+
 /**
  * The configured book, or the best stand-in.
  *

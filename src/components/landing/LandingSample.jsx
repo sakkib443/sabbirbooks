@@ -9,11 +9,12 @@
  * student on a phone often wants the file to read later, offline.
  */
 
-import { LuBookOpen, LuDownload } from 'react-icons/lu';
+import Link from 'next/link';
+import { LuArrowRight, LuBookOpen, LuDownload, LuQrCode } from 'react-icons/lu';
 import BookPreview from '@/components/books/BookPreview';
 
-export default function LandingSample({ book, shareHref }) {
-  const hasSample = Boolean(book?.previewPdfUrl || book?.previewImages?.length);
+export default function LandingSample({ book, shareHref, freeQrCode }) {
+  const hasSample = Boolean(book?.previewPdfUrl || book?.previewImages?.length || freeQrCode);
   if (!hasSample) return null;
 
   return (
@@ -30,9 +31,28 @@ export default function LandingSample({ book, shareHref }) {
             বইয়ের কিছু অংশ এখানেই পড়তে পারবেন — ওয়েবসাইট ছেড়ে কোথাও যেতে হবে না।
             চাইলে ডাউনলোড করে পরেও পড়তে পারবেন।
           </p>
+
+          {/* The real thing, not a picture of it: this opens the exact page a
+              printed QR code opens, on a chapter the admin marked free. A PDF
+              shows what the paper looks like; this shows what you are actually
+              buying — the answers, figures and videos behind the codes. */}
+          {freeQrCode && (
+            <div className="mt-7">
+              <Link
+                href={`/b/${freeQrCode}`}
+                className="inline-flex items-center gap-2 rounded-xl bg-accent px-7 py-4 text-base font-bold text-white shadow-soft transition-all hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30 hind-siliguri"
+              >
+                <LuQrCode className="text-lg" /> ফ্রি অধ্যায়টি পড়ে দেখুন
+                <LuArrowRight />
+              </Link>
+              <p className="mt-3 text-sm text-muted-foreground hind-siliguri">
+                বইয়ের QR স্ক্যান করলে ঠিক যে পাতায় যায়, এটি সেই পাতাই — লগইন ছাড়াই।
+              </p>
+            </div>
+          )}
         </div>
 
-        <div className="mx-auto mt-8 max-w-4xl">
+        <div className="mx-auto mt-10 max-w-4xl">
           <BookPreview
             images={book.previewImages}
             pdfUrl={book.previewPdfUrl}

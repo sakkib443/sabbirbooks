@@ -10,14 +10,15 @@
 
 import Link from 'next/link';
 import { LuBookOpen } from 'react-icons/lu';
-import { landingPrice } from '@/lib/landingBook';
+import { landingPrice, DEFAULT_FEATURES } from '@/lib/landingBook';
 import LandingHero from './LandingHero';
 import LandingFeatures from './LandingFeatures';
+import LandingContents from './LandingContents';
 import LandingSample from './LandingSample';
 import LandingQr from './LandingQr';
 import LandingCta from './LandingCta';
 
-export default function LandingPage({ book, settings }) {
+export default function LandingPage({ book, settings, outline }) {
   // Nothing to sell yet. Better an honest holding page than a broken one — this
   // is what an admin sees before they have published a book.
   if (!book) {
@@ -58,13 +59,24 @@ export default function LandingPage({ book, settings }) {
         checkoutHref={checkoutHref}
       />
 
+      {/* Falls back to the shop's own five selling points when the admin has
+          not entered any, so this section is never empty — which is exactly how
+          the page went live the first time: a title, a price, and nothing to
+          decide on. */}
       <LandingFeatures
-        features={book.features || []}
+        features={book.features?.length ? book.features : DEFAULT_FEATURES}
         heading="কেন এই বইটি"
         subheading="যা যা পাচ্ছেন"
       />
 
-      <LandingSample book={book} shareHref={book.previewPdfUrl ? shareHref : null} />
+      {/* The table of contents, read straight from the book's QR content. */}
+      <LandingContents outline={outline} />
+
+      <LandingSample
+        book={book}
+        shareHref={book.previewPdfUrl ? shareHref : null}
+        freeQrCode={outline?.firstFreeQrCode}
+      />
 
       <LandingQr />
 
