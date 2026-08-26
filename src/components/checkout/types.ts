@@ -28,7 +28,12 @@ export type DeliveryArea = "inside-dhaka" | "outside-dhaka";
 export interface CheckoutOptions {
   codEnabled: boolean;
   onlinePaymentEnabled: boolean;
-  deliveryCharge: Record<DeliveryArea, number>;
+  // One flat charge everywhere (the inside/outside-Dhaka split is retired).
+  deliveryCharge: number;
+  // Free local delivery: a student of freeDeliveryCollege shipping within
+  // freeDeliveryDivision pays nothing. Empty college = rule off.
+  freeDeliveryCollege: string;
+  freeDeliveryDivision: string;
   codExtraCharge: number;
   freeDeliveryAbove: number;
   deliveryNote: string;

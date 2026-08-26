@@ -57,7 +57,6 @@ import {
   CheckoutOptions,
   CheckoutStep,
   CheckoutType,
-  DeliveryArea,
   ManualChannel,
   ManualDetails,
   OrderResult,
@@ -72,7 +71,6 @@ import {
   preOrderDiscount,
   preOrderPercent,
 } from "./types";
-import { districtToArea } from "./bdGeo";
 import { upazilasOf } from "./bdGeoData";
 
 // How many copies of an unprinted book one buyer may pre-order.
@@ -104,11 +102,8 @@ export default function CheckoutView() {
 
   // ── Pay now vs pay the courier, and where the parcel is going ─────────────
   const [payMode, setPayMode] = useState<PayMode>("cod");
-  // The zone the buyer picked BY HAND, or null to follow their district. Kept as
-  // "unset" rather than a concrete default so the district can drive the zone
-  // during render — an effect that pushed the district into this state would
-  // fight every click on the toggle and cost a re-render for each keystroke.
-  const [areaChoice, setAreaChoice] = useState<DeliveryArea | null>(null);
+  // The buyer's medical college, from /auth/me — decides free local delivery.
+  const [myCollege, setMyCollege] = useState("");
   const [options, setOptions] = useState<CheckoutOptions | null>(null);
 
   // Which hosted checkouts the server holds credentials for. Stays null until the
@@ -253,37 +248,26 @@ export default function CheckoutView() {
     districtValue === prefilled.district &&
     divisionValue === prefilled.division;
 
-  // The courier zone the buyer sees selected: their own click if they made one,
-  // otherwise whatever their district implies. With no district this is the
-  // inside-Dhaka default the page has always started on.
-  const area: DeliveryArea =
-    areaChoice ?? (districtValue ? districtToArea(districtValue) : "inside-dhaka");
-
-  // Which zone delivery is actually QUOTED on.
+  // Delivery is one flat charge everywhere, waived in two cases, mirroring the
+  // server so the total never changes after Pay. The server recomputes it
+  // regardless — this is display, not the source of truth.
   //
-  // Mirrors order.service.ts exactly: a district is real geography, so when we
-  // have one it — not the zone toggle — decides the courier zone. Quoting off
-  // the toggle instead would show the cheaper inside-Dhaka rate on an order the
-  // server prices as outside Dhaka, and a total that changes after you press
-  // Pay is the one thing this screen exists to prevent.
-  const quotedArea: DeliveryArea = districtValue ? districtToArea(districtValue) : area;
-
-  // Delivery charge for the quoted zone, mirroring the server's rule so the
-  // buyer is never surprised by a different number on the confirmation. The
-  // server recomputes it regardless — this is display, not the source of truth.
-  //
-  // Deliberately NOT useMemo'd: it is three arithmetic operations, and
-  // hand-memoizing over a derived value is what makes the React Compiler give
-  // up on optimizing this component altogether.
+  // 1. A subtotal at or above freeDeliveryAbove.
+  // 2. Free local delivery: the buyer studies at freeDeliveryCollege AND is
+  //    shipping within freeDeliveryDivision. Shipping to any other division
+  //    brings the charge back — hence the live divisionValue, not the college's.
   const freeDeliveryAbove = options?.freeDeliveryAbove || 0;
-  // Tested against the DISCOUNTED subtotal, which is the number the server hands
-  // to its own quote.
-  const deliveryIsFree =
+  const deliveryIsFreeBySubtotal =
     freeDeliveryAbove > 0 && bookSubtotal - discount >= freeDeliveryAbove;
+  const deliveryIsFreeLocal =
+    !!options?.freeDeliveryCollege &&
+    myCollege === options.freeDeliveryCollege &&
+    divisionValue === options.freeDeliveryDivision;
+  const deliveryIsFree = deliveryIsFreeBySubtotal || deliveryIsFreeLocal;
   const deliveryCharge =
     !isPrinted || !options || deliveryIsFree
       ? 0
-      : (options.deliveryCharge?.[quotedArea] ?? 0) +
+      : (options.deliveryCharge ?? 0) +
         (effectivePayMode === "cod" ? options.codExtraCharge || 0 : 0);
 
   // ── Auth gate + item fetch ────────────────────────────────────────────────
@@ -400,6 +384,9 @@ export default function CheckoutView() {
       // Never overwrite something the buyer has already typed while this call
       // was in flight.
       const current = getValues();
+
+      // The college drives free local delivery, independent of any address.
+      setMyCollege((me.medicalCollegeName ?? "").trim());
 
       // Contact: the signup WhatsApp number, when the form is still empty.
       const contact = (me.phoneNumber || me.whatsappNumber || "").trim();
@@ -586,14 +573,11 @@ export default function CheckoutView() {
       if (!validateManual()) return;
     }
     if (isPrinted) {
-      // Gate the flow behind a valid shipping address, and carry the zone the
-      // delivery charge was quoted for. Blank district/division are dropped
-      // rather than sent as "": an absent district is what tells the server to
-      // honour the zone toggle instead of deriving one.
+      // Gate the flow behind a valid shipping address. Blank geo fields are
+      // dropped rather than sent as "".
       void handleSubmit((vals) =>
         runCheckout({
           ...vals,
-          area,
           division: vals.division?.trim() || undefined,
           district: vals.district?.trim() || undefined,
           upazila: vals.upazila?.trim() || undefined,
@@ -751,9 +735,6 @@ export default function CheckoutView() {
                 setValue={setValue}
                 bn={bn}
                 S={shippingLabels(S)}
-                area={area}
-                onAreaChange={setAreaChoice}
-                areaCharges={options?.deliveryCharge}
                 prefill={
                   prefillIntact && prefilled
                     ? {
@@ -762,11 +743,6 @@ export default function CheckoutView() {
                           : S.shipPrefilled,
                         clearLabel: S.shipPrefillClear,
                         onClear: () => {
-                          // Pin the zone they were already quoted before the
-                          // district that implied it goes away, or clearing a
-                          // prefilled "চট্টগ্রাম" would silently drop the
-                          // delivery charge back to the inside-Dhaka default.
-                          setAreaChoice(quotedArea);
                           setValue("division", "");
                           setValue("district", "");
                           setValue("upazila", "");
@@ -774,18 +750,6 @@ export default function CheckoutView() {
                         },
                       }
                     : null
-                }
-                zoneNote={
-                  // Only ever visible when the buyer has overridden the zone
-                  // away from what their district implies. Saying which one the
-                  // charge follows beats letting them believe the toggle moved
-                  // the price when it did not.
-                  area !== quotedArea
-                    ? S.zoneFollowsDistrict(
-                        districtValue,
-                        quotedArea === "inside-dhaka" ? S.insideDhaka : S.outsideDhaka
-                      )
-                    : undefined
                 }
               />
             )}
@@ -1553,10 +1517,6 @@ function shippingLabels(S: Copy) {
     note: S.shipNote,
     notePh: S.shipNotePh,
     optional: S.shipOptional,
-    areaLabel: S.areaLabel,
-    insideDhaka: S.insideDhaka,
-    outsideDhaka: S.outsideDhaka,
-    free: S.freeDelivery,
   };
 }
 
