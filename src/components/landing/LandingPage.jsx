@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { LuBookOpen } from 'react-icons/lu';
 import { landingPrice, DEFAULT_FEATURES } from '@/lib/landingBook';
 import LandingHero from './LandingHero';
+import LandingSample from './LandingSample';
 import LandingQr from './LandingQr';
 import LandingCta from './LandingCta';
 
@@ -64,6 +65,9 @@ export default function LandingPage({ book, settings }) {
         subheadline={settings?.landingSubheadline || book.description}
         checkoutHref={checkoutHref}
       />
+
+      {/* The sample viewer the hero's cover and "নমুনা দেখুন" button point at. */}
+      <LandingSample book={book} />
 
       <LandingQr />
 
