@@ -1,21 +1,43 @@
 'use client';
 
 /**
- * "বইটি দেখে নিন" — the sample, read in the browser.
+ * "কেনার আগে বইটি পড়ে দেখুন" — the sample, PDF-first.
  *
- * The hero's cover and its "নমুনা দেখুন" button both scroll here. The heavy
- * lifting is BookPreview's: an inline PDF viewer (the whole sample opens in the
- * page, cover page first), a thumbnail gallery with a lightbox, and a
- * full-screen reader. Viewing comes first and download second — a buyer wants
- * to look before they decide, and only then keep a copy.
+ * The client wanted the sample PDF itself to be the headline here, not a couple
+ * of page thumbnails beside it. So the whole section is one large embedded
+ * viewer: the full sample opens in the page and scrolls, cover page first. A
+ * "বড় করে দেখুন" toggle blows it up to a full-screen overlay, and download sits
+ * beside it for anyone who wants a copy to keep.
+ *
+ * The hero's cover and its "নমুনা দেখুন" button both scroll here.
  */
 
-import { LuBookOpen, LuDownload } from 'react-icons/lu';
-import { BookPreview } from '@/components/books/BookPreview';
+import { useEffect, useState } from 'react';
+import { LuBookOpen, LuDownload, LuExpand, LuX } from 'react-icons/lu';
+
+/** A sample PDF is a direct `.pdf` here; the browser renders it inline and lets
+ *  the reader scroll every page. Hide the viewer's own chrome and fit the width. */
+const withViewerParams = (url) => `${url}#toolbar=0&navpanes=0&view=FitH`;
 
 export default function LandingSample({ book }) {
-  const hasSample = Boolean(book?.previewPdfUrl || book?.previewImages?.length);
-  if (!hasSample) return null;
+  const pdfUrl = book?.previewPdfUrl;
+  const [full, setFull] = useState(false);
+
+  // Lock the page scroll while the full-screen viewer is up, and let Escape
+  // close it — the same affordances a reader expects from any lightbox.
+  useEffect(() => {
+    if (!full) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => e.key === 'Escape' && setFull(false);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [full]);
+
+  if (!pdfUrl) return null;
 
   return (
     <section id="sample" className="scroll-mt-20 border-y border-border bg-surface-soft">
@@ -25,55 +47,79 @@ export default function LandingSample({ book }) {
             <LuBookOpen /> নমুনা
           </span>
           <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground text-balance sm:text-3xl hind-siliguri">
-            কেনার আগে বইটি দেখে নিন
+            কেনার আগে বইটি পড়ে দেখুন
           </h2>
           <p className="mt-3 text-muted-foreground hind-siliguri">
-            কভার থেকে শুরু করে বইয়ের কয়েকটি পাতা এখানেই দেখতে পারবেন — ওয়েবসাইট
-            ছেড়ে কোথাও যেতে হবে না। পছন্দ হলে ডাউনলোড করে পরেও পড়তে পারবেন।
+            বইয়ের নমুনা অংশটি এখানেই পড়তে পারবেন — কভার থেকে শুরু করে, ওয়েবসাইট ছেড়ে
+            কোথাও যেতে হবে না। পছন্দ হলে ডাউনলোড করে পরেও পড়তে পারবেন।
           </p>
         </div>
 
-        <div className="mx-auto mt-9 max-w-4xl">
-          <BookPreview
-            images={book.previewImages}
-            pdfUrl={book.previewPdfUrl}
-            title={book.title}
-            bn="hind-siliguri"
-            labels={LABELS}
+        {/* The viewer — the main event. */}
+        <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hind-siliguri">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent">
+                <LuBookOpen className="text-base" />
+              </span>
+              নমুনা অধ্যায়
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFull(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary hind-siliguri"
+              >
+                <LuExpand className="text-sm" /> বড় করে দেখুন
+              </button>
+              <a
+                href={pdfUrl}
+                download
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover hind-siliguri"
+              >
+                <LuDownload className="text-sm" /> ডাউনলোড
+              </a>
+            </div>
+          </div>
+
+          <iframe
+            src={withViewerParams(pdfUrl)}
+            title="নমুনা অধ্যায়"
+            className="h-[68vh] max-h-[840px] min-h-[440px] w-full bg-muted"
           />
         </div>
-
-        {book.previewPdfUrl && (
-          <div className="mt-6 flex justify-center">
-            {/* Download is the secondary action — the page above already lets
-                them read it. A plain <a download> keeps the file, no login. */}
-            <a
-              href={book.previewPdfUrl}
-              download
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary hind-siliguri"
-            >
-              <LuDownload /> নমুনাটি ডাউনলোড করুন
-            </a>
-          </div>
-        )}
       </div>
+
+      {/* Full-screen viewer. */}
+      {full && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-foreground/90 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="text-sm font-semibold text-white hind-siliguri">নমুনা অধ্যায়</span>
+            <div className="flex items-center gap-2">
+              <a
+                href={pdfUrl}
+                download
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 hind-siliguri"
+              >
+                <LuDownload className="text-sm" /> ডাউনলোড
+              </a>
+              <button
+                type="button"
+                onClick={() => setFull(false)}
+                aria-label="বন্ধ করুন"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/20"
+              >
+                <LuX />
+              </button>
+            </div>
+          </div>
+          <iframe
+            src={withViewerParams(pdfUrl)}
+            title="নমুনা অধ্যায় — সম্পূর্ণ"
+            className="w-full flex-1 bg-white"
+          />
+        </div>
+      )}
     </section>
   );
 }
-
-// BookPreview takes every string as a prop, so it can speak Bengali here
-// without the component itself knowing about languages. Keys must match its
-// exported BookPreviewLabels exactly.
-const LABELS = {
-  heading: 'বইয়ের ভেতরে',
-  subtitle: 'নমুনা পাতাগুলো দেখে নিন',
-  samplePages: 'নমুনা পাতা',
-  pdfTitle: 'নমুনা অধ্যায়',
-  pdfDesc: 'বইয়ের কিছু অংশ এখানেই পড়ুন',
-  openPdf: 'PDF খুলুন',
-  readALittle: 'সম্পূর্ণ নমুনা দেখুন',
-  close: 'বন্ধ করুন',
-  prev: 'আগের',
-  next: 'পরের',
-  counter: (current, total) => `${current} / ${total}`,
-};
