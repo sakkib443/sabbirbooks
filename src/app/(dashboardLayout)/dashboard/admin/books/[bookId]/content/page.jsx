@@ -39,6 +39,8 @@ import {
   FiHash,
   FiRotateCcw,
   FiCheck,
+  FiLock,
+  FiGift,
 } from 'react-icons/fi';
 // First framer-motion use in this project — the rest of the app animates with
 // CSS keyframes. It is here for Reorder, which owns the measure/swap/settle
@@ -192,6 +194,25 @@ const describeContents = q => {
   if (q.attachments?.length) carried.push(`${q.attachments.length}টি ফাইল`);
   return carried;
 };
+
+/**
+ * Where the board / chapter / topic edit button used to be.
+ *
+ * A padlock rather than a disabled pencil: a greyed-out button reads as "not
+ * allowed right now" and invites a support message asking to be given the
+ * permission. Nobody has this permission — the names and numbers are printed in
+ * a book that has already shipped, and the QR codes on those pages point at
+ * these rows. The server refuses the write too; this is only what makes the
+ * refusal visible before it is attempted.
+ */
+const LockedStructure = ({ label }) => (
+  <span
+    title={`${label}ের নাম ও নম্বর স্থায়ী — ছাপা বইয়ের QR কোড এগুলোর সাথেই বাঁধা। ভেতরের প্রশ্ন এডিট করা যাবে।`}
+    className="p-1.5 rounded text-dash-mute2 cursor-help"
+  >
+    <FiLock className="w-3.5 h-3.5" />
+  </span>
+);
 
 /**
  * One draggable row while the list is being rearranged.
@@ -940,21 +961,45 @@ export default function BookContentEditorPage() {
     });
   };
 
-  const openEdit = (level, node) => {
-    setNodeError('');
-    setNodeModal({
-      level,
-      mode: 'edit',
-      node,
-      values: {
-        chapterNo: node.chapterNo || '',
-        topicNo: node.topicNo || '',
-        title: node.title || '',
-        titleBn: node.titleBn || '',
-        order: node.order ?? '',
-        isFree: Boolean(node.isFree),
-      },
-    });
+  /**
+   * Turn a chapter's free sample on or off.
+   *
+   * The one thing about a chapter that may still change, and the only way left
+   * to change it now that the edit dialog is gone. It is not printed anywhere —
+   * it decides whether the shop's "read a free chapter" button has something to
+   * open, and whether a stranger scanning that chapter's QR gets the answers or
+   * a "buy the book" card.
+   */
+  const toggleFree = async chapter => {
+    const next = !chapter.isFree;
+    if (next) {
+      const ok = await confirm({
+        title: `“${chapter.title}” সবার জন্য ফ্রি করবেন?`,
+        message:
+          'এই অধ্যায়ের সব প্রশ্ন, উত্তর, ছবি ও ভিডিও যে কেউ — লগইন ছাড়াই, বই না কিনেই — পড়তে পারবে। ওয়েবসাইটের “ফ্রি অধ্যায় পড়ুন” বাটনটিও এখানেই নিয়ে আসবে।',
+        confirmText: 'ফ্রি করুন',
+        cancelText: 'থাক',
+      });
+      if (!ok) return;
+    }
+
+    try {
+      const res = await fetch(`${API}/book-content/chapters/${chapter._id}`, {
+        method: 'PATCH',
+        headers: hdrs(),
+        body: JSON.stringify({ isFree: next }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.success) throw new Error(body.message || 'বদলানো যায়নি');
+      await loadTree();
+      notify(
+        next ? `“${chapter.title}” এখন ফ্রি` : `“${chapter.title}” আর ফ্রি নয়`,
+        'success',
+        3000
+      );
+    } catch (err) {
+      notify(err.message, 'error', 0);
+    }
   };
 
   const closeNodeModal = () => {
@@ -965,7 +1010,7 @@ export default function BookContentEditorPage() {
 
   const submitNodeModal = async () => {
     if (!nodeModal) return;
-    const { level, mode, parent, node, values } = nodeModal;
+    const { level, parent, values } = nodeModal;
     if (!values.title?.trim()) {
       setNodeError('শিরোনাম দিতে হবে');
       return;
@@ -973,10 +1018,10 @@ export default function BookContentEditorPage() {
     setNodeSaving(true);
     setNodeError('');
     try {
-      const url =
-        mode === 'create'
-          ? `${API}/book-content/${level}s`
-          : `${API}/book-content/${level}s/${node._id}`;
+      // Create only. Editing a board, chapter or topic no longer exists —
+      // their names and numbers are printed alongside the QR codes, so the
+      // server refuses the write and there is no dialog left that attempts it.
+      const url = `${API}/book-content/${level}s`;
 
       const payload = {
         title: values.title.trim(),
@@ -991,7 +1036,7 @@ export default function BookContentEditorPage() {
           : {}),
       };
 
-      if (mode === 'create') {
+      {
         payload.bookId = bookId;
         if (level === 'chapter') payload.partId = parent.partId;
         if (level === 'topic') {
@@ -1013,7 +1058,7 @@ export default function BookContentEditorPage() {
       }
 
       const res = await fetch(url, {
-        method: mode === 'create' ? 'POST' : 'PATCH',
+        method: 'POST',
         headers: hdrs(),
         body: JSON.stringify(payload),
       });
@@ -1021,7 +1066,7 @@ export default function BookContentEditorPage() {
       if (!res.ok || !body.success) throw new Error(body.message || 'সংরক্ষণ ব্যর্থ');
 
       // Auto-open the parent so the new row is visible
-      if (mode === 'create') {
+      {
         if (level === 'chapter' && parent.partId) {
           setExpanded(e => ({ ...e, [parent.partId]: true }));
         }
@@ -1163,13 +1208,7 @@ export default function BookContentEditorPage() {
                     >
                       <FiPlus className="w-3.5 h-3.5" />
                     </button>
-                    <button
-                      onClick={() => openEdit('part', part)}
-                      title="বোর্ড এডিট (QR অক্ষত থাকবে)"
-                      className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
-                    >
-                      <FiEdit2 className="w-3.5 h-3.5" />
-                    </button>
+                    <LockedStructure label="বোর্ড" />
                   </div>
                 </div>
 
@@ -1216,12 +1255,21 @@ export default function BookContentEditorPage() {
                             <FiPlus className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => openEdit('chapter', chapter)}
-                            title="অধ্যায় এডিট (QR অক্ষত থাকবে)"
-                            className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
+                            onClick={() => toggleFree(chapter)}
+                            title={
+                              chapter.isFree
+                                ? 'ফ্রি নমুনা বন্ধ করুন'
+                                : 'এই অধ্যায়টি সবার জন্য ফ্রি করুন'
+                            }
+                            className={`p-1.5 rounded transition ${
+                              chapter.isFree
+                                ? 'text-emerald-600 hover:bg-emerald-50'
+                                : 'text-dash-mute hover:bg-dash-soft3 hover:text-emerald-600'
+                            }`}
                           >
-                            <FiEdit2 className="w-3.5 h-3.5" />
+                            <FiGift className="w-3.5 h-3.5" />
                           </button>
+                          <LockedStructure label="অধ্যায়" />
                         </div>
                       </div>
 
@@ -1264,13 +1312,7 @@ export default function BookContentEditorPage() {
                                 </span>
                               </button>
                               <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 touch-always-visible transition">
-                                <button
-                                  onClick={() => openEdit('topic', topic)}
-                                  title="টপিক এডিট (QR অক্ষত থাকবে)"
-                                  className="p-1.5 rounded hover:bg-dash-soft3 text-dash-mute hover:text-dash-ink2"
-                                >
-                                  <FiEdit2 className="w-3.5 h-3.5" />
-                                </button>
+                                <LockedStructure label="টপিক" />
                               </div>
                             </div>
                           );
@@ -1938,13 +1980,13 @@ export default function BookContentEditorPage() {
           >
             <div className="flex items-center justify-between px-5 py-3 border-b border-dash-line">
               <h3 className="text-sm font-semibold text-dash-ink2">
-                {nodeModal.mode === 'create' ? 'নতুন ' : ''}
+                নতুন{' '}
                 {nodeModal.level === 'part'
                   ? 'বোর্ড'
                   : nodeModal.level === 'chapter'
                   ? 'অধ্যায়'
-                  : 'টপিক'}
-                {nodeModal.mode === 'edit' ? ' এডিট' : ' যোগ'}
+                  : 'টপিক'}{' '}
+                যোগ
               </h3>
               <button
                 onClick={closeNodeModal}
