@@ -20,7 +20,9 @@ import Link from 'next/link';
 import {
   LuArrowRight,
   LuBookOpen,
+  LuCheck,
   LuShieldCheck,
+  LuStar,
   LuTruck,
 } from 'react-icons/lu';
 import { formatTk } from '@/lib/landingBook';
@@ -241,39 +243,47 @@ function CoverCard({ book, sampleHref }) {
 /**
  * The selling points, under the video.
  *
- * Ordered by the weight the admin gave them, so the strongest claim is read
- * first; a highlighted one is coloured rather than enlarged. A two-column grid
- * from `sm` up so the list fills the width under a landscape video without
- * running long, with the highlighted point spanning both columns.
+ * The strongest claim (the highlighted one, else the heaviest) is lifted out as
+ * a banner across the top; the rest sit in a two-column grid whose rows are all
+ * the same height — `auto-rows-fr` plus stretched cells — so the block reads as
+ * an even, settled list rather than a ragged set of boxes of different sizes.
+ * Every item carries the same check mark in the same place, so the eye runs
+ * straight down the ticks.
  */
 function FeatureColumn({ features }) {
   if (!features.length) return null;
 
   const ordered = [...features].sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1));
+  const lead = ordered.find((f) => f.highlight) ?? ordered[0];
+  const rest = ordered.filter((f) => f !== lead);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-soft lg:p-5">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-soft lg:p-6">
       <h2 className="font-heading text-base font-bold text-foreground hind-siliguri">
         কেন এই বইটি
       </h2>
-      <ul className="mt-3 grid auto-rows-min gap-2 sm:grid-cols-2">
-        {ordered.map((f, i) => (
+
+      {lead && (
+        <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-coral/30 bg-coral/5 p-3.5">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-coral text-white">
+            <LuStar className="text-[11px]" />
+          </span>
+          <p className="text-sm font-semibold leading-relaxed text-coral hind-siliguri">
+            {lead.text}
+          </p>
+        </div>
+      )}
+
+      <ul className="mt-2.5 grid gap-2.5 sm:auto-rows-fr sm:grid-cols-2">
+        {rest.map((f, i) => (
           <li
             key={`${f.text}-${i}`}
-            className={`rounded-xl border p-2.5 text-sm leading-relaxed hind-siliguri ${
-              f.highlight
-                ? 'border-coral/30 bg-coral/5 font-semibold text-coral sm:col-span-2'
-                : 'border-border bg-surface-soft text-foreground'
-            }`}
+            className="flex items-start gap-2.5 rounded-xl border border-border bg-surface-soft p-3.5"
           >
-            <span className="flex gap-2">
-              <span
-                className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                  f.highlight ? 'bg-coral' : 'bg-primary'
-                }`}
-              />
-              {f.text}
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+              <LuCheck className="text-[11px]" />
             </span>
+            <span className="text-sm leading-relaxed text-foreground hind-siliguri">{f.text}</span>
           </li>
         ))}
       </ul>
