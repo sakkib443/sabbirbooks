@@ -207,7 +207,7 @@ export default function AdminDashboard() {
             <p className="text-xs text-dash-mute2">Book orders and revenue at a glance.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Month picker — scopes the revenue chart */}
           <div className="flex items-center gap-1 bg-dash-soft border border-dash-line rounded-lg px-2 py-1.5">
             <button onClick={goToPrevMonth} className="p-0.5 hover:bg-dash-soft3 rounded transition">
@@ -239,7 +239,7 @@ export default function AdminDashboard() {
             <div key={stat.title} className="bg-dash-card rounded-xl border border-dash-line/60 px-4 py-3 shadow-sm hover:shadow-md transition-all group">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider uppercase truncate">{stat.title}</p>
+                  <p className="text-[10px] font-semibold text-dash-mute2 tracking-wider uppercase leading-tight">{stat.title}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-xl font-bold text-dash-ink outfit leading-none">
                       {loading ? <span className="inline-block w-14 h-6 bg-dash-soft2 animate-pulse rounded-md" /> : stat.value}
