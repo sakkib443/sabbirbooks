@@ -79,8 +79,14 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
 // at signup from the medical college they picked, which is the only address
 // hint the shop has before their first order.
 export interface MeProfile {
+  phoneNumber?: string;
+  // The number given at signup — a student supplies a WhatsApp number, often no
+  // separate phone, so it doubles as the delivery contact on checkout.
+  whatsappNumber?: string;
   district?: string;
   division?: string;
+  // The college's upazila/thana, when the directory carries one; blank otherwise.
+  upazila?: string;
   medicalCollegeName?: string;
 }
 

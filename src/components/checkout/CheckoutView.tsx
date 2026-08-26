@@ -73,6 +73,7 @@ import {
   preOrderPercent,
 } from "./types";
 import { districtToArea } from "./bdGeo";
+import { upazilasOf } from "./bdGeoData";
 
 // How many copies of an unprinted book one buyer may pre-order.
 //
@@ -385,6 +386,8 @@ export default function CheckoutView() {
     const u = getStoredUser();
     reset({
       name: u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.name || "" : "",
+      // Phone fills from the stored record now and, a moment later, from
+      // /auth/me — where a student's WhatsApp number stands in as the contact.
       phone: u?.phoneNumber ?? "",
       address: "",
       division: "",
@@ -393,20 +396,36 @@ export default function CheckoutView() {
       note: "",
     });
     void fetchMe().then((me) => {
-      // A staff account, or a student who signed up before colleges existed,
-      // has no district on file — nothing to prefill, and no notice to show.
       if (!active || !me) return;
-      const district = (me.district ?? "").trim();
-      const division = (me.division ?? "").trim();
-      if (!district && !division) return;
       // Never overwrite something the buyer has already typed while this call
       // was in flight.
       const current = getValues();
-      // Division BEFORE district: the district select only lists a division's
-      // own districts, so a division has to be in place for the district value
-      // to have a matching option to land on.
+
+      // Contact: the signup WhatsApp number, when the form is still empty.
+      const contact = (me.phoneNumber || me.whatsappNumber || "").trim();
+      if (contact && !(current.phone ?? "").trim()) setValue("phone", contact);
+
+      // A staff account, or a student who signed up before colleges existed,
+      // has no college geography — nothing more to prefill, no notice to show.
+      const district = (me.district ?? "").trim();
+      const division = (me.division ?? "").trim();
+      const upazila = (me.upazila ?? "").trim();
+      if (!district && !division) return;
+
+      // Division BEFORE district BEFORE upazila: each select only lists the
+      // options scoped to the one above it, so the parent has to be in place
+      // for the child value to land on a real option.
       if (division && !(current.division ?? "").trim()) setValue("division", division);
       if (district && !(current.district ?? "").trim()) setValue("district", district);
+      // Only set the upazila if it is a real option under this district — the
+      // directory's area field is free text and may not match, or be blank.
+      if (
+        upazila &&
+        !(current.upazila ?? "").trim() &&
+        upazilasOf(division, district).includes(upazila)
+      ) {
+        setValue("upazila", upazila);
+      }
       setPrefilled({ district, division, college: (me.medicalCollegeName ?? "").trim() });
     });
     return () => {
