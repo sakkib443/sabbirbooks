@@ -81,9 +81,9 @@ export default function LandingHero({
       </div>
 
       <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        {/* ── The words ─────────────────────────────────────────────── */}
-        <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-sm font-semibold text-cyan-200 backdrop-blur hind-siliguri">
+        {/* ── The words, centred over the stage ─────────────────────── */}
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-sm font-semibold tracking-wide text-cyan-200 backdrop-blur font-display">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300 opacity-70" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-300" />
@@ -91,12 +91,12 @@ export default function LandingHero({
             ১ম প্রফ · Anatomy Viva{book?.isPreOrder ? ' · প্রি-অর্ডার চলছে' : ''}
           </span>
 
-          <h1 className="mt-4 font-heading text-3xl font-bold leading-[1.1] tracking-tight text-balance sm:text-4xl lg:text-5xl hind-siliguri">
+          <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-balance sm:text-4xl lg:text-[3.25rem]">
             {headline || book?.title}
           </h1>
 
           {subheadline && (
-            <p className="mt-3 max-w-xl text-base leading-relaxed text-white/65 hind-siliguri">
+            <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-white/65 font-display">
               {subheadline}
             </p>
           )}

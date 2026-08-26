@@ -6,6 +6,7 @@ import {
   Caveat,
   Work_Sans,
   Outfit,
+  Sora,
   Hind_Siliguri,
 } from "next/font/google";
 import "./globals.css";
@@ -43,6 +44,13 @@ const outfit = Outfit({
   subsets: ["latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-outfit",
+});
+// Sora — the hero's display face. Modern, geometric and a touch techy, it
+// matches the cover's neon-clinical look and reads distinctly from Outfit.
+const sora = Sora({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sora",
 });
 // Hind Siliguri renders Bangla (Bengali) text cleanly.
 const hindSiliguri = Hind_Siliguri({
@@ -97,7 +105,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${poppins.variable} ${roboto.variable} ${lobster.variable} ${caveat.variable} ${worksans.variable} ${outfit.variable} ${hindSiliguri.variable} h-full antialiased`}
+      className={`${poppins.variable} ${roboto.variable} ${lobster.variable} ${caveat.variable} ${worksans.variable} ${outfit.variable} ${sora.variable} ${hindSiliguri.variable} h-full antialiased`}
     >
       <head>
         <ThemeScript />

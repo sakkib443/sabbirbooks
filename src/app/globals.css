@@ -560,6 +560,13 @@
   font-family: var(--font-hind-siliguri), "Hind Siliguri", sans-serif;
 }
 
+/* Sora display face for hero titles. Latin glyphs render in Sora; the browser
+   falls through per-glyph to Hind Siliguri for any Bengali, so a mixed headline
+   stays consistent. */
+.font-display {
+  font-family: var(--font-sora), var(--font-hind-siliguri), "Hind Siliguri", sans-serif;
+}
+
 /* ============================================================
    MEDICAL UTILITIES & GRADIENTS
    ============================================================ */
