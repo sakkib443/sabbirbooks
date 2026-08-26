@@ -40,7 +40,6 @@ import {
   FiRotateCcw,
   FiCheck,
   FiLock,
-  FiGift,
 } from 'react-icons/fi';
 // First framer-motion use in this project — the rest of the app animates with
 // CSS keyframes. It is here for Reorder, which owns the measure/swap/settle
@@ -961,47 +960,6 @@ export default function BookContentEditorPage() {
     });
   };
 
-  /**
-   * Turn a chapter's free sample on or off.
-   *
-   * The one thing about a chapter that may still change, and the only way left
-   * to change it now that the edit dialog is gone. It is not printed anywhere —
-   * it decides whether the shop's "read a free chapter" button has something to
-   * open, and whether a stranger scanning that chapter's QR gets the answers or
-   * a "buy the book" card.
-   */
-  const toggleFree = async chapter => {
-    const next = !chapter.isFree;
-    if (next) {
-      const ok = await confirm({
-        title: `“${chapter.title}” সবার জন্য ফ্রি করবেন?`,
-        message:
-          'এই অধ্যায়ের সব প্রশ্ন, উত্তর, ছবি ও ভিডিও যে কেউ — লগইন ছাড়াই, বই না কিনেই — পড়তে পারবে। ওয়েবসাইটের “ফ্রি অধ্যায় পড়ুন” বাটনটিও এখানেই নিয়ে আসবে।',
-        confirmText: 'ফ্রি করুন',
-        cancelText: 'থাক',
-      });
-      if (!ok) return;
-    }
-
-    try {
-      const res = await fetch(`${API}/book-content/chapters/${chapter._id}`, {
-        method: 'PATCH',
-        headers: hdrs(),
-        body: JSON.stringify({ isFree: next }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.success) throw new Error(body.message || 'বদলানো যায়নি');
-      await loadTree();
-      notify(
-        next ? `“${chapter.title}” এখন ফ্রি` : `“${chapter.title}” আর ফ্রি নয়`,
-        'success',
-        3000
-      );
-    } catch (err) {
-      notify(err.message, 'error', 0);
-    }
-  };
-
   const closeNodeModal = () => {
     setNodeModal(null);
     setNodeError('');
@@ -1253,21 +1211,6 @@ export default function BookContentEditorPage() {
                             className="p-1.5 rounded hover:bg-blue-100 text-dash-mute hover:text-blue-700"
                           >
                             <FiPlus className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => toggleFree(chapter)}
-                            title={
-                              chapter.isFree
-                                ? 'ফ্রি নমুনা বন্ধ করুন'
-                                : 'এই অধ্যায়টি সবার জন্য ফ্রি করুন'
-                            }
-                            className={`p-1.5 rounded transition ${
-                              chapter.isFree
-                                ? 'text-emerald-600 hover:bg-emerald-50'
-                                : 'text-dash-mute hover:bg-dash-soft3 hover:text-emerald-600'
-                            }`}
-                          >
-                            <FiGift className="w-3.5 h-3.5" />
                           </button>
                           <LockedStructure label="অধ্যায়" />
                         </div>

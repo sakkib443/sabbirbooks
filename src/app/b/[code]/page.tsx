@@ -147,15 +147,15 @@ export default function BookTopicScanPage() {
     if (!code) return;
     setState({ kind: "loading" });
 
-    // No token is not a reason to bounce to login any more: a chapter the admin
-    // flagged free is readable by a stranger, and this page is what the shop's
-    // "read a free chapter" button opens. Ask the server and let it decide —
-    // it answers 401 only when the topic really did need an account.
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.replace(`/login?redirect=${encodeURIComponent(`/b/${code}`)}`);
+      return;
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/book-content/scan/${code}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        headers: { Authorization: `Bearer ${token}` },
       });
       const body = await res.json();
 

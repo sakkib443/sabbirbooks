@@ -66,48 +66,6 @@ export async function getLandingSettings(): Promise<LandingSettings> {
   return (body?.data as LandingSettings) || {};
 }
 
-/** What the book's own QR content adds up to — its table of contents and size. */
-export interface BookOutline {
-  totals: {
-    parts: number;
-    chapters: number;
-    topics: number;
-    questions: number;
-    freeChapters: number;
-  };
-  /** First free topic in the book — what the "read a free chapter" button opens. */
-  firstFreeQrCode?: string;
-  parts: {
-    title: string;
-    titleBn?: string;
-    chapters: {
-      chapterNo?: string;
-      title: string;
-      titleBn?: string;
-      topicCount: number;
-      questionCount: number;
-      isFree: boolean;
-      /** Present only on free chapters — a paid chapter's code is never sent. */
-      freeQrCode?: string;
-    }[];
-  }[];
-}
-
-/**
- * The book's structure, straight from the content the admin already entered.
- *
- * This is the most persuasive thing on the page and it costs the shop nothing to
- * produce: "১০ অধ্যায় · ৫৯টি QR · ৩৮১টি প্রশ্ন" is a fact about the book, not a
- * marketing claim, and the chapter list is the table of contents a buyer would
- * flip to first in a shop. Returns null rather than throwing — a book with no
- * QR content yet simply hides these sections.
- */
-export async function getBookOutline(bookSlugOrId: string): Promise<BookOutline | null> {
-  if (!bookSlugOrId) return null;
-  const body = await json(`${API}/api/book-content/outline/${encodeURIComponent(bookSlugOrId)}`);
-  return (body?.data as BookOutline) || null;
-}
-
 /**
  * The five selling points for this book, as the shop dictated them.
  *

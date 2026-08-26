@@ -3,22 +3,24 @@
 /**
  * Assembles the one page the shop currently has.
  *
- * Order is the order a buyer decides in: what it is and what it costs, why it
- * is worth it, proof they can read for themselves, how the QR part works, then
- * the ask again for anyone who scrolled all the way down.
+ * Deliberately short. The hero now carries the cover, the price, the buttons,
+ * the selling points and the video — everything a buyer needs — so what follows
+ * it is only what the hero cannot say: how the QR codes work, and the ask again
+ * for anyone who read to the bottom.
+ *
+ * The book's chapter list used to sit here too. It came out at the client's
+ * request: what a QR opens is what the book is sold for, and the page should
+ * not advertise the contents of something it will not let a visitor read.
  */
 
 import Link from 'next/link';
 import { LuBookOpen } from 'react-icons/lu';
 import { landingPrice, DEFAULT_FEATURES } from '@/lib/landingBook';
 import LandingHero from './LandingHero';
-import LandingFeatures from './LandingFeatures';
-import LandingContents from './LandingContents';
-import LandingSample from './LandingSample';
 import LandingQr from './LandingQr';
 import LandingCta from './LandingCta';
 
-export default function LandingPage({ book, settings, outline }) {
+export default function LandingPage({ book, settings }) {
   // Nothing to sell yet. Better an honest holding page than a broken one — this
   // is what an admin sees before they have published a book.
   if (!book) {
@@ -47,35 +49,20 @@ export default function LandingPage({ book, settings, outline }) {
 
   const price = landingPrice(book);
   const checkoutHref = `/checkout?type=book&slug=${encodeURIComponent(book.slug)}`;
-  const shareHref = `/read/${encodeURIComponent(book.slug)}`;
 
   return (
     <main>
       <LandingHero
         book={book}
         price={price}
+        // Falls back to the shop's own five selling points when the admin has
+        // entered none, so the middle column is never empty — which is exactly
+        // how the page went live the first time: a title, a price, and nothing
+        // to decide on.
+        features={book.features?.length ? book.features : DEFAULT_FEATURES}
         headline={settings?.landingHeadline}
         subheadline={settings?.landingSubheadline || book.description}
         checkoutHref={checkoutHref}
-      />
-
-      {/* Falls back to the shop's own five selling points when the admin has
-          not entered any, so this section is never empty — which is exactly how
-          the page went live the first time: a title, a price, and nothing to
-          decide on. */}
-      <LandingFeatures
-        features={book.features?.length ? book.features : DEFAULT_FEATURES}
-        heading="কেন এই বইটি"
-        subheading="যা যা পাচ্ছেন"
-      />
-
-      {/* The table of contents, read straight from the book's QR content. */}
-      <LandingContents outline={outline} />
-
-      <LandingSample
-        book={book}
-        shareHref={book.previewPdfUrl ? shareHref : null}
-        freeQrCode={outline?.firstFreeQrCode}
       />
 
       <LandingQr />

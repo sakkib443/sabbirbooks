@@ -1,10 +1,5 @@
 import type { Metadata } from 'next';
-import {
-  getBookOutline,
-  getLandingBook,
-  getLandingSettings,
-  landingPrice,
-} from '@/lib/landingBook';
+import { getLandingBook, getLandingSettings, landingPrice } from '@/lib/landingBook';
 import { PUBLIC_PAGES_ENABLED } from '@/config/site';
 import LandingPage from '@/components/landing/LandingPage';
 import MarketingHome from '@/components/home/MarketingHome';
@@ -71,9 +66,6 @@ export default async function HomePage() {
 
   const settings = await getLandingSettings();
   const book = await getLandingBook(settings);
-  // The book's own chapters and counts. Null when it has no QR content yet, in
-  // which case the contents section simply does not render.
-  const outline = book ? await getBookOutline(book.slug || book._id) : null;
 
-  return <LandingPage book={book} settings={settings} outline={outline} />;
+  return <LandingPage book={book} settings={settings} />;
 }
