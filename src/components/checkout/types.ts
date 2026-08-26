@@ -114,6 +114,9 @@ export interface ShippingAddress {
   area?: DeliveryArea;
   district?: string;
   division?: string;
+  // The upazila/thana. `city` carries the same value so the server's required
+  // city and the notification address line stay populated.
+  upazila?: string;
   note?: string;
 }
 

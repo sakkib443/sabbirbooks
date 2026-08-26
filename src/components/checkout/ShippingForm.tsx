@@ -1,31 +1,43 @@
 "use client";
 
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type {
+  Control,
+  FieldErrors,
+  UseFormRegister,
+  UseFormRegisterReturn,
+  UseFormSetValue,
+} from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import {
   LuTruck,
   LuUser,
   LuPhone,
   LuMapPin,
-  LuBuilding2,
   LuNotebookPen,
   LuCheck,
   LuGraduationCap,
   LuInfo,
   LuMap,
+  LuChevronDown,
 } from "react-icons/lu";
 import { Input, cn } from "@/components/ui";
 import type { DeliveryArea } from "./types";
 import { formatTk } from "./types";
-import { BD_DISTRICTS, BD_DIVISIONS } from "./bdGeo";
+import { GEO_DIVISIONS, districtsOf, upazilasOf } from "./bdGeoData";
 
 // Shape of the shipping fields — kept in sync with the zod schema in CheckoutView.
+// Geography is a guided cascade: division → district → upazila, each list drawn
+// from the one above it. `city` is not a field any more — CheckoutView sets it
+// to the upazila at submit, for the server's still-required city.
 export interface ShippingFormValues {
   name: string;
   phone: string;
   address: string;
-  city: string;
-  district?: string;
-  division?: string;
+  // Always present as strings — a select's value is "" before a choice, never
+  // undefined — and required-non-empty by the zod schema in CheckoutView.
+  division: string;
+  district: string;
+  upazila: string;
   note?: string;
 }
 
@@ -38,12 +50,12 @@ interface Labels {
   phonePh: string;
   address: string;
   addressPh: string;
-  city: string;
-  cityPh: string;
-  district: string;
-  districtPh: string;
   division: string;
-  divisionPh: string;
+  district: string;
+  upazila: string;
+  selectPh: string;
+  pickDivisionFirst: string;
+  pickDistrictFirst: string;
   note: string;
   notePh: string;
   optional: string;
@@ -68,6 +80,8 @@ export interface PrefillNotice {
 export function ShippingForm({
   register,
   errors,
+  control,
+  setValue,
   bn,
   S,
   area,
@@ -78,6 +92,11 @@ export function ShippingForm({
 }: {
   register: UseFormRegister<ShippingFormValues>;
   errors: FieldErrors<ShippingFormValues>;
+  // control + setValue drive the cascade: the district list follows the chosen
+  // division, the upazila list follows the district, and picking a parent again
+  // clears the children so a stale district can never sit under a new division.
+  control: Control<ShippingFormValues>;
+  setValue: UseFormSetValue<ShippingFormValues>;
   bn: string;
   S: Labels;
   // Courier zone lives outside the form because the price shown in the order
@@ -92,6 +111,19 @@ export function ShippingForm({
   // what the server prices from, so the buyer needs to know which one wins.
   zoneNote?: string;
 }) {
+  // The two parents the child lists depend on. useWatch, not watch(), so this
+  // component re-renders its selects when either changes without dragging the
+  // whole form out of the React Compiler's reach.
+  const division = (useWatch({ control, name: "division" }) ?? "").trim();
+  const district = (useWatch({ control, name: "district" }) ?? "").trim();
+  const upazila = (useWatch({ control, name: "upazila" }) ?? "").trim();
+  const districtOptions = districtsOf(division);
+  const upazilaOptions = upazilasOf(division, district);
+
+  const divisionReg = register("division");
+  const districtReg = register("district");
+  const upazilaReg = register("upazila");
+
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
       <div className="flex items-start gap-3">
@@ -232,77 +264,125 @@ export function ShippingForm({
             }
           />
         </div>
-        {/* District and division are free text with suggestions rather than a
-            <select>: a closed list would silently drop a prefilled spelling we
-            do not carry, and there is no version of "we lost your address" that
-            is better than an unfamiliar one.
-
-            No autoComplete on district: the browser's address-level2 token is
-            already spoken for by City above, and pointing both at it makes the
-            browser fill the two with the same string. */}
-        <Field
-          bn={bn}
-          label={S.district}
-          icon={<LuMapPin />}
-          error={errors.district?.message}
-          input={
-            <Input
-              placeholder={S.districtPh}
-              list="bd-districts"
-              aria-invalid={!!errors.district}
-              {...register("district")}
-            />
-          }
-        />
-        <Field
+        {/* Division → district → upazila, in that order. Each list is drawn
+            from the pick above it, and choosing a parent again clears its
+            children so a district can never sit under the wrong division. The
+            three cover all of Bangladesh, so a closed <select> loses nobody. */}
+        <SelectField
           bn={bn}
           label={S.division}
           icon={<LuMap />}
           error={errors.division?.message}
-          input={
-            <Input
-              placeholder={S.divisionPh}
-              list="bd-divisions"
-              autoComplete="address-level1"
-              aria-invalid={!!errors.division}
-              {...register("division")}
-            />
-          }
+          reg={divisionReg}
+          value={division}
+          placeholder={S.selectPh}
+          options={GEO_DIVISIONS}
+          onSelect={(e) => {
+            void divisionReg.onChange(e);
+            setValue("district", "");
+            setValue("upazila", "");
+          }}
         />
-        <Field
+        <SelectField
           bn={bn}
-          label={S.city}
-          icon={<LuBuilding2 />}
-          error={errors.city?.message}
-          input={
-            <Input
-              placeholder={S.cityPh}
-              autoComplete="address-level2"
-              aria-invalid={!!errors.city}
-              {...register("city")}
-            />
-          }
+          label={S.district}
+          icon={<LuMapPin />}
+          error={errors.district?.message}
+          reg={districtReg}
+          value={district}
+          placeholder={division ? S.selectPh : S.pickDivisionFirst}
+          disabled={!division}
+          options={districtOptions}
+          onSelect={(e) => {
+            void districtReg.onChange(e);
+            setValue("upazila", "");
+          }}
         />
-        <Field
+        <SelectField
           bn={bn}
-          label={`${S.note} · ${S.optional}`}
-          icon={<LuNotebookPen />}
-          error={undefined}
-          input={<Input placeholder={S.notePh} {...register("note")} />}
+          label={S.upazila}
+          icon={<LuMapPin />}
+          error={errors.upazila?.message}
+          reg={upazilaReg}
+          value={upazila}
+          placeholder={district ? S.selectPh : S.pickDistrictFirst}
+          disabled={!district}
+          options={upazilaOptions}
+          onSelect={upazilaReg.onChange}
         />
-
-        <datalist id="bd-districts">
-          {BD_DISTRICTS.map((d) => (
-            <option key={d} value={d} />
-          ))}
-        </datalist>
-        <datalist id="bd-divisions">
-          {BD_DIVISIONS.map((d) => (
-            <option key={d} value={d} />
-          ))}
-        </datalist>
+        <div className="sm:col-span-2">
+          <Field
+            bn={bn}
+            label={`${S.note} · ${S.optional}`}
+            icon={<LuNotebookPen />}
+            error={undefined}
+            input={<Input placeholder={S.notePh} {...register("note")} />}
+          />
+        </div>
       </div>
     </div>
+  );
+}
+
+// A cascade dropdown. Spreads the react-hook-form registration for name/ref/
+// blur but takes its own onChange, so the parent can clear the child fields in
+// the same tick the value changes.
+function SelectField({
+  label,
+  icon,
+  error,
+  bn,
+  reg,
+  value,
+  placeholder,
+  options,
+  onSelect,
+  disabled,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  error?: string;
+  bn: string;
+  reg: UseFormRegisterReturn;
+  // Controlled by the form's own value, so a select shows the right option the
+  // moment its option list appears — which is what a prefilled district needs,
+  // since its options only exist once the division above it is set.
+  value: string;
+  placeholder: string;
+  options: readonly string[];
+  onSelect: React.ChangeEventHandler<HTMLSelectElement>;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className={cn("mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground", bn)}>
+        <span className="text-primary">{icon}</span>
+        {label}
+      </span>
+      <div className="relative">
+        <select
+          {...reg}
+          value={value}
+          onChange={onSelect}
+          disabled={disabled}
+          aria-invalid={!!error}
+          className={cn(
+            "h-11 w-full appearance-none rounded-xl border bg-background px-3.5 pr-9 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-muted-foreground",
+            error ? "border-coral" : "border-border",
+            bn
+          )}
+        >
+          <option value="">{placeholder}</option>
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+        <LuChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      </div>
+      {error && <span className={cn("mt-1 block text-xs text-coral", bn)}>{error}</span>}
+    </label>
   );
 }
 

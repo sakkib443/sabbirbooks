@@ -208,13 +208,13 @@ export default function CheckoutView() {
         name: z.string().min(1, S.shipErrName),
         phone: z.string().min(6, S.shipErrPhone),
         address: z.string().min(1, S.shipErrAddress),
-        city: z.string().min(1, S.shipErrCity),
-        // District and division stay OPTIONAL. They only ever arrive prefilled,
-        // and a buyer who clears them to ship somewhere we have no district for
-        // must still be able to order — without a district the server keeps the
-        // dearer zone, so an empty one costs the shop nothing.
-        district: z.string().optional(),
-        division: z.string().optional(),
+        // The three geography levels are now a guided cascade — division, then
+        // its districts, then that district's upazilas — and the list covers
+        // all of Bangladesh, so requiring all three is the whole point rather
+        // than a burden. `city` is derived from the upazila at submit.
+        division: z.string().min(1, S.shipErrDivision),
+        district: z.string().min(1, S.shipErrDistrict),
+        upazila: z.string().min(1, S.shipErrUpazila),
         note: z.string().optional(),
       }),
     [S]
@@ -387,9 +387,9 @@ export default function CheckoutView() {
       name: u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.name || "" : "",
       phone: u?.phoneNumber ?? "",
       address: "",
-      city: "",
-      district: "",
       division: "",
+      district: "",
+      upazila: "",
       note: "",
     });
     void fetchMe().then((me) => {
@@ -402,8 +402,11 @@ export default function CheckoutView() {
       // Never overwrite something the buyer has already typed while this call
       // was in flight.
       const current = getValues();
-      if (district && !(current.district ?? "").trim()) setValue("district", district);
+      // Division BEFORE district: the district select only lists a division's
+      // own districts, so a division has to be in place for the district value
+      // to have a matching option to land on.
       if (division && !(current.division ?? "").trim()) setValue("division", division);
+      if (district && !(current.district ?? "").trim()) setValue("district", district);
       setPrefilled({ district, division, college: (me.medicalCollegeName ?? "").trim() });
     });
     return () => {
@@ -572,8 +575,13 @@ export default function CheckoutView() {
         runCheckout({
           ...vals,
           area,
-          district: vals.district?.trim() || undefined,
           division: vals.division?.trim() || undefined,
+          district: vals.district?.trim() || undefined,
+          upazila: vals.upazila?.trim() || undefined,
+          // city carries the upazila: the server still requires a city and the
+          // order alert prints it, and the upazila is the most local unit we
+          // have. See order.interface.ts.
+          city: vals.upazila?.trim() || vals.district?.trim() || "",
         })
       )();
     } else {
@@ -720,6 +728,8 @@ export default function CheckoutView() {
               <ShippingForm
                 register={register}
                 errors={errors}
+                control={control}
+                setValue={setValue}
                 bn={bn}
                 S={shippingLabels(S)}
                 area={area}
@@ -738,8 +748,9 @@ export default function CheckoutView() {
                           // prefilled "চট্টগ্রাম" would silently drop the
                           // delivery charge back to the inside-Dhaka default.
                           setAreaChoice(quotedArea);
-                          setValue("district", "");
                           setValue("division", "");
+                          setValue("district", "");
+                          setValue("upazila", "");
                           setPrefilled(null);
                         },
                       }
@@ -1186,14 +1197,14 @@ const EN = {
   shipNamePh: "e.g. Dr. Ayesha Rahman",
   shipPhone: "Phone",
   shipPhonePh: "01XXXXXXXXX",
-  shipAddress: "Address",
-  shipAddressPh: "House, road, area",
-  shipCity: "City / Town",
-  shipCityPh: "e.g. Dhanmondi, Dhaka",
-  shipDistrict: "District",
-  shipDistrictPh: "e.g. ঢাকা",
+  shipAddress: "Address (house / road / village)",
+  shipAddressPh: "House, road, village",
   shipDivision: "Division",
-  shipDivisionPh: "e.g. ঢাকা",
+  shipDistrict: "District",
+  shipUpazila: "Upazila / Thana",
+  shipSelectPh: "Select",
+  shipSelectDistrictFirst: "Pick a division first",
+  shipSelectUpazilaFirst: "Pick a district first",
   shipPrefilled: "District and division were filled in from your profile. Shipping somewhere else? Change them.",
   shipPrefilledFrom: (college: string) =>
     `District and division were filled in from ${college}. Sending the book home instead? Change them.`,
@@ -1206,7 +1217,9 @@ const EN = {
   shipErrName: "Name is required",
   shipErrPhone: "Enter a valid phone number",
   shipErrAddress: "Address is required",
-  shipErrCity: "City is required",
+  shipErrDivision: "Select a division",
+  shipErrDistrict: "Select a district",
+  shipErrUpazila: "Select an upazila / thana",
   // payment — manual (bKash / Rocket / Nagad)
   payHeading: "Payment method",
   paySubtitle: "Choose the wallet you'll send money from.",
@@ -1395,14 +1408,14 @@ const BN: Copy = {
   shipNamePh: "যেমন: ডা. আয়েশা রহমান",
   shipPhone: "ফোন",
   shipPhonePh: "01XXXXXXXXX",
-  shipAddress: "ঠিকানা",
-  shipAddressPh: "বাসা, রোড, এলাকা",
-  shipCity: "শহর / থানা",
-  shipCityPh: "যেমন: ধানমন্ডি, ঢাকা",
-  shipDistrict: "জেলা",
-  shipDistrictPh: "যেমন: ঢাকা",
+  shipAddress: "ঠিকানা (বাসা / রোড / গ্রাম)",
+  shipAddressPh: "বাসা, রোড, গ্রাম",
   shipDivision: "বিভাগ",
-  shipDivisionPh: "যেমন: ঢাকা",
+  shipDistrict: "জেলা",
+  shipUpazila: "উপজেলা / থানা",
+  shipSelectPh: "নির্বাচন করুন",
+  shipSelectDistrictFirst: "আগে বিভাগ বেছে নিন",
+  shipSelectUpazilaFirst: "আগে জেলা বেছে নিন",
   shipPrefilled:
     "জেলা ও বিভাগ আপনার প্রোফাইল থেকে বসানো হয়েছে। অন্য ঠিকানায় পাঠাতে চাইলে বদলে নিন।",
   shipPrefilledFrom: (college: string) =>
@@ -1416,7 +1429,9 @@ const BN: Copy = {
   shipErrName: "নাম দিন",
   shipErrPhone: "সঠিক ফোন নম্বর দিন",
   shipErrAddress: "ঠিকানা দিন",
-  shipErrCity: "শহর দিন",
+  shipErrDivision: "বিভাগ বেছে নিন",
+  shipErrDistrict: "জেলা বেছে নিন",
+  shipErrUpazila: "উপজেলা / থানা বেছে নিন",
   payHeading: "পেমেন্ট পদ্ধতি",
   paySubtitle: "যে ওয়ালেট থেকে টাকা পাঠাবেন সেটি বেছে নিন।",
   manualHeading: "পেমেন্টের তথ্য",
@@ -1510,12 +1525,12 @@ function shippingLabels(S: Copy) {
     phonePh: S.shipPhonePh,
     address: S.shipAddress,
     addressPh: S.shipAddressPh,
-    city: S.shipCity,
-    cityPh: S.shipCityPh,
-    district: S.shipDistrict,
-    districtPh: S.shipDistrictPh,
     division: S.shipDivision,
-    divisionPh: S.shipDivisionPh,
+    district: S.shipDistrict,
+    upazila: S.shipUpazila,
+    selectPh: S.shipSelectPh,
+    pickDivisionFirst: S.shipSelectDistrictFirst,
+    pickDistrictFirst: S.shipSelectUpazilaFirst,
     note: S.shipNote,
     notePh: S.shipNotePh,
     optional: S.shipOptional,
