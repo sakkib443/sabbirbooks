@@ -1,18 +1,18 @@
 'use client';
 
 /**
- * The shop's whole offer, in one screen.
+ * The shop's whole offer, organised into one compact block.
  *
- * A headline band across the top, then three equal columns a buyer reads left
- * to right: the book itself with the price and the buttons, why it is worth it,
- * and a look inside. The three are the same width and stretch to the same
- * height on desktop, so the row reads as one composed block rather than three
- * loose cards — the cover defines the height, the middle and right columns fill
- * to meet it.
+ * A short headline band, then two columns from the tablet width up: a
+ * fixed-width cover with its price and buttons on the left, the video over a
+ * feature grid on the right. Two things keep it from sprawling down the page on
+ * a PC — the columns arrive at `md` (768px), not `lg`, so a ~960px laptop gets
+ * the tidy two-column view instead of the stacked one; and both the cover and
+ * the video are capped, so neither balloons to full width and shoves everything
+ * below the fold. Mobile still stacks, which is where it already read well.
  *
  * The cover and the "নমুনা দেখুন" button both scroll to the sample section,
- * where the PDF opens inside the page. Nothing here downloads anything; that is
- * offered second, next to the viewer, for a reader who wants to keep a copy.
+ * where the PDF opens inside the page. Nothing here downloads anything.
  */
 
 import { useState } from 'react';
@@ -61,9 +61,9 @@ export default function LandingHero({
     <section className="relative overflow-hidden bg-medical-mesh">
       <div className="pointer-events-none absolute inset-0 bg-medical-grid opacity-60" />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-        {/* ── The headline, across the whole width ──────────────────── */}
-        <div className="max-w-3xl">
+      <div className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+        {/* ── Headline band ─────────────────────────────────────────── */}
+        <div className="max-w-2xl">
           {price.percent > 0 && (
             <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-coral/30 bg-coral/10 px-4 py-1.5 text-sm font-bold text-coral hind-siliguri">
               <span className="relative flex h-2 w-2">
@@ -74,31 +74,25 @@ export default function LandingHero({
             </span>
           )}
 
-          <h1 className="font-heading text-3xl font-bold leading-tight tracking-tight text-foreground text-balance sm:text-4xl lg:text-[2.75rem] hind-siliguri">
+          <h1 className="font-heading text-2xl font-bold leading-tight tracking-tight text-foreground text-balance sm:text-3xl lg:text-4xl hind-siliguri">
             {headline || book?.title}
           </h1>
 
           {subheadline && (
-            <p className="mt-3 text-base leading-relaxed text-muted-foreground hind-siliguri">
+            <p className="mt-2.5 text-base leading-relaxed text-muted-foreground hind-siliguri">
               {subheadline}
             </p>
           )}
         </div>
 
-        {/* ── Left: the product · Right: see it & why ───────────────
-            Two columns, not three. A portrait cover and a landscape video are
-            different shapes and never fill an equal-width column to the same
-            height; forcing three equal columns left the video's column half
-            empty. So the cover and its offer own the left, and the right stacks
-            the video over the feature grid — both sides full, the same height,
-            which is what makes the row read as one composed block. */}
-        <div className="mt-9 grid gap-8 lg:mt-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-stretch lg:gap-10">
-          {/* Left: the product ─────────────────────────────────────── */}
-          <div className="animate-fade-up flex flex-col">
+        {/* ── Cover + offer | video + features ──────────────────────── */}
+        <div className="mt-8 grid gap-8 md:mt-10 md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-10 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-12">
+          {/* Left: the product — a fixed, sensible cover size ───────── */}
+          <div className="animate-fade-up mx-auto flex w-full max-w-[340px] flex-col md:mx-0">
             <CoverCard book={book} sampleHref={hasSample ? '#sample' : null} />
 
-            <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
-              <span className="font-heading text-3xl font-bold text-primary sm:text-4xl">
+            <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <span className="font-heading text-3xl font-bold text-primary">
                 {formatTk(price.payable)}
               </span>
               {price.saved > 0 && (
@@ -134,7 +128,7 @@ export default function LandingHero({
               {hasSample && (
                 <a
                   href="#sample"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3.5 text-base font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary hind-siliguri"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-base font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary hind-siliguri"
                 >
                   <LuBookOpen /> নমুনা দেখুন
                 </a>
@@ -152,9 +146,9 @@ export default function LandingHero({
           </div>
 
           {/* Right: see it, then why ───────────────────────────────── */}
-          <div className="animate-fade-up delay-200 flex flex-col gap-6">
+          <div className="animate-fade-up delay-200 flex flex-col gap-5">
             {hasVideo ? (
-              <div className="overflow-hidden rounded-2xl border border-border bg-[#08222a] shadow-card">
+              <div className="w-full max-w-[560px] overflow-hidden rounded-2xl border border-border bg-[#08222a] shadow-card">
                 {isDirectVideo(book.promoVideoUrl) ? (
                   <video
                     src={book.promoVideoUrl}
@@ -181,8 +175,6 @@ export default function LandingHero({
               <PreviewPages book={book} />
             )}
 
-            {/* The selling points, filling the space under the video so the
-                right column matches the cover's height. */}
             <FeatureColumn features={features} />
           </div>
         </div>
@@ -224,8 +216,8 @@ function CoverCard({ book, sampleHref }) {
 
       {sampleHref && (
         <>
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 pb-4 text-base font-bold text-white hind-siliguri">
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 pb-3.5 text-sm font-bold text-white hind-siliguri">
             <LuBookOpen /> বইটি দেখুন
           </span>
         </>
@@ -247,14 +239,12 @@ function CoverCard({ book, sampleHref }) {
 }
 
 /**
- * The selling points, under the video in the right column.
+ * The selling points, under the video.
  *
  * Ordered by the weight the admin gave them, so the strongest claim is read
  * first; a highlighted one is coloured rather than enlarged. A two-column grid
- * on desktop (one on mobile) so the list fills the width under a landscape
- * video, and flex-1 so it stretches to bring the column level with the cover.
- * The highlighted point spans both columns — it is the headline claim and
- * should not be boxed into half the width.
+ * from `sm` up so the list fills the width under a landscape video without
+ * running long, with the highlighted point spanning both columns.
  */
 function FeatureColumn({ features }) {
   if (!features.length) return null;
@@ -262,21 +252,21 @@ function FeatureColumn({ features }) {
   const ordered = [...features].sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1));
 
   return (
-    <div className="flex flex-1 flex-col rounded-2xl border border-border bg-card p-5 shadow-soft lg:p-6">
-      <h2 className="font-heading text-lg font-bold text-foreground hind-siliguri">
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-soft lg:p-5">
+      <h2 className="font-heading text-base font-bold text-foreground hind-siliguri">
         কেন এই বইটি
       </h2>
-      <ul className="mt-4 grid flex-1 auto-rows-min gap-2.5 sm:grid-cols-2">
+      <ul className="mt-3 grid auto-rows-min gap-2 sm:grid-cols-2">
         {ordered.map((f, i) => (
           <li
             key={`${f.text}-${i}`}
-            className={`rounded-xl border p-3 text-[15px] leading-relaxed hind-siliguri ${
+            className={`rounded-xl border p-2.5 text-sm leading-relaxed hind-siliguri ${
               f.highlight
                 ? 'border-coral/30 bg-coral/5 font-semibold text-coral sm:col-span-2'
                 : 'border-border bg-surface-soft text-foreground'
             }`}
           >
-            <span className="flex gap-2.5">
+            <span className="flex gap-2">
               <span
                 className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
                   f.highlight ? 'bg-coral' : 'bg-primary'
@@ -297,7 +287,7 @@ function PreviewPages({ book }) {
   if (!images.length) return null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+    <div className="w-full max-w-[560px] rounded-2xl border border-border bg-card p-4 shadow-soft">
       <p className="mb-3 text-sm font-semibold text-foreground hind-siliguri">
         বইয়ের ভেতরের পাতা
       </p>
