@@ -25,6 +25,38 @@ import {
   LuTruck,
 } from 'react-icons/lu';
 import { formatTk } from '@/lib/landingBook';
+import { useLanguage } from '@/context/LanguageContext';
+
+const T = {
+  bn: {
+    eyebrow: '১ম প্রফ · Anatomy Viva',
+    preOrderOn: 'প্রি-অর্ডার চলছে',
+    saved: 'সাশ্রয়',
+    preOrder: 'প্রি-অর্ডার করুন',
+    order: 'অর্ডার করুন',
+    viewSample: 'নমুনা দেখুন',
+    viewBook: 'বইটি দেখুন',
+    cod: 'ক্যাশ অন ডেলিভারি',
+    delivery: 'সারা দেশে ডেলিভারি',
+    why: 'কেন এই বইটি',
+    insidePages: 'বইয়ের ভেতরের পাতা',
+    samplePage: 'নমুনা পাতা',
+  },
+  en: {
+    eyebrow: '1st Prof · Anatomy Viva',
+    preOrderOn: 'Pre-order open',
+    saved: 'saved',
+    preOrder: 'Pre-order now',
+    order: 'Order now',
+    viewSample: 'View sample',
+    viewBook: 'Look inside',
+    cod: 'Cash on delivery',
+    delivery: 'Delivered nationwide',
+    why: 'Why this book',
+    insidePages: 'Inside the book',
+    samplePage: 'Sample page',
+  },
+};
 
 /** youtu.be/ID, watch?v=ID and /shorts/ID all have to become an embed URL. */
 function toEmbedUrl(url) {
@@ -55,6 +87,8 @@ export default function LandingHero({
   subheadline,
   checkoutHref,
 }) {
+  const { isBengali } = useLanguage();
+  const L = isBengali ? T.bn : T.en;
   const hasSample = Boolean(book?.previewPdfUrl || book?.previewImages?.length);
   const hasVideo = Boolean(book?.promoVideoUrl);
 
@@ -74,7 +108,7 @@ export default function LandingHero({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
-            ১ম প্রফ · Anatomy Viva{book?.isPreOrder ? ' · প্রি-অর্ডার চলছে' : ''}
+            {L.eyebrow}{book?.isPreOrder ? ` · ${L.preOrderOn}` : ''}
           </span>
 
           <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-foreground text-balance sm:text-4xl lg:text-[3.25rem]">
@@ -103,7 +137,7 @@ export default function LandingHero({
                   <>
                     <span className="text-lg text-muted-foreground line-through">{formatTk(price.price)}</span>
                     <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-sm font-bold text-accent hind-siliguri">
-                      {formatTk(price.saved)} সাশ্রয়
+                      {formatTk(price.saved)} {L.saved}
                     </span>
                   </>
                 )}
@@ -122,7 +156,7 @@ export default function LandingHero({
                 >
                   <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent motion-safe:animate-sheen" />
                   <span className="relative flex items-center gap-2">
-                    {book?.isPreOrder ? 'প্রি-অর্ডার করুন' : 'অর্ডার করুন'}
+                    {book?.isPreOrder ? L.preOrder : L.order}
                     <LuArrowRight className="transition-transform group-hover:translate-x-1" />
                   </span>
                 </Link>
@@ -132,17 +166,17 @@ export default function LandingHero({
                     href="#sample"
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-base font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary hind-siliguri"
                   >
-                    <LuBookOpen /> নমুনা দেখুন
+                    <LuBookOpen /> {L.viewSample}
                   </a>
                 )}
               </div>
 
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground hind-siliguri">
                 <span className="inline-flex items-center gap-1.5">
-                  <LuShieldCheck className="text-accent" /> ক্যাশ অন ডেলিভারি
+                  <LuShieldCheck className="text-accent" /> {L.cod}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <LuTruck className="text-accent" /> সারা দেশে ডেলিভারি
+                  <LuTruck className="text-accent" /> {L.delivery}
                 </span>
               </div>
             </div>
@@ -195,6 +229,8 @@ export default function LandingHero({
  * the cover; the whole thing links to the sample.
  */
 function CoverCard({ book, price, sampleHref }) {
+  const { isBengali } = useLanguage();
+  const L = isBengali ? T.bn : T.en;
   const [failed, setFailed] = useState(false);
   const showCover = Boolean(book?.coverImage) && !failed;
 
@@ -223,7 +259,7 @@ function CoverCard({ book, price, sampleHref }) {
           <>
             <span className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
             <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 pb-3.5 text-sm font-bold text-white hind-siliguri">
-              <LuBookOpen /> বইটি দেখুন
+              <LuBookOpen /> {L.viewBook}
             </span>
           </>
         )}
@@ -235,7 +271,7 @@ function CoverCard({ book, price, sampleHref }) {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
           </span>
-          {price.percent}% ছাড়
+          {price.percent}% {isBengali ? 'ছাড়' : 'off'}
         </span>
       )}
     </div>
@@ -262,6 +298,8 @@ function CoverCard({ book, price, sampleHref }) {
  * so the block reads as an even list.
  */
 function FeaturePanel({ features }) {
+  const { isBengali } = useLanguage();
+  const L = isBengali ? T.bn : T.en;
   if (!features.length) return null;
 
   const ordered = [...features].sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1));
@@ -270,7 +308,7 @@ function FeaturePanel({ features }) {
 
   return (
     <div className="flex flex-1 flex-col rounded-2xl border border-border bg-surface-soft p-4 lg:p-5">
-      <h2 className="font-heading text-base font-bold text-foreground hind-siliguri">কেন এই বইটি</h2>
+      <h2 className="font-heading text-base font-bold text-foreground hind-siliguri">{L.why}</h2>
 
       {lead && (
         <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-coral/30 bg-coral/5 p-3">
@@ -300,6 +338,8 @@ function FeaturePanel({ features }) {
 
 /** Uploaded preview pages, shown when there is no promo video. */
 function PreviewPages({ book }) {
+  const { isBengali } = useLanguage();
+  const L = isBengali ? T.bn : T.en;
   const images = book?.previewImages?.filter(Boolean) || [];
   if (!images.length) {
     return (
@@ -311,14 +351,14 @@ function PreviewPages({ book }) {
 
   return (
     <div className="rounded-2xl border border-border bg-surface-soft p-4">
-      <p className="mb-3 text-sm font-semibold text-foreground hind-siliguri">বইয়ের ভেতরের পাতা</p>
+      <p className="mb-3 text-sm font-semibold text-foreground hind-siliguri">{L.insidePages}</p>
       <div className="grid grid-cols-2 gap-3">
         {images.slice(0, 4).map((src, i) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={src}
             src={src}
-            alt={`${book.title} — নমুনা পাতা ${i + 1}`}
+            alt={`${book.title} — ${L.samplePage} ${i + 1}`}
             loading="lazy"
             className="w-full rounded-lg border border-border object-cover"
           />

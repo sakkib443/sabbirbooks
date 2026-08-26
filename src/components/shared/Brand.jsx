@@ -31,6 +31,11 @@ export function useBrand() {
     settings?.brandName ||
     FALLBACK_NAME;
 
+  // The wordmark is always English, whatever the page language — a brand name
+  // is a name, not a phrase to translate, and the client wants the logo in
+  // English on the Bengali page too.
+  const englishName = settings?.brandName || FALLBACK_NAME;
+
   const tagline =
     (language === 'bn' ? settings?.brandTaglineBn : settings?.brandTagline) ||
     settings?.brandTagline ||
@@ -47,7 +52,7 @@ export function useBrand() {
       .join('')
       .toUpperCase() || 'MV';
 
-  return { name, tagline, initials, logo: settings?.logo || '', language };
+  return { name, englishName, tagline, initials, logo: settings?.logo || '', language };
 }
 
 /** Square mark: the uploaded logo, or a stethoscope tile as the fallback. */
@@ -76,19 +81,22 @@ export function BrandMark({ className = 'h-10 w-10', iconClass = 'text-[22px]' }
 }
 
 /**
- * The name as text. Split on the last space so "Magic Viva" renders with "Viva"
- * in the accent colour — a one-word name simply renders solid.
+ * The wordmark — always English, set in the display face. The first word sits
+ * in the foreground colour and the last word in the medical gradient, so
+ * "Magic Viva" reads as one organised lockup rather than plain text.
  */
 export function Wordmark({ className = 'text-xl' }) {
-  const { name } = useBrand();
-  const parts = String(name).trim().split(/\s+/);
+  const { englishName } = useBrand();
+  const parts = String(englishName).trim().split(/\s+/);
   const last = parts.length > 1 ? parts.pop() : null;
   const first = parts.join(' ');
 
   return (
-    <span className={`${className} font-bold tracking-tight text-foreground`}>
+    <span
+      className={`${className} font-display font-extrabold leading-none tracking-tight text-foreground`}
+    >
       {first}
-      {last && <span className="text-gradient-medical"> {last}</span>}
+      {last && <span className="text-gradient-medical">&nbsp;{last}</span>}
     </span>
   );
 }
