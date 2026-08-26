@@ -74,18 +74,18 @@ export const getAvailability = (input: AvailabilityInput): Availability => {
 /**
  * The mode actually in force, given what the buyer picked.
  *
- * Deliberately mirrors the original one-liner
- *   `codAllowed && payMode === "cod" ? "cod" : "online"`
- * with only the gateway branch added. In particular an unavailable "online"
- * choice still resolves to "online" rather than being quietly rewritten to COD:
- * the buyer sees the "not set up yet — please choose Cash on Delivery" notice and
- * makes that call themselves. Silently moving someone onto a different way of
- * paying is not a thing to do behind their back.
+ * The manual "Send Money" mode ('online') is retired — the hosted gateway
+ * covers the same wallets — so this never resolves to it. A choice whose method
+ * is unavailable falls back to the other real option (gateway ⇆ cod); if
+ * neither is available the UI shows the unavailable notice, and 'cod' is the
+ * harmless placeholder the submit button is gated on anyway.
  */
 export const resolvePayMode = (chosen: PayMode, a: Availability): PayMode => {
-  if (chosen === "cod") return a.cod ? "cod" : a.gateway ? "gateway" : "online";
-  if (chosen === "gateway") return a.gateway ? "gateway" : "online";
-  return "online";
+  if (chosen === "gateway" && a.gateway) return "gateway";
+  if (chosen === "cod" && a.cod) return "cod";
+  if (a.cod) return "cod";
+  if (a.gateway) return "gateway";
+  return "cod";
 };
 
 /**

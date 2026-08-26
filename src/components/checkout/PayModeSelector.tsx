@@ -10,7 +10,7 @@
  * as a footnote.
  */
 
-import { LuBanknote, LuCheck, LuSmartphone, LuZap } from "react-icons/lu";
+import { LuBanknote, LuCheck, LuInfo, LuZap } from "react-icons/lu";
 import { cn } from "@/components/ui";
 import type { PayMode } from "./types";
 
@@ -50,6 +50,11 @@ export function PayModeSelector({
   bn: string;
   S: Labels;
 }) {
+  // Two ways to pay: cash on delivery, or the hosted gateway (bKash / cards /
+  // Nagad, all on SSLCommerz's own secure page). The old manual "Send Money"
+  // option is retired — the gateway covers the same wallets without the buyer
+  // copying a transaction id, and without an admin verifying it by hand.
+  void onlineAllowed;
   const options: {
     id: PayMode;
     title: string;
@@ -58,6 +63,7 @@ export function PayModeSelector({
     enabled: boolean;
     reason?: string;
     badge?: string;
+    info?: string;
   }[] = [
     {
       id: "cod",
@@ -79,16 +85,10 @@ export function PayModeSelector({
             icon: <LuZap className="text-xl" />,
             enabled: true,
             badge: S.gatewayBadge,
+            info: S.gatewayText,
           },
         ]
       : []),
-    {
-      id: "online",
-      title: S.onlineTitle,
-      text: S.onlineText,
-      icon: <LuSmartphone className="text-xl" />,
-      enabled: onlineAllowed,
-    },
   ];
 
   return (
@@ -130,6 +130,15 @@ export function PayModeSelector({
               <span className="min-w-0 flex-1">
                 <span className={cn("flex flex-wrap items-center gap-1.5 font-semibold text-foreground", bn)}>
                   {opt.title}
+                  {opt.info && (
+                    <span
+                      title={opt.info}
+                      className="inline-flex text-muted-foreground/80 transition-colors hover:text-primary"
+                      aria-label={opt.info}
+                    >
+                      <LuInfo className="text-sm" />
+                    </span>
+                  )}
                   {opt.badge && (
                     <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
                       {opt.badge}

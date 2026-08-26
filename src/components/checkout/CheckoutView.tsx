@@ -334,8 +334,9 @@ export default function CheckoutView() {
       if (!o) return;
       setOptions(o);
       // Land on whichever method is actually on, preferring COD — it is what
-      // most buyers here expect, and it needs no wallet setup to work.
-      if (o.codEnabled === false) setPayMode("online");
+      // most buyers here expect, and it needs no wallet setup to work. With COD
+      // off, the hosted gateway is the only way to pay (the manual flow is gone).
+      if (o.codEnabled === false) setPayMode("gateway");
     });
   }, []);
 
@@ -351,10 +352,14 @@ export default function CheckoutView() {
     });
   }, []);
 
-  // A digital book or a course can only be paid for online.
+  // A digital book or a course has no cash-on-delivery — move to the gateway.
+  // Guarded on the book being LOADED: while it is still fetching, `book` is null
+  // and isPrinted reads false, and firing then would flip a printed book's
+  // default off COD before its format even arrives.
   useEffect(() => {
-    if (!isPrinted && payMode === "cod") setPayMode("online");
-  }, [isPrinted, payMode]);
+    const bookStillLoading = isBook && !book;
+    if (!bookStillLoading && !isPrinted && payMode === "cod") setPayMode("gateway");
+  }, [isBook, book, isPrinted, payMode]);
 
   // Prefill the shipping form from what the shop already knows about the buyer.
   //
