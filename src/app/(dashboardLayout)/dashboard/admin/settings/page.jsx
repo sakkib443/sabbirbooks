@@ -482,7 +482,7 @@ const SiteSettingsTab = ({ showToast }) => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-dash-ink3 mb-1"><LuPhone className="inline mr-1" /> Phone Number</label>
-              <input type="text" name="phoneNumber" value={settings.phoneNumber} onChange={handleChange} placeholder="+880 1711-946614" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua focus:border-aqua outline-none text-sm" />
+              <input type="text" name="phoneNumber" value={settings.phoneNumber} onChange={handleChange} placeholder="01799075202" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-aqua focus:border-aqua outline-none text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-dash-ink3 mb-1 flex items-center gap-2">
@@ -491,12 +491,12 @@ const SiteSettingsTab = ({ showToast }) => {
                 </span>
                 WhatsApp Number
               </label>
-              <input type="text" name="whatsappNumber" value={settings.whatsappNumber} onChange={(e) => { const value = e.target.value.replace(/[^0-9]/g, ''); setSettings(prev => ({ ...prev, whatsappNumber: value })); }} placeholder="8801711946614" maxLength={15} className="w-full px-4 py-3 border-2 border-dash-line-soft rounded-xl focus:ring-4 focus:ring-green-50 focus:border-green-400 outline-none text-lg font-mono transition-all" />
+              <input type="text" name="whatsappNumber" value={settings.whatsappNumber} onChange={(e) => { const value = e.target.value.replace(/[^0-9]/g, ''); setSettings(prev => ({ ...prev, whatsappNumber: value })); }} placeholder="8801799075202" maxLength={15} className="w-full px-4 py-3 border-2 border-dash-line-soft rounded-xl focus:ring-4 focus:ring-green-50 focus:border-green-400 outline-none text-lg font-mono transition-all" />
               <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
                 <h4 className="text-sm font-semibold text-dash-ink3 mb-2 flex items-center gap-2"><span>📝</span> সঠিক ফরম্যাট:</h4>
                 <ul className="space-y-1.5 text-xs text-dash-ink4">
-                  <li className="flex items-center gap-2"><span className="text-green-500">✓</span><code className="bg-dash-card px-2 py-0.5 rounded border">8801711946614</code><span className="text-dash-mute2">- Country code সহ, শুধু সংখ্যা</span></li>
-                  <li className="flex items-center gap-2"><span className="text-red-500">✗</span><code className="bg-red-50 px-2 py-0.5 rounded border border-red-200 line-through">+8801711946614</code><span className="text-dash-mute2">- প্লাস চিহ্ন দেবেন না</span></li>
+                  <li className="flex items-center gap-2"><span className="text-green-500">✓</span><code className="bg-dash-card px-2 py-0.5 rounded border">8801799075202</code><span className="text-dash-mute2">- Country code সহ, শুধু সংখ্যা</span></li>
+                  <li className="flex items-center gap-2"><span className="text-red-500">✗</span><code className="bg-red-50 px-2 py-0.5 rounded border border-red-200 line-through">+8801799075202</code><span className="text-dash-mute2">- প্লাস চিহ্ন দেবেন না</span></li>
                   <li className="flex items-center gap-2"><span className="text-red-500">✗</span><code className="bg-red-50 px-2 py-0.5 rounded border border-red-200 line-through">880-132-123-1802</code><span className="text-dash-mute2">- ড্যাশ বা স্পেস দেবেন না</span></li>
                 </ul>
                 <div className="mt-3 pt-3 border-t border-green-200 flex items-center justify-between">

@@ -137,7 +137,7 @@ export default function ContactContentPage() {
         <Card title="Contact Info cards">
           <div className="grid md:grid-cols-2 gap-4">
             <Field label="Email" value={c.info.email} onChange={v => set('info', 'email', v)} placeholder="info@aptechlearning.com" />
-            <Field label="Phone" value={c.info.phone} onChange={v => set('info', 'phone', v)} placeholder="+880 1611-661666" />
+            <Field label="Phone" value={c.info.phone} onChange={v => set('info', 'phone', v)} placeholder="01799075202" />
             <Field label="Visit / locations text" value={c.info.visitText} onChange={v => set('info', 'visitText', v)} placeholder="Narsingdi · Bhairab · Brahmanbaria" />
             <Field label="Visit / locations text" value={c.info.visitTextBn} onChange={v => set('info', 'visitTextBn', v)} bn />
             <Field label="Office hours" value={c.info.officeHours} onChange={v => set('info', 'officeHours', v)} placeholder="Sat–Thu, 9AM–8PM" />
@@ -199,7 +199,7 @@ export default function ContactContentPage() {
               <Field label="Facebook URL" value={c.social.facebook} onChange={v => set('social', 'facebook', v)} placeholder="https://facebook.com/..." />
               <Field label="YouTube URL" value={c.social.youtube} onChange={v => set('social', 'youtube', v)} placeholder="https://youtube.com/..." />
               <Field label="LinkedIn URL" value={c.social.linkedin} onChange={v => set('social', 'linkedin', v)} placeholder="https://linkedin.com/..." />
-              <Field label="WhatsApp number (digits only)" value={c.social.whatsapp} onChange={v => set('social', 'whatsapp', v)} placeholder="8801611661666" />
+              <Field label="WhatsApp number (digits only)" value={c.social.whatsapp} onChange={v => set('social', 'whatsapp', v)} placeholder="8801799075202" />
             </div>
           </Card>
           <Card title="Section texts">

@@ -43,7 +43,7 @@ export default function UserSupportPage() {
         {
             icon: FiPhone,
             title: 'Phone Support',
-            value: '+880 1711-946614',
+            value: '01799075202',
             subtext: 'Mon-Fri, 9AM-6PM',
             color: 'text-emerald-600',
             bg: 'bg-emerald-100',

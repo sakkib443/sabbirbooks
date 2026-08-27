@@ -390,7 +390,7 @@ export default function UserPaymentsPage() {
                 <p className="text-[11px] text-dash-mute leading-relaxed">
                   নিচের যেকোনো নম্বরে “Send Money” করুন, তারপর তথ্য দিন:
                 </p>
-                <p className="text-sm font-bold text-dash-ink3 font-mono mt-1">01711-946614 <span className="text-[10px] font-normal text-dash-mute2">(bKash / Nagad / Rocket)</span></p>
+                <p className="text-sm font-bold text-dash-ink3 font-mono mt-1">01799075202 <span className="text-[10px] font-normal text-dash-mute2">(bKash / Nagad / Rocket)</span></p>
               </div>
 
               {/* Amount */}
