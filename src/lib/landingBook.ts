@@ -144,13 +144,21 @@ export function landingPrice(book: LandingBook | null) {
     payable: bp.headlinePayable,
     saved: bp.headlineSaved,
     percent: bp.percent,
-    // The active headline offer, for the badge/eyebrow copy.
+    // The active headline offer, for the badge/eyebrow copy. `kind` says whether to
+    // render it as a percent or a "৳N off" amount.
     label: bp.headline.label,
     mode: bp.headline.mode,
+    kind: bp.headline.kind,
+    amount: bp.headline.amount,
     isPreOrder: bp.isPreOrder,
     // The online-payment offer, so the CTA can nudge "pay online, save more".
     online: bp.offers.online.enabled
-      ? { label: bp.offers.online.label, percent: bp.offers.online.percent }
+      ? {
+          label: bp.offers.online.label,
+          kind: bp.offers.online.type,
+          percent: bp.offers.online.percent,
+          amount: bp.offers.online.amount,
+        }
       : null,
   };
 }

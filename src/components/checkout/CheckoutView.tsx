@@ -67,6 +67,7 @@ import {
   SuccessResult,
   effectiveCoursePrice,
   formatReleaseDate,
+  formatTk,
 } from "./types";
 import { upazilasOf } from "./bdGeoData";
 import { priceBook, resolveOffers } from "@/lib/bookOffers";
@@ -157,7 +158,12 @@ export default function CheckoutView() {
   // still shows the pre-order UI and skips the stock gate.
   const bookOffers = useMemo(() => (isBook && book ? resolveOffers(book) : null), [isBook, book]);
   const isPreOrder = !!bookOffers?.preorder.enabled;
-  const preOrderPct = bookOffers?.preorder.percent ?? 0;
+  // The pre-order discount as shown on the badge — a percent or a fixed ৳ amount.
+  const preOrderDisc = bookOffers?.preorder
+    ? bookOffers.preorder.type === "fixed"
+      ? formatTk(bookOffers.preorder.amount)
+      : `${bookOffers.preorder.percent}%`
+    : "";
   const preOrderReleaseDate = formatReleaseDate(book?.expectedReleaseDate, isBengali);
   const outOfStock = isPrinted && !isPreOrder && stock <= 0;
   const maxQty = isPreOrder ? PREORDER_MAX_QTY : Math.max(1, stock);
@@ -716,7 +722,7 @@ export default function CheckoutView() {
                   </span>
                   <div className="min-w-0">
                     <p className={cn("font-heading text-base font-bold text-coral", bn)}>
-                      {S.preOrderBadge(preOrderPct)}
+                      {S.preOrderBadge(preOrderDisc)}
                     </p>
                     <p className={cn("mt-1 text-sm text-foreground", bn)}>
                       {book?.preOrderNote?.trim() || S.preOrderFallback}
@@ -1186,7 +1192,7 @@ const EN = {
   outOfStockTitle: "Out of stock",
   outOfStockText: "This printed book is currently unavailable. Please check back later.",
   // pre-order
-  preOrderBadge: (pct: number) => `Pre-order · ${pct}% off`,
+  preOrderBadge: (disc: string) => `Pre-order · ${disc} off`,
   preOrderFallback: "This book is not printed yet. Order now at the pre-order price.",
   preOrderShipOn: (d: string) => `Delivery starts ${d}`,
   preOrderQtyNote: "Not printed yet — reserved for you",
@@ -1401,7 +1407,7 @@ const BN: Copy = {
   inStock: (n: number) => `স্টকে ${n} টি আছে`,
   outOfStockTitle: "স্টকে নেই",
   outOfStockText: "এই প্রিন্টেড বইটি এই মুহূর্তে অনুপলব্ধ। পরে আবার দেখুন।",
-  preOrderBadge: (pct: number) => `প্রি-অর্ডার · ${pct}% ছাড়`,
+  preOrderBadge: (disc: string) => `প্রি-অর্ডার · ${disc} ছাড়`,
   preOrderFallback: "বইটি এখনো ছাপা হয়নি। প্রি-অর্ডার দামে এখনই অর্ডার করুন।",
   preOrderShipOn: (d: string) => `${d} থেকে ডেলিভারি শুরু`,
   preOrderQtyNote: "এখনো ছাপা হয়নি — আপনার জন্য রাখা থাকবে",

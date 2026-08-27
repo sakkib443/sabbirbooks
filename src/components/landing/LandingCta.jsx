@@ -21,7 +21,7 @@ const T = {
     cod: 'ক্যাশ অন ডেলিভারি',
     delivery: 'সারা দেশে পৌঁছে যাবে',
     offNames: { preorder: 'প্রি-অর্ডার অফার', normal: 'ছাড়' },
-    onlineExtra: (pct) => `অনলাইনে পেমেন্ট করলে আরও ${pct}% ছাড়`,
+    onlineExtra: (v) => `অনলাইনে পেমেন্ট করলে আরও ${v} ছাড়`,
   },
   en: {
     headingPre: 'Pre-order your copy now',
@@ -32,9 +32,13 @@ const T = {
     cod: 'Cash on delivery',
     delivery: 'Delivered nationwide',
     offNames: { preorder: 'Pre-order offer', normal: 'Discount' },
-    onlineExtra: (pct) => `${pct}% more off when you pay online`,
+    onlineExtra: (v) => `${v} more off when you pay online`,
   },
 };
+
+// "25%" for a percentage offer, "৳150" for a fixed one.
+const discText = (kind, percent, amount) =>
+  kind === 'fixed' ? formatTk(amount) : `${percent}%`;
 
 export default function LandingCta({ book, price, checkoutHref, supportPhone, deliveryNote }) {
   const { isBengali } = useLanguage();
@@ -54,14 +58,14 @@ export default function LandingCta({ book, price, checkoutHref, supportPhone, de
           {isPreOrder ? L.headingPre : L.heading}
         </h2>
 
-        {price.percent > 0 && (
+        {price.saved > 0 && (
           <p className={`mt-3 text-muted-foreground ${bn}`}>
             {offerName && (
               <span className="mr-2 inline-flex items-center rounded-full bg-coral/10 px-2.5 py-0.5 text-xs font-bold text-coral align-middle">
                 {offerName}
               </span>
             )}
-            <span className="font-bold text-coral">{price.percent}% {L.off}</span>{' '}
+            <span className="font-bold text-coral">{discText(price.kind, price.percent, price.amount)} {L.off}</span>{' '}
             <span className="font-bold text-foreground">{formatTk(price.payable)}</span>{' '}
             <span className="line-through">{formatTk(price.price)}</span>
           </p>
@@ -69,7 +73,7 @@ export default function LandingCta({ book, price, checkoutHref, supportPhone, de
 
         {price?.online && (
           <p className={`mt-1.5 text-sm font-semibold text-accent ${bn}`}>
-            {L.onlineExtra(price.online.percent)}
+            {L.onlineExtra(discText(price.online.kind, price.online.percent, price.online.amount))}
           </p>
         )}
 

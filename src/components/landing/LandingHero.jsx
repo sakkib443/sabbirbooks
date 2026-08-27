@@ -42,8 +42,8 @@ const T = {
     why: 'কেন এই বইটি',
     insidePages: 'বইয়ের ভেতরের পাতা',
     samplePage: 'নমুনা পাতা',
-    offerOn: (pct) => `${pct}% ছাড় চলছে`,
-    onlineExtra: (pct) => `অনলাইনে পেমেন্ট করলে আরও ${pct}% ছাড়`,
+    offerOn: (v) => `${v} ছাড় চলছে`,
+    onlineExtra: (v) => `অনলাইনে পেমেন্ট করলে আরও ${v} ছাড়`,
   },
   en: {
     eyebrow: '1st Prof · Anatomy Viva',
@@ -58,10 +58,14 @@ const T = {
     why: 'Why this book',
     insidePages: 'Inside the book',
     samplePage: 'Sample page',
-    offerOn: (pct) => `${pct}% off now`,
-    onlineExtra: (pct) => `${pct}% more off when you pay online`,
+    offerOn: (v) => `${v} off now`,
+    onlineExtra: (v) => `${v} more off when you pay online`,
   },
 };
+
+// "25%" for a percentage offer, "৳150" for a fixed one.
+const discText = (kind, percent, amount) =>
+  kind === 'fixed' ? formatTk(amount) : `${percent}%`;
 
 /** youtu.be/ID, watch?v=ID and /shorts/ID all have to become an embed URL. */
 function toEmbedUrl(url) {
@@ -120,7 +124,8 @@ export default function LandingHero({
               // offer. No longer hard-wired to pre-order.
               const chip = price?.isPreOrder
                 ? L.preOrderOn
-                : price?.label || (price?.percent > 0 ? L.offerOn(price.percent) : '');
+                : price?.label ||
+                  (price?.saved > 0 ? L.offerOn(discText(price.kind, price.percent, price.amount)) : '');
               return chip ? ` · ${chip}` : '';
             })()}
           </span>
@@ -159,7 +164,7 @@ export default function LandingHero({
 
               {price?.online && (
                 <p className="mt-2 inline-flex items-center gap-2 rounded-lg bg-accent-soft/60 px-3 py-1.5 text-sm font-semibold text-accent hind-siliguri">
-                  <LuBanknote className="shrink-0" /> {L.onlineExtra(price.online.percent)}
+                  <LuBanknote className="shrink-0" /> {L.onlineExtra(discText(price.online.kind, price.online.percent, price.online.amount))}
                 </p>
               )}
 
@@ -285,13 +290,13 @@ function CoverCard({ book, price, sampleHref }) {
         )}
       </div>
 
-      {price?.percent > 0 && (
+      {price?.saved > 0 && (
         <span className="absolute -right-2 -top-2 z-10 inline-flex items-center gap-1.5 rounded-full bg-coral px-3 py-1.5 text-sm font-bold text-white shadow-lg hind-siliguri">
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
           </span>
-          {price.percent}% {isBengali ? 'ছাড়' : 'off'}
+          {discText(price.kind, price.percent, price.amount)} {isBengali ? 'ছাড়' : 'off'}
         </span>
       )}
     </div>

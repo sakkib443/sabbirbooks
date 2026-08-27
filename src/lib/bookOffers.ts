@@ -16,7 +16,9 @@
 export interface BookOffer {
   enabled?: boolean;
   label?: string;
+  type?: "percent" | "fixed";
   percent?: number;
+  amount?: number;
 }
 
 export interface BookOffers {
@@ -37,7 +39,10 @@ export interface ResolvedOffer {
   enabled: boolean;
   /** The admin's own name for the offer, trimmed; '' when they left it blank. */
   label: string;
+  /** How the cut is measured — a percent of the price, or a flat taka amount. */
+  type: "percent" | "fixed";
   percent: number;
+  amount: number;
 }
 
 export interface ResolvedOffers {
@@ -51,7 +56,13 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 const clampPct = (v: unknown): number => Math.min(90, Math.max(0, Math.round(num(v))));
+const clampMoney = (v: unknown): number => Math.max(0, Math.round(num(v)));
 const trim = (v: unknown): string => (v ?? "").toString().trim();
+const offerType = (v: unknown): "percent" | "fixed" => (v === "fixed" ? "fixed" : "percent");
+
+// The taka an offer takes off a base price — a fixed offer never exceeds the base.
+export const offerDiscount = (base: number, offer: ResolvedOffer): number =>
+  offer.type === "fixed" ? Math.min(offer.amount, Math.max(0, base)) : (base * offer.percent) / 100;
 
 /** True once the admin has configured the offers object on this book. */
 export const hasOffers = (book?: OfferBook | null): boolean => {
@@ -74,19 +85,25 @@ export const resolveOffers = (book?: OfferBook | null): ResolvedOffers => {
     preorder: {
       enabled: o.preorder?.enabled != null ? !!o.preorder.enabled : book?.isPreOrder === true,
       label: trim(o.preorder?.label),
+      type: offerType(o.preorder?.type),
       percent: clampPct(o.preorder?.percent ?? book?.preOrderDiscountPercent ?? 0),
+      amount: clampMoney(o.preorder?.amount),
     },
     normal: {
       enabled: o.normal?.enabled != null ? !!o.normal.enabled : legacyNormal,
       label: trim(o.normal?.label),
+      type: offerType(o.normal?.type),
       percent: clampPct(
         o.normal?.percent ?? (legacyNormal ? ((price - (offerPrice as number)) / price) * 100 : 0)
       ),
+      amount: clampMoney(o.normal?.amount),
     },
     online: {
       enabled: !!o.online?.enabled,
       label: trim(o.online?.label),
+      type: offerType(o.online?.type),
       percent: clampPct(o.online?.percent ?? 0),
+      amount: clampMoney(o.online?.amount),
     },
   };
 };
@@ -97,7 +114,9 @@ export interface BookPrice {
   /** Catalogue unit price — the struck-through "before". */
   list: number;
   offers: ResolvedOffers;
-  headline: { mode: HeadlineMode; label: string; percent: number };
+  // `kind` says whether to show the badge as "N% off" or "৳N off"; `percent` is the
+  // effective rate (works for both) and `amount` the per-copy taka off (for fixed).
+  headline: { mode: HeadlineMode; label: string; kind: "percent" | "fixed" | "none"; percent: number; amount: number };
   isPreOrder: boolean;
   quantity: number;
   // Per-order, rounded once (never per line):
@@ -157,42 +176,54 @@ export const priceBook = (
   const offerPrice = book?.offerPrice != null ? num(book.offerPrice) : null;
 
   // Legacy books keep the exact old pricing and have no online offer — mirrors the
-  // server branch so the page total and the invoice never disagree.
+  // server branch so the page total and the invoice never disagree. Legacy offers
+  // are always percentage-based.
   if (!hasOffers(book)) {
     const base = offerPrice != null && offerPrice > 0 && offerPrice < price ? offerPrice : price;
     if (book?.isPreOrder) {
       const pct = clampPct(book.preOrderDiscountPercent ?? 25);
       const subtotal = Math.round(base * quantity);
       const headlineSaved = Math.round((base * quantity * pct) / 100);
-      return build(base, offers, { mode: "preorder", label: offers.preorder.label, percent: pct }, true, quantity, subtotal, headlineSaved, 0, 0);
+      return build(base, offers, { mode: "preorder", label: offers.preorder.label, kind: "percent", percent: pct, amount: 0 }, true, quantity, subtotal, headlineSaved, 0, 0);
     }
     if (offerPrice != null && offerPrice > 0 && offerPrice < price) {
       const subtotal = Math.round(price * quantity);
       const headlineSaved = Math.round((price - offerPrice) * quantity);
       const pct = Math.round(((price - offerPrice) / price) * 100);
-      return build(price, offers, { mode: "normal", label: offers.normal.label, percent: pct }, false, quantity, subtotal, headlineSaved, 0, 0);
+      return build(price, offers, { mode: "normal", label: offers.normal.label, kind: "percent", percent: pct, amount: 0 }, false, quantity, subtotal, headlineSaved, 0, 0);
     }
     const subtotal = Math.round(price * quantity);
-    return build(price, offers, { mode: "none", label: "", percent: 0 }, false, quantity, subtotal, 0, 0, 0);
+    return build(price, offers, { mode: "none", label: "", kind: "none", percent: 0, amount: 0 }, false, quantity, subtotal, 0, 0, 0);
   }
 
   // New offers engine: a live pre-order is the headline over a normal discount;
-  // the online offer stacks on top of whichever headline is in force. Round each
+  // the online offer stacks on top of whichever headline is in force. Each offer
+  // is a percent or a fixed taka amount (offerDiscount handles both). Round each
   // discount once and split — headlineSaved + onlineSaved is what the server takes.
-  const headline =
-    offers.preorder.enabled
-      ? { mode: "preorder" as const, label: offers.preorder.label, percent: offers.preorder.percent }
-      : offers.normal.enabled
-        ? { mode: "normal" as const, label: offers.normal.label, percent: offers.normal.percent }
-        : { mode: "none" as const, label: "", percent: 0 };
+  const headlineOffer = offers.preorder.enabled
+    ? offers.preorder
+    : offers.normal.enabled
+      ? offers.normal
+      : null;
+  const mode: HeadlineMode = offers.preorder.enabled ? "preorder" : offers.normal.enabled ? "normal" : "none";
 
-  const unit = price * (1 - headline.percent / 100);
-  const onlinePercent = opts.online && offers.online.enabled ? offers.online.percent : 0;
-  const unitOnline = unit * (1 - onlinePercent / 100);
+  const headlineOff = headlineOffer ? offerDiscount(price, headlineOffer) : 0;
+  const unit = price - headlineOff;
+  const onlineOff = opts.online && offers.online.enabled ? offerDiscount(unit, offers.online) : 0;
+  const unitOnline = unit - onlineOff;
 
   const subtotal = Math.round(price * quantity);
   const totalSaved = Math.round((price - unitOnline) * quantity);
-  const headlineSaved = Math.round((price - unit) * quantity);
+  const headlineSaved = Math.round(headlineOff * quantity);
   const onlineSaved = totalSaved - headlineSaved;
+  const onlinePercent = unit > 0 ? Math.round((onlineOff / unit) * 100) : 0;
+
+  const headline = {
+    mode,
+    label: headlineOffer?.label ?? "",
+    kind: (headlineOffer ? headlineOffer.type : "none") as "percent" | "fixed" | "none",
+    percent: price > 0 ? Math.round((headlineOff / price) * 100) : 0,
+    amount: Math.round(headlineOff),
+  };
   return build(price, offers, headline, offers.preorder.enabled, quantity, subtotal, headlineSaved, onlineSaved, onlinePercent);
 };

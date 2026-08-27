@@ -56,9 +56,9 @@ const EMPTY = {
   // price; `preorder` is the headline while the book sells before printing (stock
   // is not checked); `online` is an EXTRA cut for paying online instead of COD.
   offers: {
-    normal: { enabled: false, label: '', percent: '' },
-    preorder: { enabled: false, label: '', percent: '25' },
-    online: { enabled: false, label: '', percent: '' },
+    normal: { enabled: false, label: '', type: 'percent', percent: '', amount: '' },
+    preorder: { enabled: false, label: '', type: 'percent', percent: '25', amount: '' },
+    online: { enabled: false, label: '', type: 'percent', percent: '', amount: '' },
   },
   // Pre-order delivery promise, shown with the pre-order offer.
   preOrderNote: '', expectedReleaseDate: '',
@@ -71,7 +71,9 @@ const EMPTY = {
 const toOfferRow = (o, defPct = '') => ({
   enabled: !!o?.enabled,
   label: o?.label != null ? String(o.label) : '',
+  type: o?.type === 'fixed' ? 'fixed' : 'percent',
   percent: o?.percent != null && o?.percent !== '' ? String(o.percent) : defPct,
+  amount: o?.amount != null && o?.amount !== '' ? String(o.amount) : '',
 });
 const normalizeOffers = (o) => ({
   normal: toOfferRow(o?.normal, ''),
@@ -105,9 +107,10 @@ const Label = ({ icon: Icon, children }) => (
   </label>
 );
 
-// One offer row: an enable toggle with a title + blurb, and — once on — a name and
-// a percent (plus any extra fields passed as children, e.g. the pre-order date).
-const OfferBlock = ({ icon: Icon, title, desc, labelPh, o, onToggle, onLabel, onPercent, error, children }) => (
+// One offer row: an enable toggle with a title + blurb, and — once on — a name, a
+// type (percent or fixed taka) and its value (plus any extra fields passed as
+// children, e.g. the pre-order date).
+const OfferBlock = ({ icon: Icon, title, desc, labelPh, o, onToggle, onLabel, onType, onPercent, onAmount, error, children }) => (
   <div className={`rounded-xl border p-4 transition-colors ${o.enabled ? 'border-brand/40 bg-brand/[0.03]' : 'border-dash-line'}`}>
     <label className="flex items-start gap-3 cursor-pointer">
       <input
@@ -124,26 +127,39 @@ const OfferBlock = ({ icon: Icon, title, desc, labelPh, o, onToggle, onLabel, on
 
     {o.enabled && (
       <div className="mt-4 space-y-4 border-t border-dash-line pt-4">
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-4">
-          <div>
-            <span className="text-xs font-medium text-dash-mute">Offer name</span>
-            <input
-              type="text" value={o.label} onChange={(e) => onLabel(e.target.value)}
-              placeholder={labelPh}
-              className={`${inputCls} mt-1 border-dash-line`}
-            />
+        <div>
+          <span className="text-xs font-medium text-dash-mute">Offer name</span>
+          <input
+            type="text" value={o.label} onChange={(e) => onLabel(e.target.value)}
+            placeholder={labelPh}
+            className={`${inputCls} mt-1 border-dash-line`}
+          />
+        </div>
+        <div>
+          <span className="text-xs font-medium text-dash-mute">Discount</span>
+          <div className="mt-1 flex gap-2">
+            <select
+              value={o.type} onChange={(e) => onType(e.target.value)}
+              className={`${inputCls} w-36 shrink-0 border-dash-line`}
+            >
+              <option value="percent">Percent (%)</option>
+              <option value="fixed">Fixed (৳)</option>
+            </select>
+            {o.type === 'fixed' ? (
+              <input
+                type="number" min="0" value={o.amount}
+                onChange={(e) => onAmount(e.target.value)} placeholder="৳ off, e.g. 100"
+                className={`${inputCls} flex-1 ${error ? 'border-red-400' : 'border-dash-line'}`}
+              />
+            ) : (
+              <input
+                type="number" min="0" max="90" value={o.percent}
+                onChange={(e) => onPercent(e.target.value)} placeholder="% off, e.g. 25"
+                className={`${inputCls} flex-1 ${error ? 'border-red-400' : 'border-dash-line'}`}
+              />
+            )}
           </div>
-          <div>
-            <span className="text-xs font-medium text-dash-mute flex items-center gap-1.5">
-              <FiPercent size={12} /> Discount (%)
-            </span>
-            <input
-              type="number" min="0" max="90" value={o.percent}
-              onChange={(e) => onPercent(e.target.value)} placeholder="0"
-              className={`${inputCls} mt-1 ${error ? 'border-red-400' : 'border-dash-line'}`}
-            />
-            {error && <p className="text-red-500 text-xs mt-1.5">{error}</p>}
-          </div>
+          {error && <p className="text-red-500 text-xs mt-1.5">{error}</p>}
         </div>
         {children}
       </div>
@@ -262,11 +278,16 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
       e.secureFileUrl = 'Secure file must be a valid URL';
     if (form.previewPdfUrl.trim() && !isUrl(form.previewPdfUrl))
       e.previewPdfUrl = 'Preview PDF must be a valid URL';
-    // Each enabled offer's percent must sit in the server's 0–90 range, or the
-    // save comes back a bare "Validation error" naming nothing the admin can fix.
+    // Each enabled offer is validated by its type — a percent in the server's
+    // 0–90 range, or a fixed amount of 0 or more — or the save comes back a bare
+    // "Validation error" naming nothing the admin can fix.
     for (const k of ['normal', 'preorder', 'online']) {
       const o = form.offers[k];
-      if (o.enabled && o.percent !== '') {
+      if (!o.enabled) continue;
+      if (o.type === 'fixed') {
+        if (o.amount !== '' && (!Number.isFinite(Number(o.amount)) || Number(o.amount) < 0))
+          e[`offer_${k}`] = 'Amount must be 0 or more';
+      } else if (o.percent !== '') {
         const pct = Number(o.percent);
         if (!Number.isFinite(pct) || pct < 0 || pct > 90)
           e[`offer_${k}`] = 'Discount must be between 0 and 90';
@@ -304,7 +325,9 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
     const offer = (o) => ({
       enabled: !!o.enabled,
       label: (o.label || '').trim(),
+      type: o.type === 'fixed' ? 'fixed' : 'percent',
       percent: o.percent === '' ? 0 : Number(o.percent) || 0,
+      amount: o.amount === '' ? 0 : Number(o.amount) || 0,
     });
     p.offers = {
       normal: offer(form.offers.normal),
@@ -554,7 +577,9 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 o={form.offers.normal}
                 onToggle={(v) => setOffer('normal', { enabled: v })}
                 onLabel={(v) => setOffer('normal', { label: v })}
+                onType={(v) => setOffer('normal', { type: v })}
                 onPercent={(v) => setOffer('normal', { percent: v })}
+                onAmount={(v) => setOffer('normal', { amount: v })}
                 error={errors.offer_normal}
               />
 
@@ -566,7 +591,9 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 o={form.offers.preorder}
                 onToggle={(v) => setOffer('preorder', { enabled: v })}
                 onLabel={(v) => setOffer('preorder', { label: v })}
+                onType={(v) => setOffer('preorder', { type: v })}
                 onPercent={(v) => setOffer('preorder', { percent: v })}
+                onAmount={(v) => setOffer('preorder', { amount: v })}
                 error={errors.offer_preorder}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -605,7 +632,9 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 o={form.offers.online}
                 onToggle={(v) => setOffer('online', { enabled: v })}
                 onLabel={(v) => setOffer('online', { label: v })}
+                onType={(v) => setOffer('online', { type: v })}
                 onPercent={(v) => setOffer('online', { percent: v })}
+                onAmount={(v) => setOffer('online', { amount: v })}
                 error={errors.offer_online}
               />
             </div>

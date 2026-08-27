@@ -35,11 +35,8 @@ const toFormValues = (b) => ({
   // first save then just persists them as offers, changing nothing the buyer sees.
   offers: (() => {
     const ro = resolveOffers(b);
-    return {
-      normal: { enabled: ro.normal.enabled, label: ro.normal.label, percent: ro.normal.percent },
-      preorder: { enabled: ro.preorder.enabled, label: ro.preorder.label, percent: ro.preorder.percent },
-      online: { enabled: ro.online.enabled, label: ro.online.label, percent: ro.online.percent },
-    };
+    const row = (r) => ({ enabled: r.enabled, label: r.label, type: r.type, percent: r.percent, amount: r.amount });
+    return { normal: row(ro.normal), preorder: row(ro.preorder), online: row(ro.online) };
   })(),
   preOrderNote: b.preOrderNote || '',
   expectedReleaseDate: b.expectedReleaseDate || '',
