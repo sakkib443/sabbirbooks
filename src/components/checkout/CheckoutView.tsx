@@ -65,13 +65,11 @@ import {
   PreOrderInfo,
   ShippingAddress,
   SuccessResult,
-  effectiveBookPrice,
   effectiveCoursePrice,
   formatReleaseDate,
-  preOrderDiscount,
-  preOrderPercent,
 } from "./types";
 import { upazilasOf } from "./bdGeoData";
+import { priceBook, resolveOffers } from "@/lib/bookOffers";
 
 // How many copies of an unprinted book one buyer may pre-order.
 //
@@ -154,8 +152,12 @@ export default function CheckoutView() {
   // state, not a reason to refuse the sale — order.service.ts skips the stock
   // check for these lines. Gating on stock here would make every pre-order
   // unbuyable while the server was perfectly willing to take the order.
-  const isPreOrder = isBook && book?.isPreOrder === true;
-  const preOrderPct = preOrderPercent(book);
+  // Pre-order MODE and its headline percent, resolved through the offers helper so
+  // a book that turns pre-order on via the new offers block (not the legacy flag)
+  // still shows the pre-order UI and skips the stock gate.
+  const bookOffers = useMemo(() => (isBook && book ? resolveOffers(book) : null), [isBook, book]);
+  const isPreOrder = !!bookOffers?.preorder.enabled;
+  const preOrderPct = bookOffers?.preorder.percent ?? 0;
   const preOrderReleaseDate = formatReleaseDate(book?.expectedReleaseDate, isBengali);
   const outOfStock = isPrinted && !isPreOrder && stock <= 0;
   const maxQty = isPreOrder ? PREORDER_MAX_QTY : Math.max(1, stock);
@@ -190,12 +192,40 @@ export default function CheckoutView() {
   // Manual Send-Money details are only asked for on the manual path — unchanged.
   const isManual = needsPayment && effectivePayMode === "online";
 
-  const bookSubtotal = isBook && book ? effectiveBookPrice(book) * quantity : 0;
+  // The one place the client prices a book, through the shared offers helper the
+  // server mirrors. `payingOnline` decides whether the online-payment offer is in
+  // force — so choosing gateway vs COD re-prices the summary in real time. The
+  // server re-computes it all at order time; this only has to agree with it.
+  const payingOnline = needsPayment && effectivePayMode !== "cod";
+  const bp = useMemo(
+    () => (isBook && book ? priceBook(book, { online: payingOnline, quantity }) : null),
+    [isBook, book, payingOnline, quantity]
+  );
+  const bookSubtotal = bp?.subtotal ?? 0;
+  // Total taka off (headline + online). Kept for the delivery-threshold maths;
+  // the summary itemises it with names via discountLines below.
+  const discount = bp?.saved ?? 0;
 
-  // The pre-order discount, computed the way order.service.ts computes it. The
-  // server is still the only authority; this exists so the summary and the
-  // invoice agree, which is the whole reason the summary has a discount row.
-  const discount = isBook && book ? preOrderDiscount(book, quantity) : 0;
+  // Named discount rows for the summary: the headline offer, then the extra
+  // online-payment offer when it applies. A blank admin label falls back to a
+  // language-appropriate default.
+  const discountLines = useMemo(() => {
+    if (!bp) return [] as { label: string; amount: number }[];
+    const out: { label: string; amount: number }[] = [];
+    if (bp.headlineSaved > 0 && bp.headline.mode !== "none") {
+      out.push({
+        label: bp.headline.label || S.sumOfferNames[bp.headline.mode],
+        amount: bp.headlineSaved,
+      });
+    }
+    if (bp.onlineSaved > 0) {
+      out.push({
+        label: bp.offers.online.label || S.sumOfferNames.online,
+        amount: bp.onlineSaved,
+      });
+    }
+    return out;
+  }, [bp, S]);
 
   // ── Shipping form (only enforced for printed books) ───────────────────────
   const shippingSchema = useMemo(
@@ -300,8 +330,9 @@ export default function CheckoutView() {
         setBook(b);
         // Stock only caps the quantity for a book that has been printed. A
         // pre-order's stock is 0 by definition, and clamping to it would pin
-        // every pre-order to a single copy.
-        if (b.format === "printed" && !b.isPreOrder) {
+        // every pre-order to a single copy. Resolve pre-order through the offers
+        // helper so the new offers.preorder toggle counts, not just the legacy flag.
+        if (b.format === "printed" && !resolveOffers(b).preorder.enabled) {
           setQuantity((q) => Math.min(q, Math.max(1, b.stock ?? 1)));
         }
         setPhase("ready");
@@ -899,9 +930,9 @@ export default function CheckoutView() {
                 showDelivery={Boolean(isPrinted && !outOfStock)}
                 deliveryCharge={deliveryCharge}
                 isCod={isCod}
-                discount={discount}
+                unit={bp?.list}
+                discountLines={discountLines}
                 isPreOrder={isPreOrder}
-                preOrderPercent={preOrderPct}
               />
 
               {!outOfStock && (
@@ -1177,6 +1208,8 @@ const EN = {
   sumSave: "You save",
   sumPreOrder: "Pre-order",
   sumPreOrderDiscount: (pct: number) => `Pre-order discount (${pct}%)`,
+  // Default names for the three offers when the admin left a label blank.
+  sumOfferNames: { preorder: "Pre-order offer", normal: "Discount", online: "Online payment discount" },
   sumDuration: (m: number) => `${m} ${m === 1 ? "month" : "months"} programme`,
   // shipping
   shipHeading: "Shipping address",
@@ -1389,6 +1422,7 @@ const BN: Copy = {
   sumSave: "সাশ্রয়",
   sumPreOrder: "প্রি-অর্ডার",
   sumPreOrderDiscount: (pct: number) => `প্রি-অর্ডার ছাড় (${pct}%)`,
+  sumOfferNames: { preorder: "প্রি-অর্ডার অফার", normal: "ছাড়", online: "অনলাইন পেমেন্টে ছাড়" },
   sumDuration: (m: number) => `${m} মাসের প্রোগ্রাম`,
   shipHeading: "ডেলিভারি ঠিকানা",
   shipSubtitle: "আপনার প্রিন্টেড বই কোথায় পৌঁছে দেব?",
@@ -1499,7 +1533,6 @@ function summaryLabels(S: Copy) {
     codNote: S.codConfirmNote,
     duration: S.sumDuration,
     preOrder: S.sumPreOrder,
-    preOrderDiscount: S.sumPreOrderDiscount,
   };
 }
 

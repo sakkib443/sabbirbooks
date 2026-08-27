@@ -30,7 +30,6 @@ interface Labels {
   codNote: string;
   duration: (m: number) => string;
   preOrder: string;
-  preOrderDiscount: (pct: number) => string;
 }
 
 export function OrderSummary({
@@ -43,9 +42,9 @@ export function OrderSummary({
   deliveryCharge = 0,
   showDelivery = false,
   isCod = false,
-  discount = 0,
+  unit: unitOverride,
+  discountLines,
   isPreOrder = false,
-  preOrderPercent = 0,
 }: {
   type: CheckoutType;
   course?: CheckoutCourse | null;
@@ -57,12 +56,14 @@ export function OrderSummary({
   deliveryCharge?: number;
   showDelivery?: boolean;
   isCod?: boolean;
-  // Pre-order discount in taka, computed by the caller with the same rule the
-  // server uses. Passed in rather than derived here so there is exactly one
-  // place in the client that decides what the buyer is charged.
-  discount?: number;
+  // The catalogue unit price for a book (before offers). Passed so the subtotal
+  // is the list price and every discount shows as its own named row below —
+  // there is exactly one place in the client (CheckoutView) that prices a book.
+  unit?: number;
+  // Named offer rows — the headline offer, then the online-payment offer when it
+  // applies. Each already in taka for the current quantity.
+  discountLines?: { label: string; amount: number }[];
   isPreOrder?: boolean;
-  preOrderPercent?: number;
 }) {
   // Derive the line item + pricing for whichever product type we're buying.
   const isCourse = type === "course" && !!course;
@@ -75,24 +76,28 @@ export function OrderSummary({
   const unit = isCourse
     ? effectiveCoursePrice(course!)
     : isBook
-      ? effectiveBookPrice(book!)
+      ? unitOverride ?? effectiveBookPrice(book!)
       : 0;
   const original = isCourse
     ? toNumber(course!.fee)
     : isBook
       ? toNumber(book!.price)
       : 0;
-  const hasDiscount = original > unit && unit > 0;
+  // A course discount still shows as a struck price; a book's discounts are
+  // itemised as named offer rows below, so its unit stays the catalogue price.
+  const hasDiscount = isCourse && original > unit && unit > 0;
   const qty = isBook ? quantity : 1;
   const subtotal = unit * qty;
   const isFree = unit <= 0;
+  const lines = discountLines ?? [];
+  const discountTotal = lines.reduce((sum, l) => sum + l.amount, 0);
   // Same order of operations as the server: delivery is added to the ALREADY
   // discounted subtotal. Getting this wrong is how a page total comes to
   // disagree with the invoice.
-  const total = subtotal - discount + (showDelivery ? deliveryCharge : 0);
+  const total = subtotal - discountTotal + (showDelivery ? deliveryCharge : 0);
   // A discount needs the subtotal spelled out above it, or "−৳275" hangs off
   // nothing and the arithmetic cannot be followed.
-  const showBreakdown = showDelivery || discount > 0;
+  const showBreakdown = showDelivery || discountTotal > 0;
 
   const preOrderBadge = isPreOrder ? (
     <Badge variant="coral" className={bn}>
@@ -189,12 +194,12 @@ export function OrderSummary({
           </div>
         )}
 
-        {discount > 0 && (
-          <div className="flex items-center justify-between">
-            <dt className={cn("text-accent", bn)}>{S.preOrderDiscount(preOrderPercent)}</dt>
-            <dd className="font-semibold text-accent">−{formatTk(discount)}</dd>
+        {lines.map((line, i) => (
+          <div key={`${line.label}-${i}`} className="flex items-center justify-between">
+            <dt className={cn("text-accent", bn)}>{line.label}</dt>
+            <dd className="font-semibold text-accent">−{formatTk(line.amount)}</dd>
           </div>
-        )}
+        ))}
 
         {showDelivery && (
           <div className="flex items-center justify-between">

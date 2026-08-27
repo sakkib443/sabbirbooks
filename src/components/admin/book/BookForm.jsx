@@ -52,12 +52,32 @@ const EMPTY = {
   stock: '', secureFileUrl: '',
   previewImages: [], previewPdfUrl: '',
   status: 'published', isFeatured: false,
-  // Pre-order — the book can be bought before the print run exists.
-  isPreOrder: false, preOrderDiscountPercent: 25, preOrderNote: '',
-  expectedReleaseDate: '',
+  // Offers — three named percentage discounts. `normal` is the everyday headline
+  // price; `preorder` is the headline while the book sells before printing (stock
+  // is not checked); `online` is an EXTRA cut for paying online instead of COD.
+  offers: {
+    normal: { enabled: false, label: '', percent: '' },
+    preorder: { enabled: false, label: '', percent: '25' },
+    online: { enabled: false, label: '', percent: '' },
+  },
+  // Pre-order delivery promise, shown with the pre-order offer.
+  preOrderNote: '', expectedReleaseDate: '',
   // Landing-page content.
   promoVideoUrl: '', features: [],
 };
+
+// Normalise an offers object off the API (or a blank one) into the form's shape:
+// every percent a string for the controlled number input, all three keys present.
+const toOfferRow = (o, defPct = '') => ({
+  enabled: !!o?.enabled,
+  label: o?.label != null ? String(o.label) : '',
+  percent: o?.percent != null && o?.percent !== '' ? String(o.percent) : defPct,
+});
+const normalizeOffers = (o) => ({
+  normal: toOfferRow(o?.normal, ''),
+  preorder: toOfferRow(o?.preorder, '25'),
+  online: toOfferRow(o?.online, ''),
+});
 
 // The server stores expectedReleaseDate as a Date and hands it back as a full
 // ISO string; <input type="date"> only accepts YYYY-MM-DD and silently shows
@@ -85,6 +105,52 @@ const Label = ({ icon: Icon, children }) => (
   </label>
 );
 
+// One offer row: an enable toggle with a title + blurb, and — once on — a name and
+// a percent (plus any extra fields passed as children, e.g. the pre-order date).
+const OfferBlock = ({ icon: Icon, title, desc, labelPh, o, onToggle, onLabel, onPercent, error, children }) => (
+  <div className={`rounded-xl border p-4 transition-colors ${o.enabled ? 'border-brand/40 bg-brand/[0.03]' : 'border-dash-line'}`}>
+    <label className="flex items-start gap-3 cursor-pointer">
+      <input
+        type="checkbox" checked={o.enabled} onChange={(e) => onToggle(e.target.checked)}
+        className="mt-0.5 w-5 h-5 rounded border-dash-line-strong text-brand focus:ring-brand"
+      />
+      <span className="min-w-0">
+        <span className="flex items-center gap-2 text-sm font-bold text-dash-ink3">
+          {Icon && <Icon className="text-brand" />} {title}
+        </span>
+        <span className="block text-[11px] text-dash-mute2 mt-0.5">{desc}</span>
+      </span>
+    </label>
+
+    {o.enabled && (
+      <div className="mt-4 space-y-4 border-t border-dash-line pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-4">
+          <div>
+            <span className="text-xs font-medium text-dash-mute">Offer name</span>
+            <input
+              type="text" value={o.label} onChange={(e) => onLabel(e.target.value)}
+              placeholder={labelPh}
+              className={`${inputCls} mt-1 border-dash-line`}
+            />
+          </div>
+          <div>
+            <span className="text-xs font-medium text-dash-mute flex items-center gap-1.5">
+              <FiPercent size={12} /> Discount (%)
+            </span>
+            <input
+              type="number" min="0" max="90" value={o.percent}
+              onChange={(e) => onPercent(e.target.value)} placeholder="0"
+              className={`${inputCls} mt-1 ${error ? 'border-red-400' : 'border-dash-line'}`}
+            />
+            {error && <p className="text-red-500 text-xs mt-1.5">{error}</p>}
+          </div>
+        </div>
+        {children}
+      </div>
+    )}
+  </div>
+);
+
 export default function BookForm({ mode = 'create', bookId, initialValues }) {
   const router = useRouter();
   const { showToast, toastNode } = useToast();
@@ -97,6 +163,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
       ...seed,
       expectedReleaseDate: toDateInput(seed.expectedReleaseDate),
       features: Array.isArray(seed.features) ? seed.features.map(toFeatureRow) : [],
+      offers: normalizeOffers(seed.offers),
     };
   });
   const [slugTouched, setSlugTouched] = useState(mode === 'edit');
@@ -110,6 +177,12 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
   const set = (name, value) => {
     setForm((p) => ({ ...p, [name]: value }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
+  };
+
+  // Patch one offer (normal / preorder / online) without disturbing the others.
+  const setOffer = (kind, patch) => {
+    setForm((p) => ({ ...p, offers: { ...p.offers, [kind]: { ...p.offers[kind], ...patch } } }));
+    if (errors[`offer_${kind}`]) setErrors((p) => ({ ...p, [`offer_${kind}`]: '' }));
   };
 
   const handleChange = (e) => {
@@ -185,20 +258,19 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
     if (form.coverImage.trim() && !isUrl(form.coverImage))
       e.coverImage = 'Cover image must be a valid URL';
     if (form.price !== '' && Number(form.price) < 0) e.price = 'Price must be 0 or more';
-    if (form.offerPrice !== '' && Number(form.offerPrice) < 0)
-      e.offerPrice = 'Offer price must be 0 or more';
-    if (form.offerPrice !== '' && form.price !== '' && Number(form.offerPrice) >= Number(form.price))
-      e.offerPrice = 'Offer price should be lower than price';
     if (form.secureFileUrl.trim() && !isUrl(form.secureFileUrl))
       e.secureFileUrl = 'Secure file must be a valid URL';
     if (form.previewPdfUrl.trim() && !isUrl(form.previewPdfUrl))
       e.previewPdfUrl = 'Preview PDF must be a valid URL';
-    // Mirrors the server's zod range. Without it a 95 comes back as a bare
-    // "Validation error" naming nothing the admin can act on.
-    if (form.preOrderDiscountPercent !== '') {
-      const pct = Number(form.preOrderDiscountPercent);
-      if (!Number.isFinite(pct) || pct < 0 || pct > 90)
-        e.preOrderDiscountPercent = 'Discount must be between 0 and 90';
+    // Each enabled offer's percent must sit in the server's 0–90 range, or the
+    // save comes back a bare "Validation error" naming nothing the admin can fix.
+    for (const k of ['normal', 'preorder', 'online']) {
+      const o = form.offers[k];
+      if (o.enabled && o.percent !== '') {
+        const pct = Number(o.percent);
+        if (!Number.isFinite(pct) || pct < 0 || pct > 90)
+          e[`offer_${k}`] = 'Discount must be between 0 and 90';
+      }
     }
 
     setErrors(e);
@@ -224,15 +296,27 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
     // Auto-slug is handled server-side when blank; send it only when present.
     const slug = form.slug.trim();
     if (slug) p.slug = slug;
-    if (form.offerPrice !== '') p.offerPrice = Number(form.offerPrice);
     if (form.previewPdfUrl.trim()) p.previewPdfUrl = form.previewPdfUrl.trim();
 
-    // Pre-order + landing-page content. Sent unconditionally, including when
-    // the toggle is OFF: omitting them on false would make the toggle one-way,
-    // and an admin who turned a pre-order off would find it still on.
-    p.isPreOrder = !!form.isPreOrder;
-    p.preOrderDiscountPercent =
-      form.preOrderDiscountPercent === '' ? 25 : Number(form.preOrderDiscountPercent) || 0;
+    // Offers — sent whole (all three, enabled or not) so turning one off actually
+    // turns it off. A blank percent is 0; a blank name is stored empty and the
+    // storefront falls back to a default label.
+    const offer = (o) => ({
+      enabled: !!o.enabled,
+      label: (o.label || '').trim(),
+      percent: o.percent === '' ? 0 : Number(o.percent) || 0,
+    });
+    p.offers = {
+      normal: offer(form.offers.normal),
+      preorder: offer(form.offers.preorder),
+      online: offer(form.offers.online),
+    };
+
+    // Keep the legacy flags in lock-step with the pre-order offer, because plenty
+    // of code (order alerts, the buyer's checkout UI, old reports) still reads
+    // them. Sent unconditionally so turning the offer off is not one-way.
+    p.isPreOrder = p.offers.preorder.enabled;
+    p.preOrderDiscountPercent = p.offers.preorder.percent || 25;
     p.preOrderNote = form.preOrderNote.trim();
     // null rather than '': the field is a Date server-side, and null is what the
     // validation accepts as "clear it".
@@ -378,26 +462,18 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
 
           {/* Pricing */}
           <Card>
-            <Label icon={FiDollarSign}>Pricing</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <span className="text-xs font-medium text-dash-mute">Price (৳)</span>
-                <input
-                  type="number" name="price" min="0" value={form.price} onChange={handleChange}
-                  placeholder="0"
-                  className={`${inputCls} mt-1 ${errors.price ? 'border-red-400' : 'border-dash-line'}`}
-                />
-                {err('price')}
-              </div>
-              <div>
-                <span className="text-xs font-medium text-dash-mute">Offer Price (৳)</span>
-                <input
-                  type="number" name="offerPrice" min="0" value={form.offerPrice} onChange={handleChange}
-                  placeholder="Optional discounted price"
-                  className={`${inputCls} mt-1 ${errors.offerPrice ? 'border-red-400' : 'border-dash-line'}`}
-                />
-                {err('offerPrice')}
-              </div>
+            <Label icon={FiDollarSign}>Price</Label>
+            <div>
+              <span className="text-xs font-medium text-dash-mute">Catalogue price (৳)</span>
+              <input
+                type="number" name="price" min="0" value={form.price} onChange={handleChange}
+                placeholder="0"
+                className={`${inputCls} mt-1 ${errors.price ? 'border-red-400' : 'border-dash-line'}`}
+              />
+              {err('price')}
+              <p className="text-[11px] text-dash-mute2 mt-1.5">
+                The full price. Set any discounts as a percentage in <b>Offers</b> below.
+              </p>
             </div>
           </Card>
 
@@ -460,42 +536,40 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
             )}
           </Card>
 
-          {/* Pre-order — bought before the print run exists */}
+          {/* Offers — three named percentage discounts */}
           <Card>
-            <Label icon={FiClock}>Pre-order</Label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox" name="isPreOrder" checked={form.isPreOrder} onChange={handleChange}
-                className="mt-0.5 w-5 h-5 rounded border-dash-line-strong text-brand focus:ring-brand"
-              />
-              <span>
-                <span className="text-sm font-medium text-dash-ink3">Sell this book as a pre-order</span>
-                <span className="block text-[11px] text-dash-mute2 mt-0.5">
-                  Buyers can order before it is printed. Stock is not checked for a
-                  pre-order, so a book with 0 copies still sells.
-                </span>
-              </span>
-            </label>
+            <Label icon={FiTag}>Offers &amp; discounts</Label>
+            <p className="text-[11px] text-dash-mute2 -mt-1.5 mb-3">
+              Turn on any of these and give each its own name and percentage. The server
+              applies them at checkout, so a buyer can never change the price. On the
+              homepage the active offer’s name and price are shown on the order button.
+            </p>
 
-            {form.isPreOrder && (
-              <div className="mt-4 space-y-4 border-t border-dash-line pt-4">
+            <div className="space-y-3">
+              <OfferBlock
+                icon={FiPercent}
+                title="Normal discount"
+                desc="An everyday discount — shown on the homepage and at checkout for everyone."
+                labelPh="Offer name, e.g. ঈদ অফার"
+                o={form.offers.normal}
+                onToggle={(v) => setOffer('normal', { enabled: v })}
+                onLabel={(v) => setOffer('normal', { label: v })}
+                onPercent={(v) => setOffer('normal', { percent: v })}
+                error={errors.offer_normal}
+              />
+
+              <OfferBlock
+                icon={FiClock}
+                title="Pre-order offer"
+                desc="Sold before it is printed — stock is not checked, and this becomes the headline price."
+                labelPh="Offer name, e.g. প্রি-অর্ডার অফার"
+                o={form.offers.preorder}
+                onToggle={(v) => setOffer('preorder', { enabled: v })}
+                onLabel={(v) => setOffer('preorder', { label: v })}
+                onPercent={(v) => setOffer('preorder', { percent: v })}
+                error={errors.offer_preorder}
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-xs font-medium text-dash-mute flex items-center gap-1.5">
-                      <FiPercent size={12} /> Pre-order discount (%)
-                    </span>
-                    <input
-                      type="number" name="preOrderDiscountPercent" min="0" max="90"
-                      value={form.preOrderDiscountPercent} onChange={handleChange}
-                      placeholder="25"
-                      className={`${inputCls} mt-1 ${errors.preOrderDiscountPercent ? 'border-red-400' : 'border-dash-line'}`}
-                    />
-                    <p className="text-[11px] text-dash-mute2 mt-1">
-                      Taken off the price at checkout. The server applies it — the buyer
-                      cannot change it.
-                    </p>
-                    {err('preOrderDiscountPercent')}
-                  </div>
                   <div>
                     <span className="text-xs font-medium text-dash-mute flex items-center gap-1.5">
                       <FiCalendar size={12} /> Expected release date
@@ -506,26 +580,35 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                       className={`${inputCls} mt-1 border-dash-line`}
                     />
                     <p className="text-[11px] text-dash-mute2 mt-1">
-                      Shown on checkout and on the confirmation screen. Leave blank if you
-                      do not want to promise a date yet.
+                      Shown on checkout and the confirmation. Leave blank to promise no date yet.
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-dash-mute">Pre-order note</span>
+                    <input
+                      type="text" name="preOrderNote" value={form.preOrderNote} onChange={handleChange}
+                      placeholder="১৫ সেপ্টেম্বর থেকে ডেলিভারি শুরু"
+                      className={`${inputCls} mt-1 border-dash-line`}
+                    />
+                    <p className="text-[11px] text-dash-mute2 mt-1">
+                      Your own words about delivery, shown to the buyer.
                     </p>
                   </div>
                 </div>
+              </OfferBlock>
 
-                <div>
-                  <span className="text-xs font-medium text-dash-mute">Pre-order note</span>
-                  <input
-                    type="text" name="preOrderNote" value={form.preOrderNote} onChange={handleChange}
-                    placeholder="১৫ সেপ্টেম্বর থেকে ডেলিভারি শুরু"
-                    className={`${inputCls} mt-1 border-dash-line`}
-                  />
-                  <p className="text-[11px] text-dash-mute2 mt-1">
-                    Your own words about delivery. Shown to the buyer instead of the
-                    generic line.
-                  </p>
-                </div>
-              </div>
-            )}
+              <OfferBlock
+                icon={FiZap}
+                title="Online / instant-payment offer"
+                desc="Extra off when the buyer pays online instead of cash on delivery. Stacks on the offer above."
+                labelPh="Offer name, e.g. আগে পেমেন্টে ছাড়"
+                o={form.offers.online}
+                onToggle={(v) => setOffer('online', { enabled: v })}
+                onLabel={(v) => setOffer('online', { label: v })}
+                onPercent={(v) => setOffer('online', { percent: v })}
+                error={errors.offer_online}
+              />
+            </div>
           </Card>
 
           {/* Landing-page content */}

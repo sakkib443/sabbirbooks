@@ -17,6 +17,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   LuArrowRight,
+  LuBanknote,
   LuBookOpen,
   LuCheck,
   LuPlay,
@@ -41,6 +42,8 @@ const T = {
     why: 'কেন এই বইটি',
     insidePages: 'বইয়ের ভেতরের পাতা',
     samplePage: 'নমুনা পাতা',
+    offerOn: (pct) => `${pct}% ছাড় চলছে`,
+    onlineExtra: (pct) => `অনলাইনে পেমেন্ট করলে আরও ${pct}% ছাড়`,
   },
   en: {
     eyebrow: '1st Prof · Anatomy Viva',
@@ -55,6 +58,8 @@ const T = {
     why: 'Why this book',
     insidePages: 'Inside the book',
     samplePage: 'Sample page',
+    offerOn: (pct) => `${pct}% off now`,
+    onlineExtra: (pct) => `${pct}% more off when you pay online`,
   },
 };
 
@@ -108,7 +113,16 @@ export default function LandingHero({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
-            {L.eyebrow}{book?.isPreOrder ? ` · ${L.preOrderOn}` : ''}
+            {L.eyebrow}
+            {(() => {
+              // The active offer, shown after the eyebrow — the pre-order badge, a
+              // named campaign, or a plain "N% off now"; nothing when there is no
+              // offer. No longer hard-wired to pre-order.
+              const chip = price?.isPreOrder
+                ? L.preOrderOn
+                : price?.label || (price?.percent > 0 ? L.offerOn(price.percent) : '');
+              return chip ? ` · ${chip}` : '';
+            })()}
           </span>
 
           <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-foreground text-balance sm:text-4xl lg:text-[3.25rem]">
@@ -143,6 +157,12 @@ export default function LandingHero({
                 )}
               </div>
 
+              {price?.online && (
+                <p className="mt-2 inline-flex items-center gap-2 rounded-lg bg-accent-soft/60 px-3 py-1.5 text-sm font-semibold text-accent hind-siliguri">
+                  <LuBanknote className="shrink-0" /> {L.onlineExtra(price.online.percent)}
+                </p>
+              )}
+
               {book?.preOrderNote && (
                 <p className="mt-2.5 inline-flex items-center gap-2 rounded-lg bg-surface-soft px-3 py-2 text-sm text-muted-foreground hind-siliguri">
                   <LuTruck className="shrink-0 text-primary" /> {book.preOrderNote}
@@ -156,7 +176,7 @@ export default function LandingHero({
                 >
                   <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent motion-safe:animate-sheen" />
                   <span className="relative flex items-center gap-2">
-                    {book?.isPreOrder ? L.preOrder : L.order}
+                    {(price?.isPreOrder ?? book?.isPreOrder) ? L.preOrder : L.order}
                     <LuArrowRight className="transition-transform group-hover:translate-x-1" />
                   </span>
                 </Link>

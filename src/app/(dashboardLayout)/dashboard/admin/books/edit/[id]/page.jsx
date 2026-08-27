@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiArrowLeft, FiLoader, FiAlertCircle } from 'react-icons/fi';
 import BookForm from '@/components/admin/book/BookForm';
+import { resolveOffers } from '@/lib/bookOffers';
 
 const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -29,11 +30,17 @@ const toFormValues = (b) => ({
   previewPdfUrl: b.previewPdfUrl || '',
   status: b.status || 'published',
   isFeatured: !!b.isFeatured,
-  // Without these the form would fall back to its own defaults and then PATCH
-  // them over the top: editing the price of a pre-order title would quietly
-  // switch the pre-order off and drop its features.
-  isPreOrder: !!b.isPreOrder,
-  preOrderDiscountPercent: b.preOrderDiscountPercent ?? 25,
+  // Offers, resolved through the shared helper so a legacy book (pre-order flag /
+  // offerPrice, no offers object) opens with those values already filled in — the
+  // first save then just persists them as offers, changing nothing the buyer sees.
+  offers: (() => {
+    const ro = resolveOffers(b);
+    return {
+      normal: { enabled: ro.normal.enabled, label: ro.normal.label, percent: ro.normal.percent },
+      preorder: { enabled: ro.preorder.enabled, label: ro.preorder.label, percent: ro.preorder.percent },
+      online: { enabled: ro.online.enabled, label: ro.online.label, percent: ro.online.percent },
+    };
+  })(),
   preOrderNote: b.preOrderNote || '',
   expectedReleaseDate: b.expectedReleaseDate || '',
   promoVideoUrl: b.promoVideoUrl || '',

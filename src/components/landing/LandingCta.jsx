@@ -20,6 +20,8 @@ const T = {
     cta: 'অর্ডার করুন',
     cod: 'ক্যাশ অন ডেলিভারি',
     delivery: 'সারা দেশে পৌঁছে যাবে',
+    offNames: { preorder: 'প্রি-অর্ডার অফার', normal: 'ছাড়' },
+    onlineExtra: (pct) => `অনলাইনে পেমেন্ট করলে আরও ${pct}% ছাড়`,
   },
   en: {
     headingPre: 'Pre-order your copy now',
@@ -29,6 +31,8 @@ const T = {
     cta: 'Order now',
     cod: 'Cash on delivery',
     delivery: 'Delivered nationwide',
+    offNames: { preorder: 'Pre-order offer', normal: 'Discount' },
+    onlineExtra: (pct) => `${pct}% more off when you pay online`,
   },
 };
 
@@ -37,18 +41,35 @@ export default function LandingCta({ book, price, checkoutHref, supportPhone, de
   const L = isBengali ? T.bn : T.en;
   const bn = isBengali ? 'hind-siliguri' : '';
 
+  // The active headline offer decides the heading, the CTA verb and the offer
+  // name shown — no longer hard-wired to pre-order.
+  const isPreOrder = price?.isPreOrder ?? book?.isPreOrder;
+  const offerName =
+    price?.label || (price?.mode && price.mode !== 'none' ? L.offNames[price.mode] : '');
+
   return (
     <section className="border-t border-border bg-surface-soft">
       <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8 lg:py-20">
         <h2 className={`font-heading text-2xl font-bold tracking-tight text-foreground text-balance sm:text-3xl ${bn}`}>
-          {book?.isPreOrder ? L.headingPre : L.heading}
+          {isPreOrder ? L.headingPre : L.heading}
         </h2>
 
         {price.percent > 0 && (
           <p className={`mt-3 text-muted-foreground ${bn}`}>
+            {offerName && (
+              <span className="mr-2 inline-flex items-center rounded-full bg-coral/10 px-2.5 py-0.5 text-xs font-bold text-coral align-middle">
+                {offerName}
+              </span>
+            )}
             <span className="font-bold text-coral">{price.percent}% {L.off}</span>{' '}
             <span className="font-bold text-foreground">{formatTk(price.payable)}</span>{' '}
             <span className="line-through">{formatTk(price.price)}</span>
+          </p>
+        )}
+
+        {price?.online && (
+          <p className={`mt-1.5 text-sm font-semibold text-accent ${bn}`}>
+            {L.onlineExtra(price.online.percent)}
           </p>
         )}
 
@@ -56,7 +77,7 @@ export default function LandingCta({ book, price, checkoutHref, supportPhone, de
           href={checkoutHref}
           className={`group mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground shadow-glow transition-all hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 ${bn}`}
         >
-          {book?.isPreOrder ? L.ctaPre : L.cta}
+          {isPreOrder ? L.ctaPre : L.cta}
           <LuArrowRight className="transition-transform group-hover:translate-x-1" />
         </Link>
 

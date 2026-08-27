@@ -6,6 +6,8 @@
  * briefly down should still serve a page, not a stack trace.
  */
 
+import { priceBook, type BookOffers } from '@/lib/bookOffers';
+
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '');
 
 export interface LandingFeature {
@@ -33,6 +35,8 @@ export interface LandingBook {
   expectedReleaseDate?: string;
   promoVideoUrl?: string;
   features?: LandingFeature[];
+  // Named per-book offers. Priced by @/lib/bookOffers (mirrors the server).
+  offers?: BookOffers;
 }
 
 export interface LandingSettings {
@@ -124,33 +128,31 @@ export async function getLandingBook(settings?: LandingSettings): Promise<Landin
   );
 }
 
-/** What the buyer actually pays, and what they save. */
+/**
+ * What the buyer actually pays and saves on the storefront — the HEADLINE price
+ * (pre-order or normal discount), before the online-payment offer, which only
+ * exists at checkout once a payment method is chosen. `label`/`mode` name the
+ * active offer so the hero and CTA can show it instead of a fixed "pre-order",
+ * and `online` carries the extra-if-you-pay-online incentive for a CTA hint.
+ *
+ * Delegates to @/lib/bookOffers so this quote and the invoice can never disagree.
+ */
 export function landingPrice(book: LandingBook | null) {
-  if (!book) return { price: 0, payable: 0, saved: 0, percent: 0 };
-
-  const price = Number(book.price) || 0;
-  const offer = Number(book.offerPrice) || 0;
-
-  // A pre-order discount is applied by the server at checkout, on top of the
-  // catalogue price. An offer price, when it is a real reduction, wins instead —
-  // the two are not stacked, which matches how the order service prices a line.
-  if (book.isPreOrder) {
-    const pct = Number(book.preOrderDiscountPercent) || 0;
-    const base = offer > 0 && offer < price ? offer : price;
-    const saved = Math.round((base * pct) / 100);
-    return { price: base, payable: base - saved, saved, percent: pct };
-  }
-
-  if (offer > 0 && offer < price) {
-    return {
-      price,
-      payable: offer,
-      saved: price - offer,
-      percent: Math.round(((price - offer) / price) * 100),
-    };
-  }
-
-  return { price, payable: price, saved: 0, percent: 0 };
+  const bp = priceBook(book, { online: false, quantity: 1 });
+  return {
+    price: bp.list,
+    payable: bp.headlinePayable,
+    saved: bp.headlineSaved,
+    percent: bp.percent,
+    // The active headline offer, for the badge/eyebrow copy.
+    label: bp.headline.label,
+    mode: bp.headline.mode,
+    isPreOrder: bp.isPreOrder,
+    // The online-payment offer, so the CTA can nudge "pay online, save more".
+    online: bp.offers.online.enabled
+      ? { label: bp.offers.online.label, percent: bp.offers.online.percent }
+      : null,
+  };
 }
 
 export const formatTk = (n: number) => '৳' + Math.round(n || 0).toLocaleString('en-US');

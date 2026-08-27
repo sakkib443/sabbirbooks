@@ -2,6 +2,8 @@
 // Mirrors the *public* server shapes: course (GET /api/courses/:id) and
 // book (GET /api/books/:slug), plus the Order returned by /api/orders.
 
+import type { BookOffers } from "@/lib/bookOffers";
+
 export type CheckoutType = "course" | "book";
 // The hosted gateways. Real when the server reports credentials for them
 // (GET /api/payment/gateways); a built-in demo stand-in otherwise.
@@ -104,6 +106,10 @@ export interface CheckoutBook {
   preOrderDiscountPercent?: number;
   preOrderNote?: string;
   expectedReleaseDate?: string;
+
+  // Named per-book offers (normal / pre-order / online-payment). Priced by
+  // @/lib/bookOffers, which the server mirrors — see priceBook.
+  offers?: BookOffers;
 }
 
 // ── Shipping address (required for printed books) ──────────────────────────
