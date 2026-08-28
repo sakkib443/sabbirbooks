@@ -87,6 +87,19 @@ function StatusBadge({ status }) {
   );
 }
 
+// One labelled box in the full-order editor.
+const EditField = ({ label, value, onChange, type = 'text', mono }) => (
+  <label className="block">
+    <span className="mb-1 block text-[11px] font-medium text-dash-mute">{label}</span>
+    <input
+      type={type}
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value)}
+      className={`w-full rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 ${mono ? 'font-mono' : ''}`}
+    />
+  </label>
+);
+
 const DetailRow = ({ icon: Icon, label, value, mono }) => (
   <div className="flex items-start gap-2">
     <Icon size={13} className="text-dash-faint mt-0.5 shrink-0" />
@@ -115,6 +128,11 @@ export default function BookOrdersPage() {
   const [selected, setSelected] = useState(() => new Set());
   // One flag for every bulk action, so two cannot run at once.
   const [bulkBusy, setBulkBusy] = useState(false);
+  // The owner's full correction pass over one order — a separate panel from the
+  // payment-details edit above, because it also touches the buyer's own record.
+  const [fullEditId, setFullEditId] = useState(null);
+  const [fullForm, setFullForm] = useState({});
+  const [savingFull, setSavingFull] = useState(false);
   const canDelete = ['superAdmin', 'admin'].includes(getStoredUser()?.role);
 
   // Accepts the status so the filter dropdown can refetch with the new value
@@ -247,6 +265,70 @@ export default function BookOrdersPage() {
     });
     if (!ok) return;
     runAction(order, '/reject', 'POST', {}, 'Payment rejected — order cancelled');
+  };
+
+  // Open the full editor prefilled with what the order says today, so an admin
+  // fixing one typo does not have to retype the rest.
+  const startFullEdit = (o) => {
+    const a = o.shippingAddress || {};
+    setFullEditId(o._id);
+    setFullForm({
+      name: a.name || '',
+      phone: a.phone || '',
+      address: a.address || '',
+      upazila: a.upazila || a.city || '',
+      district: a.district || '',
+      division: a.division || '',
+      note: a.note || '',
+      email: o.user?.email || '',
+      userPhone: o.user?.phoneNumber || '',
+      whatsappNumber: o.user?.whatsappNumber || '',
+      payStatus: o.payment?.status || 'pending',
+      payMethod: o.payment?.method || '',
+      transactionId: o.payment?.transactionId || '',
+      adminNote: o.adminNote || '',
+    });
+  };
+
+  const saveFullEdit = async (o) => {
+    setSavingFull(true);
+    try {
+      const res = await fetch(`${API}/orders/${o._id}/admin-edit`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          shippingAddress: {
+            name: fullForm.name,
+            phone: fullForm.phone,
+            address: fullForm.address,
+            upazila: fullForm.upazila,
+            district: fullForm.district,
+            division: fullForm.division,
+            note: fullForm.note,
+          },
+          payment: {
+            status: fullForm.payStatus,
+            ...(fullForm.payMethod ? { method: fullForm.payMethod } : {}),
+            transactionId: fullForm.transactionId,
+          },
+          buyer: {
+            email: fullForm.email,
+            phoneNumber: fullForm.userPhone,
+            whatsappNumber: fullForm.whatsappNumber,
+          },
+          adminNote: fullForm.adminNote,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not save');
+      showToast('success', 'Order updated');
+      setFullEditId(null);
+      fetchOrders();
+    } catch (e) {
+      showToast('error', e.message || 'Could not save the changes');
+    } finally {
+      setSavingFull(false);
+    }
   };
 
   const startEdit = (order) => {
@@ -964,6 +1046,123 @@ export default function BookOrdersPage() {
                         ))}
                       </div>
                     </div>
+
+                    {/* Owner correction pass. Buyers mistype their own address and
+                        phone constantly, and a payment lands against the wrong
+                        method often enough that "delete and re-order" was becoming
+                        the workaround. Money is deliberately NOT editable — the
+                        line prices and total are the record of what was agreed. */}
+                    {canDelete && (
+                      <div className="rounded-lg border border-dash-line bg-dash-card p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dash-mute">
+                              <FiEdit2 size={12} /> Edit order
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-dash-mute2">
+                              Fix a wrong address, phone, email or payment state.
+                            </p>
+                          </div>
+                          {fullEditId === o._id ? (
+                            <button
+                              onClick={() => setFullEditId(null)}
+                              className="rounded-lg border border-dash-line px-3 py-1.5 text-xs font-semibold text-dash-mute transition hover:text-dash-ink3"
+                            >
+                              Close
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => startFullEdit(o)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-brand-hover"
+                            >
+                              <FiEdit2 size={12} /> Edit everything
+                            </button>
+                          )}
+                        </div>
+
+                        {fullEditId === o._id && (
+                          <div className="mt-4 space-y-4 border-t border-dash-line pt-4">
+                            <div>
+                              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Buyer account</p>
+                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <EditField label="Email" value={fullForm.email} onChange={(v) => setFullForm((p) => ({ ...p, email: v }))} type="email" />
+                                <EditField label="Phone" value={fullForm.userPhone} onChange={(v) => setFullForm((p) => ({ ...p, userPhone: v }))} mono />
+                                <EditField label="WhatsApp" value={fullForm.whatsappNumber} onChange={(v) => setFullForm((p) => ({ ...p, whatsappNumber: v }))} mono />
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Delivery address</p>
+                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                <EditField label="Recipient name" value={fullForm.name} onChange={(v) => setFullForm((p) => ({ ...p, name: v }))} />
+                                <EditField label="Phone" value={fullForm.phone} onChange={(v) => setFullForm((p) => ({ ...p, phone: v }))} mono />
+                                <EditField label="Street / village" value={fullForm.address} onChange={(v) => setFullForm((p) => ({ ...p, address: v }))} />
+                                <EditField label="Upazila / thana" value={fullForm.upazila} onChange={(v) => setFullForm((p) => ({ ...p, upazila: v }))} />
+                                <EditField label="District" value={fullForm.district} onChange={(v) => setFullForm((p) => ({ ...p, district: v }))} />
+                                <EditField label="Division" value={fullForm.division} onChange={(v) => setFullForm((p) => ({ ...p, division: v }))} />
+                                <EditField label="Delivery note" value={fullForm.note} onChange={(v) => setFullForm((p) => ({ ...p, note: v }))} />
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Payment</p>
+                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <label className="block">
+                                  <span className="mb-1 block text-[11px] font-medium text-dash-mute">Status</span>
+                                  <select
+                                    value={fullForm.payStatus}
+                                    onChange={(e) => setFullForm((p) => ({ ...p, payStatus: e.target.value }))}
+                                    className="w-full rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm outline-none focus:border-brand"
+                                  >
+                                    <option value="pending">Pending</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="failed">Failed</option>
+                                  </select>
+                                </label>
+                                <label className="block">
+                                  <span className="mb-1 block text-[11px] font-medium text-dash-mute">Method</span>
+                                  <select
+                                    value={fullForm.payMethod}
+                                    onChange={(e) => setFullForm((p) => ({ ...p, payMethod: e.target.value }))}
+                                    className="w-full rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm outline-none focus:border-brand"
+                                  >
+                                    <option value="">— not set —</option>
+                                    <option value="cod">Cash on delivery</option>
+                                    <option value="sslcommerz">SSLCommerz</option>
+                                    <option value="bkash">bKash</option>
+                                    <option value="manual">Manual</option>
+                                    <option value="free">Free</option>
+                                  </select>
+                                </label>
+                                <EditField label="Transaction ID" value={fullForm.transactionId} onChange={(v) => setFullForm((p) => ({ ...p, transactionId: v }))} mono />
+                              </div>
+                            </div>
+
+                            <EditField label="Admin note" value={fullForm.adminNote} onChange={(v) => setFullForm((p) => ({ ...p, adminNote: v }))} />
+
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                onClick={() => saveFullEdit(o)}
+                                disabled={savingFull}
+                                className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
+                              >
+                                {savingFull ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />}
+                                {savingFull ? 'Saving…' : 'Save changes'}
+                              </button>
+                              <button
+                                onClick={() => setFullEditId(null)}
+                                className="px-3 py-2.5 text-sm font-medium text-dash-mute transition hover:text-dash-ink3"
+                              >
+                                Cancel
+                              </button>
+                              <span className="ml-auto text-[11px] text-dash-mute2">
+                                Prices and totals are not editable — cancel and re-place instead.
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Fulfillment trail — when each step actually happened */}
                     {(o.confirmedAt || o.shippedAt || o.deliveredAt || o.cancelledAt) && (
