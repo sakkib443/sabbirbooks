@@ -131,6 +131,26 @@ async function post<T = Record<string, unknown>>(
   return (json.data as T) ?? (json as T);
 }
 
+// ── Book coupon: validate a code for the checkout preview ───────────────────
+// Returns the coupon's discount shape; `post` throws the server's message
+// ("Invalid coupon code", "not active", …) which the UI shows verbatim. The
+// order service re-evaluates on create, so this cannot be tampered into a price.
+export interface AppliedCoupon {
+  code: string;
+  name: string;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  discountAmount: number;
+  finalPrice: number;
+}
+export async function validateBookCoupon(
+  code: string,
+  amount: number,
+  fallbackErr: string
+): Promise<AppliedCoupon> {
+  return post<AppliedCoupon>("/book-coupons/validate", { code, amount }, fallbackErr);
+}
+
 // ── Item fetchers (public, no auth) ────────────────────────────────────────
 export async function fetchCourse(id: string): Promise<CheckoutCourse | null> {
   try {
@@ -265,6 +285,7 @@ export async function checkoutBook(opts: {
   /** True when the server reports credentials for `method`. */
   isLiveGateway: boolean;
   shippingAddress?: ShippingAddress;
+  couponCode?: string;
   onProgress?: (s: CheckoutStep) => void;
   genericErr: string;
 }): Promise<{ redirected: true } | { redirected: false; order: OrderResult }> {
@@ -277,6 +298,7 @@ export async function checkoutBook(opts: {
     {
       items: [{ bookSlugOrId: book.slug, quantity }],
       ...(shippingAddress ? { shippingAddress } : {}),
+      ...(opts.couponCode ? { couponCode: opts.couponCode } : {}),
     },
     genericErr
   );
@@ -319,6 +341,7 @@ export async function submitBookCod(opts: {
   book: CheckoutBook;
   quantity: number;
   shippingAddress: ShippingAddress;
+  couponCode?: string;
   onProgress?: (s: CheckoutStep) => void;
   genericErr: string;
 }): Promise<OrderResult> {
@@ -331,6 +354,7 @@ export async function submitBookCod(opts: {
       items: [{ bookSlugOrId: book.slug, quantity }],
       shippingAddress,
       paymentMethod: "cod",
+      ...(opts.couponCode ? { couponCode: opts.couponCode } : {}),
     },
     genericErr
   );
@@ -403,6 +427,7 @@ export async function submitBookManual(opts: {
   quantity: number;
   details: ManualDetails;
   shippingAddress?: ShippingAddress;
+  couponCode?: string;
   onProgress?: (s: CheckoutStep) => void;
   genericErr: string;
 }): Promise<OrderResult> {
@@ -415,6 +440,7 @@ export async function submitBookManual(opts: {
     {
       items: [{ bookSlugOrId: book.slug, quantity }],
       ...(shippingAddress ? { shippingAddress } : {}),
+      ...(opts.couponCode ? { couponCode: opts.couponCode } : {}),
     },
     genericErr
   );

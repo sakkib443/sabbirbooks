@@ -19,6 +19,7 @@ import {
   LuPackageX,
   LuCalendarClock,
   LuTruck,
+  LuTicket,
 } from "react-icons/lu";
 import { useLanguage } from "@/context/LanguageContext";
 import { Container, Button, buttonVariants, cn } from "@/components/ui";
@@ -41,6 +42,8 @@ import {
   submitBookCod,
   submitBookManual,
   submitCourseManual,
+  validateBookCoupon,
+  type AppliedCoupon,
 } from "./checkoutApi";
 import ManualPaymentDetails from "./ManualPaymentDetails";
 import GatewayChoice from "./GatewayChoice";
@@ -104,6 +107,12 @@ export default function CheckoutView() {
   // The buyer's medical college, from /auth/me — decides free local delivery.
   const [myCollege, setMyCollege] = useState("");
   const [options, setOptions] = useState<CheckoutOptions | null>(null);
+
+  // ── Coupon (books) — stacks on top of the book's own offers ───────────────
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponErr, setCouponErr] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
 
   // Which hosted checkouts the server holds credentials for. Stays null until the
   // answer arrives (and if it never does), which reads as "no gateway" everywhere
@@ -208,13 +217,26 @@ export default function CheckoutView() {
     [isBook, book, payingOnline, quantity]
   );
   const bookSubtotal = bp?.subtotal ?? 0;
-  // Total taka off (headline + online). Kept for the delivery-threshold maths;
-  // the summary itemises it with names via discountLines below.
-  const discount = bp?.saved ?? 0;
 
-  // Named discount rows for the summary: the headline offer, then the extra
-  // online-payment offer when it applies. A blank admin label falls back to a
-  // language-appropriate default.
+  // The coupon discount, on the product price AFTER the book's own offers — the
+  // same base and formula the server uses, so the summary and the invoice agree.
+  // Recomputes when the pay mode (and thus the online offer) changes the base.
+  const couponDiscount = useMemo(() => {
+    if (!appliedCoupon || !bp) return 0;
+    const base = bp.payable;
+    if (appliedCoupon.discountType === "percent") {
+      const pct = Math.min(90, Math.max(0, Number(appliedCoupon.discountValue) || 0));
+      return Math.min(Math.round((base * pct) / 100), base);
+    }
+    return Math.min(Math.max(0, Number(appliedCoupon.discountValue) || 0), base);
+  }, [appliedCoupon, bp]);
+
+  // Total taka off (offers + coupon). Kept for the delivery-threshold maths; the
+  // summary itemises it with names via discountLines below.
+  const discount = (bp?.saved ?? 0) + couponDiscount;
+
+  // Named discount rows for the summary: the headline offer, the extra online
+  // offer, then the coupon. A blank admin label falls back to a default.
   const discountLines = useMemo(() => {
     if (!bp) return [] as { label: string; amount: number }[];
     const out: { label: string; amount: number }[] = [];
@@ -230,8 +252,14 @@ export default function CheckoutView() {
         amount: bp.onlineSaved,
       });
     }
+    if (couponDiscount > 0 && appliedCoupon) {
+      out.push({
+        label: appliedCoupon.name?.trim() || S.couponLine(appliedCoupon.code),
+        amount: couponDiscount,
+      });
+    }
     return out;
-  }, [bp, S]);
+  }, [bp, S, couponDiscount, appliedCoupon]);
 
   // ── Shipping form (only enforced for printed books) ───────────────────────
   const shippingSchema = useMemo(
@@ -472,6 +500,31 @@ export default function CheckoutView() {
     return Object.keys(e).length === 0;
   };
 
+  // Validate the typed code against the current post-offer price and apply it.
+  // The server re-checks on create, so this is a preview that cannot be forged.
+  const applyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code || !bp) return;
+    setCouponBusy(true);
+    setCouponErr("");
+    try {
+      const c = await validateBookCoupon(code, bp.payable, S.couponInvalid);
+      setAppliedCoupon(c);
+      setCouponInput("");
+    } catch (e) {
+      setAppliedCoupon(null);
+      const msg = e instanceof Error ? e.message : S.couponInvalid;
+      setCouponErr(msg === "__NETWORK__" ? S.network : msg);
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponErr("");
+    setCouponInput("");
+  };
+
   const runCheckout = async (shipping?: ShippingAddress) => {
     if (!getToken()) return router.replace("/login");
     setSubmitError("");
@@ -540,6 +593,7 @@ export default function CheckoutView() {
             method: chosen,
             isLiveGateway: live,
             shippingAddress: shipping,
+            couponCode: appliedCoupon?.code,
             onProgress: setStep,
             genericErr: S.genericErr,
           });
@@ -552,6 +606,7 @@ export default function CheckoutView() {
             book,
             quantity,
             shippingAddress: shipping as ShippingAddress,
+            couponCode: appliedCoupon?.code,
             onProgress: setStep,
             genericErr: S.genericErr,
           });
@@ -572,6 +627,7 @@ export default function CheckoutView() {
             quantity,
             details,
             shippingAddress: shipping,
+            couponCode: appliedCoupon?.code,
             onProgress: setStep,
             genericErr: S.genericErr,
           });
@@ -926,6 +982,65 @@ export default function CheckoutView() {
           {/* Right: order summary + pay (sticky on desktop, last on mobile) */}
           <div>
             <div className="lg:sticky lg:top-24 space-y-4">
+              {/* Coupon — books only; stacks on top of the book's own offers */}
+              {isBook && needsPayment && (
+                <div className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
+                  <p className={cn("mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground", bn)}>
+                    <LuTicket className="text-primary" /> {S.couponHeading}
+                  </p>
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent-soft/40 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground">{appliedCoupon.code}</p>
+                        {couponDiscount > 0 && (
+                          <p className={cn("text-xs font-medium text-accent", bn)}>
+                            {S.couponApplied(formatTk(couponDiscount))}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        disabled={processing}
+                        className={cn("shrink-0 text-sm font-medium text-muted-foreground transition-colors hover:text-coral", bn)}
+                      >
+                        {S.couponRemove}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          value={couponInput}
+                          onChange={(e) => {
+                            setCouponInput(e.target.value);
+                            if (couponErr) setCouponErr("");
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void applyCoupon();
+                            }
+                          }}
+                          placeholder={S.couponPlaceholder}
+                          disabled={couponBusy || processing}
+                          className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm uppercase tracking-wide outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void applyCoupon()}
+                          disabled={couponBusy || processing || !couponInput.trim()}
+                          className={cn(buttonVariants({ variant: "outline" }), "shrink-0", bn)}
+                        >
+                          {couponBusy ? <LuLoaderCircle className="animate-spin" /> : S.couponApply}
+                        </button>
+                      </div>
+                      {couponErr && <p className={cn("mt-1.5 text-xs text-coral", bn)}>{couponErr}</p>}
+                    </>
+                  )}
+                </div>
+              )}
+
               <OrderSummary
                 type={type as CheckoutType}
                 course={course}
@@ -1216,6 +1331,14 @@ const EN = {
   sumPreOrderDiscount: (pct: number) => `Pre-order discount (${pct}%)`,
   // Default names for the three offers when the admin left a label blank.
   sumOfferNames: { preorder: "Pre-order offer", normal: "Discount", online: "Online payment discount" },
+  // Coupon
+  couponHeading: "Have a coupon?",
+  couponPlaceholder: "Coupon code",
+  couponApply: "Apply",
+  couponRemove: "Remove",
+  couponApplied: (amt: string) => `Coupon applied — you save ${amt}`,
+  couponInvalid: "This coupon could not be applied.",
+  couponLine: (code: string) => `Coupon (${code})`,
   sumDuration: (m: number) => `${m} ${m === 1 ? "month" : "months"} programme`,
   // shipping
   shipHeading: "Shipping address",
@@ -1429,6 +1552,14 @@ const BN: Copy = {
   sumPreOrder: "প্রি-অর্ডার",
   sumPreOrderDiscount: (pct: number) => `প্রি-অর্ডার ছাড় (${pct}%)`,
   sumOfferNames: { preorder: "প্রি-অর্ডার অফার", normal: "ছাড়", online: "অনলাইন পেমেন্টে ছাড়" },
+  // Coupon
+  couponHeading: "কুপন আছে?",
+  couponPlaceholder: "কুপন কোড",
+  couponApply: "প্রয়োগ",
+  couponRemove: "সরান",
+  couponApplied: (amt: string) => `কুপন প্রয়োগ হয়েছে — সাশ্রয় ${amt}`,
+  couponInvalid: "এই কুপনটি প্রয়োগ করা গেল না।",
+  couponLine: (code: string) => `কুপন (${code})`,
   sumDuration: (m: number) => `${m} মাসের প্রোগ্রাম`,
   shipHeading: "ডেলিভারি ঠিকানা",
   shipSubtitle: "আপনার প্রিন্টেড বই কোথায় পৌঁছে দেব?",

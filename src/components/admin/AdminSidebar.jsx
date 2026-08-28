@@ -86,6 +86,14 @@ const AdminSidebar = () => {
         { title: 'Book Preview', href: '/dashboard/admin/book-preview', icon: FiEye, need: ['content.write'] },
         // Book Orders is the "who is buying" screen — orders.read, not content.
         { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag, need: ['orders.read'] },
+        {
+          title: 'Coupons', icon: FiTag, need: ['orders.read'],
+          submenu: [
+            { title: 'All Coupons', href: '/dashboard/admin/book-coupons', exact: true, need: ['orders.read'] },
+            { title: 'Add Coupon', href: '/dashboard/admin/book-coupons/create', need: ['orders.write'] },
+            { title: 'Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'] },
+          ],
+        },
       ],
     },
     {

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   FiBook, FiDollarSign, FiGrid, FiTrendingUp, FiArrowRight, FiCalendar,
   FiShoppingCart, FiRefreshCw, FiChevronLeft, FiChevronRight, FiPlus,
-  FiClock, FiLayers, FiPackage,
+  FiClock, FiLayers, FiPackage, FiTag, FiGift,
 } from 'react-icons/fi';
 
 import { can, getStoredUser } from '@/lib/permissions';
@@ -361,6 +361,53 @@ export default function AdminDashboard() {
             </div>
           </div>
           <FiArrowRight className="text-dash-mute group-hover:text-brand group-hover:translate-x-0.5 transition" />
+        </Link>
+      </div>
+
+      {/* Coupon money — sales made through codes, buyer discount, and what is owed
+          to coupon owners. The Payouts screen has the per-coupon breakdown. */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 p-4 shadow-sm flex items-center gap-3">
+          <span className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white shadow-md shrink-0">
+            <FiTag size={18} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-dash-mute2 uppercase tracking-wider">Coupon Sales</p>
+            <p className="text-lg font-bold text-dash-ink outfit leading-tight">
+              {loading ? <span className="inline-block w-14 h-5 bg-dash-soft2 animate-pulse rounded-md" /> : (stats?.coupons?.orders ?? 0).toLocaleString('en-US')}
+            </p>
+            <p className="text-[11px] text-dash-mute2">Orders placed with a code</p>
+          </div>
+        </div>
+
+        <div className="bg-dash-card rounded-xl border border-dash-line/60 p-4 shadow-sm flex items-center gap-3">
+          <span className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white shadow-md shrink-0">
+            <FiGift size={18} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-dash-mute2 uppercase tracking-wider">Coupon Discount</p>
+            <p className="text-lg font-bold text-dash-ink outfit leading-tight">
+              {loading ? <span className="inline-block w-16 h-5 bg-dash-soft2 animate-pulse rounded-md" /> : tk(stats?.coupons?.discount ?? 0)}
+            </p>
+            <p className="text-[11px] text-dash-mute2">Given to buyers, all time</p>
+          </div>
+        </div>
+
+        <Link href="/dashboard/admin/book-coupons/payouts"
+          className="col-span-2 lg:col-span-1 bg-dash-card rounded-xl border border-dash-line/60 p-4 shadow-sm flex items-center justify-between gap-3 hover:shadow-md hover:border-brand/40 transition group">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shrink-0">
+              <FiDollarSign size={18} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-dash-mute2 uppercase tracking-wider">Owed to Owners</p>
+              <p className="text-lg font-bold text-dash-ink outfit leading-tight">
+                {loading ? <span className="inline-block w-16 h-5 bg-dash-soft2 animate-pulse rounded-md" /> : tk(stats?.coupons?.payout ?? 0)}
+              </p>
+              <p className="text-[11px] text-dash-mute2">See per-coupon payouts</p>
+            </div>
+          </div>
+          <FiArrowRight className="text-dash-mute group-hover:text-brand group-hover:translate-x-0.5 transition shrink-0" />
         </Link>
       </div>
     </div>
