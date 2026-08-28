@@ -26,6 +26,25 @@ const Label = ({ icon: Icon, children }) => (
   </label>
 );
 
+/**
+ * One card of the form. The heading row carries an icon tile and a one-line
+ * explanation, so each group says what it is for before the fields are read.
+ */
+const Section = ({ icon: Icon, title, subtitle, children }) => (
+  <section className="rounded-2xl border border-dash-line bg-dash-card p-5 sm:p-6">
+    <div className="mb-5 flex items-start gap-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+        {Icon && <Icon size={16} />}
+      </span>
+      <div className="min-w-0">
+        <h2 className="text-[15px] font-bold leading-tight text-dash-ink2">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-[11px] text-dash-mute2">{subtitle}</p>}
+      </div>
+    </div>
+    {children}
+  </section>
+);
+
 function CouponForm() {
   const router = useRouter();
   const id = useSearchParams().get('id');
@@ -113,14 +132,21 @@ function CouponForm() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-2xl">
-      <Link href="/dashboard/admin/book-coupons" className="inline-flex items-center gap-2 text-dash-mute hover:text-dash-ink3 mb-6">
-        <FiArrowLeft /> Back to coupons
+      <Link href="/dashboard/admin/book-coupons" className="inline-flex items-center gap-2 text-sm text-dash-mute hover:text-dash-ink3 mb-5 transition-colors">
+        <FiArrowLeft size={15} /> Back to coupons
       </Link>
 
-      <h1 className="flex items-center gap-2 text-2xl font-bold text-dash-ink2">
-        <FiTag className="text-brand" /> {editing ? 'Edit Coupon' : 'Add Coupon'}
-      </h1>
-      <p className="text-dash-mute text-sm mb-6">A discount code buyers enter at checkout, with an optional per-sale payout to its owner.</p>
+      <div className="mb-6 flex items-start gap-3.5">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-brand-hover text-white shadow-lg shadow-brand/25">
+          <FiTag size={20} />
+        </span>
+        <div className="min-w-0 pt-0.5">
+          <h1 className="text-2xl font-bold leading-tight text-dash-ink2">{editing ? 'Edit coupon' : 'New coupon'}</h1>
+          <p className="mt-0.5 text-sm text-dash-mute">
+            A discount code buyers enter at checkout, with an optional per-sale payout to its owner.
+          </p>
+        </div>
+      </div>
 
       {error && (
         <div className="flex items-center gap-3 p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
@@ -129,7 +155,7 @@ function CouponForm() {
       )}
 
       <form onSubmit={submit} className="space-y-5">
-        <div className="bg-dash-card rounded-xl border border-dash-line p-5 sm:p-6 space-y-4">
+        <Section icon={FiTag} title="Coupon &amp; owner" subtitle="The code buyers type, and who it belongs to.">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label icon={FiTag}>Coupon code *</Label>
@@ -155,46 +181,88 @@ function CouponForm() {
               <input value={form.ownerPhone} onChange={(e) => set('ownerPhone', e.target.value)} placeholder="01XXXXXXXXX" className={`${inputCls} font-mono`} />
             </div>
           </div>
-        </div>
+        </Section>
 
-        <div className="bg-dash-card rounded-xl border border-dash-line p-5 sm:p-6 space-y-4">
-          <Label icon={FiPercent}>Discount</Label>
-          <div className="flex gap-2">
-            <select value={form.discountType} onChange={(e) => set('discountType', e.target.value)} className={`${inputCls} w-40 shrink-0`}>
-              <option value="percent">Percent (%)</option>
-              <option value="fixed">Fixed (৳)</option>
-            </select>
-            <input
-              type="number" min="0" max={form.discountType === 'percent' ? 90 : undefined}
-              value={form.discountValue} onChange={(e) => set('discountValue', e.target.value)}
-              placeholder={form.discountType === 'percent' ? '% off, e.g. 20' : '৳ off, e.g. 100'}
-              className={`${inputCls} flex-1`}
-            />
-          </div>
-          <p className="text-[11px] text-dash-mute2">
-            Applied at checkout <b>on top of</b> the book’s own offer (pre-order / online / normal).
-          </p>
-
+        <Section icon={FiPercent} title="Discount &amp; payout" subtitle="What the buyer saves, and what the owner earns.">
+          {/* Type is a segmented control rather than a <select>: two choices read
+              faster as a pair, and it keeps the value box full width beneath. */}
           <div>
-            <Label icon={FiDollarSign}>Payout per sale (৳)</Label>
-            <input
-              type="number" min="0" value={form.payoutPerSale} onChange={(e) => set('payoutPerSale', e.target.value)}
-              placeholder="0"
-              className={inputCls}
-            />
-            <p className="text-[11px] text-dash-mute2 mt-1">
-              What you’ll pay the owner for each sale under this code. 0 = a plain discount, no payout.
+            <span className="text-xs font-semibold text-dash-mute">Discount type</span>
+            <div className="mt-1.5 grid grid-cols-2 gap-2 rounded-xl bg-dash-soft p-1">
+              {[
+                { id: 'percent', label: 'Percent', hint: '%' },
+                { id: 'fixed', label: 'Fixed amount', hint: '৳' },
+              ].map((t) => {
+                const on = form.discountType === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => set('discountType', t.id)}
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
+                      on
+                        ? 'bg-brand text-white shadow-sm shadow-brand/25'
+                        : 'text-dash-mute hover:text-dash-ink3 hover:bg-dash-card'
+                    }`}
+                  >
+                    <span className={`text-base leading-none ${on ? 'opacity-90' : 'opacity-60'}`}>{t.hint}</span>
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* The value, with its unit shown inside the field so the number never
+              has to carry the meaning on its own. */}
+          <div className="mt-4">
+            <span className="text-xs font-semibold text-dash-mute">
+              {form.discountType === 'percent' ? 'How many percent off?' : 'How many taka off?'}
+            </span>
+            <div className="relative mt-1.5">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-dash-mute2">
+                {form.discountType === 'percent' ? '%' : '৳'}
+              </span>
+              <input
+                type="number" min="0" max={form.discountType === 'percent' ? 90 : undefined}
+                value={form.discountValue} onChange={(e) => set('discountValue', e.target.value)}
+                placeholder={form.discountType === 'percent' ? '20' : '100'}
+                className={`${inputCls} pl-10 text-lg font-bold tabular-nums`}
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-dash-mute2">
+              Applied at checkout <b className="text-dash-ink4">on top of</b> the book’s own offer
+              (pre-order / online / normal){form.discountType === 'percent' ? '. Maximum 90%.' : '.'}
             </p>
           </div>
 
-          <label className="flex items-center gap-3 cursor-pointer pt-1">
-            <input type="checkbox" checked={form.isActive} onChange={(e) => set('isActive', e.target.checked)} className="w-5 h-5 rounded border-dash-line-strong text-brand focus:ring-brand" />
-            <span className="text-sm font-medium text-dash-ink3">Active — buyers can use this code now</span>
+          <div className="mt-5 border-t border-dash-line pt-5">
+            <span className="text-xs font-semibold text-dash-mute">Payout per sale</span>
+            <div className="relative mt-1.5">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-dash-mute2">৳</span>
+              <input
+                type="number" min="0" value={form.payoutPerSale} onChange={(e) => set('payoutPerSale', e.target.value)}
+                placeholder="0"
+                className={`${inputCls} pl-10 text-lg font-bold tabular-nums`}
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-dash-mute2">
+              What you’ll pay the owner for <b className="text-dash-ink4">each sale</b> under this code.
+              Leave 0 for a plain discount with no payout.
+            </p>
+          </div>
+
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-dash-line bg-dash-soft/50 p-3.5">
+            <input type="checkbox" checked={form.isActive} onChange={(e) => set('isActive', e.target.checked)} className="mt-0.5 h-5 w-5 rounded border-dash-line-strong text-brand focus:ring-brand" />
+            <span>
+              <span className="block text-sm font-semibold text-dash-ink3">Active</span>
+              <span className="block text-[11px] text-dash-mute2">Buyers can use this code at checkout right now.</span>
+            </span>
           </label>
-        </div>
+        </Section>
 
         {/* Owner login — optional account so they can watch their own sales */}
-        <div className="bg-dash-card rounded-xl border border-dash-line p-5 sm:p-6">
+        <Section icon={FiLogIn} title="Owner login" subtitle="Optional — let the owner sign in and watch their own sales.">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox" checked={form.makeLogin}
@@ -235,17 +303,23 @@ function CouponForm() {
                 </div>
               </div>
               <p className="text-[11px] text-dash-mute2">
-                They sign in at <b>/login</b> with this email and land on their own coupon
+                They sign in at <b className="text-dash-ink4">/login</b> with this email and land on their own coupon
                 dashboard. An email that already has an account is linked instead of recreated.
               </p>
             </div>
           )}
-        </div>
+        </Section>
 
-        <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand text-white font-semibold rounded-lg hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50">
-          {saving ? <FiLoader className="animate-spin" /> : <FiSave />}
-          {saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Coupon'}
-        </button>
+        {/* Sticky so the action stays reachable however long the form gets. */}
+        <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-dash-line bg-dash-bg/95 px-4 py-4 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:px-5">
+          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 font-semibold text-white shadow-lg shadow-brand/25 transition-all hover:bg-brand-hover disabled:opacity-50">
+            {saving ? <FiLoader className="animate-spin" /> : <FiSave />}
+            {saving ? 'Saving…' : editing ? 'Save changes' : 'Create coupon'}
+          </button>
+          <Link href="/dashboard/admin/book-coupons" className="px-4 py-3 text-sm font-medium text-dash-mute transition-colors hover:text-dash-ink3">
+            Cancel
+          </Link>
+        </div>
       </form>
     </div>
   );

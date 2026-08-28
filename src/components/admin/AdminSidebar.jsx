@@ -110,7 +110,7 @@ const AdminSidebar = () => {
         },
         { title: 'Orders', href: '/dashboard/admin/orders', icon: FiShoppingCart, need: ['orders.read'] },
         { title: 'Enrollments', href: '/dashboard/admin/enrollments', icon: FiDollarSign, need: ['training.manage'] },
-        { title: 'Coupons', href: '/dashboard/admin/coupons', icon: FiTag, need: ['training.manage'] },
+        { title: 'Course Coupons', href: '/dashboard/admin/coupons', icon: FiTag, need: ['training.manage'] },
         {
           title: 'Create New', icon: FiPlus,
           submenu: [

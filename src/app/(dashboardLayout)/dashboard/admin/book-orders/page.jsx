@@ -14,7 +14,7 @@ import {
   FiShoppingBag, FiSearch, FiLoader, FiRefreshCw, FiAlertCircle,
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
-  FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2,
+  FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
@@ -535,34 +535,61 @@ export default function BookOrdersPage() {
                       </div>
                     </div>
 
-                    {/* Buyer / shipping / payment */}
+                    {/* Buyer / shipping / payment — the complete picture of one
+                        order, so the admin never has to look anything up elsewhere
+                        before confirming it or calling the buyer. */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-dash-card rounded-lg border border-dash-line p-4">
                       <div className="space-y-2.5">
                         <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Buyer</p>
                         <DetailRow icon={FiUser} label="Name" value={buyerName(o.user)} />
                         <DetailRow icon={FiMail} label="Email" value={o.user?.email} />
-                        <DetailRow icon={FiPhone} label="Phone" value={o.user?.phoneNumber || o.shippingAddress?.phone} />
+                        <DetailRow icon={FiPhone} label="Phone" value={o.user?.phoneNumber || o.shippingAddress?.phone} mono />
+                        {o.user?.whatsappNumber && (
+                          <DetailRow icon={FiSmartphone} label="WhatsApp" value={o.user.whatsappNumber} mono />
+                        )}
+                        {/* The college is the one detail a shipping address never
+                            carries, and it is what free local delivery keys off. */}
+                        <DetailRow icon={FiBookOpen} label="Medical college" value={o.user?.medicalCollegeName} />
+                        {(o.user?.district || o.user?.division) && (
+                          <DetailRow
+                            icon={FiMapPin}
+                            label="College area"
+                            value={[o.user?.upazila, o.user?.district, o.user?.division].filter(Boolean).join(', ')}
+                          />
+                        )}
+                        <DetailRow icon={FiClock} label="Ordered" value={fmtDate(o.createdAt)} />
                       </div>
+
                       <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Shipping</p>
+                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Delivery address</p>
                         {o.shippingAddress ? (
                           <>
                             <DetailRow icon={FiUser} label="Recipient" value={o.shippingAddress.name} />
                             <DetailRow icon={FiPhone} label="Phone" value={o.shippingAddress.phone} mono />
-                            <DetailRow icon={FiMapPin} label="Address" value={`${o.shippingAddress.address || ''}${o.shippingAddress.city ? ', ' + o.shippingAddress.city : ''}`} />
+                            <DetailRow icon={FiMapPin} label="Street / village" value={o.shippingAddress.address} />
+                            <DetailRow icon={FiMapPin} label="Upazila / thana" value={o.shippingAddress.upazila || o.shippingAddress.city} />
+                            <DetailRow icon={FiMapPin} label="District" value={o.shippingAddress.district} />
+                            <DetailRow icon={FiMapPin} label="Division" value={o.shippingAddress.division} />
+                            {/* One line a courier can be read verbatim. */}
                             <DetailRow
                               icon={FiTruck}
-                              label="Zone"
-                              value={o.shippingAddress.area === 'inside-dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'}
+                              label="Full address"
+                              value={[
+                                o.shippingAddress.address,
+                                o.shippingAddress.upazila || o.shippingAddress.city,
+                                o.shippingAddress.district,
+                                o.shippingAddress.division,
+                              ].filter(Boolean).join(', ')}
                             />
-                            {o.shippingAddress.note && <DetailRow icon={FiPackage} label="Note" value={o.shippingAddress.note} />}
+                            {o.shippingAddress.note && <DetailRow icon={FiPackage} label="Delivery note" value={o.shippingAddress.note} />}
                           </>
                         ) : (
                           <p className="text-sm text-dash-mute2">Digital delivery — no shipping</p>
                         )}
                       </div>
+
                       <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Payment</p>
+                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Payment &amp; order</p>
                         <DetailRow
                           icon={FiCreditCard}
                           label="Method"
@@ -573,6 +600,7 @@ export default function BookOrdersPage() {
                               : o.payment?.method}
                         />
                         <DetailRow icon={FiHash} label="Transaction ID" value={o.payment?.transactionId} mono />
+                        {o.payment?.paidAt && <DetailRow icon={FiCheckCircle} label="Paid at" value={fmtDate(o.payment.paidAt)} />}
                         {o.payment?.method === 'manual' && (
                           <>
                             <DetailRow icon={FiSmartphone} label="Sender number" value={o.payment?.senderNumber} mono />
@@ -582,7 +610,25 @@ export default function BookOrdersPage() {
                           </>
                         )}
                         <DetailRow icon={FiPackage} label="Delivery type" value={o.deliveryType} />
-                        {o.couponCode && <DetailRow icon={FiHash} label="Coupon" value={o.couponCode} />}
+                        {o.isPreOrder && <DetailRow icon={FiClock} label="Pre-order" value="Yes — sold before printing" />}
+                        {/* Coupon: the code, what it saved the buyer, and what the
+                            shop owes the code owner for this one sale. */}
+                        {o.couponCode && (
+                          <>
+                            <DetailRow icon={FiTag} label="Coupon" value={o.couponCode} mono />
+                            {o.couponDiscount > 0 && (
+                              <DetailRow icon={FiGift} label="Coupon discount" value={bdt(o.couponDiscount)} />
+                            )}
+                            {o.couponPayout > 0 && (
+                              <DetailRow icon={FiDollarSign} label="Owner payout" value={bdt(o.couponPayout)} />
+                            )}
+                          </>
+                        )}
+                        {o.confirmedAt && <DetailRow icon={FiCheckCircle} label="Confirmed" value={fmtDate(o.confirmedAt)} />}
+                        {o.shippedAt && <DetailRow icon={FiTruck} label="Shipped" value={fmtDate(o.shippedAt)} />}
+                        {o.deliveredAt && <DetailRow icon={FiPackage} label="Delivered" value={fmtDate(o.deliveredAt)} />}
+                        {o.courierName && <DetailRow icon={FiTruck} label="Courier" value={o.courierName} />}
+                        {o.trackingCode && <DetailRow icon={FiHash} label="Tracking" value={o.trackingCode} mono />}
                       </div>
                     </div>
 

@@ -137,25 +137,42 @@ const OfferBlock = ({ icon: Icon, title, desc, labelPh, o, onToggle, onLabel, on
         </div>
         <div>
           <span className="text-xs font-medium text-dash-mute">Discount</span>
-          <div className="mt-1 flex gap-2">
-            <select
-              value={o.type} onChange={(e) => onType(e.target.value)}
-              className={`${inputCls} w-36 shrink-0 border-dash-line`}
-            >
-              <option value="percent">Percent (%)</option>
-              <option value="fixed">Fixed (৳)</option>
-            </select>
+          {/* A segmented pair rather than a <select>: two options read faster
+              side by side, and the value box keeps the full width beneath it
+              (a <select> carrying inputCls's w-full squeezed the number box). */}
+          <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-lg bg-dash-soft p-1">
+            {[
+              { id: 'percent', label: 'Percent', hint: '%' },
+              { id: 'fixed', label: 'Fixed', hint: '৳' },
+            ].map((t) => {
+              const on = o.type === t.id;
+              return (
+                <button
+                  key={t.id} type="button" onClick={() => onType(t.id)}
+                  className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-[13px] font-semibold transition-all ${
+                    on ? 'bg-brand text-white shadow-sm shadow-brand/25' : 'text-dash-mute hover:bg-dash-card hover:text-dash-ink3'
+                  }`}
+                >
+                  <span className={on ? 'opacity-90' : 'opacity-60'}>{t.hint}</span>{t.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="relative mt-2">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-dash-mute2">
+              {o.type === 'fixed' ? '৳' : '%'}
+            </span>
             {o.type === 'fixed' ? (
               <input
                 type="number" min="0" value={o.amount}
-                onChange={(e) => onAmount(e.target.value)} placeholder="৳ off, e.g. 100"
-                className={`${inputCls} flex-1 ${error ? 'border-red-400' : 'border-dash-line'}`}
+                onChange={(e) => onAmount(e.target.value)} placeholder="100"
+                className={`${inputCls} pl-9 font-bold tabular-nums ${error ? 'border-red-400' : 'border-dash-line'}`}
               />
             ) : (
               <input
                 type="number" min="0" max="90" value={o.percent}
-                onChange={(e) => onPercent(e.target.value)} placeholder="% off, e.g. 25"
-                className={`${inputCls} flex-1 ${error ? 'border-red-400' : 'border-dash-line'}`}
+                onChange={(e) => onPercent(e.target.value)} placeholder="25"
+                className={`${inputCls} pl-9 font-bold tabular-nums ${error ? 'border-red-400' : 'border-dash-line'}`}
               />
             )}
           </div>
