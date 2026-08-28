@@ -33,6 +33,12 @@ const fmtDate = (d) =>
 // 'pending' / 'paid' / 'access-granted' are set by the payment flow, not here).
 const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
 
+// The desktop table's column widths. Declared once and used by BOTH the header
+// strip and every row, because a table whose header does not line up with its
+// cells is worse than no header at all.
+const GRID_COLS =
+  'grid-cols-[32px_120px_minmax(130px,1.3fr)_minmax(120px,1.1fr)_92px_84px_140px_28px]';
+
 // The raw enum values read like database jargon on a button. These say what the
 // click actually does — which matters most for `delivered`, since on a COD order
 // it is also the moment the money is recorded.
@@ -107,7 +113,8 @@ export default function BookOrdersPage() {
   // Multi-select for bulk delete. Only owner accounts (superAdmin/admin) may
   // delete an order at all — the server enforces it; this only hides the UI.
   const [selected, setSelected] = useState(() => new Set());
-  const [deleting, setDeleting] = useState(false);
+  // One flag for every bulk action, so two cannot run at once.
+  const [bulkBusy, setBulkBusy] = useState(false);
   const canDelete = ['superAdmin', 'admin'].includes(getStoredUser()?.role);
 
   // Accepts the status so the filter dropdown can refetch with the new value
@@ -288,6 +295,39 @@ export default function BookOrdersPage() {
       return next;
     });
 
+  // Move every selected order to one status. Cancelling is destructive enough
+  // (it puts stock back and fails the payment) to be worth confirming first.
+  const bulkStatus = async (status) => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (status === 'cancelled') {
+      const ok = await confirm({
+        title: `Cancel ${ids.length} order${ids.length === 1 ? '' : 's'}?`,
+        message: 'Reserved stock goes back on the shelf and unpaid payments are marked failed.',
+        confirmText: 'Cancel orders',
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    setBulkBusy(true);
+    try {
+      const res = await fetch(`${API}/orders/bulk-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ ids, status }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not update');
+      showToast('success', json.message || 'Orders updated');
+      setSelected(new Set());
+      fetchOrders();
+    } catch (e) {
+      showToast('error', e.message || 'Could not update the selected orders');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const deleteSelected = async () => {
     const ids = [...selected];
     if (ids.length === 0) return;
@@ -300,7 +340,7 @@ export default function BookOrdersPage() {
     });
     if (!ok) return;
 
-    setDeleting(true);
+    setBulkBusy(true);
     try {
       const res = await fetch(`${API}/orders/bulk-delete`, {
         method: 'POST',
@@ -315,7 +355,7 @@ export default function BookOrdersPage() {
     } catch (e) {
       showToast('error', e.message || 'Could not delete the selected orders');
     } finally {
-      setDeleting(false);
+      setBulkBusy(false);
     }
   };
 
@@ -388,40 +428,63 @@ export default function BookOrdersPage() {
         </select>
       </div>
 
-      {/* Selection toolbar — owner accounts only. Appears above the list so the
-          count and the destructive button are never far from the checkboxes. */}
-      {canDelete && filtered.length > 0 && (
-        <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-          selected.size > 0 ? 'border-rose-200 bg-rose-50/60' : 'border-dash-line bg-dash-card'
-        }`}>
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+      {/* Selection toolbar. Appears above the list so the count and the actions
+          are never far from the checkboxes. Every fulfilment status can be set
+          in bulk — confirming twenty COD orders one at a time is the job this
+          screen exists to avoid. Delete stays owner-only. */}
+      {filtered.length > 0 && (
+        <div
+          className={`flex flex-col gap-3 rounded-xl border px-4 py-3 transition-colors sm:flex-row sm:items-center sm:justify-between ${
+            selected.size > 0 ? 'border-brand/40 bg-brand-soft/40' : 'border-dash-line bg-dash-card'
+          }`}
+        >
+          <label className="flex cursor-pointer select-none items-center gap-2.5">
             <input
               type="checkbox"
               checked={allVisibleSelected}
               onChange={toggleAllVisible}
-              className="w-4 h-4 rounded border-dash-line-strong text-brand focus:ring-brand"
+              className="h-4 w-4 rounded border-dash-line-strong text-brand focus:ring-brand"
             />
             <span className="text-sm font-medium text-dash-ink3">
               {selected.size > 0
-                ? `${selected.size} order${selected.size === 1 ? '' : 's'} selected`
+                ? `${selected.size} selected`
                 : `Select all (${filtered.length})`}
             </span>
           </label>
+
           {selected.size > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {FULFILLMENT_OPTIONS.map((st) => {
+                const Icon = STATUS_META[st]?.icon || FiCheck;
+                return (
+                  <button
+                    key={st}
+                    onClick={() => bulkStatus(st)}
+                    disabled={bulkBusy}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                      st === 'cancelled'
+                        ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                        : 'border-dash-line bg-dash-card text-dash-ink3 hover:border-brand/40 hover:text-brand'
+                    }`}
+                  >
+                    <Icon size={13} /> {FULFILLMENT_LABEL[st]}
+                  </button>
+                );
+              })}
+              {canDelete && (
+                <button
+                  onClick={deleteSelected}
+                  disabled={bulkBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+                >
+                  {bulkBusy ? <FiLoader className="animate-spin" size={13} /> : <FiTrash2 size={13} />} Delete
+                </button>
+              )}
               <button
                 onClick={() => setSelected(new Set())}
-                className="px-3 py-2 text-sm font-medium text-dash-mute hover:text-dash-ink3 transition-colors"
+                className="px-2 py-2 text-xs font-medium text-dash-mute transition-colors hover:text-dash-ink3"
               >
                 Clear
-              </button>
-              <button
-                onClick={deleteSelected}
-                disabled={deleting}
-                className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
-              >
-                {deleting ? <FiLoader className="animate-spin" /> : <FiTrash2 />}
-                Delete selected
               </button>
             </div>
           )}
@@ -446,7 +509,20 @@ export default function BookOrdersPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
+          {/* Column headers — desktop only; the mobile card labels its own
+              fields inline, where a header row has nothing to align to. */}
+          <div className={`hidden lg:grid ${GRID_COLS} items-center gap-3 rounded-lg bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2`}>
+            <span />
+            <span>Order</span>
+            <span>Buyer &amp; phone</span>
+            <span>Medical college</span>
+            <span className="text-right">Total</span>
+            <span className="text-center">Payment</span>
+            <span>Status</span>
+            <span />
+          </div>
+
           {filtered.map((o) => {
             const isOpen = expanded === o._id;
             return (
@@ -456,54 +532,131 @@ export default function BookOrdersPage() {
                   selected.has(o._id) ? 'border-rose-300 ring-1 ring-rose-200' : 'border-dash-line'
                 }`}
               >
-                {/* Summary row. The checkbox sits OUTSIDE the expand button —
-                    nesting a control inside a button is invalid and would make
-                    every tick also toggle the panel. */}
-                <div className="flex items-center">
-                  {canDelete && (
-                    <label className="pl-4 pr-1 py-3.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                {/* Summary row.
+                    Desktop is a real table: GRID_COLS is shared with the header
+                    strip above the list, so every cell lines up under its label.
+                    Mobile drops to a stacked card — a 7-column table on a phone
+                    is unreadable. The checkbox and the status select sit OUTSIDE
+                    the expand button: nesting a control inside a button is
+                    invalid, and every tick would also toggle the panel. */}
+                <div className={`hidden lg:grid ${GRID_COLS} items-center gap-3 px-3 py-2.5`}>
+                  <label className="flex cursor-pointer items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(o._id)}
+                      onChange={() => toggleOne(o._id)}
+                      className="h-4 w-4 rounded border-dash-line-strong text-brand focus:ring-brand"
+                      aria-label={`Select order ${o.orderNumber}`}
+                    />
+                  </label>
+
+                  <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
+                    <span className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-extrabold text-indigo-700">
+                      #{o.orderSeq ?? '—'}
+                    </span>
+                    <span className="mt-0.5 block truncate font-mono text-[11px] text-dash-mute2">{o.orderNumber}</span>
+                  </button>
+
+                  <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
+                    <span className="block truncate text-sm font-medium text-dash-ink3">{buyerName(o.user)}</span>
+                    <span className="block truncate font-mono text-xs text-dash-mute2">
+                      {o.shippingAddress?.phone || o.user?.phoneNumber || '—'}
+                    </span>
+                  </button>
+
+                  <div className="min-w-0">
+                    <span className="block truncate text-sm text-dash-ink4" title={o.user?.medicalCollegeName || ''}>
+                      {o.user?.medicalCollegeName || '—'}
+                    </span>
+                    <span className="block truncate text-xs text-dash-mute2">
+                      {[o.shippingAddress?.district, o.shippingAddress?.division].filter(Boolean).join(', ') || fmtDate(o.createdAt)}
+                    </span>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="block font-bold text-dash-ink2">{bdt(o.total)}</span>
+                    {isCod(o) && <span className="text-[10px] font-bold text-amber-600">COD</span>}
+                  </div>
+
+                  <div className="text-center">
+                    <span className={`inline-block rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
+                      {o.payment?.status || 'pending'}
+                    </span>
+                  </div>
+
+                  {/* Status is changed right here — no need to open the panel. */}
+                  <div>
+                    <select
+                      value={FULFILLMENT_OPTIONS.includes(o.status) ? o.status : ''}
+                      disabled={updatingId === o._id}
+                      onChange={(e) => e.target.value && updateStatus(o, e.target.value)}
+                      className={`w-full rounded-md border px-2 py-1.5 text-xs font-semibold capitalize outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20 ${STATUS_META[o.status]?.cls || 'border-dash-line text-dash-ink3'}`}
+                      title="Change status"
+                    >
+                      {!FULFILLMENT_OPTIONS.includes(o.status) && (
+                        <option value="">{o.status}</option>
+                      )}
+                      {FULFILLMENT_OPTIONS.map((s) => (
+                        <option key={s} value={s}>{FULFILLMENT_LABEL[s]}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : o._id)}
+                    className="flex items-center justify-center text-dash-mute2 hover:text-brand"
+                    title={isOpen ? 'Hide details' : 'Show details'}
+                  >
+                    {updatingId === o._id
+                      ? <FiLoader className="animate-spin" size={15} />
+                      : <FiChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
+                  </button>
+                </div>
+
+                {/* Mobile card */}
+                <div className="lg:hidden px-3 py-3">
+                  <div className="flex items-start gap-3">
+                    <label className="cursor-pointer pt-0.5">
                       <input
                         type="checkbox"
                         checked={selected.has(o._id)}
                         onChange={() => toggleOne(o._id)}
-                        className="w-4 h-4 rounded border-dash-line-strong text-brand focus:ring-brand"
+                        className="h-4 w-4 rounded border-dash-line-strong text-brand focus:ring-brand"
                         aria-label={`Select order ${o.orderNumber}`}
                       />
                     </label>
-                  )}
-                <button
-                  onClick={() => setExpanded(isOpen ? null : o._id)}
-                  className="flex-1 min-w-0 flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3.5 text-left hover:bg-dash-soft/70 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-[170px]">
-                    <span
-                      className="inline-flex shrink-0 items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-extrabold text-indigo-700"
-                      title="Order number"
-                    >
-                      #{o.orderSeq ?? '—'}
-                    </span>
-                    <FiHash className="text-dash-faint shrink-0" size={13} />
-                    <span className="font-mono text-xs font-semibold text-dash-ink3 truncate">{o.orderNumber}</span>
+                    <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 flex-1 text-left">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-extrabold text-indigo-700">
+                          #{o.orderSeq ?? '—'}
+                        </span>
+                        <span className="text-sm font-semibold text-dash-ink3">{buyerName(o.user)}</span>
+                        {isCod(o) && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">COD</span>}
+                      </span>
+                      <span className="mt-1 block font-mono text-xs text-dash-mute2">
+                        {o.shippingAddress?.phone || o.user?.phoneNumber || '—'}
+                      </span>
+                      <span className="block truncate text-xs text-dash-mute2">{o.user?.medicalCollegeName || '—'}</span>
+                      <span className="mt-1 flex items-center gap-2">
+                        <span className="font-bold text-dash-ink2">{bdt(o.total)}</span>
+                        <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
+                          {o.payment?.status || 'pending'}
+                        </span>
+                      </span>
+                    </button>
+                    <FiChevronDown size={16} className={`mt-1 shrink-0 text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </div>
-                  <div className="min-w-[140px] flex-1">
-                    <p className="text-sm font-medium text-dash-ink3 truncate">{buyerName(o.user)}</p>
-                    <p className="text-xs text-dash-mute2">{fmtDate(o.createdAt)}</p>
-                  </div>
-                  <div className="text-sm text-dash-mute hidden sm:block">
-                    {o.items?.length || 0} item{(o.items?.length || 0) === 1 ? '' : 's'}
-                  </div>
-                  <div className="font-bold text-dash-ink2 min-w-[70px] text-right">{bdt(o.total)}</div>
-                  {isCod(o) && (
-                    <span className="px-2 py-0.5 rounded-md text-xs font-bold border bg-amber-50 text-amber-700 border-amber-200">
-                      COD
-                    </span>
-                  )}
-                  <span className={`px-2 py-0.5 rounded-md text-xs font-medium border capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
-                    {o.payment?.status || 'pending'}
-                  </span>
-                  <StatusBadge status={o.status} />
-                  <FiChevronDown className={`text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
+                  <select
+                    value={FULFILLMENT_OPTIONS.includes(o.status) ? o.status : ''}
+                    disabled={updatingId === o._id}
+                    onChange={(e) => e.target.value && updateStatus(o, e.target.value)}
+                    className={`mt-2 w-full rounded-md border px-2 py-2 text-xs font-semibold capitalize outline-none ${STATUS_META[o.status]?.cls || 'border-dash-line text-dash-ink3'}`}
+                  >
+                    {!FULFILLMENT_OPTIONS.includes(o.status) && <option value="">{o.status}</option>}
+                    {FULFILLMENT_OPTIONS.map((s) => (
+                      <option key={s} value={s}>{FULFILLMENT_LABEL[s]}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Expanded detail */}
