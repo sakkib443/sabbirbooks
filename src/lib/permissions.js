@@ -112,6 +112,8 @@ export const ROLE_LABELS = {
   mentor: 'Mentor',
   student: 'Student',
   user: 'Student',
+  // A coupon owner — sells through their own code and sees only their earnings.
+  affiliate: 'Coupon Owner',
 };
 
 /** Fallback only — see the header comment. Mirrors ROLE_DEFAULT_CAPABILITIES. */
@@ -131,6 +133,8 @@ export const ROLE_DEFAULT_CAPABILITIES = {
   // Adds and edits, but never deletes and never sees orders, sales or people.
   manager: ['content.write', 'training.manage'],
   student: [],
+  // Their dashboard is gated on owning the coupon, not on any capability.
+  affiliate: [],
 };
 
 /**
@@ -224,6 +228,9 @@ export const homeRouteFor = (role) => {
       return '/dashboard/admin';
     case 'mentor':
       return '/dashboard/mentor';
+    // A coupon owner has exactly one screen: their own sales and earnings.
+    case 'affiliate':
+      return '/dashboard/affiliate';
     case 'student':
     case 'user':
       return '/';

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FiArrowLeft, FiSave, FiTag, FiUser, FiPhone, FiPercent, FiDollarSign,
-  FiGift, FiLoader, FiAlertCircle,
+  FiGift, FiLoader, FiAlertCircle, FiMail, FiLock, FiLogIn,
 } from 'react-icons/fi';
 
 import { getCoupon, saveCoupon } from '@/components/admin/bookCoupon/couponApi';
@@ -13,6 +13,9 @@ import { getCoupon, saveCoupon } from '@/components/admin/bookCoupon/couponApi';
 const EMPTY = {
   code: '', name: '', ownerName: '', ownerPhone: '',
   discountType: 'percent', discountValue: '', payoutPerSale: '', isActive: true,
+  // Optional login for the coupon's owner — an 'affiliate' account that can sign
+  // in and watch their own sales. Off by default; a coupon works without one.
+  makeLogin: false, ownerEmail: '', ownerPassword: '',
 };
 
 const inputCls =
@@ -46,6 +49,11 @@ function CouponForm() {
           discountValue: c.discountValue ?? '',
           payoutPerSale: c.payoutPerSale ?? '',
           isActive: c.isActive !== false,
+          // An existing login opens the section already ticked, with the email
+          // filled in and the password blank ("leave it alone").
+          makeLogin: !!c.ownerUser,
+          ownerEmail: c.ownerUser?.email || '',
+          ownerPassword: '',
         });
       } catch (e) {
         if (alive) setError(e.message || 'Failed to load coupon');
@@ -67,6 +75,10 @@ function CouponForm() {
     if (form.discountType === 'percent' && (val < 0 || val > 90))
       return setError('Percent discount must be between 0 and 90');
     if (val < 0) return setError('Discount cannot be negative');
+    if (form.makeLogin) {
+      if (!form.ownerEmail.trim()) return setError('Owner email is required for the login');
+      if (!editing && !form.ownerPassword) return setError('Set a password for the owner login');
+    }
 
     setSaving(true);
     try {
@@ -79,6 +91,10 @@ function CouponForm() {
         discountValue: val,
         payoutPerSale: Number(form.payoutPerSale) || 0,
         isActive: !!form.isActive,
+        // '' clears the link; a password is only sent when one was typed, so an
+        // untouched box leaves the owner's current password alone.
+        ownerEmail: form.makeLogin ? form.ownerEmail.trim().toLowerCase() : '',
+        ...(form.makeLogin && form.ownerPassword ? { ownerPassword: form.ownerPassword } : {}),
       });
       router.push('/dashboard/admin/book-coupons');
     } catch (e2) {
@@ -175,6 +191,55 @@ function CouponForm() {
             <input type="checkbox" checked={form.isActive} onChange={(e) => set('isActive', e.target.checked)} className="w-5 h-5 rounded border-dash-line-strong text-brand focus:ring-brand" />
             <span className="text-sm font-medium text-dash-ink3">Active — buyers can use this code now</span>
           </label>
+        </div>
+
+        {/* Owner login — optional account so they can watch their own sales */}
+        <div className="bg-dash-card rounded-xl border border-dash-line p-5 sm:p-6">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox" checked={form.makeLogin}
+              onChange={(e) => set('makeLogin', e.target.checked)}
+              className="mt-0.5 w-5 h-5 rounded border-dash-line-strong text-brand focus:ring-brand"
+            />
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 text-sm font-bold text-dash-ink3">
+                <FiLogIn className="text-brand" /> Give this owner a login
+              </span>
+              <span className="block text-[11px] text-dash-mute2 mt-0.5">
+                Creates an account they sign in with to see their own sales and earnings.
+                They get no admin access. Leave off for a plain discount code.
+              </span>
+            </span>
+          </label>
+
+          {form.makeLogin && (
+            <div className="mt-4 space-y-4 border-t border-dash-line pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label icon={FiMail}>Owner email (their username)</Label>
+                  <input
+                    type="email" value={form.ownerEmail}
+                    onChange={(e) => set('ownerEmail', e.target.value)}
+                    placeholder="owner@example.com"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <Label icon={FiLock}>Password</Label>
+                  <input
+                    type="text" value={form.ownerPassword}
+                    onChange={(e) => set('ownerPassword', e.target.value)}
+                    placeholder={editing ? 'Leave blank to keep current' : 'Set a password'}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-dash-mute2">
+                They sign in at <b>/login</b> with this email and land on their own coupon
+                dashboard. An email that already has an account is linked instead of recreated.
+              </p>
+            </div>
+          )}
         </div>
 
         <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand text-white font-semibold rounded-lg hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50">

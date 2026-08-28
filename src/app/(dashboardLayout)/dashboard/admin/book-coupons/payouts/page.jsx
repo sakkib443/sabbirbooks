@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   FiArrowLeft, FiDollarSign, FiLoader, FiAlertCircle, FiUser,
-  FiShoppingBag, FiTag, FiGift,
+  FiShoppingBag, FiTag, FiGift, FiLogIn,
 } from 'react-icons/fi';
 import { fetchPayouts, formatTk } from '@/components/admin/bookCoupon/couponApi';
 
@@ -105,6 +105,11 @@ export default function CouponPayoutsPage() {
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-1.5 text-dash-ink3"><FiUser size={12} className="text-dash-mute2" /> {r.ownerName || '—'}</span>
                         {r.ownerPhone && <span className="block text-[11px] text-dash-mute2 font-mono">{r.ownerPhone}</span>}
+                        {r.hasLogin && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-teal-50 px-1.5 py-0.5 text-[10px] font-bold text-teal-700" title={r.ownerEmail}>
+                            <FiLogIn size={9} /> {r.ownerEmail || 'login'}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-dash-ink3">{discountText(r)}</td>
                       <td className="px-4 py-3 text-center tabular-nums font-semibold text-dash-ink2">{r.sales}</td>

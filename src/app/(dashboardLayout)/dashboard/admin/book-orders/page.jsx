@@ -14,10 +14,11 @@ import {
   FiShoppingBag, FiSearch, FiLoader, FiRefreshCw, FiAlertCircle,
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
-  FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend,
+  FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
+import { getStoredUser } from '@/lib/permissions';
 
 const CHANNEL_LABEL = { bkash: 'bKash', rocket: 'Rocket', nagad: 'Nagad' };
 
@@ -103,6 +104,11 @@ export default function BookOrdersPage() {
   const [busyId, setBusyId] = useState(null); // approve/reject/edit in flight
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  // Multi-select for bulk delete. Only owner accounts (superAdmin/admin) may
+  // delete an order at all — the server enforces it; this only hides the UI.
+  const [selected, setSelected] = useState(() => new Set());
+  const [deleting, setDeleting] = useState(false);
+  const canDelete = ['superAdmin', 'admin'].includes(getStoredUser()?.role);
 
   // Accepts the status so the filter dropdown can refetch with the new value
   // immediately (state updates are async and wouldn't be visible in the same tick).
@@ -265,6 +271,54 @@ export default function BookOrdersPage() {
     if (ok) setEditingId(null);
   };
 
+  // ── Selection + bulk delete ───────────────────────────────────────────────
+  const toggleOne = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
+  const allVisibleSelected = filtered.length > 0 && filtered.every((o) => selected.has(o._id));
+  const toggleAllVisible = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) filtered.forEach((o) => next.delete(o._id));
+      else filtered.forEach((o) => next.add(o._id));
+      return next;
+    });
+
+  const deleteSelected = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    const ok = await confirm({
+      title: `Delete ${ids.length} order${ids.length === 1 ? '' : 's'}?`,
+      message:
+        'This permanently removes the order records. Any stock these orders had taken is put back. This cannot be undone.',
+      confirmText: 'Delete permanently',
+      danger: true,
+    });
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`${API}/orders/bulk-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ ids }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not delete');
+      showToast('success', json.message || 'Orders deleted');
+      setOrders((prev) => prev.filter((o) => !selected.has(o._id)));
+      setSelected(new Set());
+    } catch (e) {
+      showToast('error', e.message || 'Could not delete the selected orders');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header */}
@@ -334,6 +388,46 @@ export default function BookOrdersPage() {
         </select>
       </div>
 
+      {/* Selection toolbar — owner accounts only. Appears above the list so the
+          count and the destructive button are never far from the checkboxes. */}
+      {canDelete && filtered.length > 0 && (
+        <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+          selected.size > 0 ? 'border-rose-200 bg-rose-50/60' : 'border-dash-line bg-dash-card'
+        }`}>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={toggleAllVisible}
+              className="w-4 h-4 rounded border-dash-line-strong text-brand focus:ring-brand"
+            />
+            <span className="text-sm font-medium text-dash-ink3">
+              {selected.size > 0
+                ? `${selected.size} order${selected.size === 1 ? '' : 's'} selected`
+                : `Select all (${filtered.length})`}
+            </span>
+          </label>
+          {selected.size > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelected(new Set())}
+                className="px-3 py-2 text-sm font-medium text-dash-mute hover:text-dash-ink3 transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={deleteSelected}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+              >
+                {deleting ? <FiLoader className="animate-spin" /> : <FiTrash2 />}
+                Delete selected
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20 text-dash-mute2">
@@ -356,11 +450,30 @@ export default function BookOrdersPage() {
           {filtered.map((o) => {
             const isOpen = expanded === o._id;
             return (
-              <div key={o._id} className="bg-dash-card rounded-xl border border-dash-line overflow-hidden">
-                {/* Summary row */}
+              <div
+                key={o._id}
+                className={`bg-dash-card rounded-xl border overflow-hidden transition-colors ${
+                  selected.has(o._id) ? 'border-rose-300 ring-1 ring-rose-200' : 'border-dash-line'
+                }`}
+              >
+                {/* Summary row. The checkbox sits OUTSIDE the expand button —
+                    nesting a control inside a button is invalid and would make
+                    every tick also toggle the panel. */}
+                <div className="flex items-center">
+                  {canDelete && (
+                    <label className="pl-4 pr-1 py-3.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(o._id)}
+                        onChange={() => toggleOne(o._id)}
+                        className="w-4 h-4 rounded border-dash-line-strong text-brand focus:ring-brand"
+                        aria-label={`Select order ${o.orderNumber}`}
+                      />
+                    </label>
+                  )}
                 <button
                   onClick={() => setExpanded(isOpen ? null : o._id)}
-                  className="w-full flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3.5 text-left hover:bg-dash-soft/70 transition-colors"
+                  className="flex-1 min-w-0 flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3.5 text-left hover:bg-dash-soft/70 transition-colors"
                 >
                   <div className="flex items-center gap-2 min-w-[170px]">
                     <span
@@ -391,6 +504,7 @@ export default function BookOrdersPage() {
                   <StatusBadge status={o.status} />
                   <FiChevronDown className={`text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
+                </div>
 
                 {/* Expanded detail */}
                 {isOpen && (
