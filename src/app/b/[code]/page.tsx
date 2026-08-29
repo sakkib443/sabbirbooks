@@ -147,18 +147,21 @@ export default function BookTopicScanPage() {
     if (!code) return;
     setState({ kind: "loading" });
 
+    // No token is fine. A chapter the shop has marked FREE opens for anyone
+    // holding the printed page, and only the server knows which chapter this QR
+    // belongs to — so ask it, signed in or not, and let it decide. Bouncing to
+    // /login first would hide the free sample behind the very account the
+    // sample exists to sell.
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) {
-      router.replace(`/login?redirect=${encodeURIComponent(`/b/${code}`)}`);
-      return;
-    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/book-content/scan/${code}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const body = await res.json();
 
+      // Only a signed-in reader whose session expired should be sent to log in
+      // again; a stranger who simply has no access gets the 403 card below.
       if (res.status === 401) {
         router.replace(`/login?redirect=${encodeURIComponent(`/b/${code}`)}`);
         return;
@@ -241,9 +244,14 @@ export default function BookTopicScanPage() {
             QR কোডের কনটেন্ট দেখতে হলে বইটি কিনতে হবে।
           </p>
 
+          {/* A plain <img>, not next/image, on purpose. next/image THROWS on a
+              host missing from remotePatterns, which turns one unrecognised
+              cover URL into a blank crashed page — on the very screen whose job
+              is to sell the book. A thumbnail is not worth that risk. */}
           {book?.coverImage && (
             <div className="relative w-28 h-40 mx-auto mb-4 rounded-lg overflow-hidden">
-              <Image src={book.coverImage} alt={book.title} fill className="object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
             </div>
           )}
           {book && (
