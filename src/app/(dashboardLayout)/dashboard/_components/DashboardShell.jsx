@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import ProtectedRoute from '@/app/providers/protectedRoutes';
 import ThemeToggle from '@/components/theme/ThemeToggle';
 import { FiChevronDown, FiLogOut, FiSearch } from 'react-icons/fi';
+import BottomNav, { BottomNavSpacer } from '@/components/shared/BottomNav';
 
 /**
  * The dashboard chrome — sidebar slot, sticky topbar, profile dropdown, page
@@ -43,6 +44,13 @@ export default function DashboardShell({
   notificationSlot = null,
   /** Admin's sidebar toggle overlaps the top-left, so it needs extra padding. */
   headerPaddingClassName = 'px-5 lg:px-7',
+  /**
+   * Phone tab bar for this panel — [{ href, label, icon, exact }]. Most of the
+   * shop's traffic is on a phone, where the sidebar is a drawer nobody opens;
+   * these are the four or five screens that actually get used, one thumb-tap
+   * away. Desktop keeps the sidebar and never renders these.
+   */
+  bottomTabs = [],
   children,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -115,12 +123,19 @@ export default function DashboardShell({
                 <button
                   type="button"
                   aria-label="Search"
-                  className="w-9 h-9 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-dash-ink4 hover:bg-dash-soft2 transition-all"
+                  className="w-9 h-9 rounded-lg hidden sm:flex items-center justify-center text-dash-mute2 hover:text-dash-ink4 hover:bg-dash-soft2 transition-all"
                 >
                   <FiSearch size={17} />
                 </button>
 
-                <ThemeToggle className="hidden sm:inline-flex" />
+                {/* Wrapped rather than given `hidden sm:inline-flex`: the toggle
+                    already sets `inline-flex` on its own root, and two display
+                    utilities on one element let whichever Tailwind emits last
+                    win — which is why it kept showing on phones. The toggle is
+                    in the profile menu there. */}
+                <div className="hidden sm:block">
+                  <ThemeToggle />
+                </div>
 
                 {notificationSlot ? <div className="relative">{notificationSlot}</div> : null}
 
@@ -205,9 +220,13 @@ export default function DashboardShell({
           {/* Page Content */}
           <div className="p-4 lg:p-6 xl:p-7">
             {children}
+            {/* Reserve the tab bar's height so a page's last row is tappable. */}
+            {bottomTabs.length > 0 && <BottomNavSpacer />}
           </div>
         </main>
       </div>
+
+      {bottomTabs.length > 0 && <BottomNav items={bottomTabs} tone="dash" />}
     </ProtectedRoute>
   );
 }

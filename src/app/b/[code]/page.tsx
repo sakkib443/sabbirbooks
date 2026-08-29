@@ -121,6 +121,28 @@ function SectionLabel({ icon, children }: { icon: React.ReactNode; children: Rea
   );
 }
 
+/**
+ * A minimal top bar for the states that stand alone on a full screen — locked,
+ * awaiting delivery, not found. The reader state has its own header; these had
+ * the site's navbar until the QR route went fullscreen, and without something
+ * here a visitor who is simply signed out has no way back or in.
+ */
+function MiniBar() {
+  return (
+    <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-[#282828] bg-[#0f0f0f]/95 px-4 py-3 backdrop-blur">
+      <Link href="/" className="flex items-center gap-2 text-sm font-bold text-white">
+        <LuBookOpen className="text-emerald-400" /> Magic Viva
+      </Link>
+      <Link
+        href="/login"
+        className="rounded-lg border border-[#333] px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-400"
+      >
+        লগইন
+      </Link>
+    </div>
+  );
+}
+
 export default function BookTopicScanPage() {
   const params = useParams<{ code: string }>();
   const router = useRouter();
@@ -234,6 +256,7 @@ export default function BookTopicScanPage() {
     const book = state.book;
     return (
       <div className="min-h-screen bg-[#0f0f0f] text-slate-200 flex items-center justify-center px-4 py-10">
+        <MiniBar />
         <div className="w-full max-w-sm text-center">
           <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-5">
             <LuLock className="w-6 h-6 text-amber-400" />
@@ -280,6 +303,7 @@ export default function BookTopicScanPage() {
     const book = state.book;
     return (
       <div className="min-h-screen bg-[#0f0f0f] text-slate-200 flex items-center justify-center px-4 py-10">
+        <MiniBar />
         <div className="w-full max-w-sm text-center">
           <div className="w-14 h-14 rounded-full bg-sky-500/10 flex items-center justify-center mx-auto mb-5">
             <LuTruck className="w-6 h-6 text-sky-400" />

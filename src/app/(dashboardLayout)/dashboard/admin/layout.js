@@ -5,7 +5,17 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import NotificationBell from '@/components/shared/NotificationBell';
 import DashboardShell from '../_components/DashboardShell';
 import { ADMIN_SHELL_ROLES, ROLE_LABELS } from '@/lib/permissions';
-import { FiUser, FiSettings, FiBell } from 'react-icons/fi';
+import { FiUser, FiSettings, FiBell, FiHome, FiShoppingBag, FiBook, FiTag, FiTrendingUp } from 'react-icons/fi';
+
+// The five admin screens that actually get used on a phone. The sidebar is a
+// drawer there and nobody opens it mid-task; these are one thumb-tap away.
+const ADMIN_TABS = [
+  { key: 'home', href: '/dashboard/admin', label: 'হোম', icon: FiHome, exact: true },
+  { key: 'orders', href: '/dashboard/admin/book-orders', label: 'অর্ডার', icon: FiShoppingBag },
+  { key: 'books', href: '/dashboard/admin/books', label: 'বই', icon: FiBook },
+  { key: 'coupons', href: '/dashboard/admin/book-coupons', label: 'কুপন', icon: FiTag },
+  { key: 'analytics', href: '/dashboard/admin/analytics', label: 'রিপোর্ট', icon: FiTrendingUp },
+];
 
 const MENU_ITEMS = [
   { icon: FiUser, label: 'My Profile', href: '/dashboard/admin/settings' },
@@ -41,6 +51,7 @@ const AdminLayout = ({ children }) => {
     <DashboardShell
       allowedRoles={ADMIN_SHELL_ROLES}
       sidebar={<AdminSidebar />}
+      bottomTabs={ADMIN_TABS}
       rootSegment="admin"
       subtitle={`${userRole} Dashboard`}
       userName={userName}
