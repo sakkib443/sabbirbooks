@@ -70,10 +70,13 @@ const Navbar = () => {
 
   // The catalogue routes still redirect home while the shop is one book page
   // (see src/proxy.ts), and offering links that bounce is worse than offering
-  // none — so those stay behind the flag. Home, about, contact and the
-  // ambassador programme are always here: the first three because a payment
-  // gateway's review looks for them, and the fourth because it is advertised
-  // off-site and a link that lands on the homepage loses the applicant.
+  // none — so those stay behind the flag. Home, about and contact are always
+  // here, the last two because a payment gateway's review looks for them.
+  //
+  // /campus-ambassador is deliberately NOT listed. The shop recruits by sending
+  // the link to people it wants, so the page is reachable by anyone who has it
+  // and advertised to nobody who does not. It is left out of the menu, not
+  // closed off — see src/config/site.js, which keeps the route live.
   const menu = [
     { href: "/", label: t("navbar.home") },
     ...(PUBLIC_PAGES_ENABLED
@@ -82,7 +85,6 @@ const Navbar = () => {
           { href: "/books", label: t("navbar.books") },
         ]
       : []),
-    { href: "/campus-ambassador", label: t("navbar.ambassador") },
     { href: "/about", label: t("navbar.about") },
     { href: "/contact", label: t("navbar.contact") },
   ];

@@ -24,9 +24,9 @@ const Footer = () => {
   const bn = language === "bn" ? "hind-siliguri" : "";
   const { name: brandName } = useBrand();
 
-  // Same set the navbar shows, for the same reasons: the catalogue routes still
-  // bounce while the site is one book page, but home, the ambassador programme,
-  // about and contact are always reachable.
+  // Same set the navbar shows, for the same reasons — including the omission of
+  // /campus-ambassador, which the shop hands out as a link rather than
+  // advertises. See the note in Navbar.jsx.
   const explore = [
     { to: "/", label: t("navbar.home") },
     ...(PUBLIC_PAGES_ENABLED
@@ -35,7 +35,6 @@ const Footer = () => {
           { to: "/books", label: t("navbar.books") },
         ]
       : []),
-    { to: "/campus-ambassador", label: t("navbar.ambassador") },
     { to: "/about", label: t("navbar.about") },
     { to: "/contact", label: t("navbar.contact") },
   ];
