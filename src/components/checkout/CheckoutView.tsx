@@ -47,6 +47,7 @@ import {
 } from "./checkoutApi";
 import ManualPaymentDetails from "./ManualPaymentDetails";
 import GatewayChoice from "./GatewayChoice";
+import { LEGAL_PAGES } from "@/config/business";
 import {
   getAvailability,
   preferredGateway,
@@ -82,6 +83,14 @@ import { priceBook, resolveOffers } from "@/lib/bookOffers";
 // the shop has to unwind by hand. Bulk buyers phone the shop.
 const PREORDER_MAX_QTY = 10;
 
+// What the buyer is agreeing to when they tick the box. Not all four policies:
+// the delivery timeline is stated inside the terms and is linked from the
+// footer, and a consent line with four links stops being read at all. These
+// three are the ones a payment gateway's review expects to see accepted before
+// money moves — what is being sold, what happens to their data, and how they
+// get it back.
+const CONSENT_POLICIES = ["terms-and-conditions", "refund-policy", "privacy-policy"] as const;
+
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
 
 export default function CheckoutView() {
@@ -101,6 +110,9 @@ export default function CheckoutView() {
   const [step, setStep] = useState<CheckoutStep>("idle");
   const [submitError, setSubmitError] = useState("");
   const [result, setResult] = useState<SuccessResult | null>(null);
+  // Deliberately unchecked on every visit, and never remembered: consent has to
+  // be given for the order being placed now, not inherited from a previous one.
+  const [agreed, setAgreed] = useState(false);
 
   // ── Pay now vs pay the courier, and where the parcel is going ─────────────
   const [payMode, setPayMode] = useState<PayMode>("cod");
@@ -659,6 +671,13 @@ export default function CheckoutView() {
 
   const onConfirm = () => {
     if (outOfStock) return;
+    // Checked here as well as on the button's disabled state: the button can be
+    // re-enabled from devtools, and this is the one place every payment path
+    // — cash on delivery, manual wallet, hosted gateway — passes through.
+    if (!agreed) {
+      setSubmitError(S.consentRequired);
+      return;
+    }
     // Wallet details are only required on the MANUAL path — a cash-on-delivery
     // buyer has no transaction id to give (demanding one was what made COD
     // impossible to actually complete), and a hosted-gateway buyer has not paid
@@ -1068,11 +1087,61 @@ export default function CheckoutView() {
                     </div>
                   )}
 
+                  {/* Consent, immediately above the button it gates — not at
+                      the top of the page where it would be scrolled past and
+                      not remembered as having been given. */}
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors",
+                      agreed
+                        ? "border-accent/40 bg-accent-soft"
+                        : "border-border bg-muted/40 hover:border-primary/40"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => {
+                        setAgreed(e.target.checked);
+                        // Clear the nag as soon as they comply, rather than
+                        // leaving a red line under a box they just ticked.
+                        if (e.target.checked && submitError === S.consentRequired) setSubmitError("");
+                      }}
+                      disabled={processing}
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-accent"
+                    />
+                    <span className={cn("text-[13px] leading-relaxed text-muted-foreground", bn)}>
+                      {S.consentPrefix}{" "}
+                      {CONSENT_POLICIES.map((slug, i) => {
+                        const page = LEGAL_PAGES.find((p) => p.slug === slug)!;
+                        return (
+                          <span key={slug}>
+                            {/* Last separator is the language's "and"; the ones
+                                before it are commas. */}
+                            {i > 0 && (i === CONSENT_POLICIES.length - 1 ? ` ${S.consentAnd} ` : ", ")}
+                            <Link
+                              href={`/${page.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              // Opens in a tab of its own: a buyer who reads the
+                              // refund policy must not lose the cart behind it.
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover"
+                            >
+                              {isBengali ? page.bn : page.en}
+                            </Link>
+                          </span>
+                        );
+                      })}
+                      {S.consentSuffix}
+                    </span>
+                  </label>
+
                   <Button
                     size="lg"
                     variant="accent"
                     className={cn("w-full", bn)}
-                    disabled={processing || (isManual && availableChannels.length === 0)}
+                    disabled={!agreed || processing || (isManual && availableChannels.length === 0)}
                     onClick={onConfirm}
                   >
                     {processing ? (
@@ -1220,6 +1289,14 @@ const EN = {
   secureNote: "Your enrollment is processed securely.",
   verifyNote: "Your payment will be verified by our team, usually within 24 hours.",
   codConfirmNote: "No payment now — pay the courier when your book arrives.",
+
+  // Consent. The buyer must agree before an order is placed — a payment
+  // gateway's review asks to see this, and it is where the refund window and
+  // the delivery timeline are actually agreed to.
+  consentPrefix: "I have read and agree to the",
+  consentAnd: "and",
+  consentSuffix: ".",
+  consentRequired: "Please accept the terms and policies before continuing.",
 
   // Pay-now vs cash-on-delivery
   payModeHeading: "How would you like to pay?",
@@ -1446,6 +1523,12 @@ const BN: Copy = {
   secureNote: "আপনার এনরোলমেন্ট নিরাপদভাবে প্রক্রিয়া করা হয়।",
   verifyNote: "আপনার পেমেন্ট আমাদের টিম যাচাই করবে, সাধারণত ২৪ ঘণ্টার মধ্যে।",
   codConfirmNote: "এখন কোনো টাকা লাগবে না — বই হাতে পেয়ে কুরিয়ারকে দেবেন।",
+
+  // সম্মতি
+  consentPrefix: "আমি",
+  consentAnd: "ও",
+  consentSuffix: " পড়েছি এবং মেনে নিচ্ছি।",
+  consentRequired: "এগিয়ে যাওয়ার আগে শর্তাবলি ও পলিসিগুলো মেনে নিন।",
 
   // Pay-now vs cash-on-delivery
   payModeHeading: "টাকা কীভাবে দিতে চান?",
