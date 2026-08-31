@@ -13,8 +13,20 @@
  */
 
 import { useEffect, useState } from 'react';
-import { LuBookOpen, LuDownload, LuExpand, LuX } from 'react-icons/lu';
+import dynamic from 'next/dynamic';
+import { LuBookOpen, LuDownload, LuExpand, LuX, LuExternalLink } from 'react-icons/lu';
 import { useLanguage } from '@/context/LanguageContext';
+
+// pdf.js is large and touches `window`, so it is kept out of the server bundle
+// and off the landing page's first paint entirely.
+const PdfViewer = dynamic(() => import('@/components/shared/PdfViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[440px] w-full items-center justify-center bg-muted">
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+    </div>
+  ),
+});
 
 const T = {
   bn: {
@@ -25,6 +37,9 @@ const T = {
     zoom: 'বড় করে দেখুন',
     download: 'ডাউনলোড',
     close: 'বন্ধ করুন',
+    failedTitle: 'নমুনাটি এখানে দেখানো যাচ্ছে না',
+    failedBody: 'ফাইলটি নতুন ট্যাবে খুলে নিন, অথবা ডাউনলোড করে পড়ুন।',
+    openTab: 'নতুন ট্যাবে খুলুন',
   },
   en: {
     tag: 'Sample',
@@ -34,12 +49,11 @@ const T = {
     zoom: 'View larger',
     download: 'Download',
     close: 'Close',
+    failedTitle: "The sample can't be shown here",
+    failedBody: 'Open it in a new tab, or download a copy to read.',
+    openTab: 'Open in a new tab',
   },
 };
-
-/** A sample PDF is a direct `.pdf` here; the browser renders it inline and lets
- *  the reader scroll every page. Hide the viewer's own chrome and fit the width. */
-const withViewerParams = (url) => `${url}#toolbar=0&navpanes=0&view=FitH`;
 
 export default function LandingSample({ book }) {
   const { isBengali } = useLanguage();
@@ -47,6 +61,9 @@ export default function LandingSample({ book }) {
   const bn = isBengali ? 'hind-siliguri' : '';
   const pdfUrl = book?.previewPdfUrl;
   const [full, setFull] = useState(false);
+  // Only if pdf.js itself cannot open the file — a corrupt upload, or a browser
+  // too old for it. The reader is offered the file rather than a grey box.
+  const [failed, setFailed] = useState(false);
 
   // Lock the page scroll while the full-screen viewer is up, and let Escape
   // close it — the same affordances a reader expects from any lightbox.
@@ -106,11 +123,18 @@ export default function LandingSample({ book }) {
             </div>
           </div>
 
-          <iframe
-            src={withViewerParams(pdfUrl)}
-            title="নমুনা অধ্যায়"
-            className="h-[68vh] max-h-[840px] min-h-[440px] w-full bg-muted"
-          />
+          {failed ? (
+            <PdfFallback L={L} bn={bn} pdfUrl={pdfUrl} />
+          ) : (
+            // The viewer scrolls inside its own box rather than growing the
+            // page: the sample is 31 pages, and a section that pushes the rest
+            // of the landing page below all of them is not a section any more.
+            <PdfViewer
+              url={pdfUrl}
+              onError={() => setFailed(true)}
+              className="h-[68vh] max-h-[840px] min-h-[440px] w-full"
+            />
+          )}
         </div>
       </div>
 
@@ -137,13 +161,55 @@ export default function LandingSample({ book }) {
               </button>
             </div>
           </div>
-          <iframe
-            src={withViewerParams(pdfUrl)}
-            title="নমুনা অধ্যায় — সম্পূর্ণ"
-            className="w-full flex-1 bg-white"
-          />
+          {failed ? (
+            <div className="w-full flex-1 overflow-y-auto bg-white">
+              <PdfFallback L={L} bn={bn} pdfUrl={pdfUrl} />
+            </div>
+          ) : (
+            <PdfViewer
+              url={pdfUrl}
+              onError={() => setFailed(true)}
+              className="w-full flex-1"
+            />
+          )}
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * Shown only when pdf.js cannot open the file at all. It hands the reader the
+ * PDF two ways rather than leaving them looking at an empty frame wondering
+ * whether the shop is broken.
+ */
+function PdfFallback({ L, bn, pdfUrl }) {
+  return (
+    <div className="flex min-h-[440px] flex-col items-center justify-center gap-4 bg-muted px-6 py-12 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-card text-muted-foreground shadow-card">
+        <LuBookOpen className="text-xl" />
+      </span>
+      <div>
+        <p className={`font-semibold text-foreground ${bn}`}>{L.failedTitle}</p>
+        <p className={`mt-1 text-sm text-muted-foreground ${bn}`}>{L.failedBody}</p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary ${bn}`}
+        >
+          <LuExternalLink className="text-sm" /> {L.openTab}
+        </a>
+        <a
+          href={pdfUrl}
+          download
+          className={`inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover ${bn}`}
+        >
+          <LuDownload className="text-sm" /> {L.download}
+        </a>
+      </div>
+    </div>
   );
 }

@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   LuImages,
   LuFileText,
@@ -13,6 +14,14 @@ import {
   LuZoomIn,
 } from "react-icons/lu";
 import { cn } from "@/components/ui";
+
+// pdf.js, not an <iframe>: iOS Safari and Android Chrome will not render a PDF
+// inside a frame, and most of this shop's readers are on a phone. Kept out of
+// the server bundle and off first paint — see the component's own notes.
+const PdfViewer = dynamic(() => import("@/components/shared/PdfViewer"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse bg-muted" />,
+});
 
 // A sample PDF may be a direct `.pdf`, a Cloudinary *raw* upload (which needs a
 // `.pdf` suffix before a browser will render it), or some other URL that only a
@@ -171,11 +180,12 @@ export function BookPreview({
             className="group relative block w-full border-t border-border"
           >
             <div className="relative h-56 w-full overflow-hidden bg-primary-soft sm:h-72">
-              <iframe
-                src={`${getPdfRenderUrl(pdfUrl)}#toolbar=0&navpanes=0&view=FitH`}
-                title={labels.pdfTitle}
-                aria-hidden="true"
-                tabIndex={-1}
+              {/* Just the cover: this tile is a peek, and rendering all 31
+                  pages behind a 224px window would pull the whole sample down
+                  for a thumbnail. */}
+              <PdfViewer
+                url={getPdfRenderUrl(pdfUrl)}
+                maxPages={1}
                 className="pointer-events-none absolute inset-0 h-full w-full"
               />
               <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-center bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent p-4 pt-20">
@@ -292,7 +302,7 @@ export function BookPreview({
             className="mx-auto w-full max-w-4xl flex-1 overflow-hidden rounded-xl bg-card shadow-glow"
             onClick={(e) => e.stopPropagation()}
           >
-            <iframe src={getPdfRenderUrl(pdfUrl)} title={labels.pdfTitle} className="h-full w-full" />
+            <PdfViewer url={getPdfRenderUrl(pdfUrl)} className="h-full w-full" />
           </div>
         </div>
       )}
