@@ -35,5 +35,5 @@ export const config = {
   // Only the marketing routes are considered. Everything else — the API proxy,
   // uploads, static assets, the QR scan page, checkout, the dashboards — must
   // not pay for a proxy hop on every request.
-  matcher: ['/about/:path*', '/contact/:path*', '/courses/:path*', '/books', '/blog/:path*'],
+  matcher: ['/courses/:path*', '/books', '/blog/:path*'],
 };

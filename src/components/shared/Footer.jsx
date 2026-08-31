@@ -24,18 +24,21 @@ const Footer = () => {
   const bn = language === "bn" ? "hind-siliguri" : "";
   const { name: brandName } = useBrand();
 
-  // Same reasoning as the navbar: while the site is one book page, these routes
-  // all redirect home, and a footer full of links that bounce is worse than a
-  // short one. They return with NEXT_PUBLIC_PUBLIC_PAGES=on.
-  const explore = PUBLIC_PAGES_ENABLED
-    ? [
-        { to: "/", label: t("navbar.home") },
-        { to: "/courses", label: t("navbar.courses") },
-        { to: "/books", label: t("navbar.books") },
-        { to: "/about", label: t("navbar.about") },
-        { to: "/contact", label: t("navbar.contact") },
-      ]
-    : [];
+  // Same set the navbar shows, for the same reasons: the catalogue routes still
+  // bounce while the site is one book page, but home, the ambassador programme,
+  // about and contact are always reachable.
+  const explore = [
+    { to: "/", label: t("navbar.home") },
+    ...(PUBLIC_PAGES_ENABLED
+      ? [
+          { to: "/courses", label: t("navbar.courses") },
+          { to: "/books", label: t("navbar.books") },
+        ]
+      : []),
+    { to: "/campus-ambassador", label: t("navbar.ambassador") },
+    { to: "/about", label: t("navbar.about") },
+    { to: "/contact", label: t("navbar.contact") },
+  ];
 
   // Subject links point into the course catalogue, which is switched off too.
   const subjects = PUBLIC_PAGES_ENABLED

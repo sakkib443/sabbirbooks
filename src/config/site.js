@@ -17,17 +17,21 @@ export const PUBLIC_PAGES_ENABLED = process.env.NEXT_PUBLIC_PUBLIC_PAGES === 'on
  * the book instead of a 404.
  *
  * Deliberately NOT listed, because they must keep working in single-page mode:
- *   /                  the landing page itself
- *   /books/<slug>      the book's own page, which checkout links to
- *   /read/<slug>       the shareable sample-reading page
- *   /checkout          buying
- *   /login /register   accounts
- *   /b/<code>          what a printed QR opens
- *   /dashboard/**      the admin panel and a reader's own area
+ *   /                        the landing page itself
+ *   /books/<slug>            the book's own page, which checkout links to
+ *   /read/<slug>             the shareable sample-reading page
+ *   /checkout                buying
+ *   /login /register         accounts
+ *   /b/<code>                what a printed QR opens
+ *   /dashboard/**            the admin panel and a reader's own area
+ *   /about /contact          reachable again — a payment gateway's review looks
+ *                            for a real address and a real phone number, and
+ *                            both were redirecting to the homepage
+ *   /campus-ambassador       the ambassador programme and its application form,
+ *                            which is advertised off-site and must never bounce
+ *   /privacy-policy etc.     the policy pages, for the same gateway review
  */
 export const MARKETING_ONLY_ROUTES = [
-  '/about',
-  '/contact',
   '/courses',
   '/books',
   '/blog',
