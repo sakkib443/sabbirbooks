@@ -94,6 +94,15 @@ const AdminSidebar = () => {
             { title: 'Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'] },
           ],
         },
+        // An ambassador application is a record about a person — their college,
+        // their phone, a photo of their ID — so it sits with users.read, the
+        // same capability the student directory uses, rather than with orders.
+        {
+          title: 'Campus Ambassadors',
+          href: '/dashboard/admin/ambassadors',
+          icon: FiAward,
+          need: ['users.read'],
+        },
       ],
     },
     {
