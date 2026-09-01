@@ -3,60 +3,69 @@
 /**
  * Affiliates — everyone who sells for the shop under their own code.
  *
- * Everything the shop asked to see about an applicant, and the one button that
- * matters: Approve mints their coupon and their login, Reject or Suspend takes
- * the coupon offline. Both happen server-side — this screen only says which.
+ * The list, the filters, and the actions that run the programme: add somebody,
+ * edit anything about them, remove them, or switch their code on and off.
+ * Approving mints their coupon and their login; suspending or rejecting takes
+ * the coupon offline. All of that happens server-side — this screen only says
+ * which.
  *
- * The table is wide (fourteen columns), so it scrolls inside its own container
- * on desktop and becomes a stack of cards on a phone. Reviewing applications on
- * a phone is a real thing here: the shop's admin does it between other work.
+ * The table is wide, so it scrolls inside its own container on desktop and
+ * becomes a stack of cards on a phone. Working through this list on a phone is
+ * a real thing here: the shop's admin does it between other work.
+ *
+ * The filter bar and the detail panel are their own files — both grew past the
+ * point where reading this one meant scrolling through them first.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FiAward, FiLoader, FiAlertCircle, FiSearch, FiCheckCircle, FiXCircle,
-  FiPauseCircle, FiExternalLink, FiUser, FiPhone, FiMail, FiMapPin,
-  FiTag, FiShoppingBag, FiDollarSign, FiEdit3, FiX, FiFileText,
-  FiUserPlus, FiCalendar, FiTrash2, FiEdit2,
+  FiAward, FiLoader, FiAlertCircle, FiCheckCircle, FiXCircle, FiPauseCircle,
+  FiTag, FiShoppingBag, FiDollarSign, FiFileText, FiUserPlus, FiTrash2, FiEdit2,
+  FiUsers, FiDownload,
 } from 'react-icons/fi';
 import {
-  listApplications, reviewApplication, saveNote, getApplication, deleteAffiliate,
+  listApplications, reviewApplication, deleteAffiliate,
   formatTk, formatDate, STATUS_TONE, STATUS_LABEL,
 } from './ambassadorApi';
 import AffiliateForm from './AffiliateForm';
+import AffiliateFilters from './AffiliateFilters';
+import AffiliateDetail from './AffiliateDetail';
 
-const TABS = ['all', 'pending', 'approved', 'rejected', 'suspended'];
+/** Everything the filter bar can set, so a reset knows what to clear. */
+const BLANK_FILTERS = {
+  status: 'approved',
+  sort: 'recent',
+  q: '',
+  from: '', to: '',
+  joinedFrom: '', joinedTo: '',
+  college: '', division: '', district: '',
+  academicYear: '', batch: '', city: '', reach: '',
+  source: '', coupon: '', performance: '',
+};
 
 export default function AffiliatesManager({ defaultTab = 'approved' }) {
-  // 'approved' by default: this screen is about the people who are actually
-  // selling. Applications waiting for review are one chip away.
-  const [tab, setTab] = useState(defaultTab);
-  const [q, setQ] = useState('');
-  // An earnings window. Empty means "everything they have ever brought in",
-  // which is what the shop wants most of the time; a range answers "what did
-  // this affiliate do last month", which is what it wants when paying out.
-  const [range, setRange] = useState({ from: '', to: '' });
-  const [state, setState] = useState({ loading: true, error: '', rows: [], counts: {} });
+  const [filters, setFilters] = useState({ ...BLANK_FILTERS, status: defaultTab });
+  const [state, setState] = useState({
+    loading: true, error: '', rows: [], counts: {}, facets: {},
+  });
   const [busyId, setBusyId] = useState('');
-  const [open, setOpen] = useState(null); // the affiliate shown in the panel
+  const [open, setOpen] = useState(null);   // the affiliate shown in the panel
   const [editing, setEditing] = useState(null); // null = closed, {} = adding
 
-  const load = async (opts = {}) => {
+  const load = async (q = filters) => {
     setState((s) => ({ ...s, loading: true, error: '' }));
     try {
-      const j = await listApplications({
-        status: opts.status ?? tab,
-        q: opts.q ?? q,
-        from: opts.from ?? range.from,
-        to: opts.to ?? range.to,
+      const j = await listApplications(q);
+      setState({
+        loading: false, error: '',
+        rows: j.data || [], counts: j.counts || {}, facets: j.facets || {},
       });
-      setState({ loading: false, error: '', rows: j.data || [], counts: j.counts || {} });
     } catch (e) {
-      setState({ loading: false, error: e.message || 'Failed to load', rows: [], counts: {} });
+      setState((s) => ({ ...s, loading: false, error: e.message || 'লোড করা যায়নি', rows: [] }));
     }
   };
 
-  useEffect(() => { load({ status: tab }); /* eslint-disable-next-line */ }, [tab]);
+  useEffect(() => { load({ ...BLANK_FILTERS, status: defaultTab }); /* eslint-disable-next-line */ }, [defaultTab]);
 
   const remove = async (row) => {
     if (
@@ -71,7 +80,7 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
       const res = await deleteAffiliate(row._id);
       alert(res.message || 'মুছে ফেলা হয়েছে');
       if (open?._id === row._id) setOpen(null);
-      load({ status: tab });
+      load();
     } catch (e) {
       alert(e.message || 'মুছে ফেলা যায়নি');
     } finally {
@@ -80,12 +89,12 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
   };
 
   const review = async (row, status) => {
-    const verb = { approved: 'Approve', rejected: 'Reject', suspended: 'Suspend' }[status];
+    const verb = { approved: 'চালু', rejected: 'বাতিল', suspended: 'স্থগিত' }[status];
     const extra =
       status === 'approved'
-        ? '\n\nThis creates their coupon code and their login, and makes the code live.'
-        : '\n\nTheir coupon stops working. Sales already made under it are kept.';
-    if (!confirm(`${verb} ${row.fullName} (${row.applicationId})?${extra}`)) return;
+        ? '\n\nএতে তার কুপন কোড আর লগইন তৈরি হবে, কোডটা কাজ করা শুরু করবে।'
+        : '\n\nতার কুপন আর কাজ করবে না। আগে যে বিক্রি হয়েছে সেটার হিসাব থাকবে।';
+    if (!confirm(`${row.fullName} (${row.applicationId}) — ${verb} করবেন?${extra}`)) return;
 
     setBusyId(row._id);
     try {
@@ -95,11 +104,11 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
         rows: s.rows.map((r) => (r._id === row._id ? { ...r, ...updated, stats: r.stats } : r)),
       }));
       if (open?._id === row._id) setOpen((o) => ({ ...o, ...updated }));
-      // The counts moved, and if a status filter is on, this row may no longer
+      // The counts moved, and under a status filter this row may no longer
       // belong in the list at all.
-      if (tab !== 'all') load({ status: tab });
+      if (filters.status !== 'all') load();
     } catch (e) {
-      alert(e.message || 'Could not update');
+      alert(e.message || 'বদলানো যায়নি');
     } finally {
       setBusyId('');
     }
@@ -108,11 +117,47 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
   const totals = useMemo(() => {
     const rows = state.rows;
     return {
+      people: rows.length,
       orders: rows.reduce((n, r) => n + (r.stats?.orders || 0), 0),
       sales: rows.reduce((n, r) => n + (r.stats?.sales || 0), 0),
       commission: rows.reduce((n, r) => n + (r.stats?.commission || 0), 0),
     };
   }, [state.rows]);
+
+  /**
+   * The list as it stands, as a spreadsheet.
+   *
+   * Built in the browser from rows already loaded, so it exports exactly what
+   * the filters are showing — the point is to hand somebody "this month's
+   * commissions" without asking them to trust a second query.
+   */
+  const exportCsv = () => {
+    const head = [
+      'Application ID', 'Name', 'Phone', 'WhatsApp', 'Email', 'College', 'Batch',
+      'Year', 'City', 'Coupon', 'Coupon active', 'Status', 'Source', 'Joined',
+      'Orders', 'Sales', 'Commission',
+    ];
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const body = state.rows.map((r) => [
+      r.applicationId, r.fullName, r.phone, r.whatsapp, r.email, r.medicalCollegeName,
+      r.batch, r.academicYear, r.city, r.couponCode, r.coupon?.isActive ? 'yes' : 'no',
+      r.status, r.source === 'manual' ? 'added by admin' : 'applied',
+      formatDate(r.createdAt), r.stats?.orders || 0, r.stats?.sales || 0,
+      r.stats?.commission || 0,
+    ].map(cell).join(','));
+
+    // The BOM is what makes Excel read Bengali names correctly.
+    const blob = new Blob(['﻿' + [head.map(cell).join(','), ...body].join('\r\n')], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `affiliates-${filters.status}${filters.from ? `-${filters.from}` : ''}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const windowed = filters.from || filters.to;
 
   return (
     <div className="space-y-5">
@@ -126,9 +171,18 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Kpi icon={FiUsers} label="জন" value={totals.people} />
           <Kpi icon={FiShoppingBag} label="অর্ডার" value={totals.orders} />
           <Kpi icon={FiDollarSign} label="বিক্রি" value={formatTk(totals.sales)} />
           <Kpi icon={FiTag} label="কমিশন" value={formatTk(totals.commission)} />
+          <button
+            onClick={exportCsv}
+            disabled={!state.rows.length}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line px-3 py-2.5 text-sm font-medium text-dash-ink3 transition-colors hover:bg-dash-soft disabled:opacity-40"
+            title="এখন যা দেখছেন সেটাই এক্সেল ফাইলে"
+          >
+            <FiDownload /> এক্সপোর্ট
+          </button>
           <button
             onClick={() => setEditing({})}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
@@ -138,80 +192,19 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
         </div>
       </header>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === t
-                ? 'border-brand bg-brand-soft text-brand'
-                : 'border-dash-line text-dash-ink3 hover:bg-dash-soft'
-            }`}
-          >
-            {STATUS_LABEL[t]}
-            {state.counts[t] ? (
-              <span className="ml-1.5 text-xs opacity-70">{state.counts[t]}</span>
-            ) : null}
-          </button>
-        ))}
+      <AffiliateFilters
+        value={filters}
+        counts={state.counts}
+        facets={state.facets}
+        onChange={setFilters}
+        onApply={load}
+      />
 
-        <form
-          onSubmit={(e) => { e.preventDefault(); load({}); }}
-          className="ml-auto flex flex-wrap items-center gap-2"
-        >
-          {/* The earnings window. Both dates are optional — one on its own
-              still narrows, which is what "since the campaign started" means. */}
-          <label className="flex items-center gap-1.5 text-xs text-dash-mute2">
-            <FiCalendar className="text-dash-mute2" />
-            <input
-              type="date"
-              value={range.from}
-              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
-              className="rounded-lg border border-dash-line bg-dash-card px-2 py-2 text-sm text-dash-ink2 outline-none focus:border-brand"
-            />
-            <span>—</span>
-            <input
-              type="date"
-              value={range.to}
-              onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
-              className="rounded-lg border border-dash-line bg-dash-card px-2 py-2 text-sm text-dash-ink2 outline-none focus:border-brand"
-            />
-          </label>
-
-          <div className="relative">
-            <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-dash-mute2" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="নাম, কোড, ফোন, আইডি…"
-              className="w-52 rounded-lg border border-dash-line bg-dash-card py-2 pl-9 pr-3 text-sm text-dash-ink2 outline-none focus:border-brand"
-            />
-          </div>
-          <button
-            type="submit"
-            className="rounded-lg border border-dash-line px-3 py-2 text-sm font-medium text-dash-ink3 hover:bg-dash-soft"
-          >
-            খুঁজুন
-          </button>
-          {(q || range.from || range.to) && (
-            <button
-              type="button"
-              onClick={() => { setQ(''); setRange({ from: '', to: '' }); load({ q: '', from: '', to: '' }); }}
-              className="rounded-lg px-2 py-2 text-sm text-dash-mute2 hover:text-dash-ink3"
-            >
-              রিসেট
-            </button>
-          )}
-        </form>
-      </div>
-
-      {(range.from || range.to) && (
+      {windowed && (
         <p className="text-xs text-dash-mute2">
-          উপরের বিক্রি ও কমিশন শুধু{' '}
+          উপরের ও টেবিলের বিক্রি-কমিশন শুধু{' '}
           <strong className="text-dash-ink3">
-            {range.from || 'শুরু'} — {range.to || 'আজ'}
+            {filters.from || 'শুরু'} — {filters.to || 'আজ'}
           </strong>{' '}
           সময়ের অর্ডারের। কে কোন অবস্থায় আছে সেটা এই সীমার বাইরেও একই।
         </p>
@@ -225,16 +218,16 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
 
       {state.loading ? (
         <div className="flex h-[40vh] items-center justify-center text-dash-mute2">
-          <FiLoader className="mr-2 animate-spin" /> Loading…
+          <FiLoader className="mr-2 animate-spin" /> লোড হচ্ছে…
         </div>
       ) : state.rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-dash-line p-12 text-center">
           <FiAward className="mx-auto mb-3 text-3xl text-dash-mute2" />
           <p className="font-medium text-dash-ink3">এখানে কেউ নেই</p>
           <p className="mt-1 text-sm text-dash-mute2">
-            {tab === 'pending'
+            {filters.status === 'pending'
               ? 'রিভিউয়ের অপেক্ষায় কোনো আবেদন নেই।'
-              : 'অন্য ফিল্টার দেখুন, অথবা নিজেই একজন যোগ করুন।'}
+              : 'ফিল্টার বদলে দেখুন, অথবা নিজেই একজন যোগ করুন।'}
           </p>
           <button
             onClick={() => setEditing({})}
@@ -247,20 +240,20 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
         <>
           {/* Desktop table — wide, so it scrolls in its own box. */}
           <div className="hidden overflow-x-auto rounded-2xl border border-dash-line bg-dash-card lg:block">
-            <table className="w-full min-w-[1180px] text-sm">
+            <table className="w-full min-w-[1320px] text-sm">
               <thead>
                 <tr className="border-b border-dash-line text-left text-dash-mute2">
-                  <Th>Application</Th>
-                  <Th>Name</Th>
-                  <Th>College / Batch</Th>
-                  <Th>Phone</Th>
-                  <Th>Applied</Th>
-                  <Th>Status</Th>
-                  <Th>Coupon</Th>
-                  <Th className="text-right">Orders</Th>
-                  <Th className="text-right">Sales</Th>
-                  <Th className="text-right">Commission</Th>
-                  <Th className="text-right">Actions</Th>
+                  <Th>আইডি</Th>
+                  <Th>নাম</Th>
+                  <Th>কলেজ / ব্যাচ</Th>
+                  <Th>যোগাযোগ</Th>
+                  <Th>যোগ দিয়েছে</Th>
+                  <Th>অবস্থা</Th>
+                  <Th>কুপন</Th>
+                  <Th className="text-right">অর্ডার</Th>
+                  <Th className="text-right">বিক্রি</Th>
+                  <Th className="text-right">কমিশন</Th>
+                  <Th className="text-right">কাজ</Th>
                 </tr>
               </thead>
               <tbody>
@@ -273,18 +266,22 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
                       >
                         {r.applicationId}
                       </button>
+                      <SourceTag source={r.source} />
                     </Td>
                     <Td>
                       <span className="font-medium text-dash-ink2">{r.fullName}</span>
                       <span className="block text-[11px] text-dash-mute2">{r.email}</span>
                     </Td>
                     <Td>
-                      <span className="text-dash-ink3">{r.medicalCollegeName}</span>
+                      <span className="text-dash-ink3">{r.medicalCollegeName || '—'}</span>
                       <span className="block text-[11px] text-dash-mute2">
-                        {r.batch} · {r.academicYear}
+                        {[r.batch, r.academicYear].filter(Boolean).join(' · ') || '—'}
                       </span>
                     </Td>
-                    <Td className="whitespace-nowrap text-dash-ink3">{r.phone}</Td>
+                    <Td className="whitespace-nowrap">
+                      <span className="text-dash-ink3">{r.phone}</span>
+                      {r.city && <span className="block text-[11px] text-dash-mute2">{r.city}</span>}
+                    </Td>
                     <Td className="whitespace-nowrap text-dash-mute2">{formatDate(r.createdAt)}</Td>
                     <Td><StatusPill status={r.status} /></Td>
                     <Td><CouponCell row={r} /></Td>
@@ -309,7 +306,7 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
             </table>
           </div>
 
-          {/* Phone — one card per application. */}
+          {/* Phone — one card each. */}
           <div className="space-y-3 lg:hidden">
             {state.rows.map((r) => (
               <div key={r._id} className="rounded-2xl border border-dash-line bg-dash-card p-4">
@@ -323,16 +320,16 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
                     </button>
                     <p className="truncate font-semibold text-dash-ink2">{r.fullName}</p>
                     <p className="truncate text-xs text-dash-mute2">
-                      {r.medicalCollegeName} · {r.batch}
+                      {[r.medicalCollegeName, r.batch].filter(Boolean).join(' · ') || r.phone}
                     </p>
                   </div>
                   <StatusPill status={r.status} />
                 </div>
 
                 <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-dash-soft/60 p-3 text-center">
-                  <Mini label="Orders" value={r.stats?.orders || 0} />
-                  <Mini label="Sales" value={formatTk(r.stats?.sales)} />
-                  <Mini label="Commission" value={formatTk(r.stats?.commission)} />
+                  <Mini label="অর্ডার" value={r.stats?.orders || 0} />
+                  <Mini label="বিক্রি" value={formatTk(r.stats?.sales)} />
+                  <Mini label="কমিশন" value={formatTk(r.stats?.commission)} />
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -353,11 +350,12 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
       )}
 
       {open && (
-        <DetailPanel
+        <AffiliateDetail
           id={open._id}
           onClose={() => setOpen(null)}
           onReview={(status) => review(open, status)}
           onEdit={() => { setEditing(open); setOpen(null); }}
+          onDelete={remove}
           busy={busyId === open._id}
         />
       )}
@@ -370,7 +368,7 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
             setEditing(null);
             // Reload rather than splice the row in: a new affiliate may not
             // belong under the current filter, and the counts moved either way.
-            load({ status: tab });
+            load();
             if (!editing._id && saved?.couponCode) {
               alert(
                 `${saved.fullName} যুক্ত হয়েছে।\n\n` +
@@ -418,12 +416,18 @@ const StatusPill = ({ status }) => (
   </span>
 );
 
+/** Applied, or typed in by an admin. Explains why some rows have empty fields. */
+const SourceTag = ({ source }) =>
+  source === 'manual' ? (
+    <span className="mt-0.5 block text-[10px] text-dash-mute2">অ্যাডমিন যোগ করেছে</span>
+  ) : null;
+
 /**
  * The code, its terms, and whether it is live.
  *
- * "Live" is the coupon's own isActive, not the application's status — they are
+ * "Live" is the coupon's own isActive, not the affiliate's status — they are
  * normally the same, but an admin can switch a coupon off from the coupon
- * screen, and showing the application's status there would quietly lie.
+ * screen, and showing the person's status here would quietly lie.
  */
 function CouponCell({ row }) {
   if (!row.couponCode) return <span className="text-xs text-dash-mute2">—</span>;
@@ -434,7 +438,7 @@ function CouponCell({ row }) {
       <span className="block text-[11px] text-dash-mute2">
         {formatTk(row.coupon?.discountValue)} off · {formatTk(row.coupon?.payoutPerSale)}/sale{' '}
         <span className={live ? 'text-emerald-600' : 'text-rose-600'}>
-          · {live ? 'active' : 'inactive'}
+          · {live ? 'চালু' : 'বন্ধ'}
         </span>
       </span>
     </div>
@@ -502,229 +506,3 @@ function Actions({ row, busy, onReview, onOpen, onEdit, onDelete }) {
     </div>
   );
 }
-
-/**
- * Everything the applicant wrote, plus the reviewer's note.
- *
- * Fetched fresh rather than reusing the row: the list carries what the table
- * needs, and the whole application — their reach, their channels, their
- * suggestions, their ID card — is a lot to ship for every row of a queue that
- * is mostly skimmed.
- */
-function DetailPanel({ id, onClose, onReview, onEdit, busy }) {
-  const [app, setApp] = useState(null);
-  const [err, setErr] = useState('');
-  const [note, setNote] = useState('');
-  const [savingNote, setSavingNote] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    getApplication(id)
-      .then((d) => { if (alive) { setApp(d); setNote(d.adminNote || ''); } })
-      .catch((e) => alive && setErr(e.message));
-    return () => { alive = false; };
-  }, [id]);
-
-  const persistNote = async () => {
-    setSavingNote(true);
-    try {
-      await saveNote(id, note);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setSavingNote(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
-      <div
-        className="h-full w-full max-w-xl overflow-y-auto bg-dash-card shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-dash-line bg-dash-card px-5 py-4">
-          <div>
-            <p className="font-mono text-xs font-bold text-brand">{app?.applicationId || '…'}</p>
-            <h2 className="text-lg font-bold text-dash-ink2">{app?.fullName || 'Loading…'}</h2>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onEdit}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line px-3 py-2 text-xs font-medium text-dash-ink3 hover:bg-dash-soft"
-            >
-              <FiEdit2 /> এডিট
-            </button>
-            <button onClick={onClose} className="rounded-lg p-2 text-dash-mute2 hover:bg-dash-soft">
-              <FiX />
-            </button>
-          </div>
-        </header>
-
-        {err && <p className="px-5 py-4 text-sm text-rose-600">{err}</p>}
-        {!app && !err && (
-          <p className="flex items-center gap-2 px-5 py-8 text-dash-mute2">
-            <FiLoader className="animate-spin" /> Loading…
-          </p>
-        )}
-
-        {app && (
-          <div className="space-y-5 px-5 py-5">
-            <div className="flex items-center gap-2">
-              <StatusPill status={app.status} />
-              {app.reviewedAt && (
-                <span className="text-xs text-dash-mute2">
-                  reviewed {formatDate(app.reviewedAt)}
-                  {app.reviewedBy ? ` by ${app.reviewedBy.firstName || ''}` : ''}
-                </span>
-              )}
-            </div>
-
-            {app.couponCode && (
-              <div className="rounded-xl border border-dash-line bg-dash-soft/60 p-4">
-                <p className="font-mono text-lg font-bold tracking-wide text-dash-ink2">
-                  {app.couponCode}
-                </p>
-                <p className="mt-1 text-xs text-dash-mute2">
-                  {formatTk(app.coupon?.discountValue)} off the buyer ·{' '}
-                  {formatTk(app.coupon?.payoutPerSale)} to them per sale ·{' '}
-                  {app.coupon?.isActive ? 'active' : 'inactive'}
-                </p>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <Mini label="Orders" value={app.stats?.orders || 0} />
-                  <Mini label="Sales" value={formatTk(app.stats?.sales)} />
-                  <Mini label="Commission" value={formatTk(app.stats?.commission)} />
-                </div>
-              </div>
-            )}
-
-            <Group title="Contact">
-              <Row icon={FiPhone} label="Phone" value={app.phone} />
-              <Row icon={FiPhone} label="WhatsApp" value={app.whatsapp || '—'} />
-              <Row icon={FiMail} label="Email" value={app.email} />
-              <Row icon={FiExternalLink} label="Facebook" value={app.facebookUrl} link />
-              {app.instagramUrl && (
-                <Row icon={FiExternalLink} label="Instagram" value={app.instagramUrl} link />
-              )}
-            </Group>
-
-            <Group title="Academic">
-              <Row icon={FiMapPin} label="College" value={app.medicalCollegeName} />
-              <Row icon={FiUser} label="Batch" value={`${app.batch} · ${app.academicYear}`} />
-              <Row icon={FiMapPin} label="City" value={app.city} />
-              {app.idCardUrl && (
-                <Row icon={FiFileText} label="ID card" value={app.idCardUrl} link linkText="View" />
-              )}
-            </Group>
-
-            <Group title="Reach">
-              <Row icon={FiUser} label="Can reach" value={`${app.reach} students`} />
-              <Row
-                icon={FiTag}
-                label="Channels"
-                value={(app.promoteChannels || []).join(', ').replace(/-/g, ' ') || '—'}
-              />
-              {app.promoteChannelOther && (
-                <Row icon={FiTag} label="Other" value={app.promoteChannelOther} />
-              )}
-              <Row icon={FiUser} label="Group admin" value={app.isGroupAdmin ? 'Yes' : 'No'} />
-            </Group>
-
-            <Group title="Experience & ideas">
-              <Row
-                icon={FiUser}
-                label="Prior experience"
-                value={app.hasPriorExperience ? 'Yes' : 'No'}
-              />
-              {app.experienceNote && <Para text={app.experienceNote} />}
-              <Row
-                icon={FiUser}
-                label="Will share our content"
-                value={app.comfortableSharingContent ? 'Yes' : 'No'}
-              />
-              {app.suggestions && <Para text={app.suggestions} />}
-            </Group>
-
-            <Group title="Admin note">
-              <textarea
-                rows={3}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Only your team sees this."
-                className="w-full rounded-xl border border-dash-line bg-dash-card p-3 text-sm text-dash-ink2 outline-none focus:border-brand"
-              />
-              <button
-                onClick={persistNote}
-                disabled={savingNote}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line px-3 py-2 text-xs font-medium text-dash-ink3 hover:bg-dash-soft disabled:opacity-50"
-              >
-                <FiEdit3 /> {savingNote ? 'Saving…' : 'Save note'}
-              </button>
-            </Group>
-
-            <div className="flex flex-wrap gap-2 border-t border-dash-line pt-4">
-              {app.status !== 'approved' && (
-                <button
-                  disabled={busy}
-                  onClick={() => onReview('approved')}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  <FiCheckCircle /> Approve — create coupon &amp; login
-                </button>
-              )}
-              {app.status === 'approved' && (
-                <button
-                  disabled={busy}
-                  onClick={() => onReview('suspended')}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50"
-                >
-                  <FiPauseCircle /> Suspend
-                </button>
-              )}
-              {app.status !== 'rejected' && (
-                <button
-                  disabled={busy}
-                  onClick={() => onReview('rejected')}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
-                >
-                  <FiXCircle /> Reject
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const Group = ({ title, children }) => (
-  <section>
-    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-dash-mute2">{title}</h3>
-    <div className="space-y-2">{children}</div>
-  </section>
-);
-
-const Row = ({ icon: Icon, label, value, link, linkText }) => (
-  <div className="flex items-start gap-2.5 text-sm">
-    <Icon className="mt-0.5 shrink-0 text-dash-mute2" />
-    <span className="w-32 shrink-0 text-dash-mute2">{label}</span>
-    {link ? (
-      <a
-        href={/^https?:\/\//i.test(value) ? value : `https://${value}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="min-w-0 break-all text-brand hover:underline"
-      >
-        {linkText || value}
-      </a>
-    ) : (
-      <span className="min-w-0 break-words text-dash-ink2">{value}</span>
-    )}
-  </div>
-);
-
-const Para = ({ text }) => (
-  <p className="whitespace-pre-wrap rounded-xl bg-dash-soft/60 p-3 text-sm leading-relaxed text-dash-ink3">
-    {text}
-  </p>
-);
