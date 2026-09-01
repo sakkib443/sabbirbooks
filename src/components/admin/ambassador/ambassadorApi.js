@@ -59,6 +59,44 @@ export async function saveNote(id, adminNote) {
   return j.data;
 }
 
+
+/** Add an affiliate by hand — no application, approved on the spot. */
+export async function createAffiliate(body) {
+  const j = await readJson(
+    await fetch(`${API}/ambassador`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(body),
+    })
+  );
+  return j.data;
+}
+
+/** Edit everything the shop knows about them. Money and identity are not here. */
+export async function updateAffiliate(id, body) {
+  const j = await readJson(
+    await fetch(`${API}/ambassador/${id}`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify(body),
+    })
+  );
+  return j.data;
+}
+
+/** Remove the record. The coupon is kept, switched off — see the server note. */
+export async function deleteAffiliate(id) {
+  return readJson(
+    await fetch(`${API}/ambassador/${id}`, { method: 'DELETE', headers: headers() })
+  );
+}
+
+/** The college list the affiliate form picks from. Public, no auth needed. */
+export async function listColleges() {
+  const j = await readJson(await fetch(`${API}/medical-colleges`, { cache: 'no-store' }));
+  return j.data || [];
+}
+
 export const formatTk = (n) => '৳' + Math.round(Number(n) || 0).toLocaleString('en-US');
 
 export const formatDate = (d) =>
@@ -75,9 +113,9 @@ export const STATUS_TONE = {
 };
 
 export const STATUS_LABEL = {
-  all: 'All',
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  suspended: 'Suspended',
+  all: 'সব',
+  pending: 'অপেক্ষমাণ',
+  approved: 'সক্রিয়',
+  rejected: 'বাতিল',
+  suspended: 'স্থগিত',
 };

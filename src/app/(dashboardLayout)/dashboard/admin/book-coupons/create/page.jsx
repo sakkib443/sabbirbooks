@@ -1,21 +1,32 @@
 'use client';
 
+/**
+ * A coupon: a code, and what it takes off. Nothing else.
+ *
+ * It used to carry an owner, a per-sale payout and an optional login, because
+ * for a while a coupon was how the shop tracked the person selling under it.
+ * That job moved to Affiliates, where the person, their sales and what they are
+ * owed sit together. What is left here is the plain thing the name always
+ * described — a discount the shop is running.
+ *
+ * The owner fields are not sent at all rather than sent empty. An affiliate's
+ * code lives in the same collection, and an admin who opens one here must not
+ * silently strip its payout or unlink its login. The list sends those to the
+ * affiliate screen instead; this is the belt to that pair of braces.
+ */
+
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  FiArrowLeft, FiSave, FiTag, FiUser, FiPhone, FiPercent, FiDollarSign,
-  FiGift, FiLoader, FiAlertCircle, FiMail, FiLock, FiLogIn,
+  FiArrowLeft, FiSave, FiTag, FiPercent, FiGift, FiLoader, FiAlertCircle, FiUsers,
 } from 'react-icons/fi';
 
 import { getCoupon, saveCoupon } from '@/components/admin/bookCoupon/couponApi';
 
 const EMPTY = {
-  code: '', name: '', ownerName: '', ownerPhone: '',
-  discountType: 'percent', discountValue: '', payoutPerSale: '', isActive: true,
-  // Optional login for the coupon's owner — an 'affiliate' account that can sign
-  // in and watch their own sales. Off by default; a coupon works without one.
-  makeLogin: false, ownerEmail: '', ownerPassword: '',
+  code: '', name: '',
+  discountType: 'percent', discountValue: '', isActive: true,
 };
 
 const inputCls =
@@ -54,6 +65,10 @@ function CouponForm() {
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Set when this code turns out to belong to an affiliate. The form still
+  // opens — the code and the discount are fine to change — but it says where
+  // the rest of this person's setup lives.
+  const [ownedBy, setOwnedBy] = useState(null);
 
   useEffect(() => {
     if (!editing) return;
@@ -63,17 +78,15 @@ function CouponForm() {
         const c = await getCoupon(id);
         if (!alive) return;
         setForm({
-          code: c.code || '', name: c.name || '', ownerName: c.ownerName || '', ownerPhone: c.ownerPhone || '',
+          code: c.code || '',
+          name: c.name || '',
           discountType: c.discountType || 'percent',
           discountValue: c.discountValue ?? '',
-          payoutPerSale: c.payoutPerSale ?? '',
           isActive: c.isActive !== false,
-          // An existing login opens the section already ticked, with the email
-          // filled in and the password blank ("leave it alone").
-          makeLogin: !!c.ownerUser,
-          ownerEmail: c.ownerUser?.email || '',
-          ownerPassword: '',
         });
+        if (c.ownerName || c.ownerUser) {
+          setOwnedBy({ name: c.ownerName || c.ownerUser?.email, payout: c.payoutPerSale || 0 });
+        }
       } catch (e) {
         if (alive) setError(e.message || 'Failed to load coupon');
       } finally {
@@ -94,26 +107,15 @@ function CouponForm() {
     if (form.discountType === 'percent' && (val < 0 || val > 90))
       return setError('Percent discount must be between 0 and 90');
     if (val < 0) return setError('Discount cannot be negative');
-    if (form.makeLogin) {
-      if (!form.ownerEmail.trim()) return setError('Owner email is required for the login');
-      if (!editing && !form.ownerPassword) return setError('Set a password for the owner login');
-    }
 
     setSaving(true);
     try {
       await saveCoupon(id, {
         code,
         name: form.name.trim(),
-        ownerName: form.ownerName.trim(),
-        ownerPhone: form.ownerPhone.trim(),
         discountType: form.discountType,
         discountValue: val,
-        payoutPerSale: Number(form.payoutPerSale) || 0,
         isActive: !!form.isActive,
-        // '' clears the link; a password is only sent when one was typed, so an
-        // untouched box leaves the owner's current password alone.
-        ownerEmail: form.makeLogin ? form.ownerEmail.trim().toLowerCase() : '',
-        ...(form.makeLogin && form.ownerPassword ? { ownerPassword: form.ownerPassword } : {}),
       });
       router.push('/dashboard/admin/book-coupons');
     } catch (e2) {
@@ -143,7 +145,7 @@ function CouponForm() {
         <div className="min-w-0 pt-0.5">
           <h1 className="text-2xl font-bold leading-tight text-dash-ink2">{editing ? 'Edit coupon' : 'New coupon'}</h1>
           <p className="mt-0.5 text-sm text-dash-mute">
-            A discount code buyers enter at checkout, with an optional per-sale payout to its owner.
+            A discount code buyers type at checkout.
           </p>
         </div>
       </div>
@@ -154,36 +156,43 @@ function CouponForm() {
         </div>
       )}
 
+      {ownedBy && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-800">
+          <FiUsers className="mt-0.5 shrink-0" />
+          <span>
+            This code belongs to <b>{ownedBy.name}</b>
+            {ownedBy.payout ? <> — ৳{ownedBy.payout} per sale</> : null}. Changing the code or the
+            discount here is fine; their commission and their login are set on the{' '}
+            <Link href="/dashboard/admin/affiliates" className="font-semibold underline">
+              Affiliates
+            </Link>{' '}
+            screen and are left untouched by this form.
+          </span>
+        </div>
+      )}
+
       <form onSubmit={submit} className="space-y-5">
-        <Section icon={FiTag} title="Coupon &amp; owner" subtitle="The code buyers type, and who it belongs to.">
+        <Section icon={FiTag} title="The code" subtitle="What buyers type at checkout, and what it is for.">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label icon={FiTag}>Coupon code *</Label>
               <input
                 value={form.code} onChange={(e) => set('code', e.target.value.toUpperCase())}
-                placeholder="e.g. RAKIB20"
+                placeholder="e.g. BOIMELA25"
                 className={`${inputCls} font-mono uppercase`}
               />
             </div>
             <div>
               <Label icon={FiGift}>Campaign name</Label>
-              <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. রাকিবের রেফারেল" className={inputCls} />
+              <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. বইমেলা ছাড়" className={inputCls} />
             </div>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label icon={FiUser}>Owner name</Label>
-              <input value={form.ownerName} onChange={(e) => set('ownerName', e.target.value)} placeholder="Who this code belongs to" className={inputCls} />
-            </div>
-            <div>
-              <Label icon={FiPhone}>Owner phone</Label>
-              <input value={form.ownerPhone} onChange={(e) => set('ownerPhone', e.target.value)} placeholder="01XXXXXXXXX" className={`${inputCls} font-mono`} />
-            </div>
-          </div>
+          <p className="mt-2 text-[11px] text-dash-mute2">
+            The name is for your own list — buyers only ever see the code.
+          </p>
         </Section>
 
-        <Section icon={FiPercent} title="Discount &amp; payout" subtitle="What the buyer saves, and what the owner earns.">
+        <Section icon={FiPercent} title="Discount" subtitle="What the buyer saves.">
           {/* Type is a segmented control rather than a <select>: two choices read
               faster as a pair, and it keeps the value box full width beneath. */}
           <div>
@@ -236,22 +245,6 @@ function CouponForm() {
             </p>
           </div>
 
-          <div className="mt-5 border-t border-dash-line pt-5">
-            <span className="text-xs font-semibold text-dash-mute">Payout per sale</span>
-            <div className="relative mt-1.5">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-dash-mute2">৳</span>
-              <input
-                type="number" min="0" value={form.payoutPerSale} onChange={(e) => set('payoutPerSale', e.target.value)}
-                placeholder="0"
-                className={`${inputCls} pl-10 text-lg font-bold tabular-nums`}
-              />
-            </div>
-            <p className="mt-1.5 text-[11px] text-dash-mute2">
-              What you’ll pay the owner for <b className="text-dash-ink4">each sale</b> under this code.
-              Leave 0 for a plain discount with no payout.
-            </p>
-          </div>
-
           <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-dash-line bg-dash-soft/50 p-3.5">
             <input type="checkbox" checked={form.isActive} onChange={(e) => set('isActive', e.target.checked)} className="mt-0.5 h-5 w-5 rounded border-dash-line-strong text-brand focus:ring-brand" />
             <span>
@@ -261,54 +254,20 @@ function CouponForm() {
           </label>
         </Section>
 
-        {/* Owner login — optional account so they can watch their own sales */}
-        <Section icon={FiLogIn} title="Owner login" subtitle="Optional — let the owner sign in and watch their own sales.">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox" checked={form.makeLogin}
-              onChange={(e) => set('makeLogin', e.target.checked)}
-              className="mt-0.5 w-5 h-5 rounded border-dash-line-strong text-brand focus:ring-brand"
-            />
-            <span className="min-w-0">
-              <span className="flex items-center gap-2 text-sm font-bold text-dash-ink3">
-                <FiLogIn className="text-brand" /> Give this owner a login
-              </span>
-              <span className="block text-[11px] text-dash-mute2 mt-0.5">
-                Creates an account they sign in with to see their own sales and earnings.
-                They get no admin access. Leave off for a plain discount code.
-              </span>
+        {!editing && (
+          <p className="flex items-start gap-2.5 rounded-xl border border-dash-line bg-dash-soft/50 p-3.5 text-[12px] text-dash-mute">
+            <FiUsers className="mt-0.5 shrink-0 text-dash-mute2" />
+            <span>
+              Setting someone up to <b className="text-dash-ink4">sell for a commission</b>? Add them
+              under{' '}
+              <Link href="/dashboard/admin/affiliates" className="font-semibold text-brand hover:underline">
+                Affiliates
+              </Link>{' '}
+              instead — their code is created for them, along with the login they watch their own
+              sales from.
             </span>
-          </label>
-
-          {form.makeLogin && (
-            <div className="mt-4 space-y-4 border-t border-dash-line pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label icon={FiMail}>Owner email (their username)</Label>
-                  <input
-                    type="email" value={form.ownerEmail}
-                    onChange={(e) => set('ownerEmail', e.target.value)}
-                    placeholder="owner@example.com"
-                    className={inputCls}
-                  />
-                </div>
-                <div>
-                  <Label icon={FiLock}>Password</Label>
-                  <input
-                    type="text" value={form.ownerPassword}
-                    onChange={(e) => set('ownerPassword', e.target.value)}
-                    placeholder={editing ? 'Leave blank to keep current' : 'Set a password'}
-                    className={inputCls}
-                  />
-                </div>
-              </div>
-              <p className="text-[11px] text-dash-mute2">
-                They sign in at <b className="text-dash-ink4">/login</b> with this email and land on their own coupon
-                dashboard. An email that already has an account is linked instead of recreated.
-              </p>
-            </div>
-          )}
-        </Section>
+          </p>
+        )}
 
         {/* Sticky so the action stays reachable however long the form gets. */}
         <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-dash-line bg-dash-bg/95 px-4 py-4 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:px-5">

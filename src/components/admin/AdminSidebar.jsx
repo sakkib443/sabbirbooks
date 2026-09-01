@@ -95,22 +95,32 @@ const AdminSidebar = () => {
             { title: 'Delete an Order', href: '/dashboard/admin/book-orders/delete', need: ['records.delete'] },
           ],
         },
+        // Two menus, because there are two different things.
+        //
+        // A coupon is a discount with a code on it — a launch offer, a
+        // giveaway, a fair. Nobody is paid for it, so nothing about a person
+        // appears on that screen.
+        //
+        // An affiliate is a person who sells, and their coupon is only the
+        // instrument. Everything about them — who they are, what they sold,
+        // what the shop owes them — belongs on their own screen, next door.
         {
           title: 'Coupons', icon: FiTag, need: ['orders.read'],
           submenu: [
             { title: 'All Coupons', href: '/dashboard/admin/book-coupons', exact: true, need: ['orders.read'] },
             { title: 'Add Coupon', href: '/dashboard/admin/book-coupons/create', need: ['orders.write'] },
-            { title: 'Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'] },
           ],
         },
-        // An ambassador application is a record about a person — their college,
-        // their phone, a photo of their ID — so it sits with users.read, the
-        // same capability the student directory uses, rather than with orders.
+        // An affiliate record is a record about a person — their college, their
+        // phone, a photo of their ID — so it sits with users.read, the same
+        // capability the student directory uses, rather than with orders.
         {
-          title: 'Campus Ambassadors',
-          href: '/dashboard/admin/ambassadors',
-          icon: FiAward,
-          need: ['users.read'],
+          title: 'Affiliates', icon: FiAward, need: ['users.read'],
+          submenu: [
+            { title: 'All Affiliates', href: '/dashboard/admin/affiliates', exact: true, need: ['users.read'] },
+            { title: 'Applications', href: '/dashboard/admin/affiliates/applications', need: ['users.read'] },
+            { title: 'Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'] },
+          ],
         },
       ],
     },
