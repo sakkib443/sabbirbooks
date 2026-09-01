@@ -590,7 +590,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 icon={FiPercent}
                 title="Normal discount"
                 desc="An everyday discount — shown on the homepage and at checkout for everyone."
-                labelPh="Offer name, e.g. ঈদ অফার"
+                labelPh="Offer name — leave blank for a plain discount"
                 o={form.offers.normal}
                 onToggle={(v) => setOffer('normal', { enabled: v })}
                 onLabel={(v) => setOffer('normal', { label: v })}
@@ -604,7 +604,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 icon={FiClock}
                 title="Pre-order offer"
                 desc="Sold before it is printed — stock is not checked, and this becomes the headline price."
-                labelPh="Offer name, e.g. প্রি-অর্ডার অফার"
+                labelPh="Offer name — leave blank for a plain discount"
                 o={form.offers.preorder}
                 onToggle={(v) => setOffer('preorder', { enabled: v })}
                 onLabel={(v) => setOffer('preorder', { label: v })}
@@ -645,7 +645,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 icon={FiZap}
                 title="Online / instant-payment offer"
                 desc="Extra off when the buyer pays online instead of cash on delivery. Stacks on the offer above."
-                labelPh="Offer name, e.g. আগে পেমেন্টে ছাড়"
+                labelPh="Offer name — leave blank for a plain discount"
                 o={form.offers.online}
                 onToggle={(v) => setOffer('online', { enabled: v })}
                 onLabel={(v) => setOffer('online', { label: v })}

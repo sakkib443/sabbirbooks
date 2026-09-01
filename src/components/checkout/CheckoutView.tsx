@@ -91,10 +91,6 @@ const PREORDER_MAX_QTY = 10;
 // get it back.
 const CONSENT_POLICIES = ["terms-and-conditions", "refund-policy", "privacy-policy"] as const;
 
-/** The id the order buttons point at, so the checkout opens on the form the
- *  buyer came here to fill in rather than wherever the browser left them. */
-export const SHIPPING_ANCHOR = "shipping";
-
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
 
 export default function CheckoutView() {
@@ -229,41 +225,13 @@ export default function CheckoutView() {
   const codAllowed = availability.cod;
   const onlineAllowed = options?.onlinePaymentEnabled !== false;
 
-  /**
-   * Bring the address form into view once the page has something to show.
-   *
-   * Arriving from the order button, the browser restores the scroll position it
-   * had on the page before — which on a long landing page drops the buyer at
-   * the very bottom of the checkout, below the form they came here to fill in.
-   *
-   * `block: 'start'` with the form's own top, not scrollTo(0): the summary and
-   * the item above it are worth a glance, but the first thing they should be
-   * able to type into is on screen.
-   *
-   * Driven by the URL's #shipping hash, which the order buttons add, and not by
-   * a timer. A plain scroll-on-mount loses a race it cannot win: Next scrolls
-   * the window to the top of its own accord after a route change, and undid
-   * this every time — the call was made, and then quietly reversed. With a hash
-   * in the URL Next leaves the scroll alone, because the hash IS the
-   * instruction; all this has to do is wait for the form, which does not exist
-   * until the book has loaded and so cannot be found by the browser itself.
-   *
-   * Instant, not smooth: the cover and the summary resolve after first paint,
-   * and a smooth scroll animating through that lands wherever the layout has
-   * moved to by the time it finishes.
-   */
-  const formRef = useRef<HTMLDivElement | null>(null);
-  const scrolledRef = useRef(false);
-  useEffect(() => {
-    if (scrolledRef.current || phase !== "ready" || !isPrinted || outOfStock) return;
-    if (window.location.hash !== `#${SHIPPING_ANCHOR}`) return;
-    if (!formRef.current) return;
-    scrolledRef.current = true; // once per visit — never fight a buyer's own scrolling
-    // One frame, so the form is measured where it has actually been laid out.
-    requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
-    });
-  }, [phase, isPrinted, outOfStock]);
+  /* This page used to scroll itself to the address form on arrival, because it
+     opened wherever the homepage had been left. That turned out to be a
+     stylesheet bug, not a checkout one — `overflow-x: hidden` on body made body
+     the scroll container, so Next's own scroll-to-top scrolled a window that
+     was not the thing scrolling. Fixed at the source in globals.css; every
+     page now opens at the top, which is what the shop asked for, and this page
+     needs nothing special. */
   // The chosen mode, forced back to whatever is actually available.
   const effectivePayMode = resolvePayMode(payMode, availability);
   const isCod = needsPayment && effectivePayMode === "cod";
@@ -919,7 +887,7 @@ export default function CheckoutView() {
 
             {/* Shipping (printed books only) */}
             {isPrinted && !outOfStock && (
-              <div ref={formRef} id={SHIPPING_ANCHOR} className="scroll-mt-24">
+              <div>
               <ShippingForm
                 register={register}
                 errors={errors}

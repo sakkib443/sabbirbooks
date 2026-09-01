@@ -12,6 +12,7 @@ import {
 import "./globals.css";
 import Providers from "@/components/Providers";
 import SiteChrome from "@/components/shared/SiteChrome";
+import ScrollToTop from "@/components/shared/ScrollToTop";
 import ThemeScript from "@/components/theme/ThemeScript";
 
 // Google Fonts (ported from the Aptech Learning setup)
@@ -112,6 +113,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <Providers>
+          {/* In the root layout, not in SiteChrome: the dashboards render their
+              own shell and need every page to open at the top just as much as
+              the storefront does. */}
+          <ScrollToTop />
           <SiteChrome>{children}</SiteChrome>
         </Providers>
       </body>

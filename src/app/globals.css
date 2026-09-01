@@ -512,7 +512,17 @@
     font-family: var(--font-poppins), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
+    /* clip, NOT hidden.
+       `overflow-x: hidden` forces overflow-y to compute as `auto`, which makes
+       BODY the scroll container instead of the document. Everything that scrolls
+       the page then has to scroll body — and Next's own scroll-to-top on a route
+       change scrolls the window, which in that arrangement does nothing at all.
+       That is why the checkout opened wherever the homepage had been left: the
+       framework was resetting a scroll position the page was not using.
+       `clip` stops the horizontal overflow the same way without creating a
+       scroll container, so the document scrolls again and route changes land at
+       the top by themselves. */
+    overflow-x: clip;
     scrollbar-gutter: stable;
   }
   h1, h2, h3, h4, h5 {

@@ -49,10 +49,7 @@ export default function LandingPage({ book, settings }) {
   }
 
   const price = landingPrice(book);
-  // #shipping so the checkout opens on the address form. Without it the
-  // browser restores whatever scroll position this page had and drops the
-  // buyer at the bottom of a page they have not read yet.
-  const checkoutHref = `/checkout?type=book&slug=${encodeURIComponent(book.slug)}#shipping`;
+  const checkoutHref = `/checkout?type=book&slug=${encodeURIComponent(book.slug)}`;
 
   return (
     <main>
