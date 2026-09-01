@@ -11,6 +11,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ChangePassword from '@/components/affiliate/ChangePassword';
 import {
   FiTag, FiShoppingBag, FiDollarSign, FiLogOut, FiLoader,
   FiAlertCircle, FiGift, FiClock,
@@ -169,6 +170,12 @@ export default function AffiliateDashboard() {
                 </div>
               )}
             </section>
+
+            {/* An ambassador's opening password is their own phone number, which
+                is fine for getting them in and not fine for leaving them there.
+                `isPasswordChanged: false` is set when approval creates the
+                account and is what opens this card already expanded. */}
+            <ChangePassword stillDefault={me?.isPasswordChanged === false} />
 
             {/* Recent sales */}
             {d.recent?.length > 0 && (
