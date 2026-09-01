@@ -33,6 +33,7 @@ export function PayModeSelector({
   codAllowed,
   onlineAllowed,
   gatewayAllowed,
+  onlineOfferLine,
   disabled,
   codReason,
   bn,
@@ -44,6 +45,9 @@ export function PayModeSelector({
   onlineAllowed: boolean;
   /** Hosted checkout — only ever true once the server holds real credentials. */
   gatewayAllowed: boolean;
+  /** "৳20 off" / "5% off" — the extra for paying now, shown above that option.
+   *  Empty or absent when no online offer is running. */
+  onlineOfferLine?: string;
   disabled?: boolean;
   // Why COD is off, when it is — e.g. a digital book has no parcel to hand over.
   codReason?: string;
@@ -64,6 +68,7 @@ export function PayModeSelector({
     reason?: string;
     badge?: string;
     info?: string;
+    above?: string;
   }[] = [
     {
       id: "cod",
@@ -86,6 +91,10 @@ export function PayModeSelector({
             enabled: true,
             badge: S.gatewayBadge,
             info: S.gatewayText,
+            // The extra the shop gives for paying now, above the title where it
+            // is read before the choice is made rather than beside it. Absent
+            // when there is no online offer running — see onlineOfferLine.
+            above: onlineOfferLine,
           },
         ]
       : []),
@@ -128,6 +137,16 @@ export function PayModeSelector({
                 {opt.icon}
               </span>
               <span className="min-w-0 flex-1">
+                {opt.above && (
+                  <span
+                    className={cn(
+                      "mb-0.5 block text-[11px] font-bold leading-none text-accent",
+                      bn
+                    )}
+                  >
+                    {opt.above}
+                  </span>
+                )}
                 <span className={cn("flex flex-wrap items-center gap-1.5 font-semibold text-foreground", bn)}>
                   {opt.title}
                   {opt.info && (

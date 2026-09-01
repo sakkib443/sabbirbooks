@@ -410,36 +410,8 @@ export default function BookOrdersPage() {
     }
   };
 
-  const deleteSelected = async () => {
-    const ids = [...selected];
-    if (ids.length === 0) return;
-    const ok = await confirm({
-      title: `Delete ${ids.length} order${ids.length === 1 ? '' : 's'}?`,
-      message:
-        'This permanently removes the order records. Any stock these orders had taken is put back. This cannot be undone.',
-      confirmText: 'Delete permanently',
-      danger: true,
-    });
-    if (!ok) return;
-
-    setBulkBusy(true);
-    try {
-      const res = await fetch(`${API}/orders/bulk-delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ ids }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not delete');
-      showToast('success', json.message || 'Orders deleted');
-      setOrders((prev) => prev.filter((o) => !selected.has(o._id)));
-      setSelected(new Set());
-    } catch (e) {
-      showToast('error', e.message || 'Could not delete the selected orders');
-    } finally {
-      setBulkBusy(false);
-    }
-  };
+  // deleteSelected lived here. Moved to book-orders/delete — see the note
+  // in the selection bar.
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -553,15 +525,12 @@ export default function BookOrdersPage() {
                   </button>
                 );
               })}
-              {canDelete && (
-                <button
-                  onClick={deleteSelected}
-                  disabled={bulkBusy}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
-                >
-                  {bulkBusy ? <FiLoader className="animate-spin" size={13} /> : <FiTrash2 size={13} />} Delete
-                </button>
-              )}
+              {/* Deleting is NOT here any more.
+                  It used to sit one click away, beside the status buttons, on
+                  the screen an admin uses all day — and an order, once deleted,
+                  is gone. It now lives on its own page, where the order has to
+                  be found and its number typed out before anything happens.
+                  See book-orders/delete. */}
               <button
                 onClick={() => setSelected(new Set())}
                 className="px-2 py-2 text-xs font-medium text-dash-mute transition-colors hover:text-dash-ink3"

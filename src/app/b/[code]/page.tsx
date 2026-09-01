@@ -32,6 +32,7 @@ import {
 import API_BASE_URL from "@/config/api";
 import AnswerStyles from "@/components/books/AnswerStyles";
 import Lightbox from "@/components/books/Lightbox";
+import { priceBook, type BookOffers } from "@/lib/bookOffers";
 
 type Video = {
   _id?: string;
@@ -75,7 +76,12 @@ type LockedBook = {
   author?: string;
   coverImage?: string;
   price?: number;
+  // Everything priceBook() needs. The legacy price/offerPrice pair is kept
+  // because books that never moved to named offers still price from it.
   offerPrice?: number;
+  offers?: BookOffers;
+  isPreOrder?: boolean;
+  preOrderDiscountPercent?: number;
 };
 
 type State =
@@ -127,6 +133,37 @@ function SectionLabel({ icon, children }: { icon: React.ReactNode; children: Rea
  * the site's navbar until the QR route went fullscreen, and without something
  * here a visitor who is simply signed out has no way back or in.
  */
+/**
+ * What the book costs, on the card that asks someone to buy it.
+ *
+ * Run through priceBook — the one function the landing page, the book page and
+ * the checkout all price from. Reading `offerPrice` off the book directly is
+ * what put ৳600 here for a book selling at ৳550: that field is the legacy pair's
+ * half, and a book that has moved to named offers stops updating it.
+ */
+function BookPriceLine({ book }: { book: LockedBook | null }) {
+  if (!book?.price) return <div className="mb-6" />;
+  // One copy: this card sells the idea, not a quantity. `headlinePayable` and
+  // not `payable`, because the online-payment extra is only real once they pick
+  // that method at the checkout — promising it here would be a price they might
+  // not get.
+  const p = priceBook(book, { quantity: 1 });
+
+  return (
+    <div className="mb-6">
+      <p className="flex items-center justify-center gap-2">
+        <span className="text-lg font-bold text-emerald-400">৳{p.headlinePayable}</span>
+        {p.headlineSaved > 0 && (
+          <span className="text-sm text-slate-500 line-through">৳{p.list}</span>
+        )}
+      </p>
+      {p.headline.label && (
+        <p className="mt-1 text-[11px] text-slate-400">{p.headline.label}</p>
+      )}
+    </div>
+  );
+}
+
 function MiniBar() {
   return (
     <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-[#282828] bg-[#0f0f0f]/95 px-4 py-3 backdrop-blur">
@@ -279,13 +316,11 @@ export default function BookTopicScanPage() {
           {book && (
             <p className="text-white font-medium mb-1">{book.title}</p>
           )}
-          {book && (book.offerPrice ?? book.price) ? (
-            <p className="text-emerald-400 text-sm mb-6">
-              ৳{book.offerPrice ?? book.price}
-            </p>
-          ) : (
-            <div className="mb-6" />
-          )}
+          {/* Priced through the same function as the landing page and the
+              checkout. Reading `offerPrice` directly was quoting the legacy
+              field, which on a book with named offers is stale — this card was
+              showing ৳600 for a book selling at ৳550. */}
+          <BookPriceLine book={book} />
 
           <Link
             href={book?.slug ? `/books/${book.slug}` : "/books"}

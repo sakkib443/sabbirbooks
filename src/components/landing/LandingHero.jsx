@@ -30,13 +30,13 @@ import { useLanguage } from '@/context/LanguageContext';
 
 const T = {
   bn: {
-    eyebrow: '১ম প্রফ · Anatomy Viva',
+    eyebrow: '1st Prof · Anatomy Viva',
     preOrderOn: 'প্রি-অর্ডার চলছে',
     saved: 'সাশ্রয়',
     preOrder: 'প্রি-অর্ডার করুন',
     order: 'অর্ডার করুন',
     viewSample: 'নমুনা দেখুন',
-    viewBook: 'বইটি দেখুন',
+    viewBook: 'পড়ে দেখুন',
     cod: 'ক্যাশ অন ডেলিভারি',
     delivery: 'সারা দেশে ডেলিভারি',
     why: 'কেন এই বইটি',
@@ -52,7 +52,7 @@ const T = {
     preOrder: 'Pre-order now',
     order: 'Order now',
     viewSample: 'View sample',
-    viewBook: 'Look inside',
+    viewBook: 'Read a sample',
     cod: 'Cash on delivery',
     delivery: 'Delivered nationwide',
     why: 'Why this book',
@@ -112,10 +112,13 @@ export default function LandingHero({
       <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8">
         {/* ── The words, centred ────────────────────────────────────── */}
         <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-soft px-4 py-1.5 text-sm font-semibold tracking-wide text-primary font-display">
-            <span className="relative flex h-2 w-2">
+          {/* Bigger and moving, because it is the first thing on the page and
+              was being read past. The float is motion-safe: a visitor who has
+              asked their system for less motion gets the same badge, still. */}
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-primary/25 bg-primary-soft px-5 py-2.5 text-base font-bold tracking-wide text-primary font-display shadow-sm motion-safe:animate-float-soft sm:text-lg">
+            <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
             </span>
             {L.eyebrow}
             {(() => {
@@ -130,7 +133,10 @@ export default function LandingHero({
             })()}
           </span>
 
-          <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-foreground text-balance sm:text-4xl lg:text-[3.25rem]">
+          {/* The same gradient the logo's "Viva" is painted in — reached
+              through the shared class, not by writing the colour again, so the
+              headline follows if the brand ever changes. */}
+          <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-gradient-medical text-balance sm:text-4xl lg:text-[3.25rem]">
             {headline || book?.title}
           </h1>
 
@@ -186,14 +192,9 @@ export default function LandingHero({
                   </span>
                 </Link>
 
-                {hasSample && (
-                  <a
-                    href="#sample"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-base font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary hind-siliguri"
-                  >
-                    <LuBookOpen /> {L.viewSample}
-                  </a>
-                )}
+                {/* The "নমুনা দেখুন" button used to sit here. It and the cover
+                    did the same thing, and two buttons for one action is one
+                    button too many — the cover IS the button now. */}
               </div>
 
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground hind-siliguri">

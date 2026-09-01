@@ -5,6 +5,7 @@ import { LuHouse, LuBookOpen, LuShoppingBag, LuUser } from "react-icons/lu";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import BottomNav, { BottomNavSpacer } from "./BottomNav";
+import WhatsAppButton from "./WhatsAppButton";
 import type { IconType } from "react-icons";
 
 // Routes that render their own shell (admin panel, student dashboard, learn player)
@@ -50,6 +51,10 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       {/* The spacer sits after the footer so the tab bar never covers it. */}
       <BottomNavSpacer />
       <BottomNav items={PUBLIC_TABS} />
+      {/* Every public screen, not just the landing page: a question can occur
+          to someone on the book page or halfway through the policies. Left off
+          the QR reader and the dashboards, which have their own shells. */}
+      <WhatsAppButton />
     </>
   );
 }

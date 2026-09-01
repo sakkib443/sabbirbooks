@@ -168,23 +168,11 @@ export function ShippingForm({
             />
           }
         />
-        <div className="sm:col-span-2">
-          <Field
-            bn={bn}
-            label={S.address}
-            icon={<LuMapPin />}
-            error={errors.address?.message}
-            input={
-              <Input
-                placeholder={S.addressPh}
-                autoComplete="street-address"
-                aria-invalid={!!errors.address}
-                {...register("address")}
-              />
-            }
-          />
-        </div>
-        {/* Division → district → upazila, in that order. Each list is drawn
+        {/* Division → district → upazila → house/road/village: big to small,
+            which is the order the client asked for and the order an address is
+            actually recalled in. The street line used to sit above these three,
+            so it was being filled in before anyone had said which district it
+            was in. Each list is drawn
             from the pick above it, and choosing a parent again clears its
             children so a district can never sit under the wrong division. The
             three cover all of Bangladesh, so a closed <select> loses nobody. */}
@@ -230,6 +218,22 @@ export function ShippingForm({
           options={upazilaOptions}
           onSelect={upazilaReg.onChange}
         />
+        <div className="sm:col-span-2">
+          <Field
+            bn={bn}
+            label={S.address}
+            icon={<LuMapPin />}
+            error={errors.address?.message}
+            input={
+              <Input
+                placeholder={S.addressPh}
+                autoComplete="street-address"
+                aria-invalid={!!errors.address}
+                {...register("address")}
+              />
+            }
+          />
+        </div>
         <div className="sm:col-span-2">
           <Field
             bn={bn}

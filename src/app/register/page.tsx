@@ -179,7 +179,11 @@ export default function RegisterPage() {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         email: values.email.trim(),
-        phoneNumber: values.phoneNumber?.trim() || undefined,
+        // Both fields carry the same number now. phoneNumber is still sent
+        // because the courier list, the order alerts and the checkout prefill
+        // all read it — dropping it would leave those looking at an empty
+        // field for every new customer.
+        phoneNumber: values.whatsappNumber.trim(),
         whatsappNumber: values.whatsappNumber.trim(),
         medicalCollege: college?._id,
         medicalCollegeName: college?.name || collegeName.trim(),
@@ -274,21 +278,12 @@ export default function RegisterPage() {
           {...register("email")}
         />
 
-        <FormField
-          id="phoneNumber"
-          bengali={isBengali}
-          label={`${S.phone} ${S.phoneOptional}`}
-          icon={<LuPhone className="text-base" />}
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder={S.phonePh}
-          error={errors.phoneNumber?.message}
-          {...register("phoneNumber")}
-        />
-
-        {/* Required: this is how the shop actually reaches its customers about
-            an order, so it is asked for at signup rather than chased later. */}
+        {/* ONE number, and it is the WhatsApp one.
+            There used to be an optional "phone" box above this. Asking the same
+            person for two numbers gets one of them left blank or gets the same
+            digits typed twice, and the shop only ever reaches customers on
+            WhatsApp anyway — so this is the number, and it fills the phone field
+            at checkout too (see the prefill in CheckoutView). */}
         <FormField
           id="whatsappNumber"
           bengali={isBengali}
@@ -296,6 +291,7 @@ export default function RegisterPage() {
           icon={<LuPhone className="text-base" />}
           type="tel"
           inputMode="tel"
+          autoComplete="tel"
           placeholder={S.whatsappPh}
           error={errors.whatsappNumber?.message}
           {...register("whatsappNumber")}

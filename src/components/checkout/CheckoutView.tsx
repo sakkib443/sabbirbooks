@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm, useWatch } from "react-hook-form";
@@ -90,6 +90,10 @@ const PREORDER_MAX_QTY = 10;
 // money moves — what is being sold, what happens to their data, and how they
 // get it back.
 const CONSENT_POLICIES = ["terms-and-conditions", "refund-policy", "privacy-policy"] as const;
+
+/** The id the order buttons point at, so the checkout opens on the form the
+ *  buyer came here to fill in rather than wherever the browser left them. */
+export const SHIPPING_ANCHOR = "shipping";
 
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
 
@@ -210,8 +214,56 @@ export default function CheckoutView() {
     [isPrinted, outOfStock, isFreeCourse, options, availableChannels, gateways]
   );
 
+  /**
+   * This exact checkout, query string and all, for `?redirect=` on the way to
+   * login. Rebuilt from the params rather than read off `window.location` so it
+   * is the same string on the server and the client, and carries only the two
+   * keys this page needs — never a stray token someone appended to the URL.
+   */
+  const backHere = `/checkout?${new URLSearchParams({
+    type: String(type || ""),
+    ...(slug ? { slug: String(slug) } : {}),
+    ...(id ? { id: String(id) } : {}),
+  }).toString()}`;
+
   const codAllowed = availability.cod;
   const onlineAllowed = options?.onlinePaymentEnabled !== false;
+
+  /**
+   * Bring the address form into view once the page has something to show.
+   *
+   * Arriving from the order button, the browser restores the scroll position it
+   * had on the page before — which on a long landing page drops the buyer at
+   * the very bottom of the checkout, below the form they came here to fill in.
+   *
+   * `block: 'start'` with the form's own top, not scrollTo(0): the summary and
+   * the item above it are worth a glance, but the first thing they should be
+   * able to type into is on screen.
+   *
+   * Driven by the URL's #shipping hash, which the order buttons add, and not by
+   * a timer. A plain scroll-on-mount loses a race it cannot win: Next scrolls
+   * the window to the top of its own accord after a route change, and undid
+   * this every time — the call was made, and then quietly reversed. With a hash
+   * in the URL Next leaves the scroll alone, because the hash IS the
+   * instruction; all this has to do is wait for the form, which does not exist
+   * until the book has loaded and so cannot be found by the browser itself.
+   *
+   * Instant, not smooth: the cover and the summary resolve after first paint,
+   * and a smooth scroll animating through that lands wherever the layout has
+   * moved to by the time it finishes.
+   */
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const scrolledRef = useRef(false);
+  useEffect(() => {
+    if (scrolledRef.current || phase !== "ready" || !isPrinted || outOfStock) return;
+    if (window.location.hash !== `#${SHIPPING_ANCHOR}`) return;
+    if (!formRef.current) return;
+    scrolledRef.current = true; // once per visit — never fight a buyer's own scrolling
+    // One frame, so the form is measured where it has actually been laid out.
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+    });
+  }, [phase, isPrinted, outOfStock]);
   // The chosen mode, forced back to whatever is actually available.
   const effectivePayMode = resolvePayMode(payMode, availability);
   const isCod = needsPayment && effectivePayMode === "cod";
@@ -246,6 +298,22 @@ export default function CheckoutView() {
   // Total taka off (offers + coupon). Kept for the delivery-threshold maths; the
   // summary itemises it with names via discountLines below.
   const discount = (bp?.saved ?? 0) + couponDiscount;
+
+  /**
+   * "৳20 off" / "5% off" — the extra for paying now, shown above that option so
+   * it is read while the choice is still being made.
+   *
+   * Built from the book's own online offer rather than from bp.onlineSaved,
+   * because bp prices the mode currently SELECTED: once the buyer has picked
+   * cash on delivery, onlineSaved is zero and the reason to switch back would
+   * disappear from the screen at exactly the moment it matters.
+   */
+  const onlineOfferLine = useMemo(() => {
+    const o = bp?.offers.online;
+    if (!o?.enabled) return undefined;
+    if (o.type === "percent") return o.percent > 0 ? S.onlineOffPct(o.percent) : undefined;
+    return o.amount > 0 ? S.onlineOffTk(o.amount) : undefined;
+  }, [bp, S]);
 
   // Named discount rows for the summary: the headline offer, the extra online
   // offer, then the coupon. A blank admin label falls back to a default.
@@ -349,8 +417,11 @@ export default function CheckoutView() {
   // ── Auth gate + item fetch ────────────────────────────────────────────────
   useEffect(() => {
     if (!getToken()) {
-      // Not logged in → send to login (checkout requires an account).
-      router.replace("/login");
+      // Not logged in → login, and BACK HERE afterwards. Without the redirect a
+      // buyer who has already decided to buy is dropped on the homepage and has
+      // to find the order button again — the commonest way this shop was losing
+      // a sale it had already won.
+      router.replace(`/login?redirect=${encodeURIComponent(backHere)}`);
       return;
     }
     if (type !== "course" && type !== "book") {
@@ -538,7 +609,10 @@ export default function CheckoutView() {
   };
 
   const runCheckout = async (shipping?: ShippingAddress) => {
-    if (!getToken()) return router.replace("/login");
+    // Their session expired between opening the page and pressing the button.
+    // Same return path, so signing in again drops them back on the order they
+    // were halfway through rather than at the start.
+    if (!getToken()) return router.replace(`/login?redirect=${encodeURIComponent(backHere)}`);
     setSubmitError("");
     setStep("creating");
     setPhase("processing");
@@ -845,6 +919,7 @@ export default function CheckoutView() {
 
             {/* Shipping (printed books only) */}
             {isPrinted && !outOfStock && (
+              <div ref={formRef} id={SHIPPING_ANCHOR} className="scroll-mt-24">
               <ShippingForm
                 register={register}
                 errors={errors}
@@ -869,6 +944,7 @@ export default function CheckoutView() {
                     : null
                 }
               />
+              </div>
             )}
 
             {/* Out of stock notice */}
@@ -892,6 +968,7 @@ export default function CheckoutView() {
                 codAllowed={codAllowed}
                 onlineAllowed={onlineAllowed}
                 gatewayAllowed={availability.gateway}
+                onlineOfferLine={onlineOfferLine}
                 codReason={isBook && !isPrinted ? S.codDigitalOnly : undefined}
                 disabled={processing}
                 bn={bn}
@@ -1318,7 +1395,9 @@ const EN = {
 
   // Hosted gateway (bKash / SSLCommerz)
   payNow: "Pay Now",
-  gatewayTitle: "Pay instantly",
+  onlineOffPct: (v: number) => `${v}% off`,
+  onlineOffTk: (v: number) => `৳${v} off`,
+  gatewayTitle: "Pay now",
   gatewayText: "Pay with bKash or card on a secure page. Your order confirms at once.",
   gatewayBadge: "Instant",
   gatewaySecureNote: "You'll finish the payment on the provider's own secure page.",
@@ -1422,7 +1501,7 @@ const EN = {
   shipSubtitle: "Where should we deliver your printed book?",
   shipName: "Full name",
   shipNamePh: "e.g. Dr. Ayesha Rahman",
-  shipPhone: "Phone",
+  shipPhone: "WhatsApp number",
   shipPhonePh: "01XXXXXXXXX",
   shipAddress: "Address (house / road / village)",
   shipAddressPh: "House, road, village",
@@ -1550,7 +1629,9 @@ const BN: Copy = {
 
   // Hosted gateway (bKash / SSLCommerz)
   payNow: "এখনই পেমেন্ট করুন",
-  gatewayTitle: "সাথে সাথে পেমেন্ট",
+  onlineOffPct: (v: number) => `${v}% ছাড়ে`,
+  onlineOffTk: (v: number) => `৳${v} ছাড়ে`,
+  gatewayTitle: "এখনই পেমেন্ট করুন",
   gatewayText: "বিকাশ বা কার্ড দিয়ে নিরাপদ পেজে পেমেন্ট করুন। অর্ডার সাথে সাথেই কনফার্ম হবে।",
   gatewayBadge: "ইনস্ট্যান্ট",
   gatewaySecureNote: "পেমেন্টটি প্রোভাইডারের নিজস্ব নিরাপদ পেজে সম্পন্ন হবে।",
@@ -1648,7 +1729,7 @@ const BN: Copy = {
   shipSubtitle: "আপনার প্রিন্টেড বই কোথায় পৌঁছে দেব?",
   shipName: "পুরো নাম",
   shipNamePh: "যেমন: ডা. আয়েশা রহমান",
-  shipPhone: "ফোন",
+  shipPhone: "হোয়াটসঅ্যাপ নম্বর",
   shipPhonePh: "01XXXXXXXXX",
   shipAddress: "ঠিকানা (বাসা / রোড / গ্রাম)",
   shipAddressPh: "বাসা, রোড, গ্রাম",

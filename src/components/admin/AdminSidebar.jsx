@@ -85,7 +85,16 @@ const AdminSidebar = () => {
         { title: 'Book Content (QR)', href: '/dashboard/admin/book-content', icon: FiGrid, need: ['content.write'] },
         { title: 'Book Preview', href: '/dashboard/admin/book-preview', icon: FiEye, need: ['content.write'] },
         // Book Orders is the "who is buying" screen — orders.read, not content.
-        { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag, need: ['orders.read'] },
+        {
+          title: 'Book Orders', icon: FiShoppingBag, need: ['orders.read'],
+          submenu: [
+            { title: 'All Orders', href: '/dashboard/admin/book-orders', exact: true, need: ['orders.read'] },
+            // Deliberately its own screen, and deliberately named for what it
+            // does. Deleting used to be a button on the orders list; it now
+            // takes a decision to get here. See book-orders/delete.
+            { title: 'Delete an Order', href: '/dashboard/admin/book-orders/delete', need: ['records.delete'] },
+          ],
+        },
         {
           title: 'Coupons', icon: FiTag, need: ['orders.read'],
           submenu: [
