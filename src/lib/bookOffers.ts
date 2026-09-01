@@ -200,12 +200,17 @@ export const priceBook = (
   // the online offer stacks on top of whichever headline is in force. Each offer
   // is a percent or a fixed taka amount (offerDiscount handles both). Round each
   // discount once and split — headlineSaved + onlineSaved is what the server takes.
-  const headlineOffer = offers.preorder.enabled
-    ? offers.preorder
-    : offers.normal.enabled
-      ? offers.normal
-      : null;
-  const mode: HeadlineMode = offers.preorder.enabled ? "preorder" : offers.normal.enabled ? "normal" : "none";
+  // The headline is the offer that actually takes money off — not merely the one
+  // that is switched on. Mirrors book.pricing.ts on the server exactly; see the
+  // long note there. In short: "pre-order" is two facts on one switch (sold
+  // before printing, and discounted for pre-ordering), a shop can want the first
+  // without the second, and keying on `enabled` alone let a zero-discount
+  // pre-order swallow a normal discount running underneath it.
+  const preorderOff = offers.preorder.enabled ? offerDiscount(price, offers.preorder) : 0;
+  const normalOff = offers.normal.enabled ? offerDiscount(price, offers.normal) : 0;
+
+  const headlineOffer = preorderOff > 0 ? offers.preorder : normalOff > 0 ? offers.normal : null;
+  const mode: HeadlineMode = preorderOff > 0 ? "preorder" : normalOff > 0 ? "normal" : "none";
 
   const headlineOff = headlineOffer ? offerDiscount(price, headlineOffer) : 0;
   const unit = price - headlineOff;
