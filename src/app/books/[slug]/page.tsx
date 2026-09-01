@@ -26,7 +26,8 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import { Container, Badge, buttonVariants, cn } from "@/components/ui";
 import API_BASE_URL from "@/config/api";
-import { Book, formatBDT, discountPercent, bookCheckoutHref } from "@/components/books/types";
+import { Book, formatBDT, bookCheckoutHref } from "@/components/books/types";
+import { priceBook, type OfferBook } from "@/lib/bookOffers";
 import { BookPreview } from "@/components/books/BookPreview";
 
 // The public /api/books payload carries the pre-order fields too. They are
@@ -75,12 +76,12 @@ const copy = {
     orderNow: "Order now",
     buyNow: "Buy now",
     unavailable: "Currently unavailable",
-    preOrderBadge: (pct: number) => `Pre-order · ${pct}% off`,
+    preOrderBadge: (off: string) => `Pre-order · ${off} off`,
     preOrderCta: "Pre-order now",
     preOrderAvailability: "Pre-order open",
     preOrderNoteFallback: "Not printed yet — order now at the pre-order price.",
     preOrderShipOn: (d: string) => `Delivery starts ${d}`,
-    preOrderPriceNote: (p: string, pct: number) => `${p} at checkout — ${pct}% pre-order discount`,
+    onlineExtraNote: (off: string) => `${off} more off when you pay online`,
     aboutHeading: "About this book",
     detailsHeading: "Details",
     category: "Category",
@@ -124,12 +125,12 @@ const copy = {
     orderNow: "অর্ডার করুন",
     buyNow: "কিনুন",
     unavailable: "এই মুহূর্তে অনুপলব্ধ",
-    preOrderBadge: (pct: number) => `প্রি-অর্ডার · ${pct}% ছাড়`,
+    preOrderBadge: (off: string) => `প্রি-অর্ডার · ${off} ছাড়`,
     preOrderCta: "প্রি-অর্ডার করুন",
     preOrderAvailability: "প্রি-অর্ডার চলছে",
     preOrderNoteFallback: "বইটি এখনো ছাপা হয়নি — প্রি-অর্ডার দামে এখনই অর্ডার করুন।",
     preOrderShipOn: (d: string) => `${d} থেকে ডেলিভারি শুরু`,
-    preOrderPriceNote: (p: string, pct: number) => `চেকআউটে ${p} — ${pct}% প্রি-অর্ডার ছাড়`,
+    onlineExtraNote: (off: string) => `অনলাইনে পেমেন্ট করলে আরও ${off} ছাড়`,
     aboutHeading: "এই বই সম্পর্কে",
     detailsHeading: "বিস্তারিত",
     category: "ক্যাটাগরি",
@@ -224,11 +225,25 @@ export default function BookDetailPage() {
   }
 
   const isDigital = book.format === "digital";
-  const price = formatBDT(book.offerPrice) ?? formatBDT(book.price);
-  const original = book.offerPrice ? formatBDT(book.price) : null;
-  const discount = discountPercent(book.price, book.offerPrice);
-  const savings =
-    book.offerPrice && book.price ? formatBDT(book.price - book.offerPrice) : null;
+
+  /**
+   * One copy, priced the way the server prices it.
+   *
+   * This page used to read `price` and `offerPrice` directly and then apply
+   * `preOrderDiscountPercent` on top. Both are pre-offers-system leftovers, and
+   * on this book they were wrong in two directions at once: `offerPrice` still
+   * reads 600 so the page said "You save ৳0", while the 25% default in
+   * `preOrderDiscountPercent` — a number nobody had set — advertised ৳450 for a
+   * book the checkout charges ৳520 for.
+   *
+   * `headlinePayable`, not `payable`: the online-payment extra is only real once
+   * that method is chosen, and is stated separately below.
+   */
+  const p = priceBook(book as OfferBook, { quantity: 1 });
+  const price = formatBDT(p.headlinePayable);
+  const original = p.headlineSaved > 0 ? formatBDT(p.list) : null;
+  const discount = p.headline.kind === "percent" ? p.percent : 0;
+  const savings = p.headlineSaved > 0 ? formatBDT(p.headlineSaved) : null;
 
   const stock = book.stock ?? 0;
   // A pre-order is sold before the print run exists, so `stock: 0` is its normal
@@ -239,18 +254,38 @@ export default function BookDetailPage() {
   const printedOutOfStock = !isDigital && !isPreOrder && stock <= 0;
   const printedLowStock = !isDigital && !isPreOrder && stock > 0 && stock <= 10;
 
-  // Clamped exactly as the server clamps it before pricing an order, so the
-  // percent on this badge is the percent the invoice actually gives.
-  const rawPct = Number(book.preOrderDiscountPercent ?? 25);
-  const preOrderPct =
-    isPreOrder && Number.isFinite(rawPct) ? Math.min(90, Math.max(0, rawPct)) : 0;
-  // Same effective unit price the checkout summary uses, and the server's rule
-  // of rounding the DISCOUNT rather than the price.
-  const basePrice = book.price ?? 0;
-  const offer = book.offerPrice ?? 0;
-  const unitPrice = offer > 0 && offer < basePrice ? offer : basePrice;
-  const preOrderPrice =
-    preOrderPct > 0 ? unitPrice - Math.round((unitPrice * preOrderPct) / 100) : null;
+  /**
+   * The pre-order badge's number.
+   *
+   * It used to be `preOrderDiscountPercent ?? 25` — which meant every pre-order
+   * book claimed 25% off whether or not anyone had set an offer, because 25 was
+   * the default of a field left over from before offers existed. It now says
+   * whatever the live pre-order offer actually is, and says nothing when there
+   * is none.
+   */
+  const preOrderOffer = p.offers.preorder;
+  const preOrderText =
+    isPreOrder && p.headline.mode === "preorder" && p.headlineSaved > 0
+      ? preOrderOffer.type === "percent"
+        ? `${p.percent}%`
+        : (formatBDT(preOrderOffer.amount) ?? "")
+      : null;
+  // The extra for paying online, stated separately because it depends on how
+  // they choose to pay — the big price above is what everyone gets.
+  //
+  // Read off the offer, NOT off `p.onlineSaved`: this page prices the ordinary
+  // (non-online) case, so onlineSaved is zero here by design, and keying the
+  // note to it meant the note could never appear at all.
+  const onlineOffer = p.offers.online;
+  const onlineExtraText = !onlineOffer.enabled
+    ? null
+    : onlineOffer.type === "percent"
+      ? onlineOffer.percent > 0
+        ? `${onlineOffer.percent}%`
+        : null
+      : onlineOffer.amount > 0
+        ? (formatBDT(onlineOffer.amount) ?? null)
+        : null;
   const releaseDate = formatReleaseDate(book.expectedReleaseDate, isBengali);
 
   const ctaLabel = printedOutOfStock
@@ -334,12 +369,12 @@ export default function BookDetailPage() {
                   {/* The pre-order badge wins the corner over the offer-price
                       one: a book you cannot have yet is the more important fact,
                       and the pre-order discount is the bigger of the two. */}
-                  {isPreOrder ? (
+                  {isPreOrder && preOrderText ? (
                     <Badge variant="coral" className={cn("absolute right-3 top-3 bg-card/90 backdrop-blur", bn)}>
-                      <LuCalendarClock /> {S.preOrderBadge(preOrderPct)}
+                      <LuCalendarClock /> {S.preOrderBadge(preOrderText)}
                     </Badge>
                   ) : (
-                    discount && (
+                    discount > 0 && (
                       <Badge variant="coral" className="absolute right-3 top-3 bg-card/90 backdrop-blur">
                         -{discount}% {S.off}
                       </Badge>
@@ -381,13 +416,20 @@ export default function BookDetailPage() {
                   </Badge>
                 )}
               </div>
-              {/* The discount is applied by the server at checkout, not baked
-                  into the listed price — say what will actually be charged so
-                  the number on this page and the number on the invoice are the
-                  same number. */}
-              {preOrderPrice !== null && (
+              {/* The offer's own name, when the shop gave it one. Blank is the
+                  normal case and shows nothing — the struck-through price above
+                  already says a discount is running. */}
+              {p.headline.label && (
+                <p className={cn("mt-2 text-sm font-semibold text-primary", bn)}>
+                  {p.headline.label}
+                </p>
+              )}
+              {/* The extra for paying online. Separate from the price above
+                  because it depends on how they choose to pay; the big number is
+                  what everyone is charged. */}
+              {onlineExtraText && (
                 <p className={cn("mt-2 text-sm font-semibold text-coral", bn)}>
-                  {S.preOrderPriceNote(formatBDT(preOrderPrice) ?? "", preOrderPct)}
+                  {S.onlineExtraNote(onlineExtraText)}
                 </p>
               )}
 

@@ -353,10 +353,20 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
     };
 
     // Keep the legacy flags in lock-step with the pre-order offer, because plenty
-    // of code (order alerts, the buyer's checkout UI, old reports) still reads
-    // them. Sent unconditionally so turning the offer off is not one-way.
+    // of code (order alerts, old reports) still reads them. Sent unconditionally
+    // so turning the offer off is not one-way.
     p.isPreOrder = p.offers.preorder.enabled;
-    p.preOrderDiscountPercent = p.offers.preorder.percent || 25;
+    // `|| 25` here was inventing an offer. A FIXED pre-order offer has percent 0,
+    // so every fixed offer saved 25 into the legacy field — and any page still
+    // reading that field then advertised "25% pre-order discount" for a book
+    // nobody had given a percentage to. The live book showed ৳450 that way while
+    // its real pre-order price was ৳520.
+    //
+    // 0 for a fixed offer is the honest answer: there is no percentage. Anything
+    // still reading this field gets "no percent discount" instead of a number
+    // that was never set.
+    p.preOrderDiscountPercent =
+      p.offers.preorder.type === 'percent' ? p.offers.preorder.percent || 0 : 0;
     p.preOrderNote = form.preOrderNote.trim();
     // null rather than '': the field is a Date server-side, and null is what the
     // validation accepts as "clear it".
