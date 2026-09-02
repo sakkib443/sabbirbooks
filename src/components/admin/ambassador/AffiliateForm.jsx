@@ -31,6 +31,7 @@ const REACH = ['<25', '25-50', '50-100', '100-200', '200-300', '300+'];
 
 const BLANK = {
   fullName: '',
+  nickname: '',
   phone: '',
   whatsapp: '',
   email: '',
@@ -83,6 +84,9 @@ export default function AffiliateForm({ affiliate, onClose, onSaved }) {
     if (editing) return affiliate?.couponCode || '';
     const college = colleges.find((c) => String(c._id) === form.medicalCollege);
     const abbr = (college?.abbreviation || '').toUpperCase().replace(/[^A-Z]/g, '') || 'MVA';
+    // The call-name wins when given — same rule as couponCode.ts on the server.
+    const nick = form.nickname.toUpperCase().replace(/[^A-Z]/g, '');
+    if (nick.length >= 2) return `${abbr}${nick.slice(0, 8)}20`;
     const words = form.fullName
       .toUpperCase()
       .split(/\s+/)
@@ -93,7 +97,7 @@ export default function AffiliateForm({ affiliate, onClose, onSaved }) {
     if (!words.length) return '';
     const pick = words.reduce((best, w) => (w.length > best.length ? w : best), words[0]);
     return `${abbr}${pick.slice(0, 8)}20`;
-  }, [editing, affiliate, colleges, form.medicalCollege, form.fullName]);
+  }, [editing, affiliate, colleges, form.medicalCollege, form.fullName, form.nickname]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -161,6 +165,18 @@ export default function AffiliateForm({ affiliate, onClose, onSaved }) {
           <Group title="পরিচয়">
             <Field label="পুরো নাম" required>
               <input className={input} value={form.fullName} onChange={(e) => set('fullName', e.target.value)} />
+            </Field>
+            <Field
+              label="ডাক নাম"
+              help="কুপন কোড এটা দিয়েই তৈরি হবে। ফাঁকা রাখলে পুরো নাম থেকে বেছে নেওয়া হবে।"
+            >
+              <input
+                className={input}
+                value={form.nickname}
+                onChange={(e) => set('nickname', e.target.value)}
+                maxLength={20}
+                placeholder="যেমন: Sakib"
+              />
             </Field>
             <Two>
               <Field label="ফোন নম্বর" required>

@@ -45,7 +45,12 @@ const UserLayout = ({ children }) => {
 
     return (
         <DashboardShell
-            allowedRoles={["user", "student", "admin", "superAdmin"]}
+            // Every signed-in role, because this shell is "your own account" —
+            // your orders, your book, your details — and every role can buy a
+            // book. An affiliate was missing, so opening "আমার অর্ডার" bounced
+            // them to their earnings dashboard: they could see what they had
+            // earned but not where their own parcel was.
+            allowedRoles={["user", "student", "admin", "superAdmin", "affiliate", "mentor", "manager", "trainingManager", "contentManager"]}
             sidebar={<UserSidebar />}
             bottomTabs={USER_TABS}
             rootSegment="user"

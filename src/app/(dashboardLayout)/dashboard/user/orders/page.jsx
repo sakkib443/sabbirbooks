@@ -155,12 +155,11 @@ function OrderCard({ order, highlight }) {
         {/* Order number + status */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
+            {/* The order number, and only that. The shop's running count
+                (#1, #2, …) is on the admin screens where it is useful for
+                bookkeeping — a buyer seeing "#7" learns how few orders the shop
+                has taken, which is nobody's business but the shop's. */}
             <div className="flex items-center gap-2">
-              {order.orderSeq != null && (
-                <span className="inline-flex items-center rounded-md border border-brand/25 bg-brand-soft px-1.5 py-0.5 text-[11px] font-extrabold text-brand-ink shrink-0">
-                  #{order.orderSeq}
-                </span>
-              )}
               <p className="text-[13px] font-mono font-semibold text-dash-ink2 break-all">
                 {order.orderNumber}
               </p>

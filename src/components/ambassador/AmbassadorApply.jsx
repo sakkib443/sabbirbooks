@@ -56,6 +56,7 @@ export default function AmbassadorApply() {
   const [colleges, setColleges] = useState([]);
   const [form, setForm] = useState({
     fullName: '',
+    nickname: '',
     phone: '',
     whatsapp: '',
     whatsappSame: true,
@@ -107,19 +108,31 @@ export default function AmbassadorApply() {
     };
   }, []);
 
-  /** The code they will get, previewed as they fill the form in. */
+  /**
+   * The code they will get, previewed as they fill the form in.
+   *
+   * Mirrors couponCode.ts on the server exactly: the nickname wins when given,
+   * otherwise the longest non-honorific word. If these two ever disagree the
+   * applicant is shown a code they will not get, which is worse than showing
+   * none — so any change here belongs in that file too.
+   */
   const codePreview = useMemo(() => {
     const college = colleges.find((c) => String(c._id) === form.medicalCollege);
     const abbr = (college?.abbreviation || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (!abbr) return '';
+
+    const nick = (form.nickname || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (nick.length >= 2) return `${abbr}${nick.slice(0, 8)}20`;
+
     const words = form.fullName
       .toUpperCase()
       .split(/\s+/)
       .map((w) => w.replace(/[^A-Z]/g, ''))
       .filter((w) => w.length >= 2 && !['MD', 'MOHAMMAD', 'MOHAMMED', 'MST', 'MRS', 'MR', 'DR', 'MISS'].includes(w));
-    if (!abbr || !words.length) return '';
+    if (!words.length) return '';
     const pick = words.reduce((best, w) => (w.length > best.length ? w : best), words[0]);
     return `${abbr}${pick.slice(0, 8)}20`;
-  }, [colleges, form.medicalCollege, form.fullName]);
+  }, [colleges, form.medicalCollege, form.fullName, form.nickname]);
 
   const validate = () => {
     const e = {};
@@ -161,6 +174,7 @@ export default function AmbassadorApply() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: form.fullName.trim(),
+          nickname: form.nickname.trim() || undefined,
           phone: form.phone.trim(),
           whatsapp: (form.whatsappSame ? form.phone : form.whatsapp).trim(),
           email: form.email.trim().toLowerCase(),
@@ -237,6 +251,19 @@ export default function AmbassadorApply() {
               onChange={(e) => set('fullName', e.target.value)}
               placeholder={S.fullNamePh}
               autoComplete="name"
+            />
+          </Field>
+
+          {/* The name the code is built from. Asked for rather than guessed:
+              "Md. Sakib Al Hasan" could become SAKIB, HASAN or AL, and only
+              they know which one a batchmate would recognise. */}
+          <Field label={S.nickname} S={S} bn={bn} help={S.nicknameHint}>
+            <input
+              className={inputCls}
+              value={form.nickname}
+              onChange={(e) => set('nickname', e.target.value)}
+              placeholder={S.nicknamePh}
+              maxLength={20}
             />
           </Field>
 

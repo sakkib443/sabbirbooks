@@ -111,15 +111,11 @@ export default function OrderTrackingPage({ params }) {
       <div className="bg-dash-card rounded-2xl border border-dash-line shadow-sm p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
+            {/* No running count here — see the note on the orders list. */}
             <div className="flex items-center gap-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-dash-mute2">
                 অর্ডার নম্বর
               </p>
-              {order.orderSeq != null && (
-                <span className="inline-flex items-center rounded-md border border-brand/25 bg-brand-soft px-1.5 py-0.5 text-[11px] font-extrabold text-brand-ink">
-                  #{order.orderSeq}
-                </span>
-              )}
             </div>
             <p className="text-[15px] font-mono font-bold text-dash-ink2 break-all mt-0.5">
               {order.orderNumber}
