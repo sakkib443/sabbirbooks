@@ -22,6 +22,7 @@ import { useToast } from '@/components/shared/Toast';
 import ImagePicker, { MultiImagePicker } from '@/components/shared/ImagePicker';
 import PdfPicker from '@/components/shared/PdfPicker';
 import { uploadMedia } from '@/components/shared/uploadMedia';
+import FeatureTextInput from './FeatureTextInput';
 
 const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -711,6 +712,12 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
               Selling points for the book page. Weight decides how prominent a line is
               (higher = bigger, shown earlier); highlight paints it in the accent
               colour. Use the arrows to reorder.
+              <br />
+              <b className="text-dash-ink3">
+                একটা লাইনের ভেতরের কিছু শব্দ রঙিন বা বোল্ড করতে
+              </b>{' '}
+              — শব্দগুলো সিলেক্ট করে উপরের রঙের বাটনে চাপুন। নিচে দেখাবে ঠিক
+              কেমন দেখাবে।
             </p>
 
             {form.features.length === 0 && (
@@ -740,11 +747,10 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-2">
-                    <input
-                      type="text" value={f.text}
-                      onChange={(e) => setFeature(i, { text: e.target.value })}
-                      placeholder="যেমন: ৫০০+ ছবি ও ডায়াগ্রাম"
-                      className={`${inputCls} border-dash-line text-sm`}
+                    <FeatureTextInput
+                      value={f.text}
+                      onChange={(text) => setFeature(i, { text })}
+                      placeholder="যেমন: মাত্র 267 পেজে সম্পূর্ণ Anatomy"
                     />
                     <div className="flex flex-wrap items-center gap-3">
                       <label className="flex items-center gap-1.5 text-xs text-dash-mute">

@@ -27,6 +27,7 @@ import {
 } from 'react-icons/lu';
 import { formatTk } from '@/lib/landingBook';
 import { useLanguage } from '@/context/LanguageContext';
+import { renderRich } from '@/lib/richText';
 
 const T = {
   bn: {
@@ -147,9 +148,20 @@ export default function LandingHero({
           )}
         </div>
 
-        {/* ── The showcase panel: buy stack | proof stack ───────────── */}
+        {/*
+          ── The showcase panel ─────────────────────────────────────────
+          Three columns on a wide screen: the book on the left, why to buy it
+          in the middle, and the video on the right. The shop asked for this
+          because the two-column version left the sides of a desktop empty
+          while the middle did all the work — everything that sells the book
+          now sits in one glance instead of one scroll.
+
+          Two columns on a tablet (the video joins the middle stack), one on a
+          phone. The order in the markup is the order a phone reads: the book,
+          the reasons, the video — which is also the order someone decides in.
+        */}
         <div className="mt-8 rounded-3xl border border-border bg-card p-4 shadow-card sm:p-6 lg:mt-10">
-          <div className="grid gap-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:items-stretch lg:gap-8">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:items-stretch lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-8">
             {/* Left: the product & the offer ───────────────────────── */}
             <div className="animate-fade-up flex flex-col">
               <CoverCard book={book} price={price} sampleHref={hasSample ? '#sample' : null} />
@@ -207,7 +219,12 @@ export default function LandingHero({
               </div>
             </div>
 
-            {/* Right: the proof — watch it, then why ──────────────────── */}
+            {/* Middle: why this book ──────────────────────────────────── */}
+            <div className="animate-fade-up delay-200 flex flex-col">
+              <FeaturePanel features={features} />
+            </div>
+
+            {/* Right: watch it ────────────────────────────────────────── */}
             <div className="animate-fade-up delay-200 flex flex-col gap-4">
               {hasVideo ? (
                 <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-soft">
@@ -236,8 +253,6 @@ export default function LandingHero({
               ) : (
                 <PreviewPages book={book} />
               )}
-
-              <FeaturePanel features={features} />
             </div>
           </div>
         </div>
@@ -320,8 +335,17 @@ function CoverCard({ book, price, sampleHref }) {
  * The selling points.
  *
  * The strongest claim (highlighted, else heaviest) is lifted into a coral
- * banner; the rest sit in a grid of equal-height chips, each with the same tick,
- * so the block reads as an even list.
+ * banner; the rest sit below it, each with the same tick, so the block reads as
+ * an even list.
+ *
+ * One column, not two: this panel is the middle of three on a desktop now, so
+ * it is narrower than it used to be and a two-up grid would break every line in
+ * an awkward place. On a phone it is full width and one column is right there
+ * too.
+ *
+ * The text runs through renderRich, so a shop can colour part of a line —
+ * "[[green b|মাত্র 267 পেজে]]" — from the admin panel. A line with no marks is
+ * returned as the plain string it always was.
  */
 function FeaturePanel({ features }) {
   const { isBengali } = useLanguage();
@@ -341,11 +365,13 @@ function FeaturePanel({ features }) {
           <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-coral text-white">
             <LuStar className="text-[11px]" />
           </span>
-          <p className="text-sm font-semibold leading-relaxed text-coral hind-siliguri">{lead.text}</p>
+          <p className="text-sm font-semibold leading-relaxed text-coral hind-siliguri">
+            {renderRich(lead.text)}
+          </p>
         </div>
       )}
 
-      <ul className="mt-2.5 grid flex-1 auto-rows-min gap-2 sm:grid-cols-2 sm:auto-rows-fr">
+      <ul className="mt-2.5 grid flex-1 auto-rows-min gap-2 sm:grid-cols-2 sm:auto-rows-fr lg:grid-cols-1">
         {rest.map((f, i) => (
           <li
             key={`${f.text}-${i}`}
@@ -354,7 +380,9 @@ function FeaturePanel({ features }) {
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
               <LuCheck className="text-[11px]" />
             </span>
-            <span className="text-sm leading-relaxed text-foreground hind-siliguri">{f.text}</span>
+            <span className="text-sm leading-relaxed text-foreground hind-siliguri">
+              {renderRich(f.text)}
+            </span>
           </li>
         ))}
       </ul>
