@@ -288,7 +288,21 @@ export default function BookTopicScanPage() {
     );
   }
 
-  // ─── Not purchased ────────────────────────────────────────
+  /**
+   * ─── Locked ───────────────────────────────────────────────
+   *
+   * Two completely different people land here and the server cannot tell them
+   * apart: somebody holding a paid-for book who has not typed its code in, and
+   * somebody who scanned a friend's copy and has never bought anything.
+   *
+   * It used to say "you have not bought this book — buy it", which was right
+   * for the second person and an insult to the first. Now that a delivered
+   * order no longer opens the book by itself, the FIRST person is the common
+   * case: they paid ৳500, the parcel arrived, and this is what they see.
+   *
+   * So the screen offers both, in that order — the code first, because most
+   * people scanning a QR out of a book are holding that book.
+   */
   if (state.kind === "locked") {
     const book = state.book;
     return (
@@ -298,9 +312,10 @@ export default function BookTopicScanPage() {
           <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-5">
             <LuLock className="w-6 h-6 text-amber-400" />
           </div>
-          <h1 className="text-lg font-semibold text-white mb-2">এই বইটি আপনার কেনা নেই</h1>
+          <h1 className="text-lg font-semibold text-white mb-2">বইটি এখনো চালু করা হয়নি</h1>
           <p className="text-sm text-slate-400 mb-6">
-            QR কোডের কনটেন্ট দেখতে হলে বইটি কিনতে হবে।
+            আপনার বইয়ের ভেতরে একটি গোপন কোড আছে। সেটি একবার বসালেই এই অ্যাকাউন্টে
+            সব উত্তর খুলে যাবে।
           </p>
 
           {/* A plain <img>, not next/image, on purpose. next/image THROWS on a
@@ -313,27 +328,42 @@ export default function BookTopicScanPage() {
               <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
             </div>
           )}
-          {book && (
-            <p className="text-white font-medium mb-1">{book.title}</p>
-          )}
-          {/* Priced through the same function as the landing page and the
-              checkout. Reading `offerPrice` directly was quoting the legacy
-              field, which on a book with named offers is stale — this card was
-              showing ৳600 for a book selling at ৳550. */}
-          <BookPriceLine book={book} />
+          {book && <p className="text-white font-medium mb-4">{book.title}</p>}
 
           <Link
-            href={book?.slug ? `/books/${book.slug}` : "/books"}
+            href="/activate"
             className="inline-flex items-center justify-center w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-3 transition"
           >
-            বইটি কিনুন
+            বইয়ের কোড দিয়ে চালু করুন
           </Link>
+
+          <div className="mt-6 pt-5 border-t border-white/10">
+            <p className="text-xs text-slate-500 mb-3">বইটি এখনো কেনেননি?</p>
+            {/* Priced through the same function as the landing page and the
+                checkout. Reading `offerPrice` directly was quoting the legacy
+                field, which on a book with named offers is stale — this card
+                was showing ৳600 for a book selling at ৳550. */}
+            <BookPriceLine book={book} />
+            <Link
+              href={book?.slug ? `/books/${book.slug}` : "/books"}
+              className="inline-flex items-center justify-center w-full rounded-lg border border-white/15 hover:border-white/30 text-slate-200 font-medium px-5 py-2.5 transition"
+            >
+              বইটি কিনুন
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ─── Bought, but the parcel hasn't landed ─────────────────
+  /**
+   * ─── Bought, parcel still in transit ──────────────────────
+   *
+   * This screen used to promise that the content would open by itself once the
+   * parcel arrived. It will not any more — the code inside the book is what
+   * opens it. Saying otherwise here would leave the buyer waiting for something
+   * that is never going to happen, so it now says what will actually be needed.
+   */
   if (state.kind === "awaiting") {
     const book = state.book;
     return (
@@ -345,10 +375,11 @@ export default function BookTopicScanPage() {
           </div>
           <h1 className="text-lg font-semibold text-white mb-2">বইটি এখনো পৌঁছায়নি</h1>
           <p className="text-sm text-slate-400 mb-2">
-            আপনার অর্ডারটি আমরা পেয়েছি। বইটি হাতে পাওয়ার পর QR কোডের কনটেন্ট খুলে যাবে।
+            আপনার অর্ডারটি আমরা পেয়েছি। বই হাতে পেলে ভেতরের গোপন কোডটি বসিয়ে
+            নেবেন — তখনই সব উত্তর খুলে যাবে।
           </p>
           <p className="text-xs text-slate-500 mb-6">
-            আবার কিনতে হবে না — ডেলিভারি সম্পন্ন হলেই এই কোডটি কাজ করবে।
+            আবার কিনতে হবে না। কোডটি বইয়ের ভেতরেই আছে।
           </p>
 
           {book && <p className="text-white font-medium mb-6">{book.title}</p>}

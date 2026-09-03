@@ -10,7 +10,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiSettings, FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiBell, FiChevronLeft, FiTag, FiGlobe, FiClipboard, FiLink,
-  FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey,
+  FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey, FiUnlock,
 } from 'react-icons/fi';
 
 const AdminSidebar = () => {
@@ -87,6 +87,10 @@ const AdminSidebar = () => {
         // One code per printed copy — a list of unredeemed ones IS the codes,
         // so reading it is the same gate as minting them.
         { title: 'Book Codes', href: '/dashboard/admin/book-codes', icon: FiKey, need: ['content.write'] },
+        // The other half of the codes: who ended up able to read the book.
+        // orders.read, not content — it is the fulfilment question, 'did what
+        // we sold reach who we sold it to'.
+        { title: 'Book Access', href: '/dashboard/admin/book-access', icon: FiUnlock, need: ['orders.read'] },
         // Book Orders is the "who is buying" screen — orders.read, not content.
         {
           title: 'Book Orders', icon: FiShoppingBag, need: ['orders.read'],
