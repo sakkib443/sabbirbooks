@@ -138,6 +138,53 @@ export default function SmsStatusPanel() {
             )}
           </div>
 
+{/*
+            The headline. Everything below this is evidence; this is the answer.
+
+            It comes from a balance check, which goes through the same gate as a
+            send but costs nothing — so the shop learns whether the problem is
+            the IP or the sender name before spending a single message on it.
+          */}
+          {status.gateway && !status.demoMode && (
+            <div
+              className={`rounded-2xl border p-4 ${
+                status.gateway.verdict.state === 'ok'
+                  ? 'border-emerald-200 bg-emerald-50'
+                  : status.gateway.verdict.state === 'ip-blocked'
+                    ? 'border-rose-200 bg-rose-50'
+                    : 'border-amber-200 bg-amber-50'
+              }`}
+            >
+              <p className="flex items-center gap-2 text-sm font-bold">
+                {status.gateway.verdict.state === 'ok' ? (
+                  <><FiCheckCircle className="shrink-0 text-emerald-600" />
+                  <span className="text-emerald-900">গেটওয়ে সংযোগ ঠিক আছে</span></>
+                ) : status.gateway.verdict.state === 'ip-blocked' ? (
+                  <><FiXCircle className="shrink-0 text-rose-600" />
+                  <span className="text-rose-900">গেটওয়ে এই সার্ভারকে ব্লক করছে</span></>
+                ) : (
+                  <><FiAlertTriangle className="shrink-0 text-amber-600" />
+                  <span className="text-amber-900">সংযোগ ঠিক, কিন্তু একটা মান বাকি</span></>
+                )}
+              </p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-dash-ink2">
+                {status.gateway.verdict.bn}
+              </p>
+              <p className="mt-2 font-mono text-[11px] text-dash-mute2">
+                MiMSMS বলছে: {status.gateway.balance || status.gateway.error || '—'}
+              </p>
+              {status.gateway.outgoingIp && (
+                <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-[12px] text-dash-ink2">
+                  এই সার্ভার বাইরে যে IP নিয়ে যায়:{' '}
+                  <span className="font-mono font-bold">{status.gateway.outgoingIp}</span>
+                  <span className="block text-[11px] text-dash-mute2">
+                    MiMSMS প্যানেলে হুবহু এই IP টাই whitelist থাকতে হবে। অন্য কোনো IP বসানো থাকলে কাজ করবে না।
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+
           <section className="rounded-2xl border border-dash-line bg-dash-card p-5">
             <h2 className="mb-3 text-sm font-bold text-dash-ink2">সার্ভার যা পড়েছে</h2>
             <dl className="space-y-2 text-sm">
