@@ -220,6 +220,9 @@ const AdminSidebar = () => {
         // staff account must be able to reach. The Site Settings TAB inside it
         // is what carries the settings.write gate.
         { title: 'Settings', href: '/dashboard/admin/settings', icon: FiSettings },
+        // Reads deployment configuration and can spend a message, so it is
+        // owner territory — same gate as the staff screens.
+        { title: 'SMS', href: '/dashboard/admin/sms', icon: FiMessageSquare, need: ['staff.manage'] },
       ],
     },
   ];
