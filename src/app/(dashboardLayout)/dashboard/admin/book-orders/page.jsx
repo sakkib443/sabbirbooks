@@ -410,8 +410,69 @@ export default function BookOrdersPage() {
     }
   };
 
-  // deleteSelected lived here. Moved to book-orders/delete — see the note
-  // in the selection bar.
+  /**
+   * Delete orders, for real.
+   *
+   * This lived on its own page for a while, behind typing the order number
+   * out. The shop wants it back on the screen they actually work on, so it is
+   * here — but the danger that moved it away has not changed: a deleted order
+   * is gone, with its payment record and its buyer's proof of purchase.
+   *
+   * So what stands in the way now is the confirm dialog, and it is written to
+   * be READ rather than dismissed: it names the order (or counts them), says
+   * what is lost, and its button says "Delete" rather than "OK". The whole
+   * point is that the second click is a different decision from the first, not
+   * a reflex continuing it.
+   *
+   * One request for any number of orders — /bulk-delete already exists and
+   * restores each order's reserved stock as it goes, which a loop of single
+   * deletes from here would do too but over N round trips, with the list half
+   * gone if the tab is closed midway. The server reports how many actually
+   * went, and that number is what the toast says: with twenty orders and one
+   * failure, "20 deleted" would be a lie the admin then acts on.
+   */
+  const deleteOrders = async (orders) => {
+    const list = orders.filter(Boolean);
+    if (list.length === 0) return;
+    const one = list.length === 1 ? list[0] : null;
+
+    const ok = await confirm({
+      title: one ? `Delete order ${one.orderNumber}?` : `Delete ${list.length} orders?`,
+      message: one
+        ? `${buyerName(one.user)} · ${bdt(one.total)}. The order, its payment record and the buyer's proof of purchase are removed for good. This cannot be undone.`
+        : `${list.length} orders, their payment records and their buyers' proof of purchase are removed for good. This cannot be undone.`,
+      confirmText: one ? 'Delete order' : `Delete ${list.length} orders`,
+      danger: true,
+    });
+    if (!ok) return;
+
+    setBulkBusy(true);
+    try {
+      const res = await fetch(`${API}/orders/bulk-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ ids: list.map((o) => o._id) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not delete');
+
+      const deleted = Number(json?.data?.deleted ?? list.length);
+      const failed = Number(json?.data?.failed ?? 0);
+      if (failed > 0) {
+        // Partial. Say both numbers — an admin told "deleted" who then sees the
+        // rows still there has stopped trusting the whole screen.
+        showToast('error', `${deleted} deleted, ${failed} could not be`);
+      } else {
+        showToast('success', deleted === 1 ? 'Order deleted' : `${deleted} orders deleted`);
+      }
+    } catch (e) {
+      showToast('error', e.message || 'Could not delete');
+    } finally {
+      setBulkBusy(false);
+      setSelected(new Set());
+      fetchOrders();
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -525,12 +586,23 @@ export default function BookOrdersPage() {
                   </button>
                 );
               })}
-              {/* Deleting is NOT here any more.
-                  It used to sit one click away, beside the status buttons, on
-                  the screen an admin uses all day — and an order, once deleted,
-                  is gone. It now lives on its own page, where the order has to
-                  be found and its number typed out before anything happens.
-                  See book-orders/delete. */}
+              {/* Deleting, set apart on purpose.
+                  A divider and its own colour, because everything to the left
+                  moves an order along and this one ends it. Owner-only, and
+                  the confirm dialog names what goes. */}
+              {canDelete && (
+                <>
+                  <span className="mx-1 h-5 w-px bg-dash-line" aria-hidden />
+                  <button
+                    onClick={() => deleteOrders(filtered.filter((o) => selected.has(o._id)))}
+                    disabled={bulkBusy}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                  >
+                    <FiTrash2 size={13} /> Delete
+                  </button>
+                </>
+              )}
+
               <button
                 onClick={() => setSelected(new Set())}
                 className="px-2 py-2 text-xs font-medium text-dash-mute transition-colors hover:text-dash-ink3"
@@ -1040,12 +1112,28 @@ export default function BookOrdersPage() {
                               Close
                             </button>
                           ) : (
-                            <button
-                              onClick={() => startFullEdit(o)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-brand-hover"
-                            >
-                              <FiEdit2 size={12} /> Edit everything
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => startFullEdit(o)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-brand-hover"
+                              >
+                                <FiEdit2 size={12} /> Edit everything
+                              </button>
+                              {/* The other end of "fix this order". Most
+                                  mistakes are an edit; some are an order that
+                                  should never have existed. Both belong where
+                                  the admin is already looking at the order —
+                                  but only this one is irreversible, so it is
+                                  the quiet outlined button, not the filled
+                                  one, and it asks before it acts. */}
+                              <button
+                                onClick={() => deleteOrders([o])}
+                                disabled={bulkBusy || busyId === o._id}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 px-3.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                              >
+                                <FiTrash2 size={12} /> Delete
+                              </button>
+                            </div>
                           )}
                         </div>
 
