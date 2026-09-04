@@ -13,7 +13,7 @@
  * The cover and the "নমুনা দেখুন" button both scroll to the sample section.
  */
 
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   LuArrowRight,
@@ -278,20 +278,31 @@ export default function LandingHero({
 }
 
 /**
- * The promo video, playing before anyone asks.
+ * The promo video, playing before anyone asks — and unmuting itself the first
+ * moment it is allowed to.
  *
- * The shop wants it running the moment the page opens, on a phone as well as a
- * desktop. Every browser allows that on exactly one condition: the video must
- * start MUTED. There is no flag that turns that off — a page that could blast
- * sound at a stranger would be abused, so autoplay with audio is refused
- * silently and the video simply never starts. So it starts muted deliberately,
- * and offers one obvious tap to turn the sound on.
+ * THE RULE, because it is the one thing about this that surprises people:
+ * no browser will start a video that can make sound. Not muted-by-default,
+ * not "ask nicely" — a page that autoplays with audio is simply left paused,
+ * silently, and the visitor sees a still frame. Chrome, Safari and Firefox all
+ * do this, there is no flag, and it is why every autoplaying video on the web
+ * (Facebook, Instagram, YouTube's own front page) starts muted.
  *
- * That button talks to YouTube over postMessage rather than loading YouTube's
- * IFrame API script — the same command the API would send, without the extra
- * script on the critical path. `enablejsapi=1` in the URL is what opens that
- * channel. If it ever stops working the player's own controls are still there,
- * so the worst case is one redundant button, not a video nobody can hear.
+ * So sound cannot be on at the instant the page opens. What CAN happen is
+ * this: the moment the visitor touches the page at all — any tap, any click,
+ * any key — the browser grants "user activation" and audio is allowed from
+ * then on. This component waits for exactly that and unmutes on its own, so
+ * for most visitors the sound arrives a second or two in without them asking
+ * for it. The button stays for everyone else, and for the one case the
+ * listener cannot see: a tap that lands INSIDE the player, which belongs to
+ * YouTube's document, not ours.
+ *
+ * Unmuting is sent over postMessage rather than by loading YouTube's IFrame
+ * API script — the same command the API would send, without the extra script
+ * on the critical path; `enablejsapi=1` in the URL is what opens that channel.
+ * It is sent three times over a second because a command that arrives before
+ * the player is ready is dropped without a word, and the visitor's tap may
+ * well land before then.
  */
 function HeroVideo({ book }) {
   const { isBengali } = useLanguage();
@@ -302,26 +313,57 @@ function HeroVideo({ book }) {
   const url = book?.promoVideoUrl || '';
   const direct = isDirectVideo(url);
 
-  const unmute = () => {
+  // Stable across renders so the effect below can depend on it without
+  // re-subscribing on every keystroke elsewhere on the page.
+  const unmute = useCallback(() => {
     if (direct) {
       const el = videoRef.current;
       if (!el) return;
       el.muted = false;
       el.volume = 1;
-      // Turning the sound on is itself the user gesture that lets a blocked
-      // autoplay start, so this doubles as the retry.
+      // The gesture that allows sound also allows play, so this doubles as the
+      // retry for a first autoplay the browser refused.
       void el.play().catch(() => {});
     } else {
-      const w = frameRef.current?.contentWindow;
-      if (!w) return;
-      const cmd = (func, args = []) =>
-        w.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
-      cmd('unMute');
-      cmd('setVolume', [100]);
-      cmd('playVideo');
+      const send = () => {
+        const w = frameRef.current?.contentWindow;
+        if (!w) return;
+        const cmd = (func, args = []) =>
+          w.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+        cmd('unMute');
+        cmd('setVolume', [100]);
+        cmd('playVideo');
+      };
+      // Now, and twice more — an early tap can beat the player to being ready,
+      // and a command sent then is discarded silently.
+      send();
+      setTimeout(send, 400);
+      setTimeout(send, 1200);
     }
     setMuted(false);
-  };
+  }, [direct]);
+
+  /**
+   * Turn the sound on at the first sign of a visitor, without asking.
+   *
+   * `pointerdown` covers a mouse and a touch; `keydown` covers a keyboard. All
+   * three count as user activation, which is the browser's condition for
+   * letting audio start. `once` means this never fires twice, and the listener
+   * removes itself either way, so nothing is left attached to the window.
+   */
+  useEffect(() => {
+    if (!muted) return undefined;
+    const onFirstTouch = () => unmute();
+    const opts = { once: true, passive: true };
+    window.addEventListener('pointerdown', onFirstTouch, opts);
+    window.addEventListener('keydown', onFirstTouch, opts);
+    window.addEventListener('touchstart', onFirstTouch, opts);
+    return () => {
+      window.removeEventListener('pointerdown', onFirstTouch);
+      window.removeEventListener('keydown', onFirstTouch);
+      window.removeEventListener('touchstart', onFirstTouch);
+    };
+  }, [muted, unmute]);
 
   return (
     <div className="group relative overflow-hidden rounded-3xl border border-border bg-black shadow-card">
@@ -360,7 +402,7 @@ function HeroVideo({ book }) {
         <button
           type="button"
           onClick={unmute}
-          className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white shadow-lg backdrop-blur transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 hind-siliguri"
+          className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white shadow-lg backdrop-blur transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 hind-siliguri motion-safe:animate-float-soft"
         >
           <LuVolumeX className="text-base" />
           {isBengali ? 'সাউন্ড চালু করুন' : 'Turn on sound'}
