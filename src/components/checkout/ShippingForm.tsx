@@ -162,7 +162,13 @@ export function ShippingForm({
               placeholder={S.phonePh}
               type="tel"
               inputMode="tel"
-              autoComplete="tel"
+              // NOT autoComplete="tel". That invites the browser to drop in
+              // whichever number it has saved, and it did: an order arrived
+              // carrying an office number and a Mohakhali street address the
+              // buyer had never typed, filled from a saved profile while the
+              // district selects still said Khulna. The number the shop needs
+              // is the one on the account, and this form fills that in itself.
+              autoComplete="off"
               aria-invalid={!!errors.phone}
               {...register("phone")}
             />
@@ -227,7 +233,12 @@ export function ShippingForm({
             input={
               <Input
                 placeholder={S.addressPh}
-                autoComplete="street-address"
+                // Same reason as the phone above: a saved street-address
+                // profile lands here whole, and it arrives with a city the
+                // district selects below know nothing about — so the order
+                // reads "Mohakhali, Dhaka" under district খুলনা. Let the buyer
+                // type the one line this form actually asks for.
+                autoComplete="off"
                 aria-invalid={!!errors.address}
                 {...register("address")}
               />

@@ -488,12 +488,22 @@ export default function CheckoutView() {
   useEffect(() => {
     if (!isPrinted) return;
     let active = true;
-    const u = getStoredUser();
+    // The stored record is parsed JSON, so its type is whatever TS inferred
+    // from other call sites — which does not include the WhatsApp number this
+    // form now prefers. Name the fields this one reads.
+    const u = getStoredUser() as {
+      firstName?: string;
+      lastName?: string;
+      name?: string;
+      phoneNumber?: string;
+      whatsappNumber?: string;
+    } | null;
     reset({
       name: u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.name || "" : "",
       // Phone fills from the stored record now and, a moment later, from
-      // /auth/me — where a student's WhatsApp number stands in as the contact.
-      phone: u?.phoneNumber ?? "",
+      // /auth/me. WhatsApp first in both, so the field never briefly shows a
+      // different number and then changes under the buyer's eyes.
+      phone: (u?.whatsappNumber ?? u?.phoneNumber ?? "") as string,
       address: "",
       division: "",
       district: "",
@@ -509,9 +519,23 @@ export default function CheckoutView() {
       // The college drives free local delivery, independent of any address.
       setMyCollege((me.medicalCollegeName ?? "").trim());
 
-      // Contact: the signup WhatsApp number, when the form is still empty.
-      const contact = (me.phoneNumber || me.whatsappNumber || "").trim();
-      if (contact && !(current.phone ?? "").trim()) setValue("phone", contact);
+      // Contact: the WhatsApp number the student signed up with, first.
+      //
+      // It used to be phoneNumber first and only "when the field is still
+      // empty" — and both halves were wrong. The shop's rule is that the
+      // WhatsApp number is THE number: it is what a student actually answers,
+      // it is where the order texts go, and it is the one they gave on
+      // purpose. And the emptiness guard, meant to protect what the buyer had
+      // typed while this call was in flight, was instead protecting whatever
+      // the browser had autofilled a moment earlier — which is how an order
+      // reached us carrying an office number nobody at the shop recognised.
+      //
+      // So it is set outright. This resolves within a second of the form
+      // mounting, long before anyone finishes typing a number, and the field
+      // stays editable afterwards for the buyer who genuinely wants the parcel
+      // called through to somebody else.
+      const contact = (me.whatsappNumber || me.phoneNumber || "").trim();
+      if (contact) setValue("phone", contact);
 
       // A staff account, or a student who signed up before colleges existed,
       // has no college geography — nothing more to prefill, no notice to show.
