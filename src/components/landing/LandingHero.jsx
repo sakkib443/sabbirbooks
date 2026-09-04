@@ -13,7 +13,7 @@
  * The cover and the "নমুনা দেখুন" button both scroll to the sample section.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   LuArrowRight,
@@ -24,6 +24,8 @@ import {
   LuShieldCheck,
   LuStar,
   LuTruck,
+  LuVolume2,
+  LuVolumeX,
 } from 'react-icons/lu';
 import { formatTk } from '@/lib/landingBook';
 import { useLanguage } from '@/context/LanguageContext';
@@ -87,6 +89,28 @@ function toEmbedUrl(url) {
   return url;
 }
 
+/**
+ * The same embed URL, but asking the player to start on its own.
+ *
+ * `mute=1` is not a preference, it is the price of admission: no browser will
+ * autoplay a video that can make noise, and one that asks anyway is simply
+ * left paused. `playsinline=1` is the phone half of the same rule — without it
+ * iOS hijacks the video into its own fullscreen player the moment it starts.
+ *
+ * `enablejsapi=1` is what lets the sound button reach the player afterwards.
+ * The rest is housekeeping: no channel suggestions on top of our own page.
+ *
+ * A non-YouTube embed (Vimeo, or a URL we could not parse) is returned with
+ * whatever autoplay hints it understands, and falls back to a normal player if
+ * it understands none of them.
+ */
+function embedForAutoplay(url) {
+  const base = toEmbedUrl(url);
+  const params =
+    'autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&iv_load_policy=3';
+  return base.includes('?') ? `${base}&${params}` : `${base}?${params}`;
+}
+
 const isDirectVideo = (url) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url || '');
 
 export default function LandingHero({
@@ -110,154 +134,243 @@ export default function LandingHero({
         <div className="absolute right-[-120px] top-1/3 h-[26rem] w-[26rem] rounded-full bg-accent/10 blur-[120px]" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8">
-        {/* ── The words, centred ────────────────────────────────────── */}
-        <div className="mx-auto max-w-2xl text-center">
-          {/* Bigger and moving, because it is the first thing on the page and
-              was being read past. The float is motion-safe: a visitor who has
-              asked their system for less motion gets the same badge, still. */}
-          <span className="inline-flex items-center gap-2.5 rounded-full border border-primary/25 bg-primary-soft px-5 py-2.5 text-base font-bold tracking-wide text-primary font-display shadow-sm motion-safe:animate-float-soft sm:text-lg">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-            </span>
-            {L.eyebrow}
-            {(() => {
-              // The active offer, shown after the eyebrow — the pre-order badge, a
-              // named campaign, or a plain "N% off now"; nothing when there is no
-              // offer. No longer hard-wired to pre-order.
-              const chip = price?.isPreOrder
-                ? L.preOrderOn
-                : price?.label ||
-                  (price?.saved > 0 ? L.offerOn(discText(price.kind, price.percent, price.amount)) : '');
-              return chip ? ` · ${chip}` : '';
-            })()}
-          </span>
-
-          {/* The same gradient the logo's "Viva" is painted in — reached
-              through the shared class, not by writing the colour again, so the
-              headline follows if the brand ever changes. */}
-          <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-gradient-medical text-balance sm:text-4xl lg:text-[3.25rem]">
-            {headline || book?.title}
-          </h1>
-
-          {subheadline && (
-            <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground font-display">
-              {subheadline}
-            </p>
-          )}
-        </div>
-
+      <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-5 sm:px-6 lg:px-8 lg:pb-16 lg:pt-6">
         {/*
-          ── The showcase panel ─────────────────────────────────────────
-          Three columns on a wide screen: the book on the left, why to buy it
-          in the middle, and the video on the right. The shop asked for this
-          because the two-column version left the sides of a desktop empty
-          while the middle did all the work — everything that sells the book
-          now sits in one glance instead of one scroll.
+          ── One grid, two readings ─────────────────────────────────────
+          A phone reads this in DOM order — video, words, book, reasons —
+          because the shop wants the video to be the first thing on the screen
+          when the site opens, before anything else.
 
-          Two columns on a tablet (the video joins the middle stack), one on a
-          phone. The order in the markup is the order a phone reads: the book,
-          the reasons, the video — which is also the order someone decides in.
+          A desktop reads it in a different order, and CSS Grid is what makes
+          that possible without a second copy of the video: every block below
+          names its own column and row at `lg`, so the words move back to the
+          top and the video takes the whole right-hand side. One iframe, one
+          DOM, two layouts — duplicating the player would mean two YouTube
+          embeds loading and playing on every visit.
+
+              lg    ┌──────────────── words ────────────────┐
+                    ├─── book ───┬──────── video ───────────┤
+                    │   price    ├────── the reasons ───────┤
+                    └────────────┴──────────────────────────┘
+
+          The right column is the wide one (1.22fr against 0.78fr) — that is
+          the whole point of the change. The video used to be one of three
+          narrow columns; now it is nearly twice the width it was.
         */}
-        <div className="mt-8 rounded-3xl border border-border bg-card p-4 shadow-card sm:p-6 lg:mt-10">
-          <div className="grid gap-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:items-stretch lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-8">
-            {/* Left: the product & the offer ───────────────────────── */}
-            <div className="animate-fade-up flex flex-col">
-              <CoverCard book={book} price={price} sampleHref={hasSample ? '#sample' : null} />
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:gap-7">
+          {/* ── The video ─────────────────────────────────────────────
+              First in the DOM, so a phone opens on it. On a desktop it is
+              placed into the second column of the second row instead. */}
+          {hasVideo && (
+            <div className="animate-fade-up lg:col-start-2 lg:row-start-2">
+              <HeroVideo book={book} />
+            </div>
+          )}
 
-              <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
-                <span className="font-heading text-[2rem] font-bold leading-none text-primary sm:text-4xl">
-                  {formatTk(price.payable)}
-                </span>
-                {price.saved > 0 && (
-                  <>
-                    <span className="text-lg text-muted-foreground line-through">{formatTk(price.price)}</span>
-                    <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-sm font-bold text-accent hind-siliguri">
-                      {formatTk(price.saved)} {L.saved}
-                    </span>
-                  </>
-                )}
-              </div>
+          {/* ── The words ───────────────────────────────────────────── */}
+          <div className="mx-auto max-w-2xl text-center lg:col-span-2 lg:row-start-1 lg:mb-1">
+            <span className="inline-flex items-center gap-2.5 rounded-full border border-primary/25 bg-primary-soft px-5 py-2.5 text-base font-bold tracking-wide text-primary font-display shadow-sm motion-safe:animate-float-soft sm:text-lg">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+              </span>
+              {L.eyebrow}
+              {(() => {
+                // The active offer, shown after the eyebrow — the pre-order
+                // badge, a named campaign, or a plain "N% off now"; nothing
+                // when there is no offer.
+                const chip = price?.isPreOrder
+                  ? L.preOrderOn
+                  : price?.label ||
+                    (price?.saved > 0 ? L.offerOn(discText(price.kind, price.percent, price.amount)) : '');
+                return chip ? ` · ${chip}` : '';
+              })()}
+            </span>
 
-              {price?.online && (
-                <p className="mt-2 inline-flex items-center gap-2 rounded-lg bg-accent-soft/60 px-3 py-1.5 text-sm font-semibold text-accent hind-siliguri">
-                  <LuBanknote className="shrink-0" /> {L.onlineExtra(discText(price.online.kind, price.online.percent, price.online.amount))}
-                </p>
-              )}
+            {/* The same gradient the logo's "Viva" is painted in — reached
+                through the shared class, not by writing the colour again, so
+                the headline follows if the brand ever changes. */}
+            <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-gradient-medical text-balance sm:text-4xl lg:text-[3.25rem]">
+              {headline || book?.title}
+            </h1>
 
-              {book?.preOrderNote && (
-                <p className="mt-2.5 inline-flex items-center gap-2 rounded-lg bg-surface-soft px-3 py-2 text-sm text-muted-foreground hind-siliguri">
-                  <LuTruck className="shrink-0 text-primary" /> {book.preOrderNote}
-                </p>
-              )}
+            {subheadline && (
+              <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground font-display">
+                {subheadline}
+              </p>
+            )}
+          </div>
 
-              <div className="mt-4 flex flex-col gap-2.5">
-                <Link
-                  href={checkoutHref}
-                  className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-base font-bold text-primary-foreground shadow-glow transition-all hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 hind-siliguri"
-                >
-                  <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent motion-safe:animate-sheen" />
-                  <span className="relative flex items-center gap-2">
-                    {(price?.isPreOrder ?? book?.isPreOrder) ? L.preOrder : L.order}
-                    <LuArrowRight className="transition-transform group-hover:translate-x-1" />
+          {/* ── The book, the price, the button ─────────────────────── */}
+          <div className="animate-fade-up flex flex-col rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:col-start-1 lg:row-start-2 lg:row-span-2">
+            <CoverCard book={book} price={price} sampleHref={hasSample ? '#sample' : null} />
+
+            <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <span className="font-heading text-[2rem] font-bold leading-none text-primary sm:text-4xl">
+                {formatTk(price.payable)}
+              </span>
+              {price.saved > 0 && (
+                <>
+                  <span className="text-lg text-muted-foreground line-through">{formatTk(price.price)}</span>
+                  <span className="rounded-lg bg-accent-soft px-2 py-0.5 text-sm font-bold text-accent hind-siliguri">
+                    {formatTk(price.saved)} {L.saved}
                   </span>
-                </Link>
-
-                {/* The "নমুনা দেখুন" button used to sit here. It and the cover
-                    did the same thing, and two buttons for one action is one
-                    button too many — the cover IS the button now. */}
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground hind-siliguri">
-                <span className="inline-flex items-center gap-1.5">
-                  <LuShieldCheck className="text-accent" /> {L.cod}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <LuTruck className="text-accent" /> {L.delivery}
-                </span>
-              </div>
-            </div>
-
-            {/* Middle: why this book ──────────────────────────────────── */}
-            <div className="animate-fade-up delay-200 flex flex-col">
-              <FeaturePanel features={features} />
-            </div>
-
-            {/* Right: watch it ────────────────────────────────────────── */}
-            <div className="animate-fade-up delay-200 flex flex-col gap-4">
-              {hasVideo ? (
-                <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-soft">
-                  {isDirectVideo(book.promoVideoUrl) ? (
-                    <video
-                      src={book.promoVideoUrl}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      poster={book.coverImage || undefined}
-                      className="aspect-video w-full bg-black"
-                    />
-                  ) : (
-                    <div className="relative aspect-video w-full">
-                      <iframe
-                        src={toEmbedUrl(book.promoVideoUrl)}
-                        title={book.title}
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full"
-                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <PreviewPages book={book} />
+                </>
               )}
             </div>
+
+            {price?.online && (
+              <p className="mt-2 inline-flex items-center gap-2 rounded-lg bg-accent-soft/60 px-3 py-1.5 text-sm font-semibold text-accent hind-siliguri">
+                <LuBanknote className="shrink-0" /> {L.onlineExtra(discText(price.online.kind, price.online.percent, price.online.amount))}
+              </p>
+            )}
+
+            {book?.preOrderNote && (
+              <p className="mt-2.5 inline-flex items-center gap-2 rounded-lg bg-surface-soft px-3 py-2 text-sm text-muted-foreground hind-siliguri">
+                <LuTruck className="shrink-0 text-primary" /> {book.preOrderNote}
+              </p>
+            )}
+
+            <div className="mt-4 flex flex-col gap-2.5">
+              <Link
+                href={checkoutHref}
+                className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-base font-bold text-primary-foreground shadow-glow transition-all hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 hind-siliguri"
+              >
+                <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent motion-safe:animate-sheen" />
+                <span className="relative flex items-center gap-2">
+                  {(price?.isPreOrder ?? book?.isPreOrder) ? L.preOrder : L.order}
+                  <LuArrowRight className="transition-transform group-hover:translate-x-1" />
+                </span>
+              </Link>
+
+              {/* The "নমুনা দেখুন" button used to sit here. It and the cover
+                  did the same thing, and two buttons for one action is one
+                  button too many — the cover IS the button now. */}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground hind-siliguri">
+              <span className="inline-flex items-center gap-1.5">
+                <LuShieldCheck className="text-accent" /> {L.cod}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <LuTruck className="text-accent" /> {L.delivery}
+              </span>
+            </div>
+          </div>
+
+          {/* No video uploaded — the inside pages take the same slot. Kept
+              after the words in the DOM, because a strip of still pages is not
+              worth pushing the headline down a phone screen for. */}
+          {!hasVideo && (
+            <div className="animate-fade-up delay-200 lg:col-start-2 lg:row-start-2">
+              <PreviewPages book={book} />
+            </div>
+          )}
+
+          {/* ── Why this book ───────────────────────────────────────── */}
+          <div className="animate-fade-up delay-200 flex flex-col lg:col-start-2 lg:row-start-3">
+            <FeaturePanel features={features} />
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * The promo video, playing before anyone asks.
+ *
+ * The shop wants it running the moment the page opens, on a phone as well as a
+ * desktop. Every browser allows that on exactly one condition: the video must
+ * start MUTED. There is no flag that turns that off — a page that could blast
+ * sound at a stranger would be abused, so autoplay with audio is refused
+ * silently and the video simply never starts. So it starts muted deliberately,
+ * and offers one obvious tap to turn the sound on.
+ *
+ * That button talks to YouTube over postMessage rather than loading YouTube's
+ * IFrame API script — the same command the API would send, without the extra
+ * script on the critical path. `enablejsapi=1` in the URL is what opens that
+ * channel. If it ever stops working the player's own controls are still there,
+ * so the worst case is one redundant button, not a video nobody can hear.
+ */
+function HeroVideo({ book }) {
+  const { isBengali } = useLanguage();
+  const frameRef = useRef(null);
+  const videoRef = useRef(null);
+  const [muted, setMuted] = useState(true);
+
+  const url = book?.promoVideoUrl || '';
+  const direct = isDirectVideo(url);
+
+  const unmute = () => {
+    if (direct) {
+      const el = videoRef.current;
+      if (!el) return;
+      el.muted = false;
+      el.volume = 1;
+      // Turning the sound on is itself the user gesture that lets a blocked
+      // autoplay start, so this doubles as the retry.
+      void el.play().catch(() => {});
+    } else {
+      const w = frameRef.current?.contentWindow;
+      if (!w) return;
+      const cmd = (func, args = []) =>
+        w.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+      cmd('unMute');
+      cmd('setVolume', [100]);
+      cmd('playVideo');
+    }
+    setMuted(false);
+  };
+
+  return (
+    <div className="group relative overflow-hidden rounded-3xl border border-border bg-black shadow-card">
+      {direct ? (
+        <video
+          ref={videoRef}
+          src={url}
+          autoPlay
+          muted
+          playsInline
+          controls
+          preload="auto"
+          poster={book.coverImage || undefined}
+          className="aspect-video w-full bg-black"
+        />
+      ) : (
+        <div className="relative aspect-video w-full">
+          <iframe
+            ref={frameRef}
+            src={embedForAutoplay(url)}
+            title={book.title}
+            // NOT lazy: a lazily-loaded iframe can be skipped entirely on a
+            // phone, and this one has to be playing by the time the page is
+            // looked at.
+            loading="eager"
+            className="absolute inset-0 h-full w-full"
+            // `autoplay` has to be granted here as well as asked for in the
+            // URL — without it in this list the browser blocks the player.
+            allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      )}
+
+      {muted ? (
+        <button
+          type="button"
+          onClick={unmute}
+          className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white shadow-lg backdrop-blur transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 hind-siliguri"
+        >
+          <LuVolumeX className="text-base" />
+          {isBengali ? 'সাউন্ড চালু করুন' : 'Turn on sound'}
+        </button>
+      ) : (
+        <span className="pointer-events-none absolute bottom-3 right-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+          <LuVolume2 /> {isBengali ? 'সাউন্ড চালু' : 'Sound on'}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -276,7 +389,7 @@ function CoverCard({ book, price, sampleHref }) {
   const showCover = Boolean(book?.coverImage) && !failed;
 
   const inner = (
-    <div className="relative mx-auto w-full max-w-[320px] md:max-w-none">
+    <div className="relative mx-auto w-full max-w-[320px] lg:max-w-[300px]">
       {/* soft glow halo */}
       <div className="pointer-events-none absolute -inset-5 rounded-[2rem] bg-primary/15 blur-3xl" />
 
@@ -357,7 +470,7 @@ function FeaturePanel({ features }) {
   const rest = ordered.filter((f) => f !== lead);
 
   return (
-    <div className="flex flex-1 flex-col rounded-2xl border border-border bg-surface-soft p-4 lg:p-5">
+    <div className="flex flex-1 flex-col rounded-3xl border border-border bg-card p-4 shadow-card lg:p-5">
       <h2 className="font-heading text-base font-bold text-foreground hind-siliguri">{L.why}</h2>
 
       {lead && (
@@ -371,7 +484,7 @@ function FeaturePanel({ features }) {
         </div>
       )}
 
-      <ul className="mt-2.5 grid flex-1 auto-rows-min gap-2 sm:grid-cols-2 sm:auto-rows-fr lg:grid-cols-1">
+      <ul className="mt-2.5 grid flex-1 auto-rows-min gap-2 sm:grid-cols-2 sm:auto-rows-fr">
         {rest.map((f, i) => (
           <li
             key={`${f.text}-${i}`}
