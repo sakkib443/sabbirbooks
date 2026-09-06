@@ -18,8 +18,41 @@ import {
 } from 'react-icons/fi';
 import { listCoupons, removeCoupon, saveCoupon, formatTk } from '@/components/admin/bookCoupon/couponApi';
 
-const discountText = (c) =>
-  c.discountType === 'fixed' ? formatTk(c.discountValue) + ' off' : `${c.discountValue}% off`;
+const discountText = (c) => {
+  const parts = [];
+  if (Number(c.discountValue) > 0) {
+    parts.push(c.discountType === 'fixed' ? formatTk(c.discountValue) + ' off' : `${c.discountValue}% off`);
+    // The cap belongs beside the percentage it caps — read apart they are two
+    // numbers, read together they are the offer as the buyer will see it.
+    if (c.discountType === 'percent' && Number(c.maxDiscount) > 0) {
+      parts[parts.length - 1] += ` (max ${formatTk(c.maxDiscount)})`;
+    }
+  }
+  if (c.freeDelivery) parts.push('free delivery');
+  return parts.length ? parts.join(' + ') : '—';
+};
+
+/**
+ * The limits, as short chips — only the ones actually set.
+ *
+ * A coupon with none of them shows nothing, which is the point: the list's
+ * job is to make a restricted code visibly different from an open one at a
+ * glance, not to print every field on every row.
+ */
+const limitChips = (c) => {
+  const out = [];
+  const d = (v) =>
+    new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  if (c.validFrom && c.validUntil) out.push(`${d(c.validFrom)}–${d(c.validUntil)}`);
+  else if (c.validUntil) out.push(`until ${d(c.validUntil)}`);
+  else if (c.validFrom) out.push(`from ${d(c.validFrom)}`);
+  if (Number(c.maxUsesPerBuyer) > 0)
+    out.push(Number(c.maxUsesPerBuyer) === 1 ? '1 per buyer' : `${c.maxUsesPerBuyer} per buyer`);
+  if (Number(c.minPurchase) > 0) out.push(`min ${formatTk(c.minPurchase)}`);
+  if (c.appliesTo === 'cod') out.push('COD only');
+  if (c.appliesTo === 'online') out.push('online only');
+  return out;
+};
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -182,8 +215,40 @@ export default function BookCouponsPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-dash-ink2">{discountText(c)}</td>
-                  <td className="px-4 py-3 text-center tabular-nums text-dash-ink3">{c.usedCount || 0}</td>
+                  <td className="px-4 py-3 font-semibold text-dash-ink2">
+                    {discountText(c)}
+                    {/* The restrictions, under the offer they restrict. Nothing
+                        renders for an unrestricted coupon. */}
+                    {limitChips(c).length > 0 && (
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {limitChips(c).map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-md bg-dash-soft px-1.5 py-0.5 text-[10px] font-medium text-dash-mute"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center tabular-nums text-dash-ink3">
+                    {/* "3 / 50" once a total is set — a bare count cannot say
+                        how close a campaign is to stopping. */}
+                    {Number(c.maxUses) > 0 ? (
+                      <span
+                        className={
+                          Number(c.usedCount || 0) >= Number(c.maxUses)
+                            ? 'font-bold text-rose-600'
+                            : ''
+                        }
+                      >
+                        {c.usedCount || 0} / {c.maxUses}
+                      </span>
+                    ) : (
+                      c.usedCount || 0
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => toggleActive(c)}

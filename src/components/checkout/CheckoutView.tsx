@@ -376,11 +376,17 @@ export default function CheckoutView() {
     myCollege === options.freeDeliveryCollege &&
     divisionValue === options.freeDeliveryDivision;
   const deliveryIsFree = deliveryIsFreeBySubtotal || deliveryIsFreeLocal;
-  const deliveryCharge =
+  // What delivery would cost without a coupon. The coupon is priced against
+  // THIS number, so it has to exist before the waiver is applied to it.
+  const deliveryBeforeCoupon =
     !isPrinted || !options || deliveryIsFree
       ? 0
       : (options.deliveryCharge ?? 0) +
         (effectivePayMode === "cod" ? options.codExtraCharge || 0 : 0);
+  // A free-delivery coupon zeroes the delivery ROW rather than taking the same
+  // taka off the books, because that row is what the buyer checks against what
+  // the rider asks for. Same rule the order service applies on create.
+  const deliveryCharge = appliedCoupon?.freeDelivery ? 0 : deliveryBeforeCoupon;
 
   // ── Auth gate + item fetch ────────────────────────────────────────────────
   useEffect(() => {
@@ -583,7 +589,14 @@ export default function CheckoutView() {
     setCouponBusy(true);
     setCouponErr("");
     try {
-      const c = await validateBookCoupon(code, bp.payable, S.couponInvalid);
+      // Priced against the same two facts the order will be priced against, so
+      // a COD-only code or a free-delivery code answers here exactly as it will
+      // at the last click. Without them the preview says yes and the order says
+      // no, which reads as a broken checkout rather than a rule.
+      const c = await validateBookCoupon(code, bp.payable, S.couponInvalid, {
+        paymentMethod: effectivePayMode === "cod" ? "cod" : "online",
+        deliveryCharge: deliveryBeforeCoupon,
+      });
       setAppliedCoupon(c);
       setCouponInput("");
     } catch (e) {

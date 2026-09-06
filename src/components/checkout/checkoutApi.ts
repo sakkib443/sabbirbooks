@@ -141,14 +141,33 @@ export interface AppliedCoupon {
   discountType: "percent" | "fixed";
   discountValue: number;
   discountAmount: number;
+  /** The code also waives the delivery charge. */
+  freeDelivery?: boolean;
+  /** Taka that waiver is worth on this order — 0 when delivery is already free. */
+  deliveryDiscount?: number;
   finalPrice: number;
 }
+
+/**
+ * Check a code and price it, for display.
+ *
+ * The payment method and delivery charge go with it because coupons can now be
+ * restricted to one payment path and can waive delivery — send them and the
+ * preview answers the same question the order will. Omit them and those two
+ * rules are simply skipped here and enforced on create, which shows a buyer a
+ * discount that then disappears at the last click.
+ */
 export async function validateBookCoupon(
   code: string,
   amount: number,
-  fallbackErr: string
+  fallbackErr: string,
+  ctx: { paymentMethod?: string | null; deliveryCharge?: number } = {}
 ): Promise<AppliedCoupon> {
-  return post<AppliedCoupon>("/book-coupons/validate", { code, amount }, fallbackErr);
+  return post<AppliedCoupon>(
+    "/book-coupons/validate",
+    { code, amount, ...ctx },
+    fallbackErr
+  );
 }
 
 // ── Item fetchers (public, no auth) ────────────────────────────────────────

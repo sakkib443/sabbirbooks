@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FiArrowLeft, FiSave, FiTag, FiPercent, FiGift, FiLoader, FiAlertCircle, FiUsers,
+  FiTruck, FiCalendar, FiRepeat, FiFilter,
 } from 'react-icons/fi';
 
 import { getCoupon, saveCoupon } from '@/components/admin/bookCoupon/couponApi';
@@ -27,6 +28,13 @@ import { getCoupon, saveCoupon } from '@/components/admin/bookCoupon/couponApi';
 const EMPTY = {
   code: '', name: '',
   discountType: 'percent', discountValue: '', isActive: true,
+  // Every limit off by default, which is what a coupon with none of these
+  // fields already behaves like. Empty string rather than 0 so the boxes
+  // read as blank instead of pre-filled with a limit nobody asked for.
+  maxDiscount: '', freeDelivery: false,
+  validFrom: '', validUntil: '',
+  maxUses: '', maxUsesPerBuyer: '',
+  minPurchase: '', appliesTo: 'all',
 };
 
 const inputCls =
@@ -83,6 +91,16 @@ function CouponForm() {
           discountType: c.discountType || 'percent',
           discountValue: c.discountValue ?? '',
           isActive: c.isActive !== false,
+          maxDiscount: c.maxDiscount || '',
+          freeDelivery: !!c.freeDelivery,
+          // <input type="date"> only accepts yyyy-mm-dd; an ISO instant with
+          // a time on it renders as blank, silently losing a live window.
+          validFrom: c.validFrom ? String(c.validFrom).slice(0, 10) : '',
+          validUntil: c.validUntil ? String(c.validUntil).slice(0, 10) : '',
+          maxUses: c.maxUses || '',
+          maxUsesPerBuyer: c.maxUsesPerBuyer || '',
+          minPurchase: c.minPurchase || '',
+          appliesTo: c.appliesTo || 'all',
         });
         if (c.ownerName || c.ownerUser) {
           setOwnedBy({ name: c.ownerName || c.ownerUser?.email, payout: c.payoutPerSale || 0 });
@@ -116,6 +134,15 @@ function CouponForm() {
         discountType: form.discountType,
         discountValue: val,
         isActive: !!form.isActive,
+        // Blank means "no limit", and the server reads 0 and null that way.
+        maxDiscount: Number(form.maxDiscount) || 0,
+        freeDelivery: !!form.freeDelivery,
+        validFrom: form.validFrom || null,
+        validUntil: form.validUntil || null,
+        maxUses: Number(form.maxUses) || 0,
+        maxUsesPerBuyer: Number(form.maxUsesPerBuyer) || 0,
+        minPurchase: Number(form.minPurchase) || 0,
+        appliesTo: form.appliesTo || 'all',
       });
       router.push('/dashboard/admin/book-coupons');
     } catch (e2) {
@@ -252,6 +279,196 @@ function CouponForm() {
               <span className="block text-[11px] text-dash-mute2">Buyers can use this code at checkout right now.</span>
             </span>
           </label>
+        </Section>
+
+        {/* ── Delivery ─────────────────────────────────────────────────────
+            Its own card, not a checkbox buried in Discount, because it is a
+            different promise to the buyer: money off the books versus the
+            courier paid for. A code can do both. */}
+        <Section
+          icon={FiTruck}
+          title="Delivery"
+          subtitle="Waive the delivery charge, on its own or on top of a discount."
+        >
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-dash-line bg-dash-soft/50 p-3.5">
+            <input
+              type="checkbox"
+              checked={form.freeDelivery}
+              onChange={(e) => set('freeDelivery', e.target.checked)}
+              className="mt-0.5 h-5 w-5 rounded border-dash-line-strong text-brand focus:ring-brand"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-dash-ink3">Free delivery</span>
+              <span className="block text-[11px] text-dash-mute2">
+                The delivery charge becomes ৳0 on orders using this code. Leave the discount at 0
+                for a coupon that <b className="text-dash-ink4">only</b> pays the delivery.
+              </span>
+            </span>
+          </label>
+        </Section>
+
+        {/* ── When it works ────────────────────────────────────────────────
+            Both sides optional. Blank start = works now, blank end = never
+            expires, which is how every coupon written before this behaved. */}
+        <Section
+          icon={FiCalendar}
+          title="When it works"
+          subtitle="Leave a date blank for no limit on that side."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <span className="text-xs font-semibold text-dash-mute">Starts</span>
+              <input
+                type="date"
+                value={form.validFrom}
+                onChange={(e) => set('validFrom', e.target.value)}
+                className={`${inputCls} mt-1.5`}
+              />
+              <p className="mt-1.5 text-[11px] text-dash-mute2">Blank — works immediately.</p>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-dash-mute">Ends</span>
+              <input
+                type="date"
+                value={form.validUntil}
+                min={form.validFrom || undefined}
+                onChange={(e) => set('validUntil', e.target.value)}
+                className={`${inputCls} mt-1.5`}
+              />
+              <p className="mt-1.5 text-[11px] text-dash-mute2">Blank — never expires.</p>
+            </div>
+          </div>
+        </Section>
+
+        {/* ── How many times ───────────────────────────────────────────────
+            Two different questions that get confused constantly: how big the
+            campaign is, and whether one person can keep using it. */}
+        <Section
+          icon={FiRepeat}
+          title="How many times"
+          subtitle="Leave blank for unlimited."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <span className="text-xs font-semibold text-dash-mute">Total uses</span>
+              <input
+                type="number"
+                min="0"
+                value={form.maxUses}
+                onChange={(e) => set('maxUses', e.target.value)}
+                placeholder="Unlimited"
+                className={`${inputCls} mt-1.5 tabular-nums`}
+              />
+              <p className="mt-1.5 text-[11px] text-dash-mute2">
+                Across everybody. The code stops working once this many orders have used it.
+              </p>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-dash-mute">Uses per buyer</span>
+              <input
+                type="number"
+                min="0"
+                value={form.maxUsesPerBuyer}
+                onChange={(e) => set('maxUsesPerBuyer', e.target.value)}
+                placeholder="Unlimited"
+                className={`${inputCls} mt-1.5 tabular-nums`}
+              />
+              <p className="mt-1.5 text-[11px] text-dash-mute2">
+                Set to 1 for a one-per-customer code. Cancelled orders do not count.
+              </p>
+            </div>
+          </div>
+        </Section>
+
+        {/* ── Conditions ───────────────────────────────────────────────────
+            The two rules that decide whether a code applies at all, plus the
+            ceiling that stops a percentage running away on a big basket. */}
+        <Section
+          icon={FiFilter}
+          title="Conditions"
+          subtitle="When this code is allowed to apply."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <span className="text-xs font-semibold text-dash-mute">Minimum order</span>
+              <div className="relative mt-1.5">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-bold text-dash-mute2">
+                  ৳
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.minPurchase}
+                  onChange={(e) => set('minPurchase', e.target.value)}
+                  placeholder="No minimum"
+                  className={`${inputCls} pl-9 tabular-nums`}
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] text-dash-mute2">
+                Book total after the book’s own offer, before delivery.
+              </p>
+            </div>
+
+            {/* Only meaningful for a percentage — a fixed amount is already its
+                own ceiling, and showing the box there invites a number that
+                would never be read. */}
+            {form.discountType === 'percent' && (
+              <div>
+                <span className="text-xs font-semibold text-dash-mute">Maximum discount</span>
+                <div className="relative mt-1.5">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-bold text-dash-mute2">
+                    ৳
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.maxDiscount}
+                    onChange={(e) => set('maxDiscount', e.target.value)}
+                    placeholder="No cap"
+                    className={`${inputCls} pl-9 tabular-nums`}
+                  />
+                </div>
+                <p className="mt-1.5 text-[11px] text-dash-mute2">
+                  “{form.discountValue || 20}% off, up to ৳{form.maxDiscount || 100}”. Without a cap
+                  a percentage has none.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <span className="text-xs font-semibold text-dash-mute">Payment method</span>
+            <div className="mt-1.5 grid grid-cols-3 gap-2 rounded-xl bg-dash-soft p-1">
+              {[
+                { id: 'all', label: 'Any' },
+                { id: 'cod', label: 'Cash on delivery' },
+                { id: 'online', label: 'Online only' },
+              ].map((t) => {
+                const on = (form.appliesTo || 'all') === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => set('appliesTo', t.id)}
+                    className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
+                      on
+                        ? 'bg-brand text-white shadow-sm shadow-brand/25'
+                        : 'text-dash-mute hover:bg-dash-card hover:text-dash-ink3'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-dash-mute2">
+              {form.appliesTo === 'cod'
+                ? 'Only cash-on-delivery orders. Pairs naturally with free delivery.'
+                : form.appliesTo === 'online'
+                  ? 'Only prepaid orders — how you push people to pay online.'
+                  : 'Works however the buyer pays.'}
+            </p>
+          </div>
         </Section>
 
         {!editing && (
