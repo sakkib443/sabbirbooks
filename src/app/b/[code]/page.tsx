@@ -87,10 +87,13 @@ type LockedBook = {
 type State =
   | { kind: "loading" }
   | { kind: "ok"; data: ScanData }
-  | { kind: "locked"; book: LockedBook | null }
+  // "signedIn" rides with the state rather than being read separately: the
+  // locked card asks a different question of a signed-out reader, and the
+  // moment that mattered was when this fetch decided to send no token.
+  | { kind: "locked"; book: LockedBook | null; signedIn: boolean }
   // Bought, paid, but the parcel hasn't arrived. Same zero content as
   // "locked" — a different screen so the buyer isn't told to buy again.
-  | { kind: "awaiting"; book: LockedBook | null }
+  | { kind: "awaiting"; book: LockedBook | null; signedIn: boolean }
   | { kind: "notfound" }
   | { kind: "error"; message: string };
 
@@ -228,6 +231,7 @@ export default function BookTopicScanPage() {
         setState({
           kind: body.code === "BOOK_AWAITING_DELIVERY" ? "awaiting" : "locked",
           book: body.book ?? null,
+          signedIn: Boolean(token),
         });
         return;
       }
@@ -305,6 +309,7 @@ export default function BookTopicScanPage() {
    */
   if (state.kind === "locked") {
     const book = state.book;
+    const { signedIn } = state;
     return (
       <div className="min-h-screen bg-[#0f0f0f] text-slate-200 flex items-center justify-center px-4 py-10">
         <MiniBar />
@@ -312,10 +317,13 @@ export default function BookTopicScanPage() {
           <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-5">
             <LuLock className="w-6 h-6 text-amber-400" />
           </div>
-          <h1 className="text-lg font-semibold text-white mb-2">বইটি এখনো চালু করা হয়নি</h1>
+          <h1 className="text-lg font-semibold text-white mb-2">
+            {signedIn ? 'বইটি এখনো চালু করা হয়নি' : 'প্রথমে লগইন করুন'}
+          </h1>
           <p className="text-sm text-slate-400 mb-6">
-            আপনার বইয়ের ভেতরে একটি গোপন কোড আছে। সেটি একবার বসালেই এই অ্যাকাউন্টে
-            সব উত্তর খুলে যাবে।
+            {signedIn
+              ? 'আপনার বইয়ের ভেতরে একটি গোপন কোড আছে। সেটি একবার বসালেই এই অ্যাকাউন্টে সব উত্তর খুলে যাবে।'
+              : 'বই আগে চালু করা থাকলে শুধু লগইন করলেই উত্তরগুলো খুলে যাবে — নতুন কোডের দরকার নেই।'}
           </p>
 
           {/* A plain <img>, not next/image, on purpose. next/image THROWS on a
@@ -330,12 +338,37 @@ export default function BookTopicScanPage() {
           )}
           {book && <p className="text-white font-medium mb-4">{book.title}</p>}
 
-          <Link
-            href="/activate"
-            className="inline-flex items-center justify-center w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-3 transition"
-          >
-            বইয়ের কোড দিয়ে চালু করুন
-          </Link>
+          {/* The primary button is whichever step actually comes next. A
+              reader who scanned from a browser they are not signed in to —
+              which is what a phone camera does — needs to log in, not to hunt
+              for a code they may already have used. Offering "activate" first
+              sent them to a form that answers "already used" and stops. */}
+          {signedIn ? (
+            <Link
+              href="/activate"
+              className="inline-flex items-center justify-center w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-3 transition"
+            >
+              বইয়ের কোড দিয়ে চালু করুন
+            </Link>
+          ) : (
+            <div className="space-y-2">
+              <Link
+                // Back to this same QR after signing in, so the reader lands on
+                // the topic they scanned rather than a homepage they then have
+                // to navigate from with a book open in their other hand.
+                href={`/login?redirect=${encodeURIComponent(`/b/${code}`)}`}
+                className="inline-flex items-center justify-center w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-3 transition"
+              >
+                লগইন করুন
+              </Link>
+              <Link
+                href="/activate"
+                className="inline-flex items-center justify-center w-full rounded-lg border border-white/15 text-slate-200 font-medium px-5 py-3 transition hover:border-white/30"
+              >
+                বইয়ের কোড দিয়ে চালু করুন
+              </Link>
+            </div>
+          )}
 
           <div className="mt-6 pt-5 border-t border-white/10">
             <p className="text-xs text-slate-500 mb-3">বইটি এখনো কেনেননি?</p>

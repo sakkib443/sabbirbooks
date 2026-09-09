@@ -119,6 +119,10 @@ export default function ActivateBook() {
   });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
+  // Not every refusal is the same refusal. An already-spent code needs a
+  // different next step depending on WHOSE it is, and that cannot be worked
+  // out from the sentence — the server names the case.
+  const [refusal, setRefusal] = useState(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
 
@@ -248,10 +252,16 @@ export default function ActivateBook() {
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) throw new Error(json?.message || S.network);
+      if (!res.ok || !json?.success) {
+        const e = new Error(json?.message || S.network);
+        e.reason = json?.reason;
+        e.maskedEmail = json?.maskedEmail;
+        throw e;
+      }
       setDone(json);
     } catch (err) {
       setServerError(err.message || S.network);
+      setRefusal(err.reason ? { reason: err.reason, maskedEmail: err.maskedEmail } : null);
     } finally {
       setBusy(false);
     }
@@ -354,7 +364,7 @@ export default function ActivateBook() {
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => { setMode(t.id); setErrors({}); setServerError(''); }}
+                      onClick={() => { setMode(t.id); setErrors({}); setServerError(''); setRefusal(null); }}
                       className={cn(
                         'flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all',
                         mode === t.id ? 'bg-card text-primary shadow-soft' : 'text-muted-foreground hover:text-foreground',
@@ -397,10 +407,80 @@ export default function ActivateBook() {
             )}
           </Section>
 
-          {serverError && (
-            <p className={cn('flex items-start gap-2 rounded-xl border border-coral/30 bg-coral/5 px-4 py-3 text-sm text-coral', bn)}>
-              <LuTriangleAlert className="mt-0.5 shrink-0" /> {serverError}
-            </p>
+          {/*
+            A refusal a reader can act on.
+
+            Three different people reach this line and the old screen gave all
+            of them one red sentence:
+
+              the owner, whose code is already on this very account — nothing
+              is wrong, they just need to open the book;
+
+              the owner scanning from a browser they are not signed in to,
+              whose code sits on their OTHER account — they need to sign in,
+              and the masked address is how they recognise which one;
+
+              someone with a second-hand copy whose code the last owner spent
+              — no amount of retrying helps, and only the shop can.
+
+            So the card names the case, and offers the one button that ends it.
+          */}
+          {refusal?.reason === 'already-yours' ? (
+            <div className={cn('rounded-xl border border-primary/30 bg-primary/5 px-4 py-4 text-sm', bn)}>
+              <p className="flex items-start gap-2 font-semibold text-foreground">
+                <LuCircleCheck className="mt-0.5 shrink-0 text-primary" />
+                এই কোডটি আপনার এই অ্যাকাউন্টেই চালু করা আছে
+              </p>
+              <p className="mt-1.5 text-muted-foreground">
+                নতুন করে কিছু করার নেই। বইয়ের যেকোনো QR স্ক্যান করলেই উত্তর খুলে যাবে।
+              </p>
+              <Link
+                href="/dashboard/user/my-books"
+                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-semibold text-primary-foreground transition hover:bg-primary-hover"
+              >
+                আমার বই দেখুন <LuArrowRight />
+              </Link>
+            </div>
+          ) : refusal?.reason === 'already-other' ? (
+            <div className={cn('rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-4 text-sm', bn)}>
+              <p className="flex items-start gap-2 font-semibold text-foreground">
+                <LuTriangleAlert className="mt-0.5 shrink-0 text-amber-600" />
+                এই কোডটি আগেই চালু করা হয়েছে
+              </p>
+              {refusal.maskedEmail && (
+                <p className="mt-1.5 text-muted-foreground">
+                  অ্যাকাউন্ট:{' '}
+                  <span className="font-mono font-semibold text-foreground">{refusal.maskedEmail}</span>
+                </p>
+              )}
+              <p className="mt-2 text-muted-foreground">
+                এটি যদি <b className="text-foreground">আপনারই অন্য অ্যাকাউন্ট</b> হয়, ওটাতে লগইন
+                করলেই বই খুলে যাবে — কোড আবার দেওয়ার দরকার নেই।
+              </p>
+              <p className="mt-1.5 text-muted-foreground">
+                আপনার না হলে বইটি সম্ভবত আগে কেউ ব্যবহার করেছে। আমাদের জানান, আমরা দেখে দিচ্ছি।
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href="/login?redirect=%2Factivate"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-semibold text-primary-foreground transition hover:bg-primary-hover"
+                >
+                  ওই অ্যাকাউন্টে লগইন করুন <LuArrowRight />
+                </Link>
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 font-semibold text-foreground transition hover:border-primary"
+                >
+                  সাহায্য চাই
+                </Link>
+              </div>
+            </div>
+          ) : (
+            serverError && (
+              <p className={cn('flex items-start gap-2 rounded-xl border border-coral/30 bg-coral/5 px-4 py-3 text-sm text-coral', bn)}>
+                <LuTriangleAlert className="mt-0.5 shrink-0" /> {serverError}
+              </p>
+            )
           )}
 
           <button
