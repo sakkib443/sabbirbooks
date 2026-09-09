@@ -76,17 +76,64 @@ export async function listBooks() {
   return j.data?.data || j.data || [];
 }
 
-export const STATUS_LABEL = {
-  all: 'সব',
-  available: 'খালি',
-  redeemed: 'ব্যবহৃত',
-  void: 'বাতিল',
+/*
+ * The five views of one code list, in the order the shop works through them.
+ *
+ * Written the way somebody at the shop would say it out loud, not the way the
+ * database stores it. "খালি" and "বাতিল" were the field names in Bengali and
+ * nobody could tell what would happen if they pressed one.
+ *
+ * "status" and "released" are two different questions — has anybody used this
+ * code, and is it even allowed to be used yet — and the tabs combine them,
+ * which is why each carries its own filter rather than mapping to a status.
+ */
+export const TAB_VIEWS = [
+  {
+    id: 'ready',
+    label: 'চালু আছে',
+    hint: 'ছাপা হয়ে গেছে, এখনো কেউ ব্যবহার করেনি — এই কোডগুলো এখন কাজ করে',
+    query: { status: 'available', released: 'true' },
+  },
+  {
+    id: 'used',
+    label: 'কেউ নিয়েছে',
+    hint: 'কেউ কোড বসিয়ে বই খুলে ফেলেছে',
+    query: { status: 'redeemed', released: '' },
+  },
+  {
+    id: 'waiting',
+    label: 'বই ছাপা হয়নি',
+    hint: 'কোড তৈরি আছে, কিন্তু বই এখনো ছাপা হয়নি — এগুলো এখন কাজ করবে না',
+    query: { status: 'available', released: 'false' },
+  },
+  {
+    id: 'dead',
+    label: 'নষ্ট',
+    hint: 'ছাপার ভুল বা হারানো — এই কোড আর কখনো কাজ করবে না',
+    query: { status: 'void', released: '' },
+  },
+  {
+    id: 'all',
+    label: 'সব কোড',
+    hint: 'সবগুলো একসাথে',
+    query: { status: 'all', released: '' },
+  },
+];
+
+/** The pill on a row. Same plain words as the tabs. */
+export const rowState = (r) => {
+  if (r.status === 'void') return { label: 'নষ্ট', tone: 'bg-slate-100 text-slate-600 border-slate-300' };
+  if (r.status === 'redeemed') return { label: 'কেউ নিয়েছে', tone: 'bg-sky-50 text-sky-700 border-sky-200' };
+  if (r.released === false) return { label: 'বই ছাপা হয়নি', tone: 'bg-amber-50 text-amber-700 border-amber-200' };
+  return { label: 'চালু আছে', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
 };
 
-export const STATUS_TONE = {
-  available: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  redeemed: 'bg-sky-50 text-sky-700 border-sky-200',
-  void: 'bg-slate-100 text-slate-600 border-slate-300',
+// Kept for the CSV export and anything still asking by status name.
+export const STATUS_LABEL = {
+  all: 'সব',
+  available: 'চালু',
+  redeemed: 'কেউ নিয়েছে',
+  void: 'নষ্ট',
 };
 
 export const formatDate = (d) =>
@@ -137,6 +184,24 @@ export async function setRelease(upTo) {
       method: 'PATCH',
       headers: headers(),
       body: JSON.stringify({ upTo }),
+    })
+  );
+  return j;
+}
+
+/**
+ * Correct the name, college or roll typed when the code was activated.
+ *
+ * Those three are how the shop recognises a reader afterwards — in the list,
+ * in a CSV, in a support thread — and they were typed once, on a phone, in a
+ * hurry. A misspelling is a person who cannot be found.
+ */
+export async function editHolder(id, fields) {
+  const j = await readJson(
+    await fetch(`${API}/book-copies/${id}/holder`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify(fields),
     })
   );
   return j;

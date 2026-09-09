@@ -24,11 +24,13 @@ import {
 } from 'react-icons/fi';
 import {
   listCopies, generateCopies, voidCopy, downloadCsv, listBooks,
-  resetCopy, transferCopy, getRelease, setRelease,
-  STATUS_LABEL, STATUS_TONE, formatDate,
+  resetCopy, transferCopy, editHolder, getRelease, setRelease,
+  TAB_VIEWS, rowState, formatDate,
 } from './copyApi';
 
-const TABS = ['all', 'available', 'redeemed', 'void'];
+// The tab an admin lands on is the one they act from: codes that are printed,
+// unused, and will work if somebody types them today.
+const DEFAULT_TAB = 'ready';
 
 /**
  * Undoing one redemption.
@@ -40,8 +42,15 @@ const TABS = ['all', 'available', 'redeemed', 'void'];
  * against.
  */
 function FixDialog({ row, onClose, onDone }) {
-  const [mode, setMode] = useState('reset');
+  const [mode, setMode] = useState('details');
   const [email, setEmail] = useState('');
+  // Prefilled from the row, so an admin correcting one letter of a name does
+  // not have to retype the other two fields to keep them.
+  const [details, setDetails] = useState({
+    fullName: row?.holder?.fullName || '',
+    medicalCollegeName: row?.holder?.medicalCollegeName || '',
+    classRoll: row?.holder?.classRoll || '',
+  });
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -54,9 +63,11 @@ function FixDialog({ row, onClose, onDone }) {
     setBusy(true);
     try {
       const res =
-        mode === 'reset'
-          ? await resetCopy(row._id, reason.trim())
-          : await transferCopy(row._id, email.trim(), reason.trim());
+        mode === 'details'
+          ? await editHolder(row._id, details)
+          : mode === 'reset'
+            ? await resetCopy(row._id, reason.trim())
+            : await transferCopy(row._id, email.trim(), reason.trim());
       onDone(res.message);
     } catch (e2) {
       setError(e2.message || 'কাজটি করা যায়নি');
@@ -88,10 +99,11 @@ function FixDialog({ row, onClose, onDone }) {
           )}
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-dash-soft p-1">
+        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl bg-dash-soft p-1">
           {[
-            { id: 'reset', label: 'ফেরত নিন', hint: 'কোড আবার ব্যবহারযোগ্য' },
-            { id: 'transfer', label: 'সরিয়ে দিন', hint: 'অন্য অ্যাকাউন্টে' },
+            { id: 'details', label: 'তথ্য ঠিক করুন', hint: 'নাম, কলেজ, রোল' },
+            { id: 'reset', label: 'ফেরত নিন', hint: 'কোড আবার খালি' },
+            { id: 'transfer', label: 'সরিয়ে দিন', hint: 'অন্য ইমেইলে' },
           ].map((t) => (
             <button
               key={t.id}
@@ -110,6 +122,29 @@ function FixDialog({ row, onClose, onDone }) {
         </div>
 
         <form onSubmit={submit} className="space-y-3">
+          {mode === 'details' && (
+            <div className="grid gap-3">
+              {[
+                { key: 'fullName', label: 'নাম', ph: 'রাইয়ান হুসেন' },
+                { key: 'medicalCollegeName', label: 'মেডিকেল কলেজ', ph: 'খুলনা মেডিকেল কলেজ' },
+                { key: 'classRoll', label: 'রোল', ph: '৪৫' },
+              ].map((fld) => (
+                <label key={fld.key} className="block">
+                  <span className="text-xs font-semibold text-dash-mute">{fld.label}</span>
+                  <input
+                    value={details[fld.key]}
+                    onChange={(e) => setDetails((d) => ({ ...d, [fld.key]: e.target.value }))}
+                    placeholder={fld.ph}
+                    className="mt-1.5 w-full rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm outline-none focus:border-brand"
+                  />
+                </label>
+              ))}
+              <p className="text-[11px] text-dash-mute2">
+                কে বই খুলেছে সেটা বদলায় না — শুধু লেখা তথ্যটা ঠিক হয়।
+              </p>
+            </div>
+          )}
+
           {mode === 'transfer' && (
             <div>
               <span className="text-xs font-semibold text-dash-mute">কোন অ্যাকাউন্টে</span>
@@ -127,6 +162,7 @@ function FixDialog({ row, onClose, onDone }) {
             </div>
           )}
 
+          {mode !== 'details' && (
           <div>
             <span className="text-xs font-semibold text-dash-mute">কারণ (ঐচ্ছিক)</span>
             <input
@@ -139,6 +175,7 @@ function FixDialog({ row, onClose, onDone }) {
               কোডের ইতিহাসে লেখা থাকবে — পরে কেউ জিজ্ঞেস করলে উত্তর দেওয়া যাবে।
             </p>
           </div>
+          )}
 
           {error && (
             <p className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
@@ -152,8 +189,16 @@ function FixDialog({ row, onClose, onDone }) {
               disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
             >
-              {busy ? <FiLoader className="animate-spin" /> : mode === 'reset' ? <FiRotateCcw /> : <FiSend />}
-              {mode === 'reset' ? 'ফেরত নিন' : 'সরিয়ে দিন'}
+              {busy ? (
+                <FiLoader className="animate-spin" />
+              ) : mode === 'details' ? (
+                <FiUser />
+              ) : mode === 'reset' ? (
+                <FiRotateCcw />
+              ) : (
+                <FiSend />
+              )}
+              {mode === 'details' ? 'সেভ করুন' : mode === 'reset' ? 'ফেরত নিন' : 'সরিয়ে দিন'}
             </button>
             <button
               type="button"
@@ -171,7 +216,14 @@ function FixDialog({ row, onClose, onDone }) {
 
 export default function BookCodesManager() {
   const [books, setBooks] = useState([]);
-  const [filters, setFilters] = useState({ status: 'available', book: '', batch: '', q: '', released: '', page: 1 });
+  const [tab, setTabId] = useState(DEFAULT_TAB);
+  const [filters, setFilters] = useState({
+    ...TAB_VIEWS.find((v) => v.id === DEFAULT_TAB).query,
+    book: '',
+    batch: '',
+    q: '',
+    page: 1,
+  });
   // How far down the printed sheet the codes work. Its own bit of state
   // because it is a property of the whole run, not of any row on screen.
   const [release, setReleaseState] = useState(null);
@@ -204,8 +256,14 @@ export default function BookCodesManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setTab = (status) => {
-    const next = { ...filters, status, page: 1 };
+  const setTab = (id) => {
+    const view = TAB_VIEWS.find((v) => v.id === id);
+    if (!view) return;
+    setTabId(id);
+    // The tab supplies both halves of its own filter, so switching from
+    // "বই ছাপা হয়নি" to "কেউ নিয়েছে" cannot leave the released filter behind
+    // and show an empty list for no visible reason.
+    const next = { ...filters, ...view.query, page: 1 };
     setFilters(next);
     load(next);
   };
@@ -241,9 +299,9 @@ export default function BookCodesManager() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Kpi label="খালি" value={state.counts.available || 0} tone="emerald" />
-          <Kpi label="ব্যবহৃত" value={state.counts.redeemed || 0} tone="sky" />
-          <Kpi label="বাতিল" value={state.counts.void || 0} tone="slate" />
+          <Kpi label="চালু আছে" value={state.counts.ready || 0} tone="emerald" />
+          <Kpi label="কেউ নিয়েছে" value={state.counts.used || 0} tone="sky" />
+          <Kpi label="বই ছাপা হয়নি" value={state.counts.waiting || 0} tone="slate" />
           <button
             onClick={() => downloadCsv({ book: filters.book, batch: filters.batch, status: filters.status }).catch((e) => alert(e.message))}
             className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line px-3 py-2.5 text-sm font-medium text-dash-ink3 hover:bg-dash-soft"
@@ -405,22 +463,26 @@ export default function BookCodesManager() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-              filters.status === t
-                ? 'border-brand bg-brand-soft text-brand'
-                : 'border-dash-line text-dash-ink3 hover:bg-dash-soft'
-            }`}
-          >
-            {STATUS_LABEL[t]}
-            {t !== 'all' && state.counts[t] ? (
-              <span className="ml-1.5 text-xs opacity-70">{state.counts[t]}</span>
-            ) : null}
-          </button>
-        ))}
+        {TAB_VIEWS.map((v) => {
+          const on = tab === v.id;
+          return (
+            <button
+              key={v.id}
+              onClick={() => setTab(v.id)}
+              title={v.hint}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                on
+                  ? 'border-brand bg-brand-soft text-brand'
+                  : 'border-dash-line text-dash-ink3 hover:bg-dash-soft'
+              }`}
+            >
+              {v.label}
+              {state.counts[v.id] != null && (
+                <span className="ml-1.5 text-xs tabular-nums opacity-70">{state.counts[v.id]}</span>
+              )}
+            </button>
+          );
+        })}
 
         <form
           onSubmit={(e) => { e.preventDefault(); const n = { ...filters, page: 1 }; setFilters(n); load(n); }}
@@ -435,18 +497,6 @@ export default function BookCodesManager() {
             {books.map((b) => (
               <option key={b._id} value={b._id}>{b.title}</option>
             ))}
-          </select>
-          {/* Which print batch, alongside the used/unused tabs. Two different
-              questions about one code: has anyone used it, and is it even
-              allowed to be used yet. */}
-          <select
-            value={filters.released}
-            onChange={(e) => { const n = { ...filters, released: e.target.value, page: 1 }; setFilters(n); load(n); }}
-            className="rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm text-dash-ink3 outline-none focus:border-brand"
-          >
-            <option value="">চালু-বন্ধ সব</option>
-            <option value="true">শুধু চালু</option>
-            <option value="false">শুধু বন্ধ</option>
           </select>
           <div className="relative">
             <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-dash-mute2" />
@@ -523,8 +573,12 @@ export default function BookCodesManager() {
                     <td className="px-4 py-3 text-dash-ink3">{r.book?.title || '—'}</td>
                     <td className="px-4 py-3 text-dash-mute2">{r.batch || '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full border px-2.5 py-1 text-[11px] font-semibold ${STATUS_TONE[r.status]}`}>
-                        {STATUS_LABEL[r.status]}
+                      {/* One pill saying what this code IS right now, mixing
+                          both questions — used, waiting on a print run, dead,
+                          or working. Two separate columns made the reader do
+                          that combination in their head. */}
+                      <span className={`inline-block rounded-full border px-2.5 py-1 text-[11px] font-semibold ${rowState(r).tone}`}>
+                        {rowState(r).label}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -559,9 +613,9 @@ export default function BookCodesManager() {
                           disabled={busyId === r._id}
                           onClick={() => doVoid(r)}
                           className="inline-flex items-center gap-1 rounded-lg border border-dash-line px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:border-rose-200 hover:bg-rose-50 disabled:opacity-50"
-                          title="বাতিল করুন — মিসপ্রিন্ট বা হারানো শিট"
+                          title="এই কোড আর কখনো কাজ করবে না — ছাপার ভুল বা হারানো শিটের জন্য"
                         >
-                          {busyId === r._id ? <FiLoader className="animate-spin" /> : <FiSlash />} বাতিল
+                          {busyId === r._id ? <FiLoader className="animate-spin" /> : <FiSlash />} নষ্ট করুন
                         </button>
                       ) : r.status === 'redeemed' ? (
                         <button
