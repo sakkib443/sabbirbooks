@@ -91,3 +91,53 @@ export const STATUS_TONE = {
 
 export const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+/**
+ * Put a redeemed code back into circulation.
+ *
+ * For the everyday mistake: the reader typed it while signed in to the wrong
+ * account. The access that code granted is withdrawn — but only that one, so
+ * a reader who also bought the book keeps what they paid for.
+ */
+export async function resetCopy(id, reason) {
+  const j = await readJson(
+    await fetch(`${API}/book-copies/${id}/reset`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify({ reason }),
+    })
+  );
+  return j;
+}
+
+/** Move a redeemed code to another account, in one step. */
+export async function transferCopy(id, email, reason) {
+  const j = await readJson(
+    await fetch(`${API}/book-copies/${id}/transfer`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify({ email, reason }),
+    })
+  );
+  return j;
+}
+
+/** How far down the printed sheet the codes currently work. */
+export async function getRelease() {
+  const j = await readJson(
+    await fetch(`${API}/book-copies/release`, { headers: headers(), cache: 'no-store' })
+  );
+  return j.data;
+}
+
+/** Release serials 1..upTo; everything above stops working. */
+export async function setRelease(upTo) {
+  const j = await readJson(
+    await fetch(`${API}/book-copies/release`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify({ upTo }),
+    })
+  );
+  return j;
+}
