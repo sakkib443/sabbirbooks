@@ -477,7 +477,9 @@ export default function BookTopicScanPage() {
   const hasVideos = (active?.videos?.length ?? 0) > 0;
   const hasFiles = (active?.attachments?.length ?? 0) > 0;
   const hasExtra = Boolean(active?.answerHtml?.trim());
-  const hasAnything = hasImages || hasVideos || hasExtra || hasFiles;
+  // No "is there anything at all" flag any more: a question with no video
+  // always shows the video notice, so it is never empty — and the old
+  // "nothing added yet" line would have contradicted the notice beside it.
 
   const crumb = [part?.title, chapter && `${chapter.chapterNo ?? ""} ${chapter.title}`.trim()]
     .filter(Boolean)
@@ -678,6 +680,27 @@ export default function BookTopicScanPage() {
                     </section>
                   )}
 
+                  {/* No video yet — and the reader is told so, in the slot the
+                      video will fill. This section used to vanish when a
+                      question had none, so nobody could tell a video was ever
+                      coming. The notice keys on the video list alone: the
+                      moment one is uploaded it disappears on its own, with
+                      nothing for the shop to remember to switch off. Amber, not
+                      red — it is a notice, not a failure the reader caused. */}
+                  {!hasVideos && (
+                    <section>
+                      <SectionLabel icon={<LuVideo className="w-3.5 h-3.5" />}>
+                        ভিডিও
+                      </SectionLabel>
+                      <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                        <LuTriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                        <p className="text-sm leading-relaxed text-amber-200">
+                          যান্ত্রিক ত্রুটির কারণে ভিডিওটি এই মুহূর্তে দেখা যাচ্ছে না। শীঘ্রই ঠিক করে দেওয়া হবে।
+                        </p>
+                      </div>
+                    </section>
+                  )}
+
                   {/* Deliberately not labelled "উত্তর" — the answer is on the
                       paper page in the reader's hands. This is what did not fit
                       there. */}
@@ -719,15 +742,6 @@ export default function BookTopicScanPage() {
                     </section>
                   )}
 
-                  {/* Nothing attached at all — one line, so the question isn't
-                      followed by bare padding. */}
-                  {!hasAnything && (
-                    <div className="rounded-lg border border-dashed border-[#333] px-4 py-6 text-center">
-                      <p className="text-sm text-slate-500">
-                        এই প্রশ্নে এখনো ছবি, ভিডিও বা অতিরিক্ত তথ্য যোগ করা হয়নি।
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* Prev / next — easier than aiming at a small chip on a phone. */}
