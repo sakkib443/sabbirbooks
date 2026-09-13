@@ -75,6 +75,7 @@ import {
 } from "./types";
 import { upazilasOf } from "./bdGeoData";
 import { priceBook, resolveOffers } from "@/lib/bookOffers";
+import { trackOncePerSession, trackPurchase } from "@/lib/metaPixel";
 
 // How many copies of an unprinted book one buyer may pre-order.
 //
@@ -388,6 +389,15 @@ export default function CheckoutView() {
   // the rider asks for. Same rule the order service applies on create.
   const deliveryCharge = appliedCoupon?.freeDelivery ? 0 : deliveryBeforeCoupon;
 
+  // ── Meta Pixel: the order form was opened ─────────────────────────────────
+  // Ahead of the auth gate below, which sends a signed-out buyer to log in:
+  // someone who meant to buy and gave up at the sign-in screen still started a
+  // checkout. Once per tab session, because that buyer is brought straight
+  // back here after signing in.
+  useEffect(() => {
+    if (type === "book" && slug) trackOncePerSession("InitiateCheckout");
+  }, [type, slug]);
+
   // ── Auth gate + item fetch ────────────────────────────────────────────────
   useEffect(() => {
     if (!getToken()) {
@@ -690,6 +700,8 @@ export default function CheckoutView() {
           });
 
           if (res.redirected) return; // leaving the page; keep the spinner up
+          // A real gateway's Purchase is counted on /payment/return instead.
+          trackPurchase(res.order);
           setResult({ kind: "book", order: res.order, preOrder: preOrderFor(res.order) });
         } else if (isCod) {
           // Nothing is paid now — the order is placed and the courier collects.
@@ -701,6 +713,9 @@ export default function CheckoutView() {
             onProgress: setStep,
             genericErr: S.genericErr,
           });
+          // Placed is the purchase for cash on delivery: nothing more happens on
+          // this site before the courier collects.
+          trackPurchase(order);
           setResult({
             kind: "cod",
             title: book.title,
@@ -722,6 +737,7 @@ export default function CheckoutView() {
             onProgress: setStep,
             genericErr: S.genericErr,
           });
+          trackPurchase(order);
           setResult({
             kind: "manual",
             itemKind: "book",

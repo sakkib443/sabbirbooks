@@ -31,6 +31,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Container, cn } from '@/components/ui';
 import API_BASE_URL from '@/config/api';
 import { apiLogin, apiRegister, persistSession, getDeviceId, STORAGE_KEYS } from '@/components/auth/authClient';
+import { track } from '@/lib/metaPixel';
 
 const inputCls =
   'w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -220,6 +221,9 @@ export default function ActivateBook() {
             setBusy(false);
             return;
           }
+          // An account made on the way to activating a book is a signup like
+          // any other.
+          track('CompleteRegistration');
         }
 
         const login = await apiLogin({

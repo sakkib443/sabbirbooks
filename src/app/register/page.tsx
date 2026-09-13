@@ -30,6 +30,7 @@ import {
 } from "@/components/auth/authClient";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { homeRouteFor } from "@/lib/permissions";
+import { track } from "@/lib/metaPixel";
 
 export default function RegisterPage() {
   const { isBengali } = useLanguage();
@@ -195,6 +196,10 @@ export default function RegisterPage() {
         setPhase("idle");
         return;
       }
+
+      // Counted the moment the account exists — before the automatic sign-in,
+      // which can fail on its own without undoing the registration.
+      track("CompleteRegistration");
 
       // Registration succeeded → auto-login to obtain tokens + device session.
       setPhase("signing-in");

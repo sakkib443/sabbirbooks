@@ -23,6 +23,7 @@ import { LuGraduationCap, LuLoaderCircle, LuLogOut, LuPhone, LuShieldCheck } fro
 import { API_BASE, getToken, getUser, clearSession } from '@/lib/session';
 import { useLanguage } from '@/context/LanguageContext';
 import CollegePicker from './CollegePicker';
+import { track } from '@/lib/metaPixel';
 
 // Pages where the gate must stay out of the way: the user is either not signed
 // in yet, or is in the middle of the very flow that fixes this.
@@ -119,6 +120,10 @@ export default function ProfileGate() {
       if (!res.ok || body.success === false) {
         throw new Error(body.message || t('Could not save. Try again.', 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।'));
       }
+      // A Google sign-up's registration ends here, not at the Google button:
+      // the account exists from the first click, but this is the step that
+      // completes it, and every new Google student passes through it once.
+      track('CompleteRegistration');
       // Re-ask the server rather than assuming — it owns the completeness rule.
       await check();
     } catch (err) {

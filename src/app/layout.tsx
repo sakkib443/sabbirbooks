@@ -14,6 +14,7 @@ import Providers from "@/components/Providers";
 import SiteChrome from "@/components/shared/SiteChrome";
 import ScrollToTop from "@/components/shared/ScrollToTop";
 import ThemeScript from "@/components/theme/ThemeScript";
+import MetaPixel from "@/components/analytics/MetaPixel";
 
 // Google Fonts (ported from the Aptech Learning setup)
 const poppins = Poppins({
@@ -117,6 +118,10 @@ export default function RootLayout({
               own shell and need every page to open at the top just as much as
               the storefront does. */}
           <ScrollToTop />
+          {/* Every page: the storefront, checkout and the buyer's own dashboard
+              are one journey as far as the ads are concerned. The component
+              itself leaves the staff screens out. */}
+          <MetaPixel />
           <SiteChrome>{children}</SiteChrome>
         </Providers>
       </body>

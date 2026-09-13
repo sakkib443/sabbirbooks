@@ -12,12 +12,16 @@
  * Reached at /payment/return?status=success|failed|cancelled&orderId=&ref=&trx=
  */
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LuCircleCheck, LuCircleX, LuInfo, LuArrowLeft } from "react-icons/lu";
+import API_BASE_URL from "@/config/api";
 import { Container, buttonVariants, cn } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
+import { trackPurchase } from "@/lib/metaPixel";
 import { paymentReturnLabels } from "./CheckoutView";
+import { getToken } from "./checkoutApi";
 
 type Outcome = "success" | "failed" | "cancelled";
 
@@ -33,6 +37,31 @@ export default function PaymentReturn() {
   const outcome = normalise(params.get("status"));
   const orderId = params.get("orderId");
   const ref = params.get("ref");
+
+  // Meta Pixel Purchase. The "success" in this URL is only a hint (see the note
+  // at the top), so the order itself is asked for, and counted only when the
+  // server says it is paid — which is also where the amount comes from.
+  useEffect(() => {
+    if (outcome !== "success" || !orderId) return;
+    const token = getToken();
+    if (!token) return;
+    let active = true;
+    fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        const order = body?.data;
+        if (active && order?.payment?.status === "paid") trackPurchase(order);
+      })
+      .catch(() => {
+        // No event is better than a wrong one.
+      });
+    return () => {
+      active = false;
+    };
+  }, [outcome, orderId]);
 
   const tone = {
     success: {
