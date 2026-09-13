@@ -33,6 +33,7 @@ import API_BASE_URL from "@/config/api";
 import AnswerStyles from "@/components/books/AnswerStyles";
 import Lightbox from "@/components/books/Lightbox";
 import { priceBook, type BookOffers } from "@/lib/bookOffers";
+import { isVerticalVideo, toEmbedUrl } from "@/lib/videoEmbed";
 
 type Video = {
   _id?: string;
@@ -96,26 +97,6 @@ type State =
   | { kind: "awaiting"; book: LockedBook | null; signedIn: boolean }
   | { kind: "notfound" }
   | { kind: "error"; message: string };
-
-/** youtu.be/ID and watch?v=ID both need turning into an embeddable URL. */
-function toEmbedUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtu.be")) {
-      return `https://www.youtube.com/embed${u.pathname}`;
-    }
-    if (u.hostname.includes("youtube.com")) {
-      const id = u.searchParams.get("v");
-      if (id) return `https://www.youtube.com/embed/${id}`;
-    }
-    if (u.hostname.includes("vimeo.com")) {
-      return `https://player.vimeo.com/video${u.pathname}`;
-    }
-  } catch {
-    /* fall through to the raw url */
-  }
-  return url;
-}
 
 /** Small heading that separates figures / video / extra info / downloads. */
 function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
@@ -664,7 +645,15 @@ export default function BookTopicScanPage() {
                                 </a>
                               </>
                             ) : (
-                              <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
+                              <div
+                                className={`relative w-full rounded-lg overflow-hidden bg-black ${
+                                  isVerticalVideo(v.url) ? "aspect-[9/16] max-w-[320px] mx-auto" : "aspect-video"
+                                }`}
+                              >
+                                {/* A Short is shot upright, 9:16. In the 16:9 frame it
+                                    plays as a thin strip between black bars — about a
+                                    finger wide on the phone this page is built for — so
+                                    it gets an upright frame of its own. */}
                                 <iframe
                                   src={toEmbedUrl(v.url)}
                                   title={v.title || `video-${i}`}

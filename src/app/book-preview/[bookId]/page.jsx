@@ -33,6 +33,7 @@ import {
 } from 'react-icons/fi';
 import AnswerStyles from '@/components/books/AnswerStyles';
 import Lightbox from '@/components/books/Lightbox';
+import { isVerticalVideo, toEmbedUrl } from '@/lib/videoEmbed';
 
 const API =
   (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '') + '/api';
@@ -40,25 +41,6 @@ const API =
 const hdrs = () => ({
   Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''}`,
 });
-
-function toEmbedUrl(url) {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtu.be')) {
-      return `https://www.youtube.com/embed${u.pathname}`;
-    }
-    if (u.hostname.includes('youtube.com')) {
-      const id = u.searchParams.get('v');
-      if (id) return `https://www.youtube.com/embed/${id}`;
-    }
-    if (u.hostname.includes('vimeo.com')) {
-      return `https://player.vimeo.com/video${u.pathname}`;
-    }
-  } catch {
-    /* raw */
-  }
-  return url;
-}
 
 function matchesQuery(text, q) {
   if (!q) return true;
@@ -550,7 +532,13 @@ export default function BookPreviewPlayerPage() {
                                     </a>
                                   </>
                                 ) : (
-                                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-900">
+                                  <div
+                                    className={`relative w-full rounded-xl overflow-hidden bg-slate-900 ${
+                                      isVerticalVideo(v.url) ? 'aspect-[9/16] max-w-[320px] mx-auto' : 'aspect-video'
+                                    }`}
+                                  >
+                                    {/* Same upright frame for a Short as the QR page gives
+                                        it, so the preview shows what a reader will see. */}
                                     <iframe
                                       src={toEmbedUrl(v.url)}
                                       title={v.title || `video-${i}`}
