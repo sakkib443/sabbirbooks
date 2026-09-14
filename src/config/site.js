@@ -12,6 +12,15 @@
 export const PUBLIC_PAGES_ENABLED = process.env.NEXT_PUBLIC_PUBLIC_PAGES === 'on';
 
 /**
+ * The site's public address, with no trailing slash.
+ *
+ * Share previews, the sitemap and search engines all need absolute URLs, and
+ * without a base Next.js would build them from localhost on a self-hosted
+ * server. NEXT_PUBLIC_SITE_URL overrides it for a staging copy.
+ */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://magicviva.com').replace(/\/+$/, '');
+
+/**
  * Routes that only exist when the full marketing site is on. A visitor who
  * types one of these — or follows an old link, or a search result — lands on
  * the book instead of a 404.

@@ -23,6 +23,8 @@ export const LanguageProvider = ({ children }) => {
     const savedLanguage = localStorage.getItem("language");
     if (savedLanguage && (savedLanguage === "en" || savedLanguage === "bn")) {
       setLanguageState(savedLanguage);
+      // The server said lang="bn"; a saved English preference has to say so too.
+      document.documentElement.lang = savedLanguage;
     }
     setIsLoaded(true);
   }, []);

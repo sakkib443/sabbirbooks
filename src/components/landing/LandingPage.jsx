@@ -5,7 +5,8 @@
  *
  * Deliberately short. The hero now carries the cover, the price, the buttons,
  * the selling points and the video — everything a buyer needs — so what follows
- * it is only what the hero cannot say: how the QR codes work, and the ask again
+ * it is only what the hero cannot say: how the QR codes work, the book described
+ * in the words students search with (and their questions), and the ask again
  * for anyone who read to the bottom.
  *
  * The book's chapter list used to sit here too. It came out at the client's
@@ -20,6 +21,7 @@ import LandingHero from './LandingHero';
 import TrackOrder from './TrackOrder';
 import LandingSample from './LandingSample';
 import LandingQr from './LandingQr';
+import LandingSeo from './LandingSeo';
 import LandingCta from './LandingCta';
 
 export default function LandingPage({ book, settings }) {
@@ -74,6 +76,10 @@ export default function LandingPage({ book, settings }) {
       <TrackOrder />
 
       <LandingQr />
+
+      {/* What the book is in the words students search with, and the FAQ —
+          before the last ask, so the answers come first. */}
+      <LandingSeo book={book} />
 
       <LandingCta
         book={book}

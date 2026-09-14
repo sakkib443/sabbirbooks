@@ -28,6 +28,7 @@ import {
   LuVolumeX,
 } from 'react-icons/lu';
 import { formatTk } from '@/lib/landingBook';
+import { landingSeoFor } from '@/lib/landingSeo';
 import { useLanguage } from '@/context/LanguageContext';
 import { renderRich } from '@/lib/richText';
 
@@ -440,7 +441,9 @@ function CoverCard({ book, price, sampleHref }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={book.coverImage}
-            alt={book.title}
+            // Describes the cover the way image search is queried, when the book
+            // has search copy; otherwise just its title.
+            alt={landingSeoFor(book)?.coverAlt || book.title}
             onError={() => setFailed(true)}
             className="w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
           />
