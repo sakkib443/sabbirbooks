@@ -12,16 +12,15 @@
  * Reached at /payment/return?status=success|failed|cancelled&orderId=&ref=&trx=
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LuCircleCheck, LuCircleX, LuInfo, LuArrowLeft } from "react-icons/lu";
-import API_BASE_URL from "@/config/api";
 import { Container, buttonVariants, cn } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
 import { trackPurchase } from "@/lib/metaPixel";
 import { paymentReturnLabels } from "./CheckoutView";
-import { getToken } from "./checkoutApi";
+import { fetchOrderAsBuyer, getToken } from "./checkoutApi";
 
 type Outcome = "success" | "failed" | "cancelled";
 
@@ -38,26 +37,21 @@ export default function PaymentReturn() {
   const orderId = params.get("orderId");
   const ref = params.get("ref");
 
+  // Signed in → the order page on the dashboard. Paid as a guest → the phone
+  // tracker on the home page. Read after mount: the token lives in localStorage.
+  const [isGuest, setIsGuest] = useState(false);
+  useEffect(() => setIsGuest(!getToken()), []);
+
   // Meta Pixel Purchase. The "success" in this URL is only a hint (see the note
-  // at the top), so the order itself is asked for, and counted only when the
-  // server says it is paid — which is also where the amount comes from.
+  // at the top), so the order itself is asked for — with the buyer's token, or a
+  // guest's order key saved when the order was created — and counted only when
+  // the server says it is paid, which is also where the amount comes from.
   useEffect(() => {
     if (outcome !== "success" || !orderId) return;
-    const token = getToken();
-    if (!token) return;
     let active = true;
-    fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => {
-        const order = body?.data;
-        if (active && order?.payment?.status === "paid") trackPurchase(order);
-      })
-      .catch(() => {
-        // No event is better than a wrong one.
-      });
+    void fetchOrderAsBuyer(orderId).then((order) => {
+      if (active && order?.payment?.status === "paid") trackPurchase(order);
+    });
     return () => {
       active = false;
     };
@@ -113,10 +107,10 @@ export default function PaymentReturn() {
                 stare at an unpaid order. */}
             {outcome === "success" && orderId ? (
               <Link
-                href={`/dashboard/user/orders/${orderId}`}
+                href={isGuest ? "/#track-order" : `/dashboard/user/orders/${orderId}`}
                 className={cn(buttonVariants({ variant: "primary" }), bn)}
               >
-                {L.viewOrder}
+                {isGuest ? L.trackOrder : L.viewOrder}
               </Link>
             ) : (
               <Link href="/books" className={cn(buttonVariants({ variant: "primary" }), bn)}>

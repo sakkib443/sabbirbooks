@@ -23,7 +23,7 @@
  * this is for the person who has already bought it.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LuPackageSearch, LuLoaderCircle, LuTriangleAlert, LuChevronDown, LuChevronUp,
   LuCheck, LuTruck, LuHouse, LuCircleX, LuClock,
@@ -87,6 +87,12 @@ export default function TrackOrder() {
 
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState('');
+
+  // Arriving from "track this order" (/#track-order) means the buyer came here
+  // to use the tracker, so it opens rather than waiting for a second tap.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#track-order') setOpen(true);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [orders, setOrders] = useState(null);
@@ -119,7 +125,9 @@ export default function TrackOrder() {
   };
 
   return (
-    <section className="border-t border-border bg-surface-soft/40 py-8">
+    // id: the "track this order" link on the order-placed screen and in the
+    // order emails lands a buyer without an account here (/#track-order).
+    <section id="track-order" className="scroll-mt-20 border-t border-border bg-surface-soft/40 py-8">
       <Container>
         <div className="mx-auto max-w-2xl">
           <button

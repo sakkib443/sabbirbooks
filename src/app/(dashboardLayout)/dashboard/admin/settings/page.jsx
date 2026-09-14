@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { FiSettings, FiSave, FiRefreshCw, FiUser, FiLock, FiGlobe, FiEye, FiEyeOff, FiLoader, FiShield, FiUploadCloud } from 'react-icons/fi';
 import { LuGlobe, LuPhone, LuMail, LuMapPin, LuFacebook, LuYoutube, LuLinkedin } from 'react-icons/lu';
 import { useToast } from '@/components/shared/Toast';
@@ -9,6 +10,21 @@ import { currentCan, getStoredUser, ROLE_LABELS } from '@/lib/permissions';
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '');
 const stored = () => getStoredUser() || {};
 const authHdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
+
+// Settings the Delivery Charges screen owns. Left out of this page's save so a
+// stale copy here cannot overwrite a rate changed there.
+const DELIVERY_OWNED_ELSEWHERE = new Set([
+  'deliveryCharge',
+  'deliveryChargeInsideDhaka',
+  'deliveryChargeOutsideDhaka',
+  'freeDeliveryAbove',
+  'codExtraCharge',
+  'freeDeliveryCollege',
+  'freeDeliveryDivision',
+  'localDeliveryDistrict',
+  'localDeliveryCharge',
+  'collegeDeliveryMigratedAt',
+]);
 const roleLabel = (r) => ROLE_LABELS[r] || (r ? r.charAt(0).toUpperCase() + r.slice(1) : 'User');
 
 const TABS = [
@@ -278,8 +294,14 @@ const SiteSettingsTab = ({ showToast }) => {
     e.preventDefault();
     setSaving(true);
     try {
+      // Delivery charges are set on their own screen now (Delivery Charges).
+      // This page saves its whole settings object, so sending its copy of those
+      // fields back would undo a rate changed there after this page loaded.
+      const body = Object.fromEntries(
+        Object.entries(settings).filter(([k]) => !DELIVERY_OWNED_ELSEWHERE.has(k))
+      );
       const response = await fetch(`${API_URL}/api/settings`, {
-        method: 'PATCH', headers: authHdr(), body: JSON.stringify(settings),
+        method: 'PATCH', headers: authHdr(), body: JSON.stringify(body),
       });
       const data = await response.json();
       if (data.success) showToast('success', 'Settings saved successfully!');
@@ -622,23 +644,24 @@ const SiteSettingsTab = ({ showToast }) => {
           </label>
         </div>
 
+        {/* The charges themselves moved to their own screen, beside each
+            medical college's own rate. The two inside/outside-Dhaka boxes that
+            used to sit here had not priced anything since the flat rate came
+            in — editing them changed nothing a buyer paid. */}
+        <Link
+          href="/dashboard/admin/delivery-charges"
+          className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-dash-line p-3 text-sm hover:bg-dash-soft"
+        >
+          <span>
+            <span className="block font-semibold text-dash-ink2">ডেলিভারি চার্জ</span>
+            <span className="block text-xs text-dash-mute">
+              সাধারণ চার্জ, COD বাড়তি চার্জ, ফ্রি ডেলিভারির সীমা আর মেডিকেল কলেজ অনুযায়ী চার্জ — সব এখন আলাদা পাতায়
+            </span>
+          </span>
+          <span className="text-brand font-semibold">খুলুন →</span>
+        </Link>
+
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-dash-ink3 mb-1">ঢাকার ভেতরে (৳)</label>
-            <input type="number" min="0" name="deliveryChargeInsideDhaka" value={settings.deliveryChargeInsideDhaka ?? 120} onChange={e => setSettings(p => ({ ...p, deliveryChargeInsideDhaka: Number(e.target.value) }))} className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dash-ink3 mb-1">ঢাকার বাইরে (৳)</label>
-            <input type="number" min="0" name="deliveryChargeOutsideDhaka" value={settings.deliveryChargeOutsideDhaka ?? 120} onChange={e => setSettings(p => ({ ...p, deliveryChargeOutsideDhaka: Number(e.target.value) }))} className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dash-ink3 mb-1">ফ্রি ডেলিভারি — এর বেশি হলে (৳)</label>
-            <input type="number" min="0" name="freeDeliveryAbove" value={settings.freeDeliveryAbove ?? 0} onChange={e => setSettings(p => ({ ...p, freeDeliveryAbove: Number(e.target.value) }))} placeholder="0 = কখনো ফ্রি নয়" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dash-ink3 mb-1">COD বাড়তি চার্জ (৳)</label>
-            <input type="number" min="0" name="codExtraCharge" value={settings.codExtraCharge ?? 0} onChange={e => setSettings(p => ({ ...p, codExtraCharge: Number(e.target.value) }))} placeholder="0" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm" />
-          </div>
           <div className="sm:col-span-3">
             <label className="block text-sm font-medium text-dash-ink3 mb-1">ডেলিভারি সম্পর্কে বার্তা</label>
             <input type="text" name="deliveryNote" value={settings.deliveryNote || ''} onChange={handleChange} placeholder="সারা দেশে ১-৩ কর্মদিবসের ভিতরে পৌঁছে যাবে ইনশাআল্লাহ" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm" />

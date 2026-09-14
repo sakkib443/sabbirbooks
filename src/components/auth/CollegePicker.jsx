@@ -222,7 +222,7 @@ export default function CollegePicker({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-foreground">{c.name}</span>
                         <span className={`block truncate text-xs text-muted-foreground ${bn}`}>
-                          {[c.district, c.area].filter(Boolean).join(' · ')}
+                          {[c.district, c.upazila || c.area].filter(Boolean).join(' · ')}
                         </span>
                       </span>
                       {active && <LuCheck className="shrink-0 text-primary" />}

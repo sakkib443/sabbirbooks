@@ -75,6 +75,36 @@ const buyerName = (u) =>
     ? [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '—'
     : '—';
 
+// Who placed an order, as the order knows it. Ordering needs no account now, so
+// a guest order carries everything itself — name, numbers, email, college — and
+// has no `user` at all. For an account, its name comes first; the order's own
+// fields fill what an older order never recorded.
+const buyerOf = (o) => ({
+  isGuest: !o?.user,
+  name: o?.user ? buyerName(o.user) : o?.shippingAddress?.name || '—',
+  email: o?.shippingAddress?.email || o?.user?.email || '',
+  phone: o?.shippingAddress?.phone || o?.user?.phoneNumber || '',
+  altPhone: o?.shippingAddress?.altPhone || '',
+  whatsapp: o?.user?.whatsappNumber || '',
+  college: o?.college?.name || o?.user?.medicalCollegeName || '',
+  collegeArea: [
+    o?.college?.upazila || o?.user?.upazila,
+    o?.college?.district || o?.user?.district,
+    o?.user?.division,
+  ].filter(Boolean).join(', '),
+});
+
+function GuestBadge() {
+  return (
+    <span
+      className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600"
+      title="Ordered without an account"
+    >
+      Guest
+    </span>
+  );
+}
+
 const isCod = (order) => order?.payment?.method === 'cod';
 
 function StatusBadge({ status }) {
@@ -164,13 +194,18 @@ export default function BookOrdersPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return orders;
-    return orders.filter((o) =>
-      o.orderNumber?.toLowerCase().includes(q) ||
-      buyerName(o.user).toLowerCase().includes(q) ||
-      o.shippingAddress?.name?.toLowerCase().includes(q) ||
-      o.shippingAddress?.phone?.includes(q) ||
-      (o.user?.email || '').toLowerCase().includes(q)
-    );
+    return orders.filter((o) => {
+      const b = buyerOf(o);
+      return (
+        o.orderNumber?.toLowerCase().includes(q) ||
+        b.name.toLowerCase().includes(q) ||
+        o.shippingAddress?.name?.toLowerCase().includes(q) ||
+        b.phone.includes(q) ||
+        b.altPhone.includes(q) ||
+        b.email.toLowerCase().includes(q) ||
+        b.college.toLowerCase().includes(q)
+      );
+    });
   }, [orders, search]);
 
   const stats = useMemo(() => ({
@@ -280,7 +315,8 @@ export default function BookOrdersPage() {
       district: a.district || '',
       division: a.division || '',
       note: a.note || '',
-      email: o.user?.email || '',
+      altPhone: a.altPhone || '',
+      email: a.email || o.user?.email || '',
       userPhone: o.user?.phoneNumber || '',
       whatsappNumber: o.user?.whatsappNumber || '',
       payStatus: o.payment?.status || 'pending',
@@ -300,6 +336,9 @@ export default function BookOrdersPage() {
           shippingAddress: {
             name: fullForm.name,
             phone: fullForm.phone,
+            altPhone: fullForm.altPhone,
+            // The order's own email: where its emails go, and all a guest has.
+            email: fullForm.email,
             address: fullForm.address,
             upazila: fullForm.upazila,
             district: fullForm.district,
@@ -439,7 +478,7 @@ export default function BookOrdersPage() {
     const ok = await confirm({
       title: one ? `Delete order ${one.orderNumber}?` : `Delete ${list.length} orders?`,
       message: one
-        ? `${buyerName(one.user)} · ${bdt(one.total)}. The order, its payment record and the buyer's proof of purchase are removed for good. This cannot be undone.`
+        ? `${buyerOf(one).name} · ${bdt(one.total)}. The order, its payment record and the buyer's proof of purchase are removed for good. This cannot be undone.`
         : `${list.length} orders, their payment records and their buyers' proof of purchase are removed for good. This cannot be undone.`,
       confirmText: one ? 'Delete order' : `Delete ${list.length} orders`,
       danger: true,
@@ -681,15 +720,18 @@ export default function BookOrdersPage() {
                   </button>
 
                   <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
-                    <span className="block truncate text-sm font-medium text-dash-ink3">{buyerName(o.user)}</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="block truncate text-sm font-medium text-dash-ink3">{buyerOf(o).name}</span>
+                      {buyerOf(o).isGuest && <GuestBadge />}
+                    </span>
                     <span className="block truncate font-mono text-xs text-dash-mute2">
-                      {o.shippingAddress?.phone || o.user?.phoneNumber || '—'}
+                      {buyerOf(o).phone || '—'}
                     </span>
                   </button>
 
                   <div className="min-w-0">
-                    <span className="block truncate text-sm text-dash-ink4" title={o.user?.medicalCollegeName || ''}>
-                      {o.user?.medicalCollegeName || '—'}
+                    <span className="block truncate text-sm text-dash-ink4" title={buyerOf(o).college}>
+                      {buyerOf(o).college || '—'}
                     </span>
                     <span className="block truncate text-xs text-dash-mute2">
                       {[o.shippingAddress?.district, o.shippingAddress?.division].filter(Boolean).join(', ') || fmtDate(o.createdAt)}
@@ -753,13 +795,14 @@ export default function BookOrdersPage() {
                         <span className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-extrabold text-indigo-700">
                           #{o.orderSeq ?? '—'}
                         </span>
-                        <span className="text-sm font-semibold text-dash-ink3">{buyerName(o.user)}</span>
+                        <span className="text-sm font-semibold text-dash-ink3">{buyerOf(o).name}</span>
+                        {buyerOf(o).isGuest && <GuestBadge />}
                         {isCod(o) && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">COD</span>}
                       </span>
                       <span className="mt-1 block font-mono text-xs text-dash-mute2">
-                        {o.shippingAddress?.phone || o.user?.phoneNumber || '—'}
+                        {buyerOf(o).phone || '—'}
                       </span>
-                      <span className="block truncate text-xs text-dash-mute2">{o.user?.medicalCollegeName || '—'}</span>
+                      <span className="block truncate text-xs text-dash-mute2">{buyerOf(o).college || '—'}</span>
                       <span className="mt-1 flex items-center gap-2">
                         <span className="font-bold text-dash-ink2">{bdt(o.total)}</span>
                         <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
@@ -817,21 +860,26 @@ export default function BookOrdersPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-dash-card rounded-lg border border-dash-line p-4">
                       <div className="space-y-2.5">
                         <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Buyer</p>
-                        <DetailRow icon={FiUser} label="Name" value={buyerName(o.user)} />
-                        <DetailRow icon={FiMail} label="Email" value={o.user?.email} />
-                        <DetailRow icon={FiPhone} label="Phone" value={o.user?.phoneNumber || o.shippingAddress?.phone} mono />
-                        {o.user?.whatsappNumber && (
-                          <DetailRow icon={FiSmartphone} label="WhatsApp" value={o.user.whatsappNumber} mono />
+                        {buyerOf(o).isGuest && (
+                          <p className="text-xs text-dash-mute2">Ordered without an account — every detail below is from the order itself.</p>
                         )}
-                        {/* The college is the one detail a shipping address never
-                            carries, and it is what free local delivery keys off. */}
-                        <DetailRow icon={FiBookOpen} label="Medical college" value={o.user?.medicalCollegeName} />
-                        {(o.user?.district || o.user?.division) && (
-                          <DetailRow
-                            icon={FiMapPin}
-                            label="College area"
-                            value={[o.user?.upazila, o.user?.district, o.user?.division].filter(Boolean).join(', ')}
-                          />
+                        <DetailRow icon={FiUser} label="Name" value={buyerOf(o).name} />
+                        <DetailRow icon={FiMail} label="Email" value={buyerOf(o).email} />
+                        <DetailRow icon={FiPhone} label="Phone" value={buyerOf(o).phone} mono />
+                        {buyerOf(o).altPhone && (
+                          <DetailRow icon={FiPhone} label="Second phone" value={buyerOf(o).altPhone} mono />
+                        )}
+                        {buyerOf(o).whatsapp && (
+                          <DetailRow icon={FiSmartphone} label="WhatsApp" value={buyerOf(o).whatsapp} mono />
+                        )}
+                        {/* The college is snapshotted onto the order, with where it
+                            is — that is what a college's own delivery rate matched. */}
+                        <DetailRow icon={FiBookOpen} label="Medical college" value={buyerOf(o).college} />
+                        {buyerOf(o).collegeArea && (
+                          <DetailRow icon={FiMapPin} label="College area" value={buyerOf(o).collegeArea} />
+                        )}
+                        {o.deliveryRule === 'college' && (
+                          <DetailRow icon={FiTruck} label="Delivery" value="College rate (address matched the college)" />
                         )}
                         <DetailRow icon={FiClock} label="Ordered" value={fmtDate(o.createdAt)} />
                       </div>
@@ -1153,6 +1201,7 @@ export default function BookOrdersPage() {
                               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <EditField label="Recipient name" value={fullForm.name} onChange={(v) => setFullForm((p) => ({ ...p, name: v }))} />
                                 <EditField label="Phone" value={fullForm.phone} onChange={(v) => setFullForm((p) => ({ ...p, phone: v }))} mono />
+                                <EditField label="Second phone" value={fullForm.altPhone} onChange={(v) => setFullForm((p) => ({ ...p, altPhone: v }))} mono />
                                 <EditField label="Street / village" value={fullForm.address} onChange={(v) => setFullForm((p) => ({ ...p, address: v }))} />
                                 <EditField label="Upazila / thana" value={fullForm.upazila} onChange={(v) => setFullForm((p) => ({ ...p, upazila: v }))} />
                                 <EditField label="District" value={fullForm.district} onChange={(v) => setFullForm((p) => ({ ...p, district: v }))} />

@@ -17,6 +17,8 @@ import {
   LuGraduationCap,
   LuMap,
   LuChevronDown,
+  LuMail,
+  LuBadgePercent,
 } from "react-icons/lu";
 import { Input, cn } from "@/components/ui";
 import { GEO_DIVISIONS, districtsOf, upazilasOf } from "./bdGeoData";
@@ -28,6 +30,11 @@ import { GEO_DIVISIONS, districtsOf, upazilasOf } from "./bdGeoData";
 export interface ShippingFormValues {
   name: string;
   phone: string;
+  // Optional: a second number for the courier, and an email for the order
+  // emails. Ordering needs no account, so these are the only contact details
+  // the shop gets beyond the primary phone.
+  altPhone?: string;
+  email?: string;
   address: string;
   // Always present as strings — a select's value is "" before a choice, never
   // undefined — and required-non-empty by the zod schema in CheckoutView.
@@ -44,6 +51,10 @@ interface Labels {
   namePh: string;
   phone: string;
   phonePh: string;
+  altPhone: string;
+  altPhonePh: string;
+  email: string;
+  emailPh: string;
   address: string;
   addressPh: string;
   division: string;
@@ -67,6 +78,14 @@ export interface PrefillNotice {
   onClear: () => void;
 }
 
+// A line under the address about the college's own delivery rate: either that
+// it applies to this address, or what it would be if the parcel went to the
+// college's own upazila instead.
+export interface DeliveryHint {
+  applied: boolean;
+  text: string;
+}
+
 // Presentational: the react-hook-form instance lives in CheckoutView so the
 // "Confirm & Pay" button can gate the whole flow behind a valid address.
 export function ShippingForm({
@@ -77,6 +96,8 @@ export function ShippingForm({
   bn,
   S,
   prefill,
+  collegeSlot,
+  deliveryHint,
 }: {
   register: UseFormRegister<ShippingFormValues>;
   errors: FieldErrors<ShippingFormValues>;
@@ -90,6 +111,10 @@ export function ShippingForm({
   // Present only while the address still holds the values we filled in for the
   // buyer; it disappears the moment they edit either of them.
   prefill?: PrefillNotice | null;
+  // The medical-college picker. Rendered by the parent, which owns the chosen
+  // college (it prices delivery), and placed here, above the address it fills.
+  collegeSlot?: React.ReactNode;
+  deliveryHint?: DeliveryHint | null;
 }) {
   // The two parents the child lists depend on. useWatch, not watch(), so this
   // component re-renders its selects when either changes without dragging the
@@ -174,6 +199,41 @@ export function ShippingForm({
             />
           }
         />
+        <Field
+          bn={bn}
+          label={`${S.altPhone} · ${S.optional}`}
+          icon={<LuPhone />}
+          error={errors.altPhone?.message}
+          input={
+            <Input
+              placeholder={S.altPhonePh}
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              aria-invalid={!!errors.altPhone}
+              {...register("altPhone")}
+            />
+          }
+        />
+        <Field
+          bn={bn}
+          label={`${S.email} · ${S.optional}`}
+          icon={<LuMail />}
+          error={errors.email?.message}
+          input={
+            <Input
+              placeholder={S.emailPh}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              aria-invalid={!!errors.email}
+              {...register("email")}
+            />
+          }
+        />
+        {/* The college comes before the address because picking it fills the
+            address in — division, district and upazila of the campus. */}
+        {collegeSlot && <div className="sm:col-span-2">{collegeSlot}</div>}
         {/* Division → district → upazila → house/road/village: big to small,
             which is the order the client asked for and the order an address is
             actually recalled in. The street line used to sit above these three,
@@ -224,6 +284,22 @@ export function ShippingForm({
           options={upazilaOptions}
           onSelect={upazilaReg.onChange}
         />
+        {deliveryHint && (
+          <p
+            className={cn(
+              "flex items-start gap-2 rounded-xl border px-3.5 py-2.5 text-sm sm:col-span-2",
+              deliveryHint.applied
+                ? "border-accent/30 bg-accent-soft/60 text-foreground"
+                : "border-border bg-surface-soft text-muted-foreground",
+              bn
+            )}
+          >
+            <LuBadgePercent
+              className={cn("mt-0.5 shrink-0", deliveryHint.applied ? "text-accent" : "text-primary")}
+            />
+            <span>{deliveryHint.text}</span>
+          </p>
+        )}
         <div className="sm:col-span-2">
           <Field
             bn={bn}

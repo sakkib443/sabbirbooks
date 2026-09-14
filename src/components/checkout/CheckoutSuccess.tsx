@@ -49,6 +49,10 @@ interface Labels {
   pendingStatusLabel: string;
   pendingStatusValue: string;
   viewMyOrders: string;
+  // A guest has no account and so no "my orders" page: their way back to the
+  // order is the phone tracker on the home page.
+  trackByPhone: string;
+  guestTrackNote: (phone: string) => string;
   amountLabel: string;
   channelName: (id: ManualChannel) => string;
   methodNames: Record<string, string>;
@@ -110,7 +114,22 @@ function PreOrderNote({
   );
 }
 
-export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Labels }) {
+/** Where a guest follows their order: the tracker section on the home page. */
+const GUEST_TRACK_HREF = "/#track-order";
+
+export function CheckoutSuccess({
+  result,
+  L,
+  isGuest = false,
+  phone = "",
+}: {
+  result: SuccessResult;
+  L: Labels;
+  /** Ordered without an account — no dashboard to link to. */
+  isGuest?: boolean;
+  /** The number the order was placed with, to say which one to track with. */
+  phone?: string;
+}) {
   const bn = L.bn;
   // The screen renders in whichever language the labels came in; the date has to
   // follow them, and `bn` is the only signal the component is given.
@@ -119,12 +138,12 @@ export function CheckoutSuccess({ result, L }: { result: SuccessResult; L: Label
   // Cash on delivery → nothing has been paid; the screen has to say what is
   // owed and when, or the buyer assumes the purchase is finished.
   if (result.kind === "cod") {
-    return <CodBody result={result} L={L} isBengali={isBengali} />;
+    return <CodBody result={result} L={L} isBengali={isBengali} isGuest={isGuest} phone={phone} />;
   }
 
   // Manual payment → pending verification screen (distinct from the paid flow).
   if (result.kind === "manual") {
-    return <PendingBody result={result} L={L} isBengali={isBengali} />;
+    return <PendingBody result={result} L={L} isBengali={isBengali} isGuest={isGuest} phone={phone} />;
   }
 
   const subtitle =
@@ -165,10 +184,14 @@ function CodBody({
   result,
   L,
   isBengali,
+  isGuest,
+  phone,
 }: {
   result: Extract<SuccessResult, { kind: "cod" }>;
   L: Labels;
   isBengali: boolean;
+  isGuest: boolean;
+  phone: string;
 }) {
   const bn = L.bn;
 
@@ -224,21 +247,28 @@ function CodBody({
           )}
         </div>
 
+        {isGuest && (
+          <p className={cn("mt-4 text-sm text-muted-foreground", bn)}>{L.guestTrackNote(phone)}</p>
+        )}
+
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           {/* Straight to this order's tracking page — the buyer's next question
               is "where is my parcel?", and making them find their own order in
               a list first is a step for nothing. `orderId` is the Mongo _id the
               tracking route needs; the ?ref fallback (order NUMBER, highlighted
-              in the list) only matters if a future flow stops carrying the id. */}
+              in the list) only matters if a future flow stops carrying the id.
+              A guest has no dashboard, so theirs goes to the phone tracker. */}
           <Link
             href={
-              result.orderId
-                ? `/dashboard/user/orders/${result.orderId}`
-                : `/dashboard/user/orders?ref=${encodeURIComponent(result.reference)}`
+              isGuest
+                ? GUEST_TRACK_HREF
+                : result.orderId
+                  ? `/dashboard/user/orders/${result.orderId}`
+                  : `/dashboard/user/orders?ref=${encodeURIComponent(result.reference)}`
             }
             className={cn(buttonVariants({ variant: "accent", size: "lg" }), "flex-1", bn)}
           >
-            <LuReceipt /> {L.viewMyOrders}
+            <LuReceipt /> {isGuest ? L.trackByPhone : L.viewMyOrders}
           </Link>
           <Link
             href="/books"
@@ -257,10 +287,14 @@ function PendingBody({
   result,
   L,
   isBengali,
+  isGuest,
+  phone,
 }: {
   result: Extract<SuccessResult, { kind: "manual" }>;
   L: Labels;
   isBengali: boolean;
+  isGuest: boolean;
+  phone: string;
 }) {
   const bn = L.bn;
   const subtitle =
@@ -272,13 +306,17 @@ function PendingBody({
   const continueHref = result.itemKind === "course" ? "/courses" : "/books";
   const continueLabel = result.itemKind === "course" ? L.continueCourses : L.continueBooks;
   // A book order is tracked on the orders pages; a course purchase has no
-  // parcel to follow, so it keeps going to the payment history.
+  // parcel to follow, so it keeps going to the payment history. A guest's book
+  // order is followed on the home page's phone tracker.
+  const guestBook = isGuest && result.itemKind === "book";
   const myHref =
     result.itemKind === "course"
       ? "/dashboard/user/payments"
-      : result.orderId
-        ? `/dashboard/user/orders/${result.orderId}`
-        : `/dashboard/user/orders?ref=${encodeURIComponent(result.reference)}`;
+      : guestBook
+        ? GUEST_TRACK_HREF
+        : result.orderId
+          ? `/dashboard/user/orders/${result.orderId}`
+          : `/dashboard/user/orders?ref=${encodeURIComponent(result.reference)}`;
 
   return (
     <div className="mx-auto max-w-xl">
@@ -303,12 +341,16 @@ function PendingBody({
 
         {result.preOrder && <PreOrderNote preOrder={result.preOrder} L={L} isBengali={isBengali} />}
 
+        {guestBook && (
+          <p className={cn("mt-4 text-sm text-muted-foreground", bn)}>{L.guestTrackNote(phone)}</p>
+        )}
+
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
             href={myHref}
             className={cn(buttonVariants({ variant: "accent", size: "lg" }), "flex-1", bn)}
           >
-            <LuReceipt /> {L.viewMyOrders}
+            <LuReceipt /> {guestBook ? L.trackByPhone : L.viewMyOrders}
           </Link>
           <Link
             href={continueHref}

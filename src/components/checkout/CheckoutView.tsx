@@ -28,10 +28,12 @@ import ShippingForm, { type ShippingFormValues } from "./ShippingForm";
 import PaymentMethod from "./PaymentMethod";
 import PayModeSelector from "./PayModeSelector";
 import CheckoutSuccess from "./CheckoutSuccess";
+import CollegePicker from "@/components/auth/CollegePicker";
 import {
   checkoutBook,
   fetchBook,
   fetchCheckoutOptions,
+  fetchColleges,
   fetchCourse,
   fetchGatewayStatus,
   fetchMe,
@@ -44,7 +46,9 @@ import {
   submitCourseManual,
   validateBookCoupon,
   type AppliedCoupon,
+  type OrderCollegeInput,
 } from "./checkoutApi";
+import { quoteDelivery } from "./deliveryCharge";
 import ManualPaymentDetails from "./ManualPaymentDetails";
 import GatewayChoice from "./GatewayChoice";
 import { LEGAL_PAGES } from "@/config/business";
@@ -61,6 +65,7 @@ import {
   CheckoutOptions,
   CheckoutStep,
   CheckoutType,
+  CollegeOption,
   ManualChannel,
   ManualDetails,
   OrderResult,
@@ -94,6 +99,12 @@ const CONSENT_POLICIES = ["terms-and-conditions", "refund-policy", "privacy-poli
 
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
 
+// A Bangladeshi mobile, however it is typed — the same test the server applies
+// (order.service normalizeBdMobile) after stripping spaces and dashes.
+const BD_MOBILE = /^(?:\+?88)?01[3-9]\d{8}$/;
+const isBdMobile = (v?: string) => BD_MOBILE.test(String(v || "").replace(/[\s-]/g, ""));
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export default function CheckoutView() {
   const { isBengali } = useLanguage();
   const bn = isBengali ? "hind-siliguri" : "";
@@ -117,8 +128,16 @@ export default function CheckoutView() {
 
   // ── Pay now vs pay the courier, and where the parcel is going ─────────────
   const [payMode, setPayMode] = useState<PayMode>("cod");
-  // The buyer's medical college, from /auth/me — decides free local delivery.
-  const [myCollege, setMyCollege] = useState("");
+  // The buyer's medical college — picked on this form, by anyone, account or
+  // not. A listed college fills the address and may carry its own delivery
+  // rate; a typed name (college not in the list) does neither.
+  const [colleges, setColleges] = useState<CollegeOption[]>([]);
+  const [college, setCollege] = useState<CollegeOption | null>(null);
+  const [collegeName, setCollegeName] = useState("");
+  const [collegeError, setCollegeError] = useState("");
+  // A signed-in buyer's college from their profile, matched to the directory
+  // once it has loaded.
+  const [profileCollege, setProfileCollege] = useState<{ id?: string; name?: string } | null>(null);
   const [options, setOptions] = useState<CheckoutOptions | null>(null);
 
   // ── Coupon (books) — stacks on top of the book's own offers ───────────────
@@ -314,9 +333,21 @@ export default function CheckoutView() {
   const shippingSchema = useMemo(
     () =>
       z.object({
-        name: z.string().min(1, S.shipErrName),
-        phone: z.string().min(6, S.shipErrPhone),
-        address: z.string().min(1, S.shipErrAddress),
+        name: z.string().trim().min(1, S.shipErrName),
+        // With no account behind an order, the number is the only way back to
+        // the buyer — the SMS, the courier's call, the order tracker. So it has
+        // to be a real Bangladeshi mobile, checked here with the rule the
+        // server enforces, so the buyer hears about a typo before pressing Pay.
+        phone: z.string().refine((v) => isBdMobile(v), S.shipErrPhone),
+        altPhone: z
+          .string()
+          .optional()
+          .refine((v) => !v?.trim() || isBdMobile(v), S.shipErrAltPhone),
+        email: z
+          .string()
+          .optional()
+          .refine((v) => !v?.trim() || EMAIL_SHAPE.test(v.trim()), S.shipErrEmail),
+        address: z.string().trim().min(1, S.shipErrAddress),
         // The three geography levels are now a guided cascade — division, then
         // its districts, then that district's upazilas — and the list covers
         // all of Bangladesh, so requiring all three is the whole point rather
@@ -361,50 +392,65 @@ export default function CheckoutView() {
     districtValue === prefilled.district &&
     divisionValue === prefilled.division;
 
-  // Delivery is one flat charge everywhere, waived in two cases, mirroring the
-  // server so the total never changes after Pay. The server recomputes it
-  // regardless — this is display, not the source of truth.
+  const upazilaValue = (useWatch({ control, name: "upazila" }) ?? "").trim();
+
+  // Delivery, priced exactly as the server prices it (deliveryCharge.ts mirrors
+  // order.service), so the total never changes after Pay. The server recomputes
+  // it regardless — this is display, not the source of truth.
   //
-  // 1. A subtotal at or above freeDeliveryAbove.
-  // 2. Free local delivery: the buyer studies at freeDeliveryCollege AND is
-  //    shipping within freeDeliveryDivision. Shipping to any other division
-  //    brings the charge back — hence the live divisionValue, not the college's.
-  const freeDeliveryAbove = options?.freeDeliveryAbove || 0;
-  const deliveryIsFreeBySubtotal =
-    freeDeliveryAbove > 0 && bookSubtotal - discount >= freeDeliveryAbove;
-  const deliveryIsFreeLocal =
-    !!options?.freeDeliveryCollege &&
-    myCollege === options.freeDeliveryCollege &&
-    divisionValue === options.freeDeliveryDivision;
-  const deliveryIsFree = deliveryIsFreeBySubtotal || deliveryIsFreeLocal;
+  //   free above the threshold → the college's own rate, only when the parcel
+  //   goes to that college's district AND upazila → the standard charge.
+  const deliveryQuote = quoteDelivery({
+    isPrinted: Boolean(isPrinted) && !!options,
+    standard: options?.deliveryCharge ?? 0,
+    codExtra: options?.codExtraCharge || 0,
+    isCod: effectivePayMode === "cod",
+    freeAbove: options?.freeDeliveryAbove || 0,
+    productTotal: bookSubtotal - discount,
+    college,
+    district: districtValue,
+    upazila: upazilaValue,
+  });
   // What delivery would cost without a coupon. The coupon is priced against
   // THIS number, so it has to exist before the waiver is applied to it.
-  const deliveryBeforeCoupon =
-    !isPrinted || !options || deliveryIsFree
-      ? 0
-      : (options.deliveryCharge ?? 0) +
-        (effectivePayMode === "cod" ? options.codExtraCharge || 0 : 0);
+  const deliveryBeforeCoupon = deliveryQuote.charge;
+
+  // Tell the buyer about their college's rate while they fill the address: that
+  // it applies, or that it would if the parcel went to the college's upazila.
+  const collegeRate = college?.deliveryCharge;
+  const collegeHasRate =
+    !!isPrinted && !!college?.upazila && collegeRate !== null && collegeRate !== undefined;
+  const deliveryHint = !collegeHasRate
+    ? null
+    : deliveryQuote.rule === "college"
+      ? { applied: true, text: S.collegeRateApplied(college!.name, deliveryBeforeCoupon) }
+      : deliveryQuote.rule === "standard"
+        ? {
+            applied: false,
+            text: S.collegeRateAvailable(college!.upazila!, college!.district || "", Number(collegeRate)),
+          }
+        : null;
   // A free-delivery coupon zeroes the delivery ROW rather than taking the same
   // taka off the books, because that row is what the buyer checks against what
   // the rider asks for. Same rule the order service applies on create.
   const deliveryCharge = appliedCoupon?.freeDelivery ? 0 : deliveryBeforeCoupon;
 
   // ── Meta Pixel: the order form was opened ─────────────────────────────────
-  // Ahead of the auth gate below, which sends a signed-out buyer to log in:
-  // someone who meant to buy and gave up at the sign-in screen still started a
-  // checkout. Once per tab session, because that buyer is brought straight
-  // back here after signing in.
+  // Once per tab session: a buyer who reloads the form, or leaves to sign in to
+  // a course and comes back, is still one checkout.
   useEffect(() => {
     if (type === "book" && slug) trackOncePerSession("InitiateCheckout");
   }, [type, slug]);
 
-  // ── Auth gate + item fetch ────────────────────────────────────────────────
+  // ── Auth gate (courses, digital books) + item fetch ───────────────────────
   useEffect(() => {
-    if (!getToken()) {
-      // Not logged in → login, and BACK HERE afterwards. Without the redirect a
-      // buyer who has already decided to buy is dropped on the homepage and has
-      // to find the order button again — the commonest way this shop was losing
-      // a sale it had already won.
+    // A PRINTED book needs no account. Access to the book's content comes from
+    // the code printed inside it, not from the order, so the order only has to
+    // reach the right person — and the signup form in front of it was where
+    // buyers who could not work it out gave up. A course is still enrolment
+    // into an account, so it keeps the login step, and comes BACK HERE after;
+    // a digital book does too, once its format is known (below).
+    if (!getToken() && type !== "book") {
       router.replace(`/login?redirect=${encodeURIComponent(backHere)}`);
       return;
     }
@@ -428,6 +474,12 @@ export default function CheckoutView() {
         const b = await fetchBook(slug as string);
         if (!active) return;
         if (!b || !b._id) return setPhase("notfound");
+        // A digital book is opened from the buyer's account, so it cannot be
+        // bought without one — the server refuses a guest's digital order too.
+        if (!getToken() && b.format !== "printed") {
+          router.replace(`/login?redirect=${encodeURIComponent(backHere)}`);
+          return;
+        }
         setBook(b);
         // Stock only caps the quantity for a book that has been printed. A
         // pre-order's stock is 0 by definition, and clamping to it would pin
@@ -520,20 +572,27 @@ export default function CheckoutView() {
       // /auth/me. WhatsApp first in both, so the field never briefly shows a
       // different number and then changes under the buyer's eyes.
       phone: (u?.whatsappNumber ?? u?.phoneNumber ?? "") as string,
+      altPhone: "",
+      email: "",
       address: "",
       division: "",
       district: "",
       upazila: "",
       note: "",
     });
+    // A guest has no profile: the form simply starts empty.
     void fetchMe().then((me) => {
       if (!active || !me) return;
       // Never overwrite something the buyer has already typed while this call
       // was in flight.
       const current = getValues();
 
-      // The college drives free local delivery, independent of any address.
-      setMyCollege((me.medicalCollegeName ?? "").trim());
+      // The profile's college, matched to the directory when it loads (see the
+      // effect below) — which is what fills the address and prices delivery.
+      if (me.medicalCollege || me.medicalCollegeName) {
+        setProfileCollege({ id: me.medicalCollege, name: (me.medicalCollegeName ?? "").trim() });
+      }
+      if (me.email && !(current.email ?? "").trim()) setValue("email", me.email);
 
       // Contact: the WhatsApp number the student signed up with, first.
       //
@@ -581,6 +640,58 @@ export default function CheckoutView() {
     };
   }, [isPrinted, reset, setValue, getValues]);
 
+  // The college directory, for printed books — it is what the picker lists and
+  // what a college's own delivery rate comes from.
+  useEffect(() => {
+    if (!isPrinted) return;
+    let active = true;
+    void fetchColleges().then((list) => {
+      if (active) setColleges(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isPrinted]);
+
+  /**
+   * Choose a college — from the picker, or from the buyer's profile.
+   *
+   * A listed college fills the address with where its campus is: division,
+   * district and upazila, parent first so each select already has the options
+   * the child value belongs to. The buyer can change any of them afterwards;
+   * the college's own delivery rate simply stops applying if they do.
+   */
+  const pickCollege = (picked: CollegeOption | null, typed = "") => {
+    setCollege(picked);
+    setCollegeName(picked ? "" : typed);
+    setCollegeError("");
+    if (!picked) return;
+    const division = (picked.division ?? "").trim();
+    const district = (picked.district ?? "").trim();
+    if (!division || !district) return;
+    const upazila = (picked.upazila ?? "").trim();
+    setValue("division", division);
+    setValue("district", district);
+    setValue("upazila", upazila && upazilasOf(division, district).includes(upazila) ? upazila : "");
+    setPrefilled({ division, district, college: picked.name });
+  };
+
+  // A signed-in buyer's profile college, once both it and the directory are in.
+  // Only while nothing has been chosen on this form yet — a pick made in the
+  // meantime is the buyer's decision and stands.
+  useEffect(() => {
+    if (!profileCollege || !colleges.length) return;
+    const match =
+      colleges.find((c) => profileCollege.id && c._id === profileCollege.id) ||
+      colleges.find((c) => profileCollege.name && c.name === profileCollege.name);
+    setProfileCollege(null);
+    // A profile naming a college the directory does not list is left for the
+    // buyer to pick or type — the picker has no way to show a name it cannot
+    // find, and a requirement met invisibly is worse than asking again.
+    if (match && !college && !collegeName.trim()) pickCollege(match);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileCollege, colleges]);
+
   // ── Run the end-to-end flow (A: course, B: book) ──────────────────────────
   const validateManual = (): boolean => {
     const e: typeof manualErrors = {};
@@ -606,6 +717,8 @@ export default function CheckoutView() {
       const c = await validateBookCoupon(code, bp.payable, S.couponInvalid, {
         paymentMethod: effectivePayMode === "cod" ? "cod" : "online",
         deliveryCharge: deliveryBeforeCoupon,
+        // A guest's "one use per buyer" is their phone number.
+        phone: (getValues("phone") ?? "").trim() || undefined,
       });
       setAppliedCoupon(c);
       setCouponInput("");
@@ -623,11 +736,21 @@ export default function CheckoutView() {
     setCouponInput("");
   };
 
+  // The college as the order API takes it: a listed one by id, else the typed name.
+  const collegeInput: OrderCollegeInput | undefined = college
+    ? { medicalCollege: college._id }
+    : collegeName.trim()
+      ? { medicalCollegeName: collegeName.trim() }
+      : undefined;
+
   const runCheckout = async (shipping?: ShippingAddress) => {
-    // Their session expired between opening the page and pressing the button.
-    // Same return path, so signing in again drops them back on the order they
-    // were halfway through rather than at the start.
-    if (!getToken()) return router.replace(`/login?redirect=${encodeURIComponent(backHere)}`);
+    // A course or a digital book needs an account, and the session may have
+    // expired between opening the page and pressing the button — same return
+    // path, so signing in again lands back here. A printed book is ordered with
+    // or without one.
+    if (!getToken() && !(type === "book" && isPrinted)) {
+      return router.replace(`/login?redirect=${encodeURIComponent(backHere)}`);
+    }
     setSubmitError("");
     setStep("creating");
     setPhase("processing");
@@ -695,6 +818,7 @@ export default function CheckoutView() {
             isLiveGateway: live,
             shippingAddress: shipping,
             couponCode: appliedCoupon?.code,
+            college: collegeInput,
             onProgress: setStep,
             genericErr: S.genericErr,
           });
@@ -710,6 +834,7 @@ export default function CheckoutView() {
             quantity,
             shippingAddress: shipping as ShippingAddress,
             couponCode: appliedCoupon?.code,
+            college: collegeInput,
             onProgress: setStep,
             genericErr: S.genericErr,
           });
@@ -734,6 +859,7 @@ export default function CheckoutView() {
             details,
             shippingAddress: shipping,
             couponCode: appliedCoupon?.code,
+            college: collegeInput,
             onProgress: setStep,
             genericErr: S.genericErr,
           });
@@ -785,11 +911,21 @@ export default function CheckoutView() {
       if (!validateManual()) return;
     }
     if (isPrinted) {
+      // The college is not a react-hook-form field (the picker is its own
+      // widget), so it is checked here — and the form is still validated in
+      // the same click, so every missing field lights up at once.
+      if (!college && !collegeName.trim()) {
+        setCollegeError(S.shipErrCollege);
+        void handleSubmit(() => undefined)();
+        return;
+      }
       // Gate the flow behind a valid shipping address. Blank geo fields are
       // dropped rather than sent as "".
       void handleSubmit((vals) =>
         runCheckout({
           ...vals,
+          altPhone: vals.altPhone?.trim() || undefined,
+          email: vals.email?.trim() || undefined,
           division: vals.division?.trim() || undefined,
           district: vals.district?.trim() || undefined,
           upazila: vals.upazila?.trim() || undefined,
@@ -841,7 +977,13 @@ export default function CheckoutView() {
     return (
       <main className="py-10 sm:py-14">
         <Container>
-          <CheckoutSuccess result={result} L={successLabels(S, bn)} />
+          <CheckoutSuccess
+            result={result}
+            L={successLabels(S, bn)}
+            // Decided at render: a guest has no "my orders" page to be sent to.
+            isGuest={!getToken()}
+            phone={(getValues("phone") ?? "").trim()}
+          />
         </Container>
       </main>
     );
@@ -948,6 +1090,18 @@ export default function CheckoutView() {
                 setValue={setValue}
                 bn={bn}
                 S={shippingLabels(S)}
+                collegeSlot={
+                  <CollegePicker
+                    value={college}
+                    customName={collegeName}
+                    onChange={(picked: CollegeOption | null, typed: string) => pickCollege(picked, typed)}
+                    bengali={isBengali}
+                    error={collegeError || undefined}
+                    label={S.shipCollege}
+                    placeholder={S.shipCollegePh}
+                  />
+                }
+                deliveryHint={deliveryHint}
                 prefill={
                   prefillIntact && prefilled
                     ? {
@@ -1522,8 +1676,25 @@ const EN = {
   shipSubtitle: "Where should we deliver your printed book?",
   shipName: "Full name",
   shipNamePh: "e.g. Dr. Ayesha Rahman",
-  shipPhone: "WhatsApp number",
+  shipPhone: "Mobile number",
   shipPhonePh: "01XXXXXXXXX",
+  shipAltPhone: "Another mobile number",
+  shipAltPhonePh: "01XXXXXXXXX",
+  shipEmail: "Email",
+  shipEmailPh: "you@example.com",
+  shipCollege: "Medical college",
+  shipCollegePh: "Choose your medical college",
+  shipErrAltPhone: "The second number is not a valid mobile number",
+  shipErrEmail: "Enter a valid email address",
+  shipErrCollege: "Choose your medical college",
+  collegeRateApplied: (college: string, tk: number) =>
+    tk === 0
+      ? `Delivery is free to ${college}'s area.`
+      : `${college}'s own delivery rate applies: ${formatTk(tk)}.`,
+  collegeRateAvailable: (upazila: string, district: string, tk: number) =>
+    `Sent to ${upazila}, ${district}, this order gets the college's own delivery rate — ${
+      tk === 0 ? "free" : formatTk(tk)
+    }.`,
   shipAddress: "Address (house / road / village)",
   shipAddressPh: "House, road, village",
   shipDivision: "Division",
@@ -1534,7 +1705,7 @@ const EN = {
   shipSelectUpazilaFirst: "Pick a district first",
   shipPrefilled: "District and division were filled in from your profile. Shipping somewhere else? Change them.",
   shipPrefilledFrom: (college: string) =>
-    `District and division were filled in from ${college}. Sending the book home instead? Change them.`,
+    `The address was filled in from ${college}. Sending the book somewhere else? Change it.`,
   shipPrefillClear: "Different address",
   zoneFollowsDistrict: (district: string, zone: string) =>
     `Delivery is charged by district — ${district} counts as ${zone}.`,
@@ -1542,7 +1713,7 @@ const EN = {
   shipNotePh: "Landmark or instructions",
   shipOptional: "optional",
   shipErrName: "Name is required",
-  shipErrPhone: "Enter a valid phone number",
+  shipErrPhone: "Enter a valid mobile number, e.g. 01712345678",
   shipErrAddress: "Address is required",
   shipErrDivision: "Select a division",
   shipErrDistrict: "Select a district",
@@ -1583,6 +1754,11 @@ const EN = {
   pendingStatusLabel: "Status",
   pendingStatusValue: "Awaiting verification",
   viewMyOrders: "View my orders",
+  trackByPhone: "Track this order",
+  guestTrackNote: (phone: string) =>
+    phone
+      ? `No account needed — look this order up any time with ${phone} in "Track your order" on the home page.`
+      : `No account needed — look this order up any time with your mobile number in "Track your order" on the home page.`,
   // success
   successTitle: "Payment successful!",
   successCourseSub: "Your enrollment is confirmed. You now have access to the course.",
@@ -1750,8 +1926,25 @@ const BN: Copy = {
   shipSubtitle: "আপনার প্রিন্টেড বই কোথায় পৌঁছে দেব?",
   shipName: "পুরো নাম",
   shipNamePh: "যেমন: ডা. আয়েশা রহমান",
-  shipPhone: "হোয়াটসঅ্যাপ নম্বর",
+  shipPhone: "মোবাইল নম্বর",
   shipPhonePh: "01XXXXXXXXX",
+  shipAltPhone: "আরেকটা মোবাইল নম্বর",
+  shipAltPhonePh: "01XXXXXXXXX",
+  shipEmail: "ইমেইল",
+  shipEmailPh: "you@example.com",
+  shipCollege: "মেডিকেল কলেজ",
+  shipCollegePh: "আপনার মেডিকেল কলেজ বেছে নিন",
+  shipErrAltPhone: "দ্বিতীয় নম্বরটি সঠিক মোবাইল নম্বর নয়",
+  shipErrEmail: "সঠিক ইমেইল দিন",
+  shipErrCollege: "মেডিকেল কলেজ বেছে নিন",
+  collegeRateApplied: (college: string, tk: number) =>
+    tk === 0
+      ? `${college}-এর এলাকায় ডেলিভারি ফ্রি।`
+      : `${college}-এর বিশেষ ডেলিভারি চার্জ প্রযোজ্য: ${formatTk(tk)}।`,
+  collegeRateAvailable: (upazila: string, district: string, tk: number) =>
+    `${district} জেলার ${upazila}-তে পাঠালে এই কলেজের বিশেষ ডেলিভারি চার্জ পাবেন — ${
+      tk === 0 ? "ফ্রি" : formatTk(tk)
+    }।`,
   shipAddress: "ঠিকানা (বাসা / রোড / গ্রাম)",
   shipAddressPh: "বাসা, রোড, গ্রাম",
   shipDivision: "বিভাগ",
@@ -1763,7 +1956,7 @@ const BN: Copy = {
   shipPrefilled:
     "জেলা ও বিভাগ আপনার প্রোফাইল থেকে বসানো হয়েছে। অন্য ঠিকানায় পাঠাতে চাইলে বদলে নিন।",
   shipPrefilledFrom: (college: string) =>
-    `জেলা ও বিভাগ ${college} অনুযায়ী বসানো হয়েছে। বাড়ির ঠিকানায় পাঠাতে চাইলে বদলে নিন।`,
+    `ঠিকানা ${college} অনুযায়ী বসানো হয়েছে। অন্য ঠিকানায় পাঠাতে চাইলে বদলে নিন।`,
   shipPrefillClear: "অন্য ঠিকানা",
   zoneFollowsDistrict: (district: string, zone: string) =>
     `ডেলিভারি চার্জ জেলা অনুযায়ী হিসাব হয় — ${district} মানে ${zone}।`,
@@ -1771,7 +1964,7 @@ const BN: Copy = {
   shipNotePh: "ল্যান্ডমার্ক বা নির্দেশনা",
   shipOptional: "ঐচ্ছিক",
   shipErrName: "নাম দিন",
-  shipErrPhone: "সঠিক ফোন নম্বর দিন",
+  shipErrPhone: "সঠিক মোবাইল নম্বর দিন, যেমন 01712345678",
   shipErrAddress: "ঠিকানা দিন",
   shipErrDivision: "বিভাগ বেছে নিন",
   shipErrDistrict: "জেলা বেছে নিন",
@@ -1810,6 +2003,11 @@ const BN: Copy = {
   pendingStatusLabel: "স্ট্যাটাস",
   pendingStatusValue: "যাচাইয়ের অপেক্ষায়",
   viewMyOrders: "আমার অর্ডার দেখুন",
+  trackByPhone: "অর্ডার ট্র্যাক করুন",
+  guestTrackNote: (phone: string) =>
+    phone
+      ? `অ্যাকাউন্ট লাগবে না — হোমপেজের "অর্ডার ট্র্যাক করুন"-এ ${phone} নম্বর দিলেই যেকোনো সময় এই অর্ডারের খবর দেখতে পাবেন।`
+      : `অ্যাকাউন্ট লাগবে না — হোমপেজের "অর্ডার ট্র্যাক করুন"-এ আপনার মোবাইল নম্বর দিলেই যেকোনো সময় এই অর্ডারের খবর দেখতে পাবেন।`,
   successTitle: "পেমেন্ট সফল হয়েছে!",
   successCourseSub: "আপনার এনরোলমেন্ট নিশ্চিত হয়েছে। এখন আপনি কোর্সটি অ্যাক্সেস করতে পারবেন।",
   successBookDigitalSub: "আপনার অর্ডার সম্পন্ন হয়েছে। নিচে থেকে ডিজিটাল বই ডাউনলোড করুন।",
@@ -1866,6 +2064,10 @@ function shippingLabels(S: Copy) {
     namePh: S.shipNamePh,
     phone: S.shipPhone,
     phonePh: S.shipPhonePh,
+    altPhone: S.shipAltPhone,
+    altPhonePh: S.shipAltPhonePh,
+    email: S.shipEmail,
+    emailPh: S.shipEmailPh,
     address: S.shipAddress,
     addressPh: S.shipAddressPh,
     division: S.shipDivision,
@@ -1922,6 +2124,8 @@ export function paymentReturnLabels(isBengali: boolean) {
     refLabel: S.retRefLabel,
     tryAgain: S.retTryAgain,
     viewOrder: S.retViewOrder,
+    // A buyer who paid without an account follows the order on the home page.
+    trackOrder: S.trackByPhone,
     backToBooks: S.retBackToBooks,
   };
 }
@@ -1988,6 +2192,8 @@ function successLabels(S: Copy, bn: string) {
     pendingStatusLabel: S.pendingStatusLabel,
     pendingStatusValue: S.pendingStatusValue,
     viewMyOrders: S.viewMyOrders,
+    trackByPhone: S.trackByPhone,
+    guestTrackNote: S.guestTrackNote,
     amountLabel: S.successPaid,
     // Cash on delivery
     codTitle: S.codSuccessTitle,

@@ -30,12 +30,9 @@ export type DeliveryArea = "inside-dhaka" | "outside-dhaka";
 export interface CheckoutOptions {
   codEnabled: boolean;
   onlinePaymentEnabled: boolean;
-  // One flat charge everywhere (the inside/outside-Dhaka split is retired).
+  // The standard charge. A college can have its own rate — it arrives with the
+  // college list (CollegeOption.deliveryCharge), not here.
   deliveryCharge: number;
-  // Free local delivery: a student of freeDeliveryCollege shipping within
-  // freeDeliveryDivision pays nothing. Empty college = rule off.
-  freeDeliveryCollege: string;
-  freeDeliveryDivision: string;
   codExtraCharge: number;
   freeDeliveryAbove: number;
   deliveryNote: string;
@@ -128,7 +125,26 @@ export interface ShippingAddress {
   // The upazila/thana. `city` carries the same value so the server's required
   // city and the notification address line stay populated.
   upazila?: string;
+  /** A second number for the courier. Optional. */
+  altPhone?: string;
+  /** Where the order emails go. Optional — a guest may have none. */
+  email?: string;
   note?: string;
+}
+
+// ── Medical college (GET /api/medical-colleges) ────────────────────────────
+// What the checkout needs from the directory: where the campus is, to fill the
+// address, and its own delivery rate, which applies only when the parcel goes
+// to that same district AND upazila (see collegeRateApplies in deliveryCharge.ts).
+export interface CollegeOption {
+  _id: string;
+  name: string;
+  type?: string;
+  division?: string;
+  district?: string;
+  upazila?: string;
+  /** null/undefined = no special rate. 0 = free, COD surcharge included. */
+  deliveryCharge?: number | null;
 }
 
 // ── Order (returned by /api/orders create + complete) ──────────────────────
@@ -153,6 +169,15 @@ export interface OrderResult {
   status: string;
   payment: { status: string; method?: string; transactionId?: string };
   shippingAddress?: ShippingAddress;
+  /** Present on a guest order — no account. */
+  user?: string | null;
+  college?: { name: string; district?: string; upazila?: string };
+  deliveryRule?: "digital" | "free-above" | "college" | "standard";
+  /**
+   * Only in the create response: the key that lets this browser pay for and read
+   * back an order placed without an account. Kept in localStorage per order.
+   */
+  accessKey?: string;
 }
 
 // What a pre-order promises the buyer about delivery. Carried onto the success

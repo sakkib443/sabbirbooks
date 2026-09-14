@@ -10,7 +10,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiSettings, FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiBell, FiChevronLeft, FiTag, FiGlobe, FiClipboard, FiLink,
-  FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey, FiUnlock,
+  FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey, FiUnlock, FiTruck,
 } from 'react-icons/fi';
 
 const AdminSidebar = () => {
@@ -102,6 +102,9 @@ const AdminSidebar = () => {
             { title: 'Delete an Order', href: '/dashboard/admin/book-orders/delete', need: ['records.delete'] },
           ],
         },
+        // The standard charge and each medical college's own rate. A rate is a
+        // price, so settings.write — the same gate as the API behind it.
+        { title: 'Delivery Charges', href: '/dashboard/admin/delivery-charges', icon: FiTruck, need: ['settings.write'] },
         // Two menus, because there are two different things.
         //
         // A coupon is a discount with a code on it — a launch offer, a

@@ -18,6 +18,7 @@ import {
   CheckoutCourse,
   CheckoutOptions,
   CheckoutStep,
+  CollegeOption,
   ManualDetails,
   OrderResult,
   PaymentMethod,
@@ -67,6 +68,44 @@ function authHeaders(): Record<string, string> {
   };
 }
 
+// ── Order access keys ──────────────────────────────────────────────────────
+// Ordering does not need an account. A guest's order comes back from POST
+// /orders with an `accessKey` — the one thing that lets this browser pay for the
+// order and read it back after the gateway returns. It is kept per order id in
+// localStorage and sent as `x-order-key`. A signed-in buyer's token already does
+// the same job, so for them the key is simply a second way in.
+const ORDER_KEY_PREFIX = "mv_order_key:";
+
+function rememberOrderKey(orderId?: string, key?: string): void {
+  if (typeof window === "undefined" || !orderId || !key) return;
+  try {
+    localStorage.setItem(ORDER_KEY_PREFIX + orderId, key);
+  } catch {
+    // Storage blocked: a signed-in buyer still has their token; a guest who
+    // cannot store the key still gets the COD order and the SMS.
+  }
+}
+
+export function orderKeyFor(orderId?: string | null): string {
+  if (typeof window === "undefined" || !orderId) return "";
+  try {
+    return localStorage.getItem(ORDER_KEY_PREFIX + orderId) || "";
+  } catch {
+    return "";
+  }
+}
+
+const orderKeyHeader = (orderId?: string): Record<string, string> => {
+  const key = orderKeyFor(orderId);
+  return key ? { "x-order-key": key } : {};
+};
+
+/** The buyer's college for an order: a listed one by id, or a typed name. */
+export interface OrderCollegeInput {
+  medicalCollege?: string;
+  medicalCollegeName?: string;
+}
+
 async function readJson(res: Response): Promise<Record<string, unknown>> {
   try {
     return (await res.json()) as Record<string, unknown>;
@@ -79,6 +118,11 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
 // at signup from the medical college they picked, which is the only address
 // hint the shop has before their first order.
 export interface MeProfile {
+  /** The directory id of the college picked at signup, when it was a listed one. */
+  medicalCollege?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
   phoneNumber?: string;
   // The number given at signup — a student supplies a WhatsApp number, often no
   // separate phone, so it doubles as the delivery contact on checkout.
@@ -112,13 +156,14 @@ export async function fetchMe(): Promise<MeProfile | null> {
 async function post<T = Record<string, unknown>>(
   path: string,
   body: unknown,
-  fallbackErr: string
+  fallbackErr: string,
+  extraHeaders: Record<string, string> = {}
 ): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
-      headers: authHeaders(),
+      headers: { ...authHeaders(), ...extraHeaders },
       body: JSON.stringify(body),
     });
   } catch {
@@ -161,7 +206,9 @@ export async function validateBookCoupon(
   code: string,
   amount: number,
   fallbackErr: string,
-  ctx: { paymentMethod?: string | null; deliveryCharge?: number } = {}
+  // `phone` lets a guest's "one use per buyer" be checked in the preview too —
+  // without an account, the phone number is who the buyer is.
+  ctx: { paymentMethod?: string | null; deliveryCharge?: number; phone?: string } = {}
 ): Promise<AppliedCoupon> {
   return post<AppliedCoupon>(
     "/book-coupons/validate",
@@ -305,6 +352,7 @@ export async function checkoutBook(opts: {
   isLiveGateway: boolean;
   shippingAddress?: ShippingAddress;
   couponCode?: string;
+  college?: OrderCollegeInput;
   onProgress?: (s: CheckoutStep) => void;
   genericErr: string;
 }): Promise<{ redirected: true } | { redirected: false; order: OrderResult }> {
@@ -318,14 +366,23 @@ export async function checkoutBook(opts: {
       items: [{ bookSlugOrId: book.slug, quantity }],
       ...(shippingAddress ? { shippingAddress } : {}),
       ...(opts.couponCode ? { couponCode: opts.couponCode } : {}),
+      ...(opts.college || {}),
     },
     genericErr
   );
   if (!order?._id) throw new Error(genericErr);
+  // Before the gateway: this browser needs the key to open the payment session
+  // below, and again on /payment/return to read the result.
+  rememberOrderKey(order._id, order.accessKey);
 
   // 2) Open the gateway session.
   onProgress?.("paying");
-  const session = await post<GatewaySession>(`/orders/${order._id}/pay/${method}`, {}, genericErr);
+  const session = await post<GatewaySession>(
+    `/orders/${order._id}/pay/${method}`,
+    {},
+    genericErr,
+    orderKeyHeader(order._id)
+  );
 
   // 3a) Real gateway → leave the app. Nothing else is done client-side: the
   //     callback and IPN settle the order server-side, so closing the tab mid-
@@ -361,6 +418,7 @@ export async function submitBookCod(opts: {
   quantity: number;
   shippingAddress: ShippingAddress;
   couponCode?: string;
+  college?: OrderCollegeInput;
   onProgress?: (s: CheckoutStep) => void;
   genericErr: string;
 }): Promise<OrderResult> {
@@ -374,11 +432,45 @@ export async function submitBookCod(opts: {
       shippingAddress,
       paymentMethod: "cod",
       ...(opts.couponCode ? { couponCode: opts.couponCode } : {}),
+      ...(opts.college || {}),
     },
     genericErr
   );
   if (!order?._id) throw new Error(genericErr);
+  rememberOrderKey(order._id, order.accessKey);
   return order;
+}
+
+// ── Medical colleges (public) ──────────────────────────────────────────────
+// The directory the checkout fills the address from and prices delivery with.
+// [] on failure: the buyer can still type their college and their address.
+export async function fetchColleges(): Promise<CollegeOption[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/medical-colleges`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const json = await readJson(res);
+    return Array.isArray(json.data) ? (json.data as CollegeOption[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+// ── One order, as the person who placed it ─────────────────────────────────
+// The signed-in owner's token, or — for a guest — the order's key saved when it
+// was created. null on any failure; callers only use this to show or count a
+// result, never to decide one.
+export async function fetchOrderAsBuyer(orderId: string): Promise<OrderResult | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}`, {
+      headers: { ...authHeaders(), ...orderKeyHeader(orderId) },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await readJson(res);
+    return (json.data as OrderResult) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Checkout options: enabled methods + delivery charges (public) ───────────
@@ -447,6 +539,7 @@ export async function submitBookManual(opts: {
   details: ManualDetails;
   shippingAddress?: ShippingAddress;
   couponCode?: string;
+  college?: OrderCollegeInput;
   onProgress?: (s: CheckoutStep) => void;
   genericErr: string;
 }): Promise<OrderResult> {
@@ -460,10 +553,12 @@ export async function submitBookManual(opts: {
       items: [{ bookSlugOrId: book.slug, quantity }],
       ...(shippingAddress ? { shippingAddress } : {}),
       ...(opts.couponCode ? { couponCode: opts.couponCode } : {}),
+      ...(opts.college || {}),
     },
     genericErr
   );
   if (!order?._id) throw new Error(genericErr);
+  rememberOrderKey(order._id, order.accessKey);
 
   // 2) Attach the manual Send-Money details — order stays pending for admin review.
   onProgress?.("confirming");
@@ -476,7 +571,8 @@ export async function submitBookManual(opts: {
       sentAt: details.sentAt || undefined,
       note: details.note || undefined,
     },
-    genericErr
+    genericErr,
+    orderKeyHeader(order._id)
   );
   return updated;
 }
