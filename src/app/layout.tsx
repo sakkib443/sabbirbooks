@@ -61,6 +61,16 @@ const hindSiliguri = Hind_Siliguri({
   variable: "--font-hind-siliguri",
 });
 
+// Meta Business domain verification: Meta's crawler reads this tag on the home
+// page to confirm the domain belongs to the shop's business account. It is a
+// public code, not a secret. It sits outside the brand lookup below so it is in
+// every response, even when the settings API is down. facebookexternalhit is
+// one of the HTML-limited bots Next.js serves blocking metadata to, so the tag
+// lands in <head> for Meta even though this metadata is generated.
+const META_TAGS: Metadata["other"] = {
+  "facebook-domain-verification": "mhe2gdj5p1c07y6p1rueqfo96bumt9",
+};
+
 // Tab title, share previews and the favicon all follow the brand configured in
 // the admin panel, so renaming the site does not leave the old name in the
 // browser tab. Cached for five minutes — this runs on every page render, and the
@@ -69,6 +79,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const fallback: Metadata = {
     title: "Magic Viva",
     description: "A medical course and book platform.",
+    other: META_TAGS,
   };
 
   const api = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/?$/i, "");
@@ -87,6 +98,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description:
         s.heroDescription || `${s.brandName} — medical courses, books and QR resources.`,
       ...(icon ? { icons: { icon } } : {}),
+      other: META_TAGS,
     };
   } catch {
     // The site must still render when the API is down.
