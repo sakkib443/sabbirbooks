@@ -10,6 +10,9 @@
  *   EARNED    money in hand — delivered, or paid online up front
  *   UPCOMING  sold but not yet collected
  *
+ * Each with or without the delivery charge (the switch in the header), and the
+ * books sold and the delivery charges shown on their own.
+ *
  * An account without `orders.read` gets the content workspace instead, and
  * never fires the request — so the network tab holds no half-answered business
  * questions either.
@@ -25,6 +28,7 @@ import {
 import { can, getStoredUser } from '@/lib/permissions';
 import {
   MoneyCard, RangeBar, RevenueChart, ChartLegend, resolvePreset, tk,
+  DeliveryToggle, BooksAndDelivery, useDeliveryMode, moneyIn, modeNote, booksLabel,
 } from '@/components/admin/stats/OrderStats';
 
 const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -46,6 +50,7 @@ export default function AdminDashboard() {
   const [draft, setDraft] = useState(() => resolvePreset('30d'));
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useDeliveryMode();
 
   const showOrderDashboard = can(getStoredUser(), 'orders.read');
 
@@ -112,6 +117,10 @@ export default function AdminDashboard() {
 
   const r = stats?.range;
   const t = stats?.totals;
+  // The three money figures, with or without the delivery charge as chosen.
+  const tm = moneyIn(t, mode);
+  const rm = moneyIn(r, mode);
+  const todayM = moneyIn(stats?.today, mode);
 
   return (
     <div className="space-y-4">
@@ -127,6 +136,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <DeliveryToggle mode={mode} onChange={setMode} />
           <button onClick={fetchData} className="flex items-center gap-1.5 rounded-lg border border-dash-line bg-dash-soft px-3 py-1.5 text-xs font-medium text-dash-ink4 transition hover:bg-dash-soft2">
             <FiRefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Reload
           </button>
@@ -148,20 +158,23 @@ export default function AdminDashboard() {
         />
         <MoneyCard
           icon={FiPackage} tone="indigo" loading={loading}
-          label="Total Value" value={tk(t?.value)}
+          label="Total Value" value={tk(tm.value)}
           note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, all time`}
         />
         <MoneyCard
           icon={FiDollarSign} tone="emerald" loading={loading}
-          label="Total Earned" value={tk(t?.earned)}
+          label="Total Earned" value={tk(tm.earned)}
           note="Delivered + paid online"
         />
         <MoneyCard
           icon={FiTruck} tone="sky" loading={loading}
-          label="Upcoming" value={tk(t?.upcoming)}
+          label="Upcoming" value={tk(tm.upcoming)}
           note="Sold, not yet collected"
         />
       </div>
+
+      {/* The two things the totals fold together: the books, and the delivery. */}
+      <BooksAndDelivery bucket={t} loading={loading} scope="all time" />
 
       {/* Date range */}
       <RangeBar
@@ -178,27 +191,35 @@ export default function AdminDashboard() {
           <div>
             <h2 className="text-base font-semibold text-dash-ink2 outfit-semibold">Order Revenue</h2>
             <p className="mt-0.5 text-xs text-dash-mute2">
-              {r ? `${r.from} → ${r.to}` : 'Loading…'}
+              {r ? `${r.from} → ${r.to} · ${modeNote(mode)}` : 'Loading…'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-5">
             <div className="text-right">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Sold</p>
-              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{tk(r?.value)}</p>
+              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{tk(rm.value)}</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Earned</p>
-              <p className="text-sm font-bold text-emerald-600 outfit tabular-nums">{tk(r?.earned)}</p>
+              <p className="text-sm font-bold text-emerald-600 outfit tabular-nums">{tk(rm.earned)}</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Orders</p>
               <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{(r?.orders ?? 0).toLocaleString('en-US')}</p>
             </div>
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Books</p>
+              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{(r?.copies ?? 0).toLocaleString('en-US')}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Delivery</p>
+              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{tk(r?.delivery?.value)}</p>
+            </div>
             <ChartLegend />
           </div>
         </div>
         <div className="px-2 pb-2">
-          <RevenueChart daily={r?.daily} loading={loading} />
+          <RevenueChart daily={r?.daily} loading={loading} mode={mode} />
         </div>
       </div>
 
@@ -207,7 +228,7 @@ export default function AdminDashboard() {
         <MoneyCard
           icon={FiShoppingCart} tone="brand" loading={loading}
           label="Today's Orders" value={(stats?.today?.orders ?? 0).toLocaleString('en-US')}
-          note={`${tk(stats?.today?.value)} sold · ${tk(stats?.today?.earned)} earned`}
+          note={`${booksLabel(stats?.today?.copies)} · ${tk(todayM.value)} sold · ${tk(todayM.earned)} earned`}
         />
         <MoneyCard
           icon={FiTag} tone="indigo" loading={loading}

@@ -138,11 +138,19 @@ export default function NotificationBell() {
         }
       `}</style>
 
-      {/* Dropdown */}
+      {/* Dropdown.
+          Phone: pinned under the topbar, the full width less a margin. A
+          360px panel hung off the bell's right edge ran past the LEFT edge of
+          the screen, because on a phone the bell is not at the far right — the
+          profile button is. `fixed` here resolves against the topbar (its
+          backdrop-blur makes it the containing block), which spans the screen
+          and sits at the top, so top-[4.5rem] lands just below it. The height
+          stops short of the bottom tab bar, and the list scrolls inside.
+          sm and up: the usual dropdown beside the bell. */}
       {open && (
-        <div className="absolute right-0 top-12 w-[360px] sm:w-[400px] bg-dash-card rounded-2xl shadow-2xl shadow-dash-line-strong/40 z-50 overflow-hidden border border-dash-line-soft">
+        <div className="fixed inset-x-3 top-[4.5rem] z-50 flex max-h-[calc(100dvh-10rem)] flex-col overflow-hidden rounded-2xl border border-dash-line-soft bg-dash-card shadow-2xl shadow-dash-line-strong/40 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:max-h-none sm:w-[400px]">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-dash-soft to-dash-card border-b border-dash-line-soft/80">
+          <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-3.5 sm:px-5 bg-gradient-to-r from-dash-soft to-dash-card border-b border-dash-line-soft/80">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-sm shadow-teal-500/20">
                 <FiBell size={14} className="text-white" />
@@ -165,8 +173,8 @@ export default function NotificationBell() {
             </div>
           </div>
 
-          {/* List */}
-          <div className="max-h-[420px] overflow-y-auto">
+          {/* List — fills the panel on a phone, capped beside the bell */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:max-h-[420px]">
             {loading ? (
               <div className="p-10 text-center">
                 <div className="inline-block w-6 h-6 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
@@ -216,8 +224,10 @@ export default function NotificationBell() {
                         <p className="text-[12px] text-dash-mute mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
                         <div className="flex items-center gap-2 mt-1.5">
                           <span className="text-[10px] text-dash-mute2 font-medium">{timeAgo(n.createdAt)}</span>
+                          {/* Shown on hover with a mouse; always shown on a
+                              touch screen, which has no hover to reveal it. */}
                           {n.link && (
-                            <span className="text-[10px] text-teal-500 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                            <span className="text-[10px] text-teal-500 flex items-center gap-0.5 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
                               <FiExternalLink size={9} /> দেখুন
                             </span>
                           )}
@@ -227,7 +237,8 @@ export default function NotificationBell() {
                       {/* Delete */}
                       <button
                         onClick={(e) => { e.stopPropagation(); removeOne(n._id); }}
-                        className="absolute right-3 top-3 p-1.5 rounded-lg text-dash-faint hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                        aria-label="Delete notification"
+                        className="absolute right-3 top-3 p-1.5 rounded-lg text-dash-faint hover:text-red-500 hover:bg-red-50 transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-visible:opacity-100"
                       >
                         <FiTrash2 size={12} />
                       </button>
@@ -240,7 +251,7 @@ export default function NotificationBell() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="px-4 py-2.5 border-t border-dash-line-soft/80 bg-gradient-to-r from-dash-soft/80 to-dash-card flex items-center justify-between">
+            <div className="shrink-0 px-4 py-2.5 border-t border-dash-line-soft/80 bg-gradient-to-r from-dash-soft/80 to-dash-card flex items-center justify-between gap-2">
               <a href={(() => {
                   try {
                     const u = JSON.parse(localStorage.getItem('user') || '{}');

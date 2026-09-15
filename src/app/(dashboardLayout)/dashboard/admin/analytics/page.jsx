@@ -12,18 +12,22 @@
  *   VALUE     what has been sold
  *   EARNED    money in hand — delivered, or paid online up front
  *   UPCOMING  sold but not yet collected
+ *
+ * With or without the delivery charge (the header switch), plus the books sold
+ * and the delivery charges on their own, and each title's copies and sales.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   FiTrendingUp, FiPackage, FiDollarSign, FiTruck, FiShoppingCart, FiRefreshCw,
-  FiTag, FiGift, FiCreditCard, FiAlertCircle, FiArrowRight, FiPieChart,
+  FiTag, FiGift, FiCreditCard, FiAlertCircle, FiArrowRight, FiPieChart, FiBook,
 } from 'react-icons/fi';
 
 import { can, getStoredUser } from '@/lib/permissions';
 import {
   MoneyCard, RangeBar, RevenueChart, ChartLegend, resolvePreset, tk,
+  DeliveryToggle, BooksAndDelivery, useDeliveryMode, moneyIn, rowValue, modeNote, booksLabel,
 } from '@/components/admin/stats/OrderStats';
 
 const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -50,23 +54,24 @@ const METHOD_LABEL = {
   unpaid: 'Not paid yet',
 };
 
-/** A labelled proportion row — used for both breakdowns. */
-function BarRow({ label, badge, orders, value, total }) {
+/** A labelled proportion row — used for every breakdown. */
+function BarRow({ label, badge, orders, copies, value, total, capitalize = true }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <div className="py-2.5">
       <div className="flex items-center justify-between gap-3">
-        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold capitalize ${badge || 'border-dash-line text-dash-ink3'}`}>
+        <span className={`inline-block min-w-0 truncate rounded-md border px-2 py-0.5 text-xs font-semibold ${capitalize ? 'capitalize' : ''} ${badge || 'border-dash-line text-dash-ink3'}`}>
           {label}
         </span>
-        <span className="text-sm font-bold tabular-nums text-dash-ink2">{tk(value)}</span>
+        <span className="shrink-0 text-sm font-bold tabular-nums text-dash-ink2">{tk(value)}</span>
       </div>
       <div className="mt-1.5 flex items-center gap-2">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-dash-soft2">
           <div className="h-full rounded-full bg-gradient-to-r from-brand to-brand-hover" style={{ width: `${pct}%` }} />
         </div>
-        <span className="w-24 shrink-0 text-right text-[11px] text-dash-mute2 tabular-nums">
-          {orders} order{orders === 1 ? '' : 's'} · {pct}%
+        <span className="shrink-0 text-right text-[11px] text-dash-mute2 tabular-nums">
+          {orders} order{orders === 1 ? '' : 's'}
+          {copies !== undefined && ` · ${booksLabel(copies)}`} · {pct}%
         </span>
       </div>
     </div>
@@ -80,6 +85,7 @@ export default function BookAnalyticsPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [mode, setMode] = useDeliveryMode();
 
   const allowed = can(getStoredUser(), 'analytics.read') || can(getStoredUser(), 'orders.read');
 
@@ -112,25 +118,29 @@ export default function BookAnalyticsPage() {
   };
 
   const r = stats?.range;
+  const rm = moneyIn(r, mode);
+  const allTime = moneyIn(stats?.totals, mode);
 
+  // Breakdown values follow the delivery switch, like every other figure.
   const statusRows = useMemo(() => {
     const by = stats?.byStatus || {};
-    const total = Object.values(by).reduce((s, x) => s + (x.value || 0), 0);
-    return {
-      total,
-      rows: STATUS_ORDER.filter((s) => by[s]).map((s) => ({ key: s, ...by[s] })),
-    };
-  }, [stats]);
+    const rows = STATUS_ORDER.filter((s) => by[s]).map((s) => ({ key: s, ...by[s], shown: rowValue(by[s], mode) }));
+    return { total: rows.reduce((s, x) => s + x.shown, 0), rows };
+  }, [stats, mode]);
 
   const methodRows = useMemo(() => {
     const by = stats?.byMethod || {};
-    const total = Object.values(by).reduce((s, x) => s + (x.value || 0), 0);
-    return {
-      total,
-      rows: Object.entries(by)
-        .map(([k, v]) => ({ key: k, ...v }))
-        .sort((a, b) => b.value - a.value),
-    };
+    const rows = Object.entries(by)
+      .map(([k, v]) => ({ key: k, ...v, shown: rowValue(v, mode) }))
+      .sort((a, b) => b.shown - a.shown);
+    return { total: rows.reduce((s, x) => s + x.shown, 0), rows };
+  }, [stats, mode]);
+
+  // Titles — always book money: a delivery charge belongs to the parcel, not
+  // to any one book in it.
+  const bookRows = useMemo(() => {
+    const rows = stats?.byBook || [];
+    return { total: rows.reduce((s, b) => s + (b.sales || 0), 0), rows };
   }, [stats]);
 
   if (!allowed) {
@@ -159,6 +169,7 @@ export default function BookAnalyticsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <DeliveryToggle mode={mode} onChange={setMode} />
           <button onClick={fetchData} className="flex items-center gap-1.5 rounded-lg border border-dash-line bg-dash-soft px-3 py-1.5 text-xs font-medium text-dash-ink4 transition hover:bg-dash-soft2">
             <FiRefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Reload
           </button>
@@ -187,12 +198,15 @@ export default function BookAnalyticsPage() {
         <MoneyCard icon={FiShoppingCart} tone="brand" loading={loading}
           label="Orders in period" value={(r?.orders ?? 0).toLocaleString('en-US')} note="Cancelled excluded" />
         <MoneyCard icon={FiPackage} tone="indigo" loading={loading}
-          label="Total Value" value={tk(r?.value)} note="What was sold" />
+          label="Total Value" value={tk(rm.value)} note="What was sold" />
         <MoneyCard icon={FiDollarSign} tone="emerald" loading={loading}
-          label="Total Earned" value={tk(r?.earned)} note="Delivered + paid online" />
+          label="Total Earned" value={tk(rm.earned)} note="Delivered + paid online" />
         <MoneyCard icon={FiTruck} tone="sky" loading={loading}
-          label="Upcoming" value={tk(r?.upcoming)} note="Still to be collected" />
+          label="Upcoming" value={tk(rm.upcoming)} note="Still to be collected" />
       </div>
+
+      {/* The books and the delivery charges, each on its own. */}
+      <BooksAndDelivery bucket={r} loading={loading} scope="this period" />
 
       {/* Chart */}
       <div className="rounded-xl border border-dash-line/60 bg-dash-card shadow-sm">
@@ -200,14 +214,36 @@ export default function BookAnalyticsPage() {
           <div>
             <h2 className="text-base font-semibold text-dash-ink2 outfit-semibold">Sold vs Earned</h2>
             <p className="mt-0.5 text-xs text-dash-mute2">
-              The gap between the two lines is money still out with couriers and buyers.
+              The gap between the two lines is money still out with couriers and buyers · {modeNote(mode)}.
             </p>
           </div>
           <ChartLegend />
         </div>
         <div className="px-2 pb-2">
-          <RevenueChart daily={r?.daily} loading={loading} />
+          <RevenueChart daily={r?.daily} loading={loading} mode={mode} />
         </div>
+      </div>
+
+      {/* By title */}
+      <div className="rounded-xl border border-dash-line/60 bg-dash-card p-5 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-dash-ink2 outfit-semibold">
+          <FiBook size={15} className="text-brand" /> By book
+        </h2>
+        <p className="mb-2 text-xs text-dash-mute2">
+          Copies sold of each title in this period, and what they sold for after offers and coupons — without the delivery charge.
+        </p>
+        {loading ? (
+          <div className="h-24 animate-pulse rounded-lg bg-dash-soft" />
+        ) : bookRows.rows.length === 0 ? (
+          <p className="py-6 text-center text-sm text-dash-mute2">No books sold in this period.</p>
+        ) : (
+          <div className="divide-y divide-dash-line-soft">
+            {bookRows.rows.map((b) => (
+              <BarRow key={b.book || b.title} label={b.title} capitalize={false}
+                orders={b.orders} copies={b.copies} value={b.sales} total={bookRows.total} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Breakdowns */}
@@ -225,7 +261,7 @@ export default function BookAnalyticsPage() {
             <div className="divide-y divide-dash-line-soft">
               {statusRows.rows.map((s) => (
                 <BarRow key={s.key} label={s.key} badge={STATUS_STYLE[s.key]}
-                  orders={s.orders} value={s.value} total={statusRows.total} />
+                  orders={s.orders} copies={s.copies} value={s.shown} total={statusRows.total} />
               ))}
             </div>
           )}
@@ -244,7 +280,7 @@ export default function BookAnalyticsPage() {
             <div className="divide-y divide-dash-line-soft">
               {methodRows.rows.map((m) => (
                 <BarRow key={m.key} label={METHOD_LABEL[m.key] || m.key}
-                  orders={m.orders} value={m.value} total={methodRows.total} />
+                  orders={m.orders} copies={m.copies} value={m.shown} total={methodRows.total} />
               ))}
             </div>
           )}
@@ -254,10 +290,10 @@ export default function BookAnalyticsPage() {
       {/* All-time + coupons */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MoneyCard icon={FiPackage} tone="indigo" loading={loading}
-          label="All-time Value" value={tk(stats?.totals?.value)}
-          note={`${(stats?.totals?.orders ?? 0).toLocaleString('en-US')} orders`} />
+          label="All-time Value" value={tk(allTime.value)}
+          note={`${(stats?.totals?.orders ?? 0).toLocaleString('en-US')} orders · ${booksLabel(stats?.totals?.copies)}`} />
         <MoneyCard icon={FiDollarSign} tone="emerald" loading={loading}
-          label="All-time Earned" value={tk(stats?.totals?.earned)} note="Money in hand" />
+          label="All-time Earned" value={tk(allTime.earned)} note="Money in hand" />
         <MoneyCard icon={FiTag} tone="brand" loading={loading}
           label="Coupon Sales" value={(stats?.coupons?.orders ?? 0).toLocaleString('en-US')}
           note={`${tk(stats?.coupons?.discount)} discount given`}

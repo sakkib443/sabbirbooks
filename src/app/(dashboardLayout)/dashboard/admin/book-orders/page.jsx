@@ -14,11 +14,12 @@ import {
   FiShoppingBag, FiSearch, FiLoader, FiRefreshCw, FiAlertCircle,
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
-  FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign,
+  FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { getStoredUser } from '@/lib/permissions';
+import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
 
 const CHANNEL_LABEL = { bkash: 'bKash', rocket: 'Rocket', nagad: 'Nagad' };
 
@@ -35,9 +36,34 @@ const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
 
 // The desktop table's column widths. Declared once and used by BOTH the header
 // strip and every row, because a table whose header does not line up with its
-// cells is worse than no header at all.
+// cells is worse than no header at all. It needs ~900px, so the table starts at
+// xl — below that (a tablet, a small laptop with the sidebar open) the stacked
+// card is used, rather than a table with its last columns cut off.
 const GRID_COLS =
-  'grid-cols-[32px_120px_minmax(130px,1.3fr)_minmax(120px,1.1fr)_92px_84px_140px_28px]';
+  'grid-cols-[32px_108px_minmax(116px,1.2fr)_minmax(104px,1fr)_minmax(110px,1fr)_92px_84px_128px_28px]';
+
+// How many books an order holds. Copies, not lines: one line of three is three.
+const copiesOf = (o) => (o?.items || []).reduce((n, it) => n + (Number(it.quantity) || 1), 0);
+
+// Which books, as one short line: "MAGIC VIVA ANATOMY ×2 · PHYSIOLOGY ×1".
+const titlesOf = (o) =>
+  (o?.items || []).map((it) => `${it.title} ×${Number(it.quantity) || 1}`).join(' · ');
+
+// An order's money without the delivery charge — what its books sold for.
+const bookMoneyOf = (o) => (o?.total || 0) - (o?.deliveryCharge || 0);
+
+/** "3 books", on a chip, so the count reads at a glance in a long list. */
+function BooksChip({ order, className = '' }) {
+  const n = copiesOf(order);
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border border-brand/25 bg-brand-soft/60 px-1.5 py-0.5 text-xs font-bold text-brand-ink tabular-nums ${className}`}
+      title={titlesOf(order)}
+    >
+      <FiBook size={11} /> {n} {n === 1 ? 'book' : 'books'}
+    </span>
+  );
+}
 
 // The raw enum values read like database jargon on a button. These say what the
 // click actually does — which matters most for `delivered`, since on a COD order
@@ -164,6 +190,9 @@ export default function BookOrdersPage() {
   const [fullForm, setFullForm] = useState({});
   const [savingFull, setSavingFull] = useState(false);
   const canDelete = ['superAdmin', 'admin'].includes(getStoredUser()?.role);
+  // Paid revenue with or without the delivery charge — the same switch, and the
+  // same remembered choice, as the dashboard and the analytics page.
+  const [deliveryMode, setDeliveryMode] = useDeliveryMode();
 
   // Accepts the status so the filter dropdown can refetch with the new value
   // immediately (state updates are async and wouldn't be visible in the same tick).
@@ -203,24 +232,32 @@ export default function BookOrdersPage() {
         b.phone.includes(q) ||
         b.altPhone.includes(q) ||
         b.email.toLowerCase().includes(q) ||
-        b.college.toLowerCase().includes(q)
+        b.college.toLowerCase().includes(q) ||
+        // A book's title finds every order of it.
+        (o.items || []).some((it) => it.title?.toLowerCase().includes(q))
       );
     });
   }, [orders, search]);
 
-  const stats = useMemo(() => ({
-    total: orders.length,
-    revenue: orders
-      .filter((o) => o.payment?.status === 'paid')
-      .reduce((s, o) => s + (o.total || 0), 0),
-    // Orders waiting on a decision — the actual work queue.
-    pending: orders.filter((o) => o.status === 'pending').length,
-    // Cash still out with couriers: confirmed COD orders not yet collected.
-    codOutstanding: orders
-      .filter((o) => isCod(o) && o.payment?.status !== 'paid' && o.status !== 'cancelled')
-      .reduce((s, o) => s + (o.total || 0), 0),
-    delivered: orders.filter((o) => o.status === 'delivered').length,
-  }), [orders]);
+  const stats = useMemo(() => {
+    const paid = orders.filter((o) => o.payment?.status === 'paid');
+    const live = orders.filter((o) => o.status !== 'cancelled');
+    return {
+      total: orders.length,
+      revenue: paid.reduce((s, o) => s + (o.total || 0), 0),
+      revenueBooks: paid.reduce((s, o) => s + bookMoneyOf(o), 0),
+      // Books in every order that still stands — a cancelled order sold nothing.
+      books: live.reduce((s, o) => s + copiesOf(o), 0),
+      // Orders waiting on a decision — the actual work queue.
+      pending: orders.filter((o) => o.status === 'pending').length,
+      // Cash still out with couriers: confirmed COD orders not yet collected.
+      // The whole total, delivery included — it is what the rider collects.
+      codOutstanding: orders
+        .filter((o) => isCod(o) && o.payment?.status !== 'paid' && o.status !== 'cancelled')
+        .reduce((s, o) => s + (o.total || 0), 0),
+      delivered: orders.filter((o) => o.status === 'delivered').length,
+    };
+  }, [orders]);
 
   const updateStatus = async (order, status) => {
     setUpdatingId(order._id);
@@ -523,23 +560,34 @@ export default function BookOrdersPage() {
           </h1>
           <p className="text-dash-mute text-sm">Track and fulfill customer book orders.</p>
         </div>
-        <button
-          onClick={fetchOrders}
-          className="flex items-center gap-2 px-3.5 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors self-start"
-        >
-          <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <DeliveryToggle mode={deliveryMode} onChange={setDeliveryMode} />
+          <button
+            onClick={() => fetchOrders()}
+            className="flex items-center gap-2 px-3.5 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
+          >
+            <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-dash-ink2">{stats.total}</p>
           <p className="text-xs text-dash-mute2 mt-1">Total orders</p>
         </div>
         <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-emerald-600">{bdt(stats.revenue)}</p>
-          <p className="text-xs text-dash-mute2 mt-1">Paid revenue</p>
+          <p className="text-xl font-bold text-brand-ink tabular-nums">{stats.books.toLocaleString('en-US')}</p>
+          <p className="text-xs text-dash-mute2 mt-1" title="Every book in orders that were not cancelled">Books ordered</p>
+        </div>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+          <p className="text-xl font-bold text-emerald-600 tabular-nums">
+            {bdt(deliveryMode === 'without' ? stats.revenueBooks : stats.revenue)}
+          </p>
+          <p className="text-xs text-dash-mute2 mt-1">
+            Paid revenue · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
+          </p>
         </div>
         <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
@@ -562,7 +610,7 @@ export default function BookOrdersPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by order #, buyer name, phone or email…"
+            placeholder="Search by order #, buyer, phone, email or book…"
             className="w-full pl-10 pr-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none"
           />
         </div>
@@ -674,11 +722,12 @@ export default function BookOrdersPage() {
         <div className="space-y-2">
           {/* Column headers — desktop only; the mobile card labels its own
               fields inline, where a header row has nothing to align to. */}
-          <div className={`hidden lg:grid ${GRID_COLS} items-center gap-3 rounded-lg bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2`}>
+          <div className={`hidden xl:grid ${GRID_COLS} items-center gap-3 rounded-lg bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2`}>
             <span />
             <span>Order</span>
             <span>Buyer &amp; phone</span>
             <span>Medical college</span>
+            <span>Books</span>
             <span className="text-right">Total</span>
             <span className="text-center">Payment</span>
             <span>Status</span>
@@ -701,7 +750,7 @@ export default function BookOrdersPage() {
                     is unreadable. The checkbox and the status select sit OUTSIDE
                     the expand button: nesting a control inside a button is
                     invalid, and every tick would also toggle the panel. */}
-                <div className={`hidden lg:grid ${GRID_COLS} items-center gap-3 px-3 py-2.5`}>
+                <div className={`hidden xl:grid ${GRID_COLS} items-center gap-3 px-3 py-2.5`}>
                   <label className="flex cursor-pointer items-center justify-center">
                     <input
                       type="checkbox"
@@ -737,6 +786,15 @@ export default function BookOrdersPage() {
                       {[o.shippingAddress?.district, o.shippingAddress?.division].filter(Boolean).join(', ') || fmtDate(o.createdAt)}
                     </span>
                   </div>
+
+                  {/* How many books, and which — offers and coupons make the
+                      total alone say nothing about the count. */}
+                  <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
+                    <BooksChip order={o} />
+                    <span className="mt-0.5 block truncate text-[11px] text-dash-mute2" title={titlesOf(o)}>
+                      {titlesOf(o) || '—'}
+                    </span>
+                  </button>
 
                   <div className="text-right">
                     <span className="block font-bold text-dash-ink2">{bdt(o.total)}</span>
@@ -778,8 +836,8 @@ export default function BookOrdersPage() {
                   </button>
                 </div>
 
-                {/* Mobile card */}
-                <div className="lg:hidden px-3 py-3">
+                {/* Mobile / tablet card */}
+                <div className="xl:hidden px-3 py-3">
                   <div className="flex items-start gap-3">
                     <label className="cursor-pointer pt-0.5">
                       <input
@@ -803,12 +861,14 @@ export default function BookOrdersPage() {
                         {buyerOf(o).phone || '—'}
                       </span>
                       <span className="block truncate text-xs text-dash-mute2">{buyerOf(o).college || '—'}</span>
-                      <span className="mt-1 flex items-center gap-2">
+                      <span className="mt-1 flex flex-wrap items-center gap-2">
                         <span className="font-bold text-dash-ink2">{bdt(o.total)}</span>
+                        <BooksChip order={o} />
                         <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
                           {o.payment?.status || 'pending'}
                         </span>
                       </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-dash-mute2">{titlesOf(o)}</span>
                     </button>
                     <FiChevronDown size={16} className={`mt-1 shrink-0 text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </div>
@@ -828,17 +888,32 @@ export default function BookOrdersPage() {
                 {/* Expanded detail */}
                 {isOpen && (
                   <div className="border-t border-dash-line-soft p-4 sm:p-5 bg-dash-soft/40 space-y-5">
-                    {/* Items */}
+                    {/* Items — the quantity in a column of its own, so "how many"
+                        is read off the page rather than worked out from prices. */}
                     <div>
-                      <p className="text-xs font-bold text-dash-mute uppercase tracking-wider mb-2">Items</p>
-                      <div className="bg-dash-card rounded-lg border border-dash-line divide-y divide-dash-line-soft">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Items</p>
+                        <BooksChip order={o} />
+                      </div>
+                      <div className="bg-dash-card rounded-lg border border-dash-line overflow-hidden">
+                        <div className="grid grid-cols-[minmax(0,1fr)_44px_68px_76px] sm:grid-cols-[minmax(0,1fr)_64px_96px_104px] gap-2 bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">
+                          <span>Book</span>
+                          <span className="text-center">Qty</span>
+                          <span className="text-right">Price</span>
+                          <span className="text-right">Amount</span>
+                        </div>
                         {(o.items || []).map((it, i) => (
-                          <div key={i} className="flex items-center justify-between px-3 py-2.5 text-sm">
+                          <div
+                            key={i}
+                            className="grid grid-cols-[minmax(0,1fr)_44px_68px_76px] sm:grid-cols-[minmax(0,1fr)_64px_96px_104px] items-center gap-2 border-t border-dash-line-soft px-3 py-2.5 text-sm"
+                          >
                             <div className="min-w-0">
-                              <p className="font-medium text-dash-ink3 truncate">{it.title}</p>
-                              <p className="text-xs text-dash-mute2 capitalize">{it.format} · {bdt(it.price)} × {it.quantity}</p>
+                              <p className="font-medium text-dash-ink3 truncate" title={it.title}>{it.title}</p>
+                              <p className="text-xs text-dash-mute2 capitalize">{it.format}</p>
                             </div>
-                            <span className="font-semibold text-dash-ink3 shrink-0">{bdt(it.price * it.quantity)}</span>
+                            <span className="text-center text-base font-bold text-dash-ink2 tabular-nums">{Number(it.quantity) || 1}</span>
+                            <span className="text-right text-dash-ink4 tabular-nums">{bdt(it.price)}</span>
+                            <span className="text-right font-semibold text-dash-ink3 tabular-nums">{bdt(it.price * (Number(it.quantity) || 1))}</span>
                           </div>
                         ))}
                       </div>
@@ -847,6 +922,7 @@ export default function BookOrdersPage() {
                         {o.discount > 0 && (
                           <span className="text-dash-mute2">Discount: <span className="text-emerald-600">−{bdt(o.discount)}</span></span>
                         )}
+                        <span className="text-dash-mute2">Books: <span className="text-dash-ink4">{bdt(bookMoneyOf(o))}</span></span>
                         {o.deliveryCharge > 0 && (
                           <span className="text-dash-mute2">Delivery: <span className="text-dash-ink4">{bdt(o.deliveryCharge)}</span></span>
                         )}

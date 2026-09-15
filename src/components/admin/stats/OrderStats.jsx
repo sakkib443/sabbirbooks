@@ -11,12 +11,167 @@
  *
  * Kept in one file so both screens describe the money identically; a dashboard
  * and a report that disagree about "revenue" is worse than having only one.
+ *
+ * Every figure can be read two ways. An order's total is its books plus the
+ * delivery charge, and the delivery charge is the courier's money passing
+ * through — so the admin chooses whether revenue includes it (DeliveryToggle),
+ * and the charge and the number of books sold are shown on their own as well.
  */
 
-import React, { useMemo } from 'react';
-import { FiCalendar } from 'react-icons/fi';
+import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { FiBook, FiCalendar, FiTruck } from 'react-icons/fi';
 
 export const tk = (n) => '৳' + Math.round(Number(n) || 0).toLocaleString('en-US');
+
+// ── With or without the delivery charge ────────────────────────────────────
+// One choice for every money screen, remembered in this browser, so the
+// dashboard and the analytics page never show the same period two ways.
+// Without delivery by default: the shop reads revenue as what its books sold for.
+const MODE_KEY = 'mv_revenue_delivery';
+const modeListeners = new Set();
+let memoryMode = null; // for a browser that refuses localStorage
+
+const readMode = () => {
+  try {
+    const stored = localStorage.getItem(MODE_KEY);
+    if (stored === 'with' || stored === 'without') return stored;
+  } catch {
+    // Blocked storage: fall through to this visit's choice.
+  }
+  return memoryMode || 'without';
+};
+
+const subscribeMode = (onChange) => {
+  modeListeners.add(onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    modeListeners.delete(onChange);
+    window.removeEventListener('storage', onChange);
+  };
+};
+
+/** ['without' | 'with', setMode] */
+export function useDeliveryMode() {
+  const mode = useSyncExternalStore(subscribeMode, readMode, () => 'without');
+  const setMode = useCallback((next) => {
+    memoryMode = next;
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {
+      // Kept in memory for this visit instead.
+    }
+    modeListeners.forEach((listener) => listener());
+  }, []);
+  return [mode, setMode];
+}
+
+/**
+ * value / earned / upcoming of a stats bucket, in the chosen mode. A server
+ * that predates the split has no `books` part; its totals are used as they are.
+ */
+export const moneyIn = (bucket, mode) => {
+  const source = mode === 'without' && bucket?.books ? bucket.books : bucket;
+  return { value: source?.value ?? 0, earned: source?.earned ?? 0, upcoming: source?.upcoming ?? 0 };
+};
+
+/** A breakdown row ({ value, delivery }) in the chosen mode. */
+export const rowValue = (row, mode) =>
+  mode === 'without' ? (row?.value ?? 0) - (row?.delivery ?? 0) : row?.value ?? 0;
+
+export const modeNote = (mode) => (mode === 'without' ? 'without delivery charge' : 'with delivery charge');
+
+export const booksLabel = (n) => `${(n ?? 0).toLocaleString('en-US')} ${n === 1 ? 'book' : 'books'}`;
+
+export function DeliveryToggle({ mode, onChange }) {
+  const options = [
+    { key: 'without', label: 'Without delivery' },
+    { key: 'with', label: 'With delivery' },
+  ];
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Revenue and the delivery charge"
+      className="inline-flex items-center rounded-lg border border-dash-line bg-dash-soft p-0.5"
+    >
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          role="radio"
+          aria-checked={mode === o.key}
+          onClick={() => onChange(o.key)}
+          className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+            mode === o.key ? 'bg-dash-card text-brand shadow-sm' : 'text-dash-mute hover:text-dash-ink3'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The two figures the totals hide: how many books were sold and what they
+ * sold for, and the delivery charge on its own — whichever mode is chosen.
+ */
+export function BooksAndDelivery({ bucket, loading, scope }) {
+  const books = bucket?.books;
+  const delivery = bucket?.delivery;
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <MoneyCard
+        icon={FiBook} tone="indigo" loading={loading}
+        label={`Books sold · ${scope}`}
+        value={booksLabel(bucket?.copies)}
+        note={`in ${(bucket?.orders ?? 0).toLocaleString('en-US')} orders`}
+        foot={
+          <MiniFigures
+            loading={loading}
+            items={[
+              { label: 'Book sales', value: tk(books?.value) },
+              { label: 'Earned', value: tk(books?.earned), tone: 'text-emerald-600' },
+              { label: 'Upcoming', value: tk(books?.upcoming) },
+            ]}
+          />
+        }
+      />
+      <MoneyCard
+        icon={FiTruck} tone="sky" loading={loading}
+        label={`Delivery charges · ${scope}`}
+        value={tk(delivery?.value)}
+        note="Charged to buyers, kept apart from book sales"
+        foot={
+          <MiniFigures
+            loading={loading}
+            items={[
+              { label: 'Collected', value: tk(delivery?.earned), tone: 'text-emerald-600' },
+              { label: 'To collect', value: tk(delivery?.upcoming) },
+            ]}
+          />
+        }
+      />
+    </div>
+  );
+}
+
+function MiniFigures({ items, loading }) {
+  return (
+    <dl
+      className="mt-3 grid gap-2 border-t border-dash-line-soft pt-2.5"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+    >
+      {items.map((it) => (
+        <div key={it.label} className="min-w-0">
+          <dt className="truncate text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">{it.label}</dt>
+          <dd className={`mt-0.5 truncate text-sm font-bold tabular-nums ${it.tone || 'text-dash-ink2'}`}>
+            {loading ? '—' : it.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 /** Compact money for a chart axis: 12500 → ৳12.5k */
 export const tkShort = (n) => {
@@ -137,13 +292,19 @@ export function MoneyCard({ icon: Icon, label, value, note, tone = 'brand', load
  *
  * Plain SVG on purpose: no chart library in this project, and the shapes here
  * are simple enough that adding one would cost more than it saves.
+ *
+ * `mode` 'without' draws both lines with each day's delivery charge taken out.
  */
-export function RevenueChart({ daily, loading }) {
+export function RevenueChart({ daily, loading, mode = 'with' }) {
   const W = 760, H = 260, PL = 52, PR = 16, PT = 16, PB = 34;
   const iw = W - PL - PR, ih = H - PT - PB;
 
   const { valuePath, valueArea, earnedPath, earnedArea, grid, ticks, max, points } = useMemo(() => {
-    const rows = daily || [];
+    const rows = (daily || []).map((d) =>
+      mode === 'without'
+        ? { ...d, value: (d.value || 0) - (d.delivery || 0), earned: (d.earned || 0) - (d.earnedDelivery || 0) }
+        : d
+    );
     const max = Math.max(...rows.map((d) => d.value), 1);
     const x = (i) => PL + (rows.length <= 1 ? iw / 2 : (i / (rows.length - 1)) * iw);
     const y = (v) => PT + ih - (v / max) * ih;
@@ -182,7 +343,7 @@ export function RevenueChart({ daily, loading }) {
       grid, ticks, max,
       points: rows.map((d, i) => ({ x: x(i), yv: y(d.value), ye: y(d.earned), d })),
     };
-  }, [daily, iw, ih]);
+  }, [daily, mode, iw, ih]);
 
   if (loading) return <div className="mx-3 my-2 h-[250px] animate-pulse rounded-lg bg-dash-soft" />;
 
