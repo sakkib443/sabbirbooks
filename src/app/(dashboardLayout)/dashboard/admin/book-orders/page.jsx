@@ -15,11 +15,13 @@ import {
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
   FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
+  FiCalendar,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { getStoredUser } from '@/lib/permissions';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
+import { addDays, bdDate, dayWindow, formatBd, pastCutoff } from '@/lib/shopDay';
 
 const CHANNEL_LABEL = { bkash: 'bKash', rocket: 'Rocket', nagad: 'Nagad' };
 
@@ -51,6 +53,31 @@ const titlesOf = (o) =>
 
 // An order's money without the delivery charge — what its books sold for.
 const bookMoneyOf = (o) => (o?.total || 0) - (o?.deliveryCharge || 0);
+
+// How many orders one load brings. The stat cards are counted from what is
+// loaded, so a date filter is also how the admin gets exact figures past this.
+const LIST_LIMIT = 500;
+
+// Date shortcuts. A day on this screen runs 3 PM → 3 PM Bangladesh time and is
+// named by the date it ends on (lib/shopDay). "Tomorrow" only makes sense once
+// today's 3 PM has passed: orders placed after it already count for tomorrow.
+const DATE_PRESETS = [
+  { key: 'all', label: 'All dates' },
+  { key: 'yesterday', label: 'Yesterday' },
+  { key: 'today', label: 'Today' },
+  { key: 'tomorrow', label: 'Tomorrow (after 3 PM)', afterCutoffOnly: true },
+  { key: '7d', label: 'Last 7 days' },
+];
+
+/** The first and last date a shortcut covers, or null for all dates. */
+const daysForPreset = (key) => {
+  const today = bdDate();
+  if (key === 'today') return { fromDay: today, toDay: today };
+  if (key === 'yesterday') return { fromDay: addDays(today, -1), toDay: addDays(today, -1) };
+  if (key === 'tomorrow') return { fromDay: addDays(today, 1), toDay: addDays(today, 1) };
+  if (key === '7d') return { fromDay: addDays(today, -6), toDay: today };
+  return null;
+};
 
 /** "3 books", on a chip, so the count reads at a glance in a long list. */
 function BooksChip({ order, className = '' }) {
@@ -193,24 +220,67 @@ export default function BookOrdersPage() {
   // Paid revenue with or without the delivery charge — the same switch, and the
   // same remembered choice, as the dashboard and the analytics page.
   const [deliveryMode, setDeliveryMode] = useDeliveryMode();
+  // Date filter: the shortcut in use, the exact window it resolved to (sent to
+  // the API as instants), and the two date inputs.
+  const [datePreset, setDatePreset] = useState('all');
+  const [dateRange, setDateRange] = useState(null); // { from: Date, to: Date } | null
+  const [dayFrom, setDayFrom] = useState('');
+  const [dayTo, setDayTo] = useState('');
+  // Every order matching the filters on the server, which can be more than loaded.
+  const [matchCount, setMatchCount] = useState(0);
 
-  // Accepts the status so the filter dropdown can refetch with the new value
-  // immediately (state updates are async and wouldn't be visible in the same tick).
-  const fetchOrders = async (status = statusFilter) => {
+  // Accepts the status and the date window so a filter change can refetch with
+  // the new values immediately (state updates are async and wouldn't be visible
+  // in the same tick).
+  const fetchOrders = async (status = statusFilter, range = dateRange) => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API}/orders?status=${status}&limit=500`, {
+      const params = new URLSearchParams({ status, limit: String(LIST_LIMIT) });
+      if (range) {
+        params.set('from', range.from.toISOString());
+        params.set('to', range.to.toISOString());
+      }
+      const res = await fetch(`${API}/orders?${params}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) throw new Error(json.message || 'Failed to load orders');
-      setOrders(Array.isArray(json.data) ? json.data : []);
+      const list = Array.isArray(json.data) ? json.data : [];
+      setOrders(list);
+      setMatchCount(Number(json.meta?.total) || list.length);
+      // A different list: a tick left over from the previous one would let a
+      // bulk action change orders that are no longer on the screen.
+      setSelected(new Set());
     } catch (err) {
       setError(err.message || 'Failed to load orders');
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyDatePreset = (key) => {
+    const days = daysForPreset(key);
+    const range = days ? dayWindow(days.fromDay, days.toDay) : null;
+    setDatePreset(key);
+    setDateRange(range);
+    setDayFrom(days?.fromDay || '');
+    setDayTo(days?.toDay || '');
+    fetchOrders(statusFilter, range);
+  };
+
+  // One date, or a span of dates, both ends included.
+  const applyCustomDays = () => {
+    if (!dayFrom && !dayTo) return;
+    let first = dayFrom || dayTo;
+    let last = dayTo || dayFrom;
+    if (first > last) [first, last] = [last, first];
+    const range = dayWindow(first, last);
+    setDayFrom(first);
+    setDayTo(last);
+    setDatePreset('custom');
+    setDateRange(range);
+    fetchOrders(statusFilter, range);
   };
 
   const changeStatus = (status) => {
@@ -628,6 +698,77 @@ export default function BookOrdersPage() {
           <option value="access-granted">Access granted</option>
           <option value="cancelled">Cancelled</option>
         </select>
+      </div>
+
+      {/* Dates. A day here runs 3 PM → 3 PM Bangladesh time, named by the date
+          it ends on — the stat cards above count the same window. */}
+      <div className="space-y-1.5">
+        <div className="flex flex-col gap-3 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <FiCalendar className="mr-1 text-dash-mute2" aria-hidden />
+            {DATE_PRESETS.filter((p) => !p.afterCutoffOnly || pastCutoff()).map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => applyDatePreset(p.key)}
+                aria-pressed={datePreset === p.key}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  datePreset === p.key
+                    ? 'bg-brand text-white shadow-sm shadow-brand/25'
+                    : 'text-dash-mute hover:bg-dash-soft hover:text-dash-ink3'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              value={dayFrom}
+              onChange={(e) => setDayFrom(e.target.value)}
+              aria-label="First date"
+              className="rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+            />
+            <span className="text-dash-mute2">–</span>
+            <input
+              type="date"
+              value={dayTo}
+              onChange={(e) => setDayTo(e.target.value)}
+              aria-label="Last date"
+              className="rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+            />
+            <button
+              type="button"
+              onClick={applyCustomDays}
+              disabled={!dayFrom && !dayTo}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                datePreset === 'custom'
+                  ? 'bg-brand text-white shadow-sm shadow-brand/25'
+                  : 'bg-dash-soft2 text-dash-ink4 hover:bg-dash-soft3'
+              }`}
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+        <p className="px-1 text-xs text-dash-mute2">
+          {dateRange ? (
+            <>
+              Orders placed <span className="font-semibold text-dash-ink3">{formatBd(dateRange.from)}</span>
+              {' → '}
+              <span className="font-semibold text-dash-ink3">{formatBd(dateRange.to)}</span>
+            </>
+          ) : (
+            'All dates'
+          )}
+          {' · '}A day here runs 3 PM → 3 PM, Bangladesh time.
+          {!loading && matchCount > orders.length && (
+            <span className="text-amber-700">
+              {' '}Showing the latest {orders.length.toLocaleString('en-US')} of {matchCount.toLocaleString('en-US')} — pick dates to see and count the rest.
+            </span>
+          )}
+        </p>
       </div>
 
       {/* Selection toolbar. Appears above the list so the count and the actions
