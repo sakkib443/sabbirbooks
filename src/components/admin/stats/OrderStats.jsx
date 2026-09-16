@@ -257,20 +257,27 @@ const TONES = {
   sky: 'from-sky-500 to-cyan-500',
 };
 
+/**
+ * One figure on a card.
+ *
+ * On a phone the cards sit two to a row, about 140px each, and a figure like
+ * ৳1,58,400 is wider than the room left beside the icon — it ran over the icon
+ * and out of the card. So below sm the figure takes a full line under the
+ * label and icon; from sm up the icon sits beside all three lines, as it always
+ * has. One grid, placed differently per breakpoint, rather than two copies.
+ */
 export function MoneyCard({ icon: Icon, label, value, note, tone = 'brand', loading, href, foot }) {
   const body = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">{label}</p>
-          <p className="mt-1 text-xl font-bold leading-none text-dash-ink outfit tabular-nums">
-            {loading ? <span className="inline-block h-6 w-20 animate-pulse rounded-md bg-dash-soft2" /> : value}
-          </p>
-          {note && <p className="mt-1 truncate text-[11px] text-dash-mute2">{note}</p>}
-        </div>
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${TONES[tone]} text-white shadow-md`}>
-          <Icon size={17} />
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
+        <p className="col-start-1 row-start-1 text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">{label}</p>
+        <span className={`col-start-2 row-start-1 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br sm:row-span-3 sm:h-9 sm:w-9 ${TONES[tone]} text-white shadow-md`}>
+          <Icon size={16} />
         </span>
+        <p className="col-span-2 row-start-2 mt-1 whitespace-nowrap text-lg font-bold leading-none text-dash-ink outfit tabular-nums sm:col-span-1 sm:text-xl">
+          {loading ? <span className="inline-block h-6 w-20 animate-pulse rounded-md bg-dash-soft2" /> : value}
+        </p>
+        {note && <p className="col-span-2 row-start-3 mt-1 truncate text-[11px] text-dash-mute2 sm:col-span-1">{note}</p>}
       </div>
       {foot}
     </>

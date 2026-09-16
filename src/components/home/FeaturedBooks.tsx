@@ -56,7 +56,7 @@ export default function FeaturedBooks() {
           />
           <Link
             href="/books"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden shrink-0 sm:inline-flex", bn)}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 max-sm:hidden", bn)}
           >
             {t("featuredBooks.viewAll")} <LuArrowRight className="text-sm" />
           </Link>

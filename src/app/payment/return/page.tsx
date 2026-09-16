@@ -4,7 +4,8 @@ import { Container } from "@/components/ui";
 import PaymentReturn from "@/components/checkout/PaymentReturn";
 
 export const metadata: Metadata = {
-  title: "Payment · Magic Viva",
+  // The root layout appends " · <brand>" to every page title already.
+  title: "Payment",
   description: "Your payment result.",
   // A payment result is per-buyer and reached from an external redirect —
   // nothing here should ever end up in a search index.

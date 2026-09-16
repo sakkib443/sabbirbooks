@@ -42,8 +42,13 @@ export default function DashboardShell({
   menuHoverClassName = 'hover:bg-dash-soft hover:text-brand-ink',
   /** <NotificationBell /> for admin/student; a plain button for mentor. */
   notificationSlot = null,
-  /** Admin's sidebar toggle overlaps the top-left, so it needs extra padding. */
-  headerPaddingClassName = 'px-5 lg:px-7',
+  /**
+   * Room for the sidebar's menu button, which every panel's sidebar pins at the
+   * top-left on a phone (fixed, left-4, 40px wide). With plain px-5 it sat on
+   * top of the page title in the student and mentor panels — only the admin
+   * layout had asked for the extra left padding.
+   */
+  headerPaddingClassName = 'pl-16 pr-4 lg:px-7',
   /**
    * Phone tab bar for this panel — [{ href, label, icon, exact }]. Most of the
    * shop's traffic is on a phone, where the sidebar is a drawer nobody opens;
@@ -84,7 +89,11 @@ export default function DashboardShell({
   };
 
   const getPageTitle = () => {
-    const segments = (pathname || '').split('/').filter(Boolean);
+    // Ids are not titles: on /dashboard/user/orders/6aa8…c3 the header used to
+    // show 24 hex characters, too wide for a phone, pushing the bell and the
+    // profile button off the screen. The nearest named segment names the page.
+    const isId = (s) => /^[a-f0-9]{24}$/i.test(s) || /^\d+$/.test(s) || /^[0-9a-f-]{32,36}$/i.test(s);
+    const segments = (pathname || '').split('/').filter((s) => s && !isId(s));
     const last = segments[segments.length - 1];
     if (!last || last === rootSegment) return 'Dashboard';
     if (titleOverrides[last]) return titleOverrides[last];
@@ -105,21 +114,22 @@ export default function DashboardShell({
         <main className="min-h-screen transition-all duration-300 lg:ml-[260px]">
           {/* ═══════ Top Header Bar ═══════ */}
           <header className="sticky top-0 z-30 bg-dash-card/90 backdrop-blur-xl border-b border-dash-line/60">
-            <div className={`flex items-center justify-between h-[64px] ${headerPaddingClassName}`}>
-              {/* Left Side — Page Title */}
-              <div className="flex items-center gap-3">
-                <div>
-                  <h2 className="text-lg font-bold text-dash-ink2 leading-tight outfit-semibold">
+            <div className={`flex items-center justify-between gap-3 h-[64px] ${headerPaddingClassName}`}>
+              {/* Left Side — Page Title. min-w-0 + truncate: a long title gives
+                  way with an ellipsis instead of pushing the buttons off a phone. */}
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-lg font-bold text-dash-ink2 leading-tight outfit-semibold">
                     {getPageTitle()}
                   </h2>
-                  <p className="text-[11px] text-dash-mute2 font-medium -mt-0.5">
+                  <p className="truncate text-[11px] text-dash-mute2 font-medium -mt-0.5">
                     {subtitle}
                   </p>
                 </div>
               </div>
 
               {/* Right Side — Search, Theme, Notification, Profile */}
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
                   aria-label="Search"

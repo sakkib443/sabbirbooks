@@ -25,6 +25,10 @@ const sizes: Record<Size, string> = {
 };
 
 // Exported so links can look like buttons: <Link className={buttonVariants({ variant: "accent" })} />
+//
+// To hide one below a breakpoint, add "max-lg:hidden", not "hidden lg:inline-flex".
+// cn() only joins class names, and the stylesheet emits .inline-flex (from
+// `base`) after .hidden, so a plain `hidden` loses and the button shows anyway.
 export function buttonVariants(
   { variant = "primary", size = "md" }: { variant?: Variant; size?: Size } = {}
 ): string {

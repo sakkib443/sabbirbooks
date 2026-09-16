@@ -113,7 +113,10 @@ export default function BookCouponsPage() {
           </h1>
           <p className="text-dash-mute text-sm">Discount codes buyers type at book checkout.</p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* flex-wrap: the three buttons need ~360px in a row, more than a
+            phone has left after the page padding — unwrapped, they pushed the
+            whole page sideways. */}
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/dashboard/admin/affiliates"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dash-line text-dash-ink3 font-medium hover:bg-dash-soft transition-colors"

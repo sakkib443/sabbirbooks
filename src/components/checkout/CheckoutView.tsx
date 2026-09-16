@@ -99,6 +99,9 @@ const CONSENT_POLICIES = ["terms-and-conditions", "refund-policy", "privacy-poli
 
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
 
+/** What a tap on the confirm button found still missing, in the order asked. */
+type MissingStep = "address" | "college" | "payment" | "consent";
+
 // A Bangladeshi mobile, however it is typed — the same test the server applies
 // (order.service normalizeBdMobile) after stripping spaces and dashes.
 const BD_MOBILE = /^(?:\+?88)?01[3-9]\d{8}$/;
@@ -125,6 +128,10 @@ export default function CheckoutView() {
   // Deliberately unchecked on every visit, and never remembered: consent has to
   // be given for the order being placed now, not inherited from a previous one.
   const [agreed, setAgreed] = useState(false);
+  // What the last tap on the confirm button found missing. Each item drops off
+  // the list by itself as it is fixed (the red fields corrected, a college
+  // picked, the box ticked).
+  const [missingSteps, setMissingSteps] = useState<MissingStep[]>([]);
 
   // ── Pay now vs pay the courier, and where the parcel is going ─────────────
   const [payMode, setPayMode] = useState<PayMode>("cod");
@@ -736,6 +743,18 @@ export default function CheckoutView() {
     setCouponInput("");
   };
 
+  // The confirm button's list of what is missing, less whatever has been fixed
+  // since the tap. After that tap the form re-checks each field as it changes,
+  // so no errors left means every red field has been corrected.
+  const stillMissing = missingSteps.filter(
+    (step) =>
+      !(step === "address" && Object.keys(errors).length === 0) &&
+      !(step === "consent" && agreed) &&
+      !(step === "college" && (college || collegeName.trim()))
+  );
+  const collegeMissing = stillMissing.includes("college");
+  const consentMissing = stillMissing.includes("consent");
+
   // The college as the order API takes it: a listed one by id, else the typed name.
   const collegeInput: OrderCollegeInput | undefined = college
     ? { medicalCollege: college._id }
@@ -890,35 +909,71 @@ export default function CheckoutView() {
     }
   };
 
-  const onConfirm = () => {
+  /**
+   * Take the buyer to the first thing still missing.
+   *
+   * On a phone the confirm button is a long scroll below the address, so a red
+   * line under an empty field is off screen: the button looked dead, and buyers
+   * gave up ("it goes up to there and then does nothing"). Waits a moment for
+   * the error marks to render, then scrolls to the first one in page order —
+   * a field marked aria-invalid, the college picker or the consent box — and
+   * puts the cursor in it.
+   */
+  const revealFirstProblem = () => {
+    window.setTimeout(() => {
+      const target = document.querySelector<HTMLElement>(
+        '[data-checkout-form] [aria-invalid="true"], [data-checkout-missing="true"]'
+      );
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = target.matches("input, select, textarea, button")
+        ? target
+        : target.querySelector<HTMLElement>("input, select, textarea, button");
+      focusable?.focus({ preventScroll: true });
+    }, 60);
+  };
+
+  const onConfirm = async () => {
     if (outOfStock) return;
-    // Checked here as well as on the button's disabled state: the button can be
-    // re-enabled from devtools, and this is the one place every payment path
-    // — cash on delivery, manual wallet, hosted gateway — passes through.
-    if (!agreed) {
-      setSubmitError(S.consentRequired);
+    setSubmitError("");
+
+    // Checked here rather than by disabling the button: a disabled button on a
+    // phone looks like a broken one, and says nothing about what is missing.
+    // Everything is checked in one tap, so every gap is marked at once.
+    if (isManual && availableChannels.length === 0) {
+      setSubmitError(S.manualNotConfigured);
       return;
+    }
+    const missing: MissingStep[] = [];
+    if (isPrinted) {
+      // The address (react-hook-form) and the college, which is its own widget.
+      // handleSubmit, not trigger(): only a submit switches the form (mode
+      // "onSubmit") to re-checking a field as it is typed, so a red mark clears
+      // the moment it is fixed instead of staying red until the next tap.
+      let addressOk = false;
+      await handleSubmit(() => {
+        addressOk = true;
+      })();
+      if (!addressOk) missing.push("address");
+      if (!college && !collegeName.trim()) {
+        setCollegeError(S.shipErrCollege);
+        missing.push("college");
+      }
     }
     // Wallet details are only required on the MANUAL path — a cash-on-delivery
     // buyer has no transaction id to give (demanding one was what made COD
     // impossible to actually complete), and a hosted-gateway buyer has not paid
     // yet, so there is nothing for them to copy down either.
-    if (isManual) {
-      if (availableChannels.length === 0) {
-        setSubmitError(S.manualNotConfigured);
-        return;
-      }
-      if (!validateManual()) return;
+    if (isManual && !validateManual()) missing.push("payment");
+    if (!agreed) missing.push("consent");
+
+    setMissingSteps(missing);
+    if (missing.length > 0) {
+      revealFirstProblem();
+      return;
     }
+
     if (isPrinted) {
-      // The college is not a react-hook-form field (the picker is its own
-      // widget), so it is checked here — and the form is still validated in
-      // the same click, so every missing field lights up at once.
-      if (!college && !collegeName.trim()) {
-        setCollegeError(S.shipErrCollege);
-        void handleSubmit(() => undefined)();
-        return;
-      }
       // Gate the flow behind a valid shipping address. Blank geo fields are
       // dropped rather than sent as "".
       void handleSubmit((vals) =>
@@ -1020,10 +1075,16 @@ export default function CheckoutView() {
             Submit Payment button were painted ABOVE every input. Buyers had to
             fill the address, scroll back up, and hunt for the button. On lg the
             grid columns place these left and right regardless of order, so
-            dropping the utilities changes nothing on desktop. */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)] lg:gap-8">
-          {/* Left: form column */}
-          <div className="space-y-6">
+            dropping the utilities changes nothing on desktop.
+
+            grid-cols-1 / minmax(0,1fr), not a bare `grid`: an implicit column is
+            as wide as its widest content, which on a 320px phone was 329px — the
+            whole form sat 25px past the screen edge and dragged the bottom tab
+            bar with it. */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:gap-8">
+          {/* Left: form column. data-checkout-form marks where a tap on the
+              confirm button looks for fields still marked invalid. */}
+          <div className="space-y-6" data-checkout-form>
             {/* Pre-order — said plainly and first, because "this book does not
                 exist yet" changes what the buyer is agreeing to. */}
             {isPreOrder && (
@@ -1091,15 +1152,17 @@ export default function CheckoutView() {
                 bn={bn}
                 S={shippingLabels(S)}
                 collegeSlot={
-                  <CollegePicker
-                    value={college}
-                    customName={collegeName}
-                    onChange={(picked: CollegeOption | null, typed: string) => pickCollege(picked, typed)}
-                    bengali={isBengali}
-                    error={collegeError || undefined}
-                    label={S.shipCollege}
-                    placeholder={S.shipCollegePh}
-                  />
+                  <div data-checkout-missing={collegeMissing ? "true" : undefined}>
+                    <CollegePicker
+                      value={college}
+                      customName={collegeName}
+                      onChange={(picked: CollegeOption | null, typed: string) => pickCollege(picked, typed)}
+                      bengali={isBengali}
+                      error={collegeError || undefined}
+                      label={S.shipCollege}
+                      placeholder={S.shipCollegePh}
+                    />
+                  </div>
                 }
                 deliveryHint={deliveryHint}
                 prefill={
@@ -1339,15 +1402,36 @@ export default function CheckoutView() {
                     </div>
                   )}
 
+                  {/* What is still missing, beside the button that was tapped —
+                      the fields themselves can be a long scroll above it. */}
+                  {stillMissing.length > 0 && (
+                    <div
+                      role="alert"
+                      className={cn("rounded-xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral", bn)}
+                    >
+                      <p className="flex items-center gap-2 font-semibold">
+                        <LuTriangleAlert className="shrink-0" /> {S.missingIntro}
+                      </p>
+                      <ul className="mt-1.5 list-disc space-y-0.5 pl-9">
+                        {stillMissing.map((step) => (
+                          <li key={step}>{S.missingStep[step]}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {/* Consent, immediately above the button it gates — not at
                       the top of the page where it would be scrolled past and
                       not remembered as having been given. */}
                   <label
+                    data-checkout-missing={consentMissing ? "true" : undefined}
                     className={cn(
                       "flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors",
                       agreed
                         ? "border-accent/40 bg-accent-soft"
-                        : "border-border bg-muted/40 hover:border-primary/40"
+                        : consentMissing
+                          ? "border-coral bg-coral/5 ring-2 ring-coral/25"
+                          : "border-border bg-muted/40 hover:border-primary/40"
                     )}
                   >
                     <input
@@ -1360,7 +1444,9 @@ export default function CheckoutView() {
                         if (e.target.checked && submitError === S.consentRequired) setSubmitError("");
                       }}
                       disabled={processing}
-                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-accent"
+                      // 20px, not 16: this box stands between a buyer and the
+                      // order, and it is tapped with a thumb.
+                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-accent"
                     />
                     <span className={cn("text-[13px] leading-relaxed text-muted-foreground", bn)}>
                       {S.consentPrefix}{" "}
@@ -1393,8 +1479,10 @@ export default function CheckoutView() {
                     size="lg"
                     variant="accent"
                     className={cn("w-full", bn)}
-                    disabled={!agreed || processing || (isManual && availableChannels.length === 0)}
-                    onClick={onConfirm}
+                    // Never disabled for a missing tick or field: the tap is
+                    // what shows the buyer what is left (see onConfirm).
+                    disabled={processing || (isManual && availableChannels.length === 0)}
+                    onClick={() => void onConfirm()}
                   >
                     {processing ? (
                       <>
@@ -1492,7 +1580,7 @@ function CheckoutSkeleton({ bn, S }: { bn: string; S: Copy }) {
     <main className="py-8 sm:py-12">
       <Container>
         <div className="mb-6 h-8 w-48 animate-pulse rounded bg-muted" />
-        <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)] lg:gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:gap-8">
           <div className="space-y-6">
             <div className="h-40 w-full animate-pulse rounded-2xl bg-muted" />
             <div className="h-28 w-full animate-pulse rounded-2xl bg-muted" />
@@ -1549,6 +1637,13 @@ const EN = {
   consentAnd: "and",
   consentSuffix: ".",
   consentRequired: "Please accept the terms and policies before continuing.",
+  missingIntro: "Before you confirm the order:",
+  missingStep: {
+    address: "Fill in the fields marked in red above",
+    college: "Choose your medical college",
+    payment: "Add your payment details",
+    consent: "Tick the box below to accept the terms",
+  } as Record<MissingStep, string>,
 
   // Pay-now vs cash-on-delivery
   payModeHeading: "How would you like to pay?",
@@ -1805,6 +1900,13 @@ const BN: Copy = {
   consentAnd: "ও",
   consentSuffix: " পড়েছি এবং মেনে নিচ্ছি।",
   consentRequired: "এগিয়ে যাওয়ার আগে শর্তাবলি ও পলিসিগুলো মেনে নিন।",
+  missingIntro: "অর্ডার কনফার্ম করার আগে:",
+  missingStep: {
+    address: "উপরে লাল দাগ দেওয়া ঘরগুলো পূরণ করুন",
+    college: "আপনার মেডিকেল কলেজ বেছে নিন",
+    payment: "পেমেন্টের তথ্য দিন",
+    consent: "নিচের ঘরে টিক দিয়ে শর্তাবলি মেনে নিন",
+  },
 
   // Pay-now vs cash-on-delivery
   payModeHeading: "টাকা কীভাবে দিতে চান?",

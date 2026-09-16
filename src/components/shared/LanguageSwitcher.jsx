@@ -57,10 +57,13 @@ const LanguageSwitcher = ({ variant = "default" }) => {
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* Narrower on the smallest phones (under 360px), where the header has
+          no width to spare: less padding, and no chevron. */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="group flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 transition-colors hover:border-primary/40 hover:bg-primary-soft"
+        className="group flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-2 transition-colors hover:border-primary/40 hover:bg-primary-soft min-[360px]:gap-2 min-[360px]:px-3"
         aria-label="Switch language"
+        aria-expanded={isOpen}
       >
         <LuLanguages className="text-base text-primary" />
         <span
@@ -73,7 +76,7 @@ const LanguageSwitcher = ({ variant = "default" }) => {
         </span>
         <LuChevronDown
           className={cn(
-            "text-sm text-muted-foreground transition-transform duration-300",
+            "text-sm text-muted-foreground transition-transform duration-300 max-[359px]:hidden",
             isOpen && "rotate-180"
           )}
         />

@@ -217,7 +217,9 @@ const Navbar = () => {
         )}
       >
         <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-secondary" />
-        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* gap-2: justify-between alone lets the logo and the buttons touch on
+            a 320px phone, where together they need the whole width. */}
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
           {/* Left: brand + nav */}
           <div className="flex items-center gap-8">
             <Link href="/" className="group flex items-center gap-2.5">
@@ -264,7 +266,11 @@ const Navbar = () => {
             ) : (
               <Link
                 href="/login"
-                className={cn(buttonVariants({ variant: "primary", size: "sm" }), "hidden lg:inline-flex", bn)}
+                // max-lg:hidden, not "hidden lg:inline-flex" (see buttonVariants):
+                // a plain `hidden` lost to the button's own inline-flex, so this
+                // desktop button showed on phones and pushed the header past a
+                // 375px screen — the whole page scrolled sideways.
+                className={cn(buttonVariants({ variant: "primary", size: "sm" }), "max-lg:hidden", bn)}
               >
                 <HiOutlineUserCircle className="text-lg" />
                 {t("navbar.login")}
