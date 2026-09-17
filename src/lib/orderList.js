@@ -46,11 +46,22 @@ export const countOptions = (values) => {
 /**
  * What the courier has to know about the money: nothing to collect (paid, or a
  * free order), cash to collect on delivery, or an online payment still unpaid.
+ *
+ * English, like the rest of the printed list — the shop asked for it, and it is
+ * also what keeps the list copyable (see lib/orderListPdf).
  */
 export const PAYMENT_LABEL = {
-  paid: 'পেইড',
-  cod: 'ক্যাশ অন ডেলিভারি',
-  due: 'পেমেন্ট বাকি',
+  paid: 'Paid',
+  cod: 'Cash on delivery',
+  due: 'Payment due',
+};
+
+/** The money line under it: what to collect, or what was paid. Taka as "Tk". */
+export const paymentAmountOf = (o) => {
+  const taka = `Tk ${Math.round(Number(o?.total) || 0).toLocaleString('en-US')}`;
+  const key = paymentKeyOf(o);
+  if (key === 'cod') return `Collect ${taka}`;
+  return key === 'paid' ? `${taka} paid` : `${taka} due`;
 };
 
 export const paymentKeyOf = (o) => {
@@ -82,6 +93,9 @@ export const printRowOf = (o) => {
     address: sa.address ? parts.join(', ') : '',
     digital: o?.deliveryType === 'digital',
     payment: paymentKeyOf(o),
+    // The whole order, delivery charge included — it is what the buyer hands
+    // over, whatever the revenue switch upstairs is set to.
+    amount: paymentAmountOf(o),
   };
 };
 
