@@ -27,13 +27,16 @@ const CONTENT_W = PAGE_W - MARGIN_X * 2;
 const PAD_X = 5;
 const PAD_Y = 4;
 
+// English, as the shop asked: the buyers' own names and addresses stay in
+// whatever they typed, but everything the list itself says is English — and
+// English text is the text a reader can select and copy (see the text layer).
 const COLUMNS = [
   { key: 'n', label: '#', share: 0.05, alignRight: true },
-  { key: 'name', label: 'নাম', share: 0.17 },
-  { key: 'phone', label: 'মোবাইল নম্বর', share: 0.14 },
-  { key: 'college', label: 'মেডিকেল কলেজ', share: 0.19 },
-  { key: 'address', label: 'ঠিকানা', share: 0.31 },
-  { key: 'payment', label: 'পেমেন্ট', share: 0.14 },
+  { key: 'name', label: 'Name', share: 0.17 },
+  { key: 'phone', label: 'Mobile', share: 0.14 },
+  { key: 'college', label: 'Medical college', share: 0.18 },
+  { key: 'address', label: 'Address', share: 0.31 },
+  { key: 'payment', label: 'Payment', share: 0.15 },
 ];
 
 const STYLES = {
@@ -127,13 +130,15 @@ function measureBlocks(ctx, family, parts, width) {
 
 const blocksHeight = (blocks) => blocks.reduce((h, b) => h + b.lines.length * b.box.lineHeight, 0);
 
-function drawBlocks(ctx, family, blocks, x, y, width, alignRight = false) {
+function drawBlocks(ctx, family, blocks, x, y, width, alignRight = false, collect) {
   let top = y;
   for (const block of blocks) {
     applyStyle(ctx, family, block.style);
     for (const line of block.lines) {
-      const left = alignRight ? x + width - ctx.measureText(line).width : x;
+      const drawn = ctx.measureText(line).width;
+      const left = alignRight ? x + width - drawn : x;
       ctx.fillText(line, left, top + block.box.baseline);
+      collect?.({ text: line, x: left, baseline: top + block.box.baseline, size: block.style.size, width: drawn });
       top += block.box.lineHeight;
     }
   }
@@ -141,11 +146,12 @@ function drawBlocks(ctx, family, blocks, x, y, width, alignRight = false) {
 
 const cellParts = (row, index) => ({
   n: [[String(index + 1), 'num']],
-  name: [[row.name || '—', 'td']],
-  phone: [[row.phone || '—', 'td'], ...(row.altPhone ? [[row.altPhone, 'sub']] : [])],
-  college: [[row.college || '—', 'td']],
-  address: [[row.address || (row.digital ? 'ডিজিটাল বই — পাঠানোর কিছু নেই' : '—'), 'td']],
-  payment: [[PAYMENT_LABEL[row.payment] || '—', 'pay']],
+  name: [[row.name || '-', 'td']],
+  phone: [[row.phone || '-', 'td'], ...(row.altPhone ? [[row.altPhone, 'sub']] : [])],
+  college: [[row.college || '-', 'td']],
+  address: [[row.address || (row.digital ? 'Digital book - nothing to ship' : '-'), 'td']],
+  // Under the words, the money: what this buyer hands over, or already has.
+  payment: [[PAYMENT_LABEL[row.payment] || '-', 'pay'], ...(row.amount ? [[row.amount, 'sub']] : [])],
 });
 
 const columnWidths = () => COLUMNS.map((c) => c.share * CONTENT_W);
@@ -217,7 +223,12 @@ export async function buildOrderListPdf({ title, heading = '', filters = [], sum
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(PX_PER_PT, 0, 0, PX_PER_PT, 0, 0);
 
-    if (p === 0) drawBlocks(ctx, family, header, MARGIN_X, MARGIN_TOP, CONTENT_W);
+    // Every line drawn is also kept, to be laid invisibly over the picture so
+    // the list can be selected and copied — see textLayer().
+    const runs = [];
+    const collect = (run) => runs.push(run);
+
+    if (p === 0) drawBlocks(ctx, family, header, MARGIN_X, MARGIN_TOP, CONTENT_W, false, collect);
 
     const drawRow = (cells, top, height, fill) => {
       let x = MARGIN_X;
@@ -229,7 +240,7 @@ export async function buildOrderListPdf({ title, heading = '', filters = [], sum
         ctx.strokeStyle = '#9a9a9a';
         ctx.lineWidth = 0.6;
         ctx.strokeRect(x, top, widths[i], height);
-        drawBlocks(ctx, family, blocks, x + PAD_X, top + PAD_Y, widths[i] - PAD_X * 2, COLUMNS[i].alignRight);
+        drawBlocks(ctx, family, blocks, x + PAD_X, top + PAD_Y, widths[i] - PAD_X * 2, COLUMNS[i].alignRight, collect);
         x += widths[i];
       });
     };
@@ -237,14 +248,18 @@ export async function buildOrderListPdf({ title, heading = '', filters = [], sum
     drawRow(headCells, page.tableTop, headRowHeight, '#ececec');
     for (const row of page.rows) drawRow(row.cells, row.y, row.height, row.index % 2 === 1 ? '#f6f6f6' : null);
 
-    const foot = STYLES.foot;
-    const footBox = applyStyle(ctx, family, foot);
+    const footBox = applyStyle(ctx, family, STYLES.foot);
     const footY = PAGE_H - MARGIN_BOTTOM + 14 + footBox.baseline;
-    if (footer) ctx.fillText(footer, MARGIN_X, footY);
-    const pageLabel = `পৃষ্ঠা ${p + 1} / ${pages.length}`;
-    ctx.fillText(pageLabel, PAGE_W - MARGIN_X - ctx.measureText(pageLabel).width, footY);
+    if (footer) {
+      ctx.fillText(footer, MARGIN_X, footY);
+      collect({ text: footer, x: MARGIN_X, baseline: footY, size: STYLES.foot.size, width: ctx.measureText(footer).width });
+    }
+    const pageLabel = `Page ${p + 1} / ${pages.length}`;
+    const pageLabelWidth = ctx.measureText(pageLabel).width;
+    ctx.fillText(pageLabel, PAGE_W - MARGIN_X - pageLabelWidth, footY);
+    collect({ text: pageLabel, x: PAGE_W - MARGIN_X - pageLabelWidth, baseline: footY, size: STYLES.foot.size, width: pageLabelWidth });
 
-    images.push({ bytes: await jpegOf(canvas), width: canvas.width, height: canvas.height });
+    images.push({ bytes: await jpegOf(canvas), width: canvas.width, height: canvas.height, runs });
     canvas.width = 0; // let the browser drop the bitmap now, not at collection time
     canvas.height = 0;
   }
@@ -255,6 +270,55 @@ export async function buildOrderListPdf({ title, heading = '', filters = [], sum
 // ── A PDF of full-page JPEGs ─────────────────────────────────────────────────
 
 const latin1 = (text) => Uint8Array.from(text, (ch) => ch.charCodeAt(0) & 0xff);
+
+// Helvetica's own character widths (per 1000 units), so the invisible text can
+// be stretched to sit exactly under the picture's words.
+const HELVETICA_W = {};
+'278 278 355 556 556 889 667 191 333 333 389 584 278 333 278 278 556 556 556 556 556 556 556 556 556 556 278 278 584 584 584 556 1015 667 667 722 722 667 611 778 722 278 500 667 556 833 722 778 667 778 722 667 611 722 667 944 667 667 611 278 278 278 469 556 333 556 556 500 556 556 278 556 556 222 222 500 222 833 556 556 556 556 333 500 278 556 500 722 500 500 500 334 260 334 584'
+  .split(' ')
+  .forEach((w, i) => {
+    HELVETICA_W[String.fromCharCode(32 + i)] = Number(w);
+  });
+
+/**
+ * Text a standard PDF font can hold: Latin-1, which WinAnsiEncoding covers
+ * (the "·" between the heading's parts included). Bengali lines stay
+ * picture-only — see the note at the top of this file.
+ */
+const isLatin = (text) => /^[\x20-\x7e\xa0-\xff]+$/.test(text);
+
+const helveticaWidth = (text, size) =>
+  Array.from(text).reduce((w, ch) => w + (HELVETICA_W[ch] ?? 556), 0) * (size / 1000);
+
+const escapePdfText = (text) =>
+  Array.from(text)
+    .map((ch) => {
+      const code = ch.charCodeAt(0);
+      if (ch === '\\' || ch === '(' || ch === ')') return `\\${ch}`;
+      return code > 0x7e ? `\\${code.toString(8).padStart(3, '0')}` : ch;
+    })
+    .join('');
+
+/**
+ * The page's words again, this time as real PDF text: invisible (Tr 3), laid
+ * over the picture of them and stretched (Tz) to the width they were drawn at.
+ * This is what lets a reader select, copy and search the list — the same trick
+ * a scanner uses when it puts OCR text under a scan.
+ */
+function textLayer(runs) {
+  const ops = ['BT', '3 Tr'];
+  for (const run of runs) {
+    if (!isLatin(run.text)) continue;
+    const natural = helveticaWidth(run.text, run.size);
+    if (natural <= 0) continue;
+    ops.push(`/F1 ${run.size.toFixed(2)} Tf`);
+    ops.push(`${((run.width / natural) * 100).toFixed(2)} Tz`);
+    ops.push(`1 0 0 1 ${run.x.toFixed(2)} ${(PAGE_H - run.baseline).toFixed(2)} Tm`);
+    ops.push(`(${escapePdfText(run.text)}) Tj`);
+  }
+  ops.push('ET');
+  return ops.length > 3 ? ops.join('\n') : '';
+}
 
 /** A PDF text string for any Unicode text: UTF-16BE, hex, with its BOM. */
 const pdfTextString = (text) =>
@@ -276,22 +340,25 @@ function pdfOfImages(images, title) {
     push('\nendobj\n');
   };
 
-  // 1 catalogue, 2 page tree, 3 info; then page, image, contents for each page.
-  const pageId = (i) => 4 + i * 3;
-  const size = 4 + images.length * 3;
+  // 1 catalogue, 2 page tree, 3 info, 4 the font the text layer is written in;
+  // then page, image and contents for each page.
+  const pageId = (i) => 5 + i * 3;
+  const size = 5 + images.length * 3;
 
   push('%PDF-1.4\n%âãÏÓ\n');
   object(1, '<< /Type /Catalog /Pages 2 0 R >>');
   object(2, `<< /Type /Pages /Count ${images.length} /Kids [${images.map((_, i) => `${pageId(i)} 0 R`).join(' ')}] >>`);
   const now = new Date(Date.now() + 6 * 3600e3).toISOString().replace(/[-:T]/g, '').slice(0, 14);
   object(3, `<< /Title ${pdfTextString(title)} /Producer (Magic Viva admin) /CreationDate (D:${now}+06'00') >>`);
+  object(4, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
 
   images.forEach((image, i) => {
     const id = pageId(i);
     object(
       id,
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] ` +
-        `/Resources << /XObject << /Im0 ${id + 1} 0 R >> /ProcSet [/PDF /ImageC] >> /Contents ${id + 2} 0 R >>`
+        `/Resources << /XObject << /Im0 ${id + 1} 0 R >> /Font << /F1 4 0 R >> /ProcSet [/PDF /ImageC /Text] >> ` +
+        `/Contents ${id + 2} 0 R >>`
     );
     object(
       id + 1,
@@ -300,7 +367,7 @@ function pdfOfImages(images, title) {
       image.bytes,
       '\nendstream'
     );
-    const draw = `q\n${PAGE_W} 0 0 ${PAGE_H} 0 0 cm\n/Im0 Do\nQ`;
+    const draw = `q\n${PAGE_W} 0 0 ${PAGE_H} 0 0 cm\n/Im0 Do\nQ\n${textLayer(image.runs || [])}`;
     object(id + 2, `<< /Length ${draw.length} >>\nstream\n${draw}\nendstream`);
   });
 

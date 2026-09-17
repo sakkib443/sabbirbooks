@@ -69,15 +69,15 @@ const LIST_LIMIT = 500;
 const EXPORT_LIMIT = 5000;
 
 // The status filter as the PDF's heading line names it.
-const STATUS_BN = {
-  all: 'সব',
-  pending: 'পেন্ডিং',
-  paid: 'পেইড',
-  processing: 'কনফার্মড',
-  shipped: 'শিপড',
-  delivered: 'ডেলিভারড',
-  'access-granted': 'অ্যাক্সেস দেওয়া',
-  cancelled: 'বাতিল',
+const STATUS_TEXT = {
+  all: 'All',
+  pending: 'Pending',
+  paid: 'Paid',
+  processing: 'Confirmed',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  'access-granted': 'Access granted',
+  cancelled: 'Cancelled',
 };
 
 /** The query GET /api/orders takes: status, a date window, how many. */
@@ -736,29 +736,36 @@ export default function BookOrdersPage() {
     return { matching, list: keepForPdf(matching), fromLatest };
   };
 
-  // What a PDF says about itself, and what its file is called.
+  // What a PDF says about itself, and what its file is called. English, as the
+  // shop asked, and the file name starts with the college: a phone's file list and
+  // WhatsApp both cut a long name off at the end, so the college has to be at
+  // the front to tell one day's six files apart.
   const pdfArea = [upazilaFilter, districtFilter].filter(Boolean).join(', ');
   const pdfDays = dayFrom && dayTo ? (dayFrom === dayTo ? dayTo : `${dayFrom} to ${dayTo}`) : bdDate();
-  const pdfFileName = (...parts) =>
-    `${safeFileName([`${brand.englishName} orders`, pdfDays, ...parts].filter(Boolean).join(' - '))}.pdf`;
-  const pdfText = ({ count, leftOut = 0, fromLatest = 0, onlySelected = false, heading = '' }) => {
+  const pdfFileName = (subject) =>
+    `${safeFileName(`${subject || pdfArea || brand.englishName} - ${pdfDays}`)} orders.pdf`;
+  const pdfText = ({ list, leftOut = 0, fromLatest = 0, onlySelected = false, heading = '' }) => {
     const madeAt = formatBdFull(new Date());
+    // What the courier or the campus rep has to bring back, on the first line.
+    const cod = list.filter((o) => isCod(o) && o.payment?.status !== 'paid');
+    const toCollect = cod.reduce((sum, o) => sum + (o.total || 0), 0);
     return {
-      title: `${brand.englishName} — অর্ডার লিস্ট`,
+      title: `${brand.englishName} - Order list`,
       heading,
       filters: [
-        `তারিখ: ${dateRange ? `${formatBdFull(dateRange.from)} → ${formatBdFull(dateRange.to)}` : 'সব তারিখ'}`,
-        `স্ট্যাটাস: ${STATUS_BN[statusFilter] || statusFilter}`,
-        !heading && collegeFilter && `মেডিকেল কলেজ: ${collegeFilter}`,
-        pdfArea && `এলাকা: ${pdfArea}`,
-        search.trim() && `সার্চ: ${search.trim()}`,
+        `Date: ${dateRange ? `${formatBdFull(dateRange.from)} to ${formatBdFull(dateRange.to)}` : 'all dates'}`,
+        `Status: ${STATUS_TEXT[statusFilter] || statusFilter}`,
+        !heading && collegeFilter && `Medical college: ${collegeFilter}`,
+        pdfArea && `Area: ${pdfArea}`,
+        search.trim() && `Search: ${search.trim()}`,
       ].filter(Boolean),
       summary: [
-        `মোট ${count}টি অর্ডার`,
-        onlySelected && 'শুধু টিক দেওয়া অর্ডার',
-        leftOut > 0 && `বাতিল ${leftOut}টি বাদ`,
-        fromLatest > 0 && `সর্বশেষ ${fromLatest}টি অর্ডারের মধ্য থেকে`,
-        `তৈরি: ${madeAt}`,
+        `${list.length} order${list.length === 1 ? '' : 's'}`,
+        cod.length > 0 && `${cod.length} cash on delivery, Tk ${toCollect.toLocaleString('en-US')} to collect`,
+        onlySelected && 'only the ticked orders',
+        leftOut > 0 && `${leftOut} cancelled left out`,
+        fromLatest > 0 && `from the latest ${fromLatest} orders`,
+        `Made: ${madeAt}`,
       ].filter(Boolean).join('   ·   '),
       footer: `${brand.englishName} · ${madeAt}`,
     };
@@ -778,10 +785,10 @@ export default function BookOrdersPage() {
       }
       const leftOut = onlySelected ? 0 : matching.length - list.length;
       const blob = await buildOrderListPdf({
-        ...pdfText({ count: list.length, leftOut, fromLatest, onlySelected }),
+        ...pdfText({ list, leftOut, fromLatest, onlySelected }),
         rows: list.map(printRowOf),
       });
-      downloadBlob(blob, pdfFileName(collegeFilter, pdfArea));
+      downloadBlob(blob, pdfFileName(collegeFilter));
     } catch (e) {
       showToast('error', e.message || 'Could not make the PDF');
     } finally {
@@ -828,14 +835,14 @@ export default function BookOrdersPage() {
             : matching.filter((o) => o.status === 'cancelled' && collegeOf(o) === college).length;
         const blob = await buildOrderListPdf({
           ...pdfText({
-            count: group.length,
+            list: group,
             leftOut,
             fromLatest,
-            heading: `মেডিকেল কলেজ: ${college || 'উল্লেখ নেই'}`,
+            heading: `Medical college: ${college || 'not given'}`,
           }),
           rows: group.map(printRowOf),
         });
-        files.push({ college, count: group.length, name: pdfFileName(college || 'No college', pdfArea), blob });
+        files.push({ college, count: group.length, name: pdfFileName(college || 'No college'), blob });
       }
 
       // A short gap between files: some browsers drop downloads fired together.
