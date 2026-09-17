@@ -32,10 +32,14 @@ const PAD_Y = 4;
 // English text is the text a reader can select and copy (see the text layer).
 const COLUMNS = [
   { key: 'n', label: '#', share: 0.05, alignRight: true },
-  { key: 'name', label: 'Name', share: 0.17 },
-  { key: 'phone', label: 'Mobile', share: 0.14 },
-  { key: 'college', label: 'Medical college', share: 0.18 },
-  { key: 'address', label: 'Address', share: 0.31 },
+  { key: 'name', label: 'Name', share: 0.16 },
+  { key: 'phone', label: 'Mobile', share: 0.13 },
+  { key: 'college', label: 'Medical college', share: 0.16 },
+  { key: 'address', label: 'Address', share: 0.275 },
+  // Beside the payment, because these two are what the packer acts on: how
+  // many copies go in the parcel, and how much comes back. Wide enough for the
+  // word "Books" to stay on one line.
+  { key: 'books', label: 'Books', share: 0.075, alignRight: true },
   { key: 'payment', label: 'Payment', share: 0.15 },
 ];
 
@@ -150,6 +154,7 @@ const cellParts = (row, index) => ({
   phone: [[row.phone || '-', 'td'], ...(row.altPhone ? [[row.altPhone, 'sub']] : [])],
   college: [[row.college || '-', 'td']],
   address: [[row.address || (row.digital ? 'Digital book - nothing to ship' : '-'), 'td']],
+  books: [[String(row.books || 1), 'td']],
   // Under the words, the money: what this buyer hands over, or already has.
   payment: [[PAYMENT_LABEL[row.payment] || '-', 'pay'], ...(row.amount ? [[row.amount, 'sub']] : [])],
 });

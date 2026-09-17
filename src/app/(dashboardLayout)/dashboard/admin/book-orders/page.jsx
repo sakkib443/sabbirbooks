@@ -27,7 +27,7 @@ import { buildOrderListPdf, downloadBlob } from '@/lib/orderListPdf';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
 import { addDays, bdDate, dayWindow, formatBd, pastCutoff } from '@/lib/shopDay';
 import {
-  areaOf, collegeOf, countOptions, formatBdFull, matchesPlace, printRowOf, safeFileName,
+  areaOf, collegeOf, copiesOf, countOptions, formatBdFull, matchesPlace, printRowOf, safeFileName,
 } from '@/lib/orderList';
 
 const CHANNEL_LABEL = { bkash: 'bKash', rocket: 'Rocket', nagad: 'Nagad' };
@@ -50,9 +50,6 @@ const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
 // card is used, rather than a table with its last columns cut off.
 const GRID_COLS =
   'grid-cols-[32px_108px_minmax(116px,1.2fr)_minmax(104px,1fr)_minmax(110px,1fr)_92px_84px_128px_28px]';
-
-// How many books an order holds. Copies, not lines: one line of three is three.
-const copiesOf = (o) => (o?.items || []).reduce((n, it) => n + (Number(it.quantity) || 1), 0);
 
 // Which books, as one short line: "MAGIC VIVA ANATOMY ×2 · PHYSIOLOGY ×1".
 const titlesOf = (o) =>
@@ -761,6 +758,7 @@ export default function BookOrdersPage() {
       ].filter(Boolean),
       summary: [
         `${list.length} order${list.length === 1 ? '' : 's'}`,
+        `${list.reduce((n, o) => n + copiesOf(o), 0)} books`,
         cod.length > 0 && `${cod.length} cash on delivery, Tk ${toCollect.toLocaleString('en-US')} to collect`,
         onlySelected && 'only the ticked orders',
         leftOut > 0 && `${leftOut} cancelled left out`,
