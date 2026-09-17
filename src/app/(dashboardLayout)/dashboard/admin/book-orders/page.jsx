@@ -3,8 +3,9 @@
 /**
  * Admin — Book Orders.
  * Lists orders from GET /api/orders (admin, bearer token), filter by status,
- * expand a row to see items / buyer / shipping / payment, and advance the
- * fulfillment status via PATCH /api/orders/:id/status.
+ * date, medical college and area, expand a row to see items / buyer / shipping
+ * / payment, and advance the fulfillment status via PATCH /api/orders/:id/status.
+ * The filtered (or ticked) orders print as a PDF list — see OrderListPrint.
  * Allowed manual statuses mirror the backend zod enum:
  *   processing | shipped | delivered | cancelled
  */
@@ -15,13 +16,18 @@ import {
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
   FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
-  FiCalendar,
+  FiCalendar, FiDownload,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
+import { useBrand } from '@/components/shared/Brand';
+import OrderListPrint from '@/components/admin/orders/OrderListPrint';
 import { getStoredUser } from '@/lib/permissions';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
 import { addDays, bdDate, dayWindow, formatBd, pastCutoff } from '@/lib/shopDay';
+import {
+  areaOf, collegeOf, countOptions, formatBdFull, matchesPlace, printRowOf, safeFileName,
+} from '@/lib/orderList';
 
 const CHANNEL_LABEL = { bkash: 'bKash', rocket: 'Rocket', nagad: 'Nagad' };
 
@@ -57,6 +63,31 @@ const bookMoneyOf = (o) => (o?.total || 0) - (o?.deliveryCharge || 0);
 // How many orders one load brings. The stat cards are counted from what is
 // loaded, so a date filter is also how the admin gets exact figures past this.
 const LIST_LIMIT = 500;
+
+// The most a PDF list fetches when more orders match than the screen loaded.
+const EXPORT_LIMIT = 5000;
+
+// The status filter as the PDF's heading line names it.
+const STATUS_BN = {
+  all: 'সব',
+  pending: 'পেন্ডিং',
+  paid: 'পেইড',
+  processing: 'কনফার্মড',
+  shipped: 'শিপড',
+  delivered: 'ডেলিভারড',
+  'access-granted': 'অ্যাক্সেস দেওয়া',
+  cancelled: 'বাতিল',
+};
+
+/** The query GET /api/orders takes: status, a date window, how many. */
+const ordersQuery = (status, range, limit) => {
+  const params = new URLSearchParams({ status, limit: String(limit) });
+  if (range) {
+    params.set('from', range.from.toISOString());
+    params.set('to', range.to.toISOString());
+  }
+  return params;
+};
 
 // Date shortcuts. A day on this screen runs 3 PM → 3 PM Bangladesh time and is
 // named by the date it ends on (lib/shopDay). "Tomorrow" only makes sense once
@@ -139,13 +170,53 @@ const buyerOf = (o) => ({
   phone: o?.shippingAddress?.phone || o?.user?.phoneNumber || '',
   altPhone: o?.shippingAddress?.altPhone || '',
   whatsapp: o?.user?.whatsappNumber || '',
-  college: o?.college?.name || o?.user?.medicalCollegeName || '',
+  college: collegeOf(o),
   collegeArea: [
     o?.college?.upazila || o?.user?.upazila,
     o?.college?.district || o?.user?.district,
     o?.user?.division,
   ].filter(Boolean).join(', '),
 });
+
+/** The search box: order #, buyer, phone, email, college or a book's title. `q` is lower-case. */
+const matchesSearch = (o, q) => {
+  if (!q) return true;
+  const b = buyerOf(o);
+  return (
+    o.orderNumber?.toLowerCase().includes(q) ||
+    b.name.toLowerCase().includes(q) ||
+    o.shippingAddress?.name?.toLowerCase().includes(q) ||
+    b.phone.includes(q) ||
+    b.altPhone.includes(q) ||
+    b.email.toLowerCase().includes(q) ||
+    b.college.toLowerCase().includes(q) ||
+    // A book's title finds every order of it.
+    (o.items || []).some((it) => it.title?.toLowerCase().includes(q))
+  );
+};
+
+/** A select with its options counted: "Dhaka Medical College (12)". */
+function CountSelect({ value, onChange, allLabel, options, disabled, label }) {
+  // A choice the reloaded orders no longer contain stays listed, at 0, so the
+  // select never shows a filter other than the one actually applied.
+  const shown = value && !options.some((o) => o.value === value) ? [{ value, count: 0 }, ...options] : options;
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      aria-label={label}
+      className="w-full min-w-0 px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4 disabled:opacity-50"
+    >
+      <option value="">{allLabel}</option>
+      {shown.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.value} ({o.count})
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function GuestBadge() {
   return (
@@ -228,6 +299,16 @@ export default function BookOrdersPage() {
   const [dayTo, setDayTo] = useState('');
   // Every order matching the filters on the server, which can be more than loaded.
   const [matchCount, setMatchCount] = useState(0);
+  // Medical college and area (district → upazila). Applied here, to the loaded
+  // orders, and their choices are counted from them — only colleges and places
+  // that actually have orders in the chosen dates are offered.
+  const [collegeFilter, setCollegeFilter] = useState('');
+  const [districtFilter, setDistrictFilter] = useState('');
+  const [upazilaFilter, setUpazilaFilter] = useState('');
+  // The PDF list being printed (see OrderListPrint), and the load before it.
+  const [printJob, setPrintJob] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const brand = useBrand();
 
   // Accepts the status and the date window so a filter change can refetch with
   // the new values immediately (state updates are async and wouldn't be visible
@@ -235,12 +316,10 @@ export default function BookOrdersPage() {
   const fetchOrders = async (status = statusFilter, range = dateRange) => {
     setLoading(true);
     setError('');
+    // A printed list belongs to the orders it was made from.
+    setPrintJob(null);
     try {
-      const params = new URLSearchParams({ status, limit: String(LIST_LIMIT) });
-      if (range) {
-        params.set('from', range.from.toISOString());
-        params.set('to', range.to.toISOString());
-      }
+      const params = ordersQuery(status, range, LIST_LIMIT);
       const res = await fetch(`${API}/orders?${params}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -290,28 +369,38 @@ export default function BookOrdersPage() {
 
   useEffect(() => { fetchOrders(); }, []); // initial load
 
+  const place = useMemo(
+    () => ({ college: collegeFilter, district: districtFilter, upazila: upazilaFilter }),
+    [collegeFilter, districtFilter, upazilaFilter]
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter((o) => {
-      const b = buyerOf(o);
-      return (
-        o.orderNumber?.toLowerCase().includes(q) ||
-        b.name.toLowerCase().includes(q) ||
-        o.shippingAddress?.name?.toLowerCase().includes(q) ||
-        b.phone.includes(q) ||
-        b.altPhone.includes(q) ||
-        b.email.toLowerCase().includes(q) ||
-        b.college.toLowerCase().includes(q) ||
-        // A book's title finds every order of it.
-        (o.items || []).some((it) => it.title?.toLowerCase().includes(q))
-      );
-    });
-  }, [orders, search]);
+    return orders.filter((o) => matchesSearch(o, q) && matchesPlace(o, place));
+  }, [orders, search, place]);
+
+  // The choices, counted from the loaded orders. The upazilas are the chosen
+  // district's; with no district chosen there is nothing to narrow.
+  const collegeOptions = useMemo(() => countOptions(orders.map(collegeOf)), [orders]);
+  const districtOptions = useMemo(() => countOptions(orders.map((o) => areaOf(o).district)), [orders]);
+  const upazilaOptions = useMemo(
+    () =>
+      districtFilter
+        ? countOptions(orders.map(areaOf).filter((a) => a.district === districtFilter).map((a) => a.upazila))
+        : [],
+    [orders, districtFilter]
+  );
+
+  // A PDF of the filtered list leaves cancelled orders out — nobody delivers
+  // them or collects for them — unless cancelled orders are what was asked for.
+  const keepForPdf = (list) => (statusFilter === 'cancelled' ? list : list.filter((o) => o.status !== 'cancelled'));
+  const allLoaded = matchCount <= orders.length;
+  const pdfCount = keepForPdf(filtered).length;
 
   const stats = useMemo(() => {
     const paid = orders.filter((o) => o.payment?.status === 'paid');
     const live = orders.filter((o) => o.status !== 'cancelled');
+    const codUnpaid = live.filter((o) => isCod(o) && o.payment?.status !== 'paid');
     return {
       total: orders.length,
       revenue: paid.reduce((s, o) => s + (o.total || 0), 0),
@@ -320,11 +409,11 @@ export default function BookOrdersPage() {
       books: live.reduce((s, o) => s + copiesOf(o), 0),
       // Orders waiting on a decision — the actual work queue.
       pending: orders.filter((o) => o.status === 'pending').length,
-      // Cash still out with couriers: confirmed COD orders not yet collected.
-      // The whole total, delivery included — it is what the rider collects.
-      codOutstanding: orders
-        .filter((o) => isCod(o) && o.payment?.status !== 'paid' && o.status !== 'cancelled')
-        .reduce((s, o) => s + (o.total || 0), 0),
+      // Cash still out with couriers: COD orders not yet collected. With the
+      // delivery charge it is what the rider collects; without it, what the
+      // books are owed — the same switch as the revenue card.
+      codOutstanding: codUnpaid.reduce((s, o) => s + (o.total || 0), 0),
+      codOutstandingBooks: codUnpaid.reduce((s, o) => s + bookMoneyOf(o), 0),
       delivered: orders.filter((o) => o.status === 'delivered').length,
     };
   }, [orders]);
@@ -620,6 +709,70 @@ export default function BookOrdersPage() {
     }
   };
 
+  /**
+   * The PDF list: the ticked orders, or else every order the filters show —
+   * all of them, fetched in full first when the screen holds only the latest
+   * LIST_LIMIT. Opens the print dialog, whose "Save as PDF" saves the file.
+   */
+  const exportPdf = async (onlySelected = false) => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      let list;
+      let leftOut = 0;
+      let fromLatest = 0;
+      if (onlySelected) {
+        list = filtered.filter((o) => selected.has(o._id));
+      } else {
+        let pool = orders;
+        if (!allLoaded) {
+          const params = ordersQuery(statusFilter, dateRange, Math.min(matchCount, EXPORT_LIMIT));
+          const res = await fetch(`${API}/orders?${params}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || json.success === false) throw new Error(json.message || 'Could not load the orders');
+          pool = Array.isArray(json.data) ? json.data : [];
+          if (pool.length < matchCount) fromLatest = pool.length;
+        }
+        const q = search.trim().toLowerCase();
+        const matching = pool.filter((o) => matchesSearch(o, q) && matchesPlace(o, place));
+        list = keepForPdf(matching);
+        leftOut = matching.length - list.length;
+      }
+      if (list.length === 0) {
+        showToast('error', 'No orders to put in the PDF');
+        return;
+      }
+
+      const area = [upazilaFilter, districtFilter].filter(Boolean).join(', ');
+      const days = dayFrom && dayTo ? (dayFrom === dayTo ? dayTo : `${dayFrom} to ${dayTo}`) : bdDate();
+      setPrintJob({
+        title: `${brand.englishName} — অর্ডার লিস্ট`,
+        fileName: safeFileName([`${brand.englishName} orders`, days, collegeFilter, area].filter(Boolean).join(' - ')),
+        filters: [
+          `তারিখ: ${dateRange ? `${formatBdFull(dateRange.from)} → ${formatBdFull(dateRange.to)}` : 'সব তারিখ'}`,
+          `স্ট্যাটাস: ${STATUS_BN[statusFilter] || statusFilter}`,
+          collegeFilter && `মেডিকেল কলেজ: ${collegeFilter}`,
+          area && `এলাকা: ${area}`,
+          search.trim() && `সার্চ: ${search.trim()}`,
+        ].filter(Boolean),
+        summary: [
+          `মোট ${list.length}টি অর্ডার`,
+          onlySelected && 'শুধু টিক দেওয়া অর্ডার',
+          leftOut > 0 && `বাতিল ${leftOut}টি বাদ`,
+          fromLatest > 0 && `সর্বশেষ ${fromLatest}টি অর্ডারের মধ্য থেকে`,
+          `তৈরি: ${formatBdFull(new Date())}`,
+        ].filter(Boolean).join('   ·   '),
+        rows: list.map(printRowOf),
+      });
+    } catch (e) {
+      showToast('error', e.message || 'Could not make the PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header */}
@@ -663,9 +816,16 @@ export default function BookOrdersPage() {
           <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
           <p className="text-xs text-dash-mute2 mt-1">Awaiting confirmation</p>
         </div>
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-orange-600">{bdt(stats.codOutstanding)}</p>
-          <p className="text-xs text-dash-mute2 mt-1">COD to collect</p>
+        <div
+          className="bg-dash-card rounded-xl border border-dash-line p-4"
+          title={`The couriers collect ${bdt(stats.codOutstanding)}, delivery charge included`}
+        >
+          <p className="text-xl font-bold text-orange-600 tabular-nums">
+            {bdt(deliveryMode === 'without' ? stats.codOutstandingBooks : stats.codOutstanding)}
+          </p>
+          <p className="text-xs text-dash-mute2 mt-1">
+            COD to collect · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
+          </p>
         </div>
         <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-sky-600">{stats.delivered}</p>
@@ -771,6 +931,52 @@ export default function BookOrdersPage() {
         </p>
       </div>
 
+      {/* Medical college and area, then the PDF of whatever the filters show.
+          Four across on a wide screen, two on a tablet, stacked on a phone. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <CountSelect
+          label="Medical college"
+          value={collegeFilter}
+          onChange={setCollegeFilter}
+          allLabel="All medical colleges"
+          options={collegeOptions}
+        />
+        <CountSelect
+          label="District"
+          value={districtFilter}
+          onChange={(v) => {
+            setDistrictFilter(v);
+            // An upazila belongs to one district; a new district starts over.
+            setUpazilaFilter('');
+          }}
+          allLabel="All districts"
+          options={districtOptions}
+        />
+        <CountSelect
+          label="Upazila / thana"
+          value={upazilaFilter}
+          onChange={setUpazilaFilter}
+          allLabel={districtFilter ? 'All upazilas / thanas' : 'Upazila — pick a district first'}
+          options={upazilaOptions}
+          disabled={!districtFilter}
+        />
+        <button
+          type="button"
+          onClick={() => exportPdf(false)}
+          disabled={loading || exporting || (allLoaded && pdfCount === 0)}
+          title={
+            statusFilter === 'cancelled'
+              ? 'A printable list of the orders shown — save it as PDF from the print window'
+              : 'A printable list of the orders shown, cancelled ones left out — save it as PDF from the print window'
+          }
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand px-4 py-2.5 font-semibold text-white shadow-sm shadow-brand/25 transition-colors hover:bg-brand-hover disabled:opacity-50"
+        >
+          {exporting ? <FiLoader className="animate-spin" /> : <FiDownload />}
+          Download PDF
+          {allLoaded && <span className="rounded-md bg-white/20 px-1.5 text-xs tabular-nums">{pdfCount}</span>}
+        </button>
+      </div>
+
       {/* Selection toolbar. Appears above the list so the count and the actions
           are never far from the checkboxes. Every fulfilment status can be set
           in bulk — confirming twenty COD orders one at a time is the job this
@@ -814,6 +1020,15 @@ export default function BookOrdersPage() {
                   </button>
                 );
               })}
+              {/* Only the ticked orders, as a PDF list — cancelled ones too,
+                  since ticking them is asking for them. */}
+              <button
+                onClick={() => exportPdf(true)}
+                disabled={exporting}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-xs font-semibold text-dash-ink3 transition-colors hover:border-brand/40 hover:text-brand disabled:opacity-50"
+              >
+                <FiDownload size={13} /> PDF
+              </button>
               {/* Deleting, set apart on purpose.
                   A divider and its own colour, because everything to the left
                   moves an order along and this one ends it. Owner-only, and
@@ -1506,6 +1721,7 @@ export default function BookOrdersPage() {
 
       {toastNode}
       {confirmNode}
+      <OrderListPrint job={printJob} />
     </div>
   );
 }
