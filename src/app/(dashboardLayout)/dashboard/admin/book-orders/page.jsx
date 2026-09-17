@@ -90,14 +90,14 @@ const ordersQuery = (status, range, limit) => {
   return params;
 };
 
-// Date shortcuts. A day on this screen runs 3 PM → 3 PM Bangladesh time and is
+// Date shortcuts. A day on this screen runs noon → noon Bangladesh time and is
 // named by the date it ends on (lib/shopDay). "Tomorrow" only makes sense once
-// today's 3 PM has passed: orders placed after it already count for tomorrow.
+// today's noon has passed: orders placed after it already count for tomorrow.
 const DATE_PRESETS = [
   { key: 'all', label: 'All dates' },
   { key: 'yesterday', label: 'Yesterday' },
   { key: 'today', label: 'Today' },
-  { key: 'tomorrow', label: 'Tomorrow (after 3 PM)', afterCutoffOnly: true },
+  { key: 'tomorrow', label: 'Tomorrow (after 12 PM)', afterCutoffOnly: true },
   { key: '7d', label: 'Last 7 days' },
 ];
 
@@ -943,7 +943,7 @@ export default function BookOrdersPage() {
         </select>
       </div>
 
-      {/* Dates. A day here runs 3 PM → 3 PM Bangladesh time, named by the date
+      {/* Dates. A day here runs noon → noon Bangladesh time, named by the date
           it ends on — the stat cards above count the same window. */}
       <div className="space-y-1.5">
         <div className="flex flex-col gap-3 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
@@ -1005,7 +1005,7 @@ export default function BookOrdersPage() {
           ) : (
             'All dates'
           )}
-          {' · '}A day here runs 3 PM → 3 PM, Bangladesh time.
+          {' · '}A day here runs 12 PM → 12 PM, Bangladesh time.
           {!loading && matchCount > orders.length && (
             <span className="text-amber-700">
               {' '}Showing the latest {orders.length.toLocaleString('en-US')} of {matchCount.toLocaleString('en-US')} — pick dates to see and count the rest.
