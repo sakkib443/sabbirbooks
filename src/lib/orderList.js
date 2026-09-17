@@ -6,6 +6,9 @@
  * holds exactly the orders the filters show.
  */
 
+/** How many books an order holds. Copies, not lines: one line of three is three. */
+export const copiesOf = (o) => (o?.items || []).reduce((n, it) => n + (Number(it.quantity) || 1), 0);
+
 /** The buyer's medical college as the order recorded it, else their profile's. */
 export const collegeOf = (o) => String(o?.college?.name || o?.user?.medicalCollegeName || '').trim();
 
@@ -90,6 +93,8 @@ export const printRowOf = (o) => {
     phone: sa.phone || o?.user?.phoneNumber || '',
     altPhone: sa.altPhone || '',
     college: collegeOf(o),
+    // How many copies to hand this person — two of one title is two.
+    books: copiesOf(o),
     address: sa.address ? parts.join(', ') : '',
     digital: o?.deliveryType === 'digital',
     payment: paymentKeyOf(o),
