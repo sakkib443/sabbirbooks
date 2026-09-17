@@ -304,7 +304,7 @@ export default function BookTopicScanPage() {
           <p className="text-sm text-slate-400 mb-6">
             {signedIn
               ? 'আপনার বইয়ের ভেতরে একটি গোপন কোড আছে। সেটি একবার বসালেই এই অ্যাকাউন্টে সব উত্তর খুলে যাবে।'
-              : 'বই আগে চালু করা থাকলে শুধু লগইন করলেই উত্তরগুলো খুলে যাবে — নতুন কোডের দরকার নেই।'}
+              : 'বই আগে চালু করা থাকলে শুধু লগইন করলেই উত্তরগুলো খুলে যাবে — নতুন কোডের দরকার নেই। অ্যাকাউন্ট না থাকলে বইয়ের কোড দিয়েই চালু করে নিতে পারবেন।'}
           </p>
 
           {/* A plain <img>, not next/image, on purpose. next/image THROWS on a
@@ -377,6 +377,11 @@ export default function BookTopicScanPage() {
    * parcel arrived. It will not any more — the code inside the book is what
    * opens it. Saying otherwise here would leave the buyer waiting for something
    * that is never going to happen, so it now says what will actually be needed.
+   *
+   * "In transit" is only what the ORDER says. A buyer who took the book from a
+   * campus rep, or whose order the shop has not marked delivered yet, is
+   * holding the book while this screen calls it undelivered — so the code box
+   * is the first button here too. Redeeming never looks at the order.
    */
   if (state.kind === "awaiting") {
     const book = state.book;
@@ -393,17 +398,26 @@ export default function BookTopicScanPage() {
             নেবেন — তখনই সব উত্তর খুলে যাবে।
           </p>
           <p className="text-xs text-slate-500 mb-6">
-            আবার কিনতে হবে না। কোডটি বইয়ের ভেতরেই আছে।
+            বই আগেই হাতে পেয়ে থাকলে অপেক্ষা করার দরকার নেই — এখনই কোডটি বসান।
+            আবার কিনতে হবে না, কোডটি বইয়ের ভেতরেই আছে।
           </p>
 
           {book && <p className="text-white font-medium mb-6">{book.title}</p>}
 
-          <Link
-            href="/dashboard/user/orders"
-            className="inline-flex items-center justify-center w-full rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-medium px-5 py-3 transition"
-          >
-            অর্ডারের অবস্থা দেখুন
-          </Link>
+          <div className="space-y-2">
+            <Link
+              href="/activate"
+              className="inline-flex items-center justify-center w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-5 py-3 transition"
+            >
+              বই হাতে আছে? কোড দিয়ে চালু করুন
+            </Link>
+            <Link
+              href="/dashboard/user/orders"
+              className="inline-flex items-center justify-center w-full rounded-lg border border-white/15 text-slate-200 font-medium px-5 py-3 transition hover:border-white/30"
+            >
+              অর্ডারের অবস্থা দেখুন
+            </Link>
+          </div>
         </div>
       </div>
     );
