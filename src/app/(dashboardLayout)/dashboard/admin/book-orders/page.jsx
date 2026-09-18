@@ -39,6 +39,22 @@ const bdt = (v) => (typeof v === 'number' ? '৳' + v.toLocaleString('en-US') : 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
 
+// The same instant, short enough for a row: "18 Sep, 2:47 pm". Bangladesh
+// time, whatever the admin's own device says — the day filter above counts in
+// Bangladesh time too, and two clocks on one screen is how orders end up
+// looking like they fell a day out.
+const fmtWhen = (d) =>
+  d
+    ? new Date(d).toLocaleString('en-GB', {
+        timeZone: 'Asia/Dhaka',
+        day: 'numeric',
+        month: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+    : '—';
+
 // Manual fulfillment transitions the admin can set (payment-driven states
 // 'pending' / 'paid' / 'access-granted' are set by the payment flow, not here).
 const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
@@ -49,7 +65,7 @@ const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
 // xl — below that (a tablet, a small laptop with the sidebar open) the stacked
 // card is used, rather than a table with its last columns cut off.
 const GRID_COLS =
-  'grid-cols-[32px_108px_minmax(116px,1.2fr)_minmax(104px,1fr)_minmax(110px,1fr)_92px_84px_128px_28px]';
+  'grid-cols-[32px_30px_120px_minmax(116px,1.2fr)_minmax(96px,1fr)_minmax(104px,1fr)_92px_84px_128px_28px]';
 
 // Which books, as one short line: "MAGIC VIVA ANATOMY ×2 · PHYSIOLOGY ×1".
 const titlesOf = (o) =>
@@ -1214,6 +1230,9 @@ export default function BookOrdersPage() {
               fields inline, where a header row has nothing to align to. */}
           <div className={`hidden xl:grid ${GRID_COLS} items-center gap-3 rounded-lg bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2`}>
             <span />
+            {/* Counts the list as it stands, so a date filter starts again at 1
+                — the same numbering the PDF of this list prints. */}
+            <span className="text-right">#</span>
             <span>Order</span>
             <span>Buyer &amp; phone</span>
             <span>Medical college</span>
@@ -1224,8 +1243,9 @@ export default function BookOrdersPage() {
             <span />
           </div>
 
-          {filtered.map((o) => {
+          {filtered.map((o, index) => {
             const isOpen = expanded === o._id;
+            const serial = index + 1;
             return (
               <div
                 key={o._id}
@@ -1251,11 +1271,18 @@ export default function BookOrdersPage() {
                     />
                   </label>
 
+                  <span className="text-right text-xs font-semibold tabular-nums text-dash-mute2">{serial}</span>
+
                   <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
                     <span className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-extrabold text-indigo-700">
                       #{o.orderSeq ?? '—'}
                     </span>
-                    <span className="mt-0.5 block truncate font-mono text-[11px] text-dash-mute2">{o.orderNumber}</span>
+                    {/* When it was placed, on the row itself: the packing list
+                        is made by the clock, not by the order number. */}
+                    <span className="mt-0.5 block truncate text-[11px] tabular-nums text-dash-mute2" title={fmtDate(o.createdAt)}>
+                      {fmtWhen(o.createdAt)}
+                    </span>
+                    <span className="block truncate font-mono text-[10px] text-dash-faint">{o.orderNumber}</span>
                   </button>
 
                   <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
@@ -1340,12 +1367,18 @@ export default function BookOrdersPage() {
                     </label>
                     <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 flex-1 text-left">
                       <span className="flex flex-wrap items-center gap-1.5">
+                        {/* Same running number as the desktop table and the
+                            PDF: where this order sits in the list on screen. */}
+                        <span className="text-xs font-bold tabular-nums text-dash-mute2">{serial}.</span>
                         <span className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-extrabold text-indigo-700">
                           #{o.orderSeq ?? '—'}
                         </span>
                         <span className="text-sm font-semibold text-dash-ink3">{buyerOf(o).name}</span>
                         {buyerOf(o).isGuest && <GuestBadge />}
                         {isCod(o) && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">COD</span>}
+                      </span>
+                      <span className="mt-1 block text-[11px] tabular-nums text-dash-mute2" title={fmtDate(o.createdAt)}>
+                        {fmtWhen(o.createdAt)}
                       </span>
                       <span className="mt-1 block font-mono text-xs text-dash-mute2">
                         {buyerOf(o).phone || '—'}
