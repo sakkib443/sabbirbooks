@@ -268,13 +268,21 @@ const EditField = ({ label, value, onChange, type = 'text', mono }) => (
   </label>
 );
 
+/**
+ * One fact about an order, on ONE line: icon, label, value.
+ *
+ * The label used to sit above the value, which doubled the height of every
+ * field — a single order's details ran well past a screen, and the shorter
+ * columns (payment, with three fields) left a hole beside the longer ones.
+ * Side by side, the same facts take half the room and line up down the column.
+ */
 const DetailRow = ({ icon: Icon, label, value, mono }) => (
-  <div className="flex items-start gap-2">
-    <Icon size={13} className="text-dash-faint mt-0.5 shrink-0" />
-    <div className="min-w-0">
-      <p className="text-[10px] text-dash-mute2 uppercase tracking-wider">{label}</p>
-      <p className={`text-sm text-dash-ink3 break-words ${mono ? 'font-mono' : ''}`}>{value || '—'}</p>
-    </div>
+  <div className="flex items-baseline gap-2">
+    <Icon size={11} className="shrink-0 translate-y-0.5 text-dash-faint" />
+    <span className="w-[74px] shrink-0 text-[10px] uppercase leading-snug tracking-wider text-dash-mute2">{label}</span>
+    <span className={`min-w-0 flex-1 break-words text-[13px] leading-snug text-dash-ink3 ${mono ? 'font-mono' : ''}`}>
+      {value || '—'}
+    </span>
   </div>
 );
 
@@ -1410,57 +1418,56 @@ export default function BookOrdersPage() {
 
                 {/* Expanded detail */}
                 {isOpen && (
-                  <div className="border-t border-dash-line-soft p-4 sm:p-5 bg-dash-soft/40 space-y-5">
-                    {/* Items — the quantity in a column of its own, so "how many"
-                        is read off the page rather than worked out from prices. */}
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Items</p>
-                        <BooksChip order={o} />
-                      </div>
-                      <div className="bg-dash-card rounded-lg border border-dash-line overflow-hidden">
-                        <div className="grid grid-cols-[minmax(0,1fr)_44px_68px_76px] sm:grid-cols-[minmax(0,1fr)_64px_96px_104px] gap-2 bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">
-                          <span>Book</span>
-                          <span className="text-center">Qty</span>
-                          <span className="text-right">Price</span>
-                          <span className="text-right">Amount</span>
-                        </div>
-                        {(o.items || []).map((it, i) => (
+                  <div className="border-t border-dash-line-soft bg-dash-soft/40 p-3 sm:p-4 space-y-3">
+                    {/* Items — one line each: what, how many, at what price. It
+                        was a table with its own header row, which spent five
+                        lines on the one book most orders hold and pushed the
+                        buyer and the address below the fold. */}
+                    <div className="overflow-hidden rounded-lg border border-dash-line bg-dash-card">
+                      {(o.items || []).map((it, i) => {
+                        const qty = Number(it.quantity) || 1;
+                        return (
                           <div
                             key={i}
-                            className="grid grid-cols-[minmax(0,1fr)_44px_68px_76px] sm:grid-cols-[minmax(0,1fr)_64px_96px_104px] items-center gap-2 border-t border-dash-line-soft px-3 py-2.5 text-sm"
+                            className="flex items-baseline justify-between gap-3 border-b border-dash-line-soft px-3 py-1.5 text-sm last:border-b-0"
                           >
-                            <div className="min-w-0">
-                              <p className="font-medium text-dash-ink3 truncate" title={it.title}>{it.title}</p>
-                              <p className="text-xs text-dash-mute2 capitalize">{it.format}</p>
-                            </div>
-                            <span className="text-center text-base font-bold text-dash-ink2 tabular-nums">{Number(it.quantity) || 1}</span>
-                            <span className="text-right text-dash-ink4 tabular-nums">{bdt(it.price)}</span>
-                            <span className="text-right font-semibold text-dash-ink3 tabular-nums">{bdt(it.price * (Number(it.quantity) || 1))}</span>
+                            <span className="min-w-0 truncate" title={it.title}>
+                              <span className="font-medium text-dash-ink3">{it.title}</span>
+                              <span className="ml-1.5 text-[11px] capitalize text-dash-mute2">{it.format}</span>
+                            </span>
+                            <span className="shrink-0 tabular-nums text-dash-mute2">
+                              <span className="font-bold text-dash-ink2">×{qty}</span>
+                              <span className="ml-2">{bdt(it.price)}</span>
+                              <span className="ml-2 font-semibold text-dash-ink3">{bdt(it.price * qty)}</span>
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 mt-2 text-sm px-1">
-                        <span className="text-dash-mute2">Subtotal: <span className="text-dash-ink4">{bdt(o.subtotal)}</span></span>
+                        );
+                      })}
+                      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-0.5 border-t border-dash-line bg-dash-soft/60 px-3 py-1.5 text-xs">
+                        <span className="text-dash-mute2">Subtotal <span className="text-dash-ink4">{bdt(o.subtotal)}</span></span>
                         {o.discount > 0 && (
-                          <span className="text-dash-mute2">Discount: <span className="text-emerald-600">−{bdt(o.discount)}</span></span>
+                          <span className="text-dash-mute2">Discount <span className="text-emerald-600">−{bdt(o.discount)}</span></span>
                         )}
-                        <span className="text-dash-mute2">Books: <span className="text-dash-ink4">{bdt(bookMoneyOf(o))}</span></span>
+                        <span className="text-dash-mute2">Books <span className="text-dash-ink4">{bdt(bookMoneyOf(o))}</span></span>
                         {o.deliveryCharge > 0 && (
-                          <span className="text-dash-mute2">Delivery: <span className="text-dash-ink4">{bdt(o.deliveryCharge)}</span></span>
+                          <span className="text-dash-mute2">Delivery <span className="text-dash-ink4">{bdt(o.deliveryCharge)}</span></span>
                         )}
-                        <span className="font-semibold text-dash-ink3">Total: {bdt(o.total)}</span>
+                        <span className="text-sm font-semibold text-dash-ink3">Total {bdt(o.total)}</span>
                       </div>
                     </div>
 
                     {/* Buyer / shipping / payment — the complete picture of one
                         order, so the admin never has to look anything up elsewhere
                         before confirming it or calling the buyer. */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-dash-card rounded-lg border border-dash-line p-4">
-                      <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Buyer</p>
+                    {/* Buyer / shipping / payment, three columns of one-line facts. The
+                        columns are uneven by nature — an address has more parts than a
+                        payment — so they share one card rather than three boxes whose
+                        empty halves show. */}
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-lg border border-dash-line bg-dash-card p-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="space-y-1">
+                        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-dash-mute">Buyer</p>
                         {buyerOf(o).isGuest && (
-                          <p className="text-xs text-dash-mute2">Ordered without an account — every detail below is from the order itself.</p>
+                          <p className="text-[11px] leading-snug text-dash-mute2">Ordered without an account — every detail below is from the order itself.</p>
                         )}
                         <DetailRow icon={FiUser} label="Name" value={buyerOf(o).name} />
                         <DetailRow icon={FiMail} label="Email" value={buyerOf(o).email} />
@@ -1483,8 +1490,8 @@ export default function BookOrdersPage() {
                         <DetailRow icon={FiClock} label="Ordered" value={fmtDate(o.createdAt)} />
                       </div>
 
-                      <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Delivery address</p>
+                      <div className="space-y-1">
+                        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-dash-mute">Delivery address</p>
                         {o.shippingAddress ? (
                           <>
                             <DetailRow icon={FiUser} label="Recipient" value={o.shippingAddress.name} />
@@ -1511,8 +1518,8 @@ export default function BookOrdersPage() {
                         )}
                       </div>
 
-                      <div className="space-y-2.5">
-                        <p className="text-xs font-bold text-dash-mute uppercase tracking-wider">Payment &amp; order</p>
+                      <div className="space-y-1">
+                        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-dash-mute">Payment &amp; order</p>
                         <DetailRow
                           icon={FiCreditCard}
                           label="Method"
@@ -1562,7 +1569,7 @@ export default function BookOrdersPage() {
                         book's QR content), and it becomes paid when marked
                         delivered. Approving it here would book revenue for a
                         parcel still in a van. */}
-                    <div className="rounded-lg border border-dash-line bg-dash-card p-4">
+                    <div className="rounded-lg border border-dash-line bg-dash-card p-3">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-dash-mute uppercase tracking-wider">
@@ -1741,7 +1748,7 @@ export default function BookOrdersPage() {
                         the workaround. Money is deliberately NOT editable — the
                         line prices and total are the record of what was agreed. */}
                     {canDelete && (
-                      <div className="rounded-lg border border-dash-line bg-dash-card p-4">
+                      <div className="rounded-lg border border-dash-line bg-dash-card p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
                             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dash-mute">
