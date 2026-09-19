@@ -36,6 +36,14 @@ const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => (typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '');
 const bdt = (v) => (typeof v === 'number' ? '৳' + v.toLocaleString('en-US') : '—');
+
+// "01707387130" → "01707 387 130". The admin reads these aloud down a phone
+// line, and an unbroken 11-digit run is where digits get dropped or swapped.
+// Anything that isn't a plain 11-digit local number is shown as stored.
+const spacedPhone = (p) => {
+  const s = String(p || '').replace(/\s+/g, '');
+  return /^\d{11}$/.test(s) ? `${s.slice(0, 5)} ${s.slice(5, 8)} ${s.slice(8)}` : p;
+};
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
 
@@ -1290,7 +1298,6 @@ export default function BookOrdersPage() {
                     <span className="mt-0.5 block truncate text-[11px] tabular-nums text-dash-mute2" title={fmtDate(o.createdAt)}>
                       {fmtWhen(o.createdAt)}
                     </span>
-                    <span className="block truncate font-mono text-[10px] text-dash-faint">{o.orderNumber}</span>
                   </button>
 
                   <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
@@ -1298,8 +1305,10 @@ export default function BookOrdersPage() {
                       <span className="block truncate text-sm font-medium text-dash-ink3">{buyerOf(o).name}</span>
                       {buyerOf(o).isGuest && <GuestBadge />}
                     </span>
-                    <span className="block truncate font-mono text-xs text-dash-mute2">
-                      {buyerOf(o).phone || '—'}
+                    {/* The number the admin actually dials — so it is the
+                        largest thing in the cell, and grouped for reading. */}
+                    <span className="mt-0.5 block truncate font-mono text-base font-bold tracking-wide text-dash-ink2">
+                      {spacedPhone(buyerOf(o).phone) || '—'}
                     </span>
                   </button>
 
@@ -1388,8 +1397,8 @@ export default function BookOrdersPage() {
                       <span className="mt-1 block text-[11px] tabular-nums text-dash-mute2" title={fmtDate(o.createdAt)}>
                         {fmtWhen(o.createdAt)}
                       </span>
-                      <span className="mt-1 block font-mono text-xs text-dash-mute2">
-                        {buyerOf(o).phone || '—'}
+                      <span className="mt-1 block font-mono text-base font-bold tracking-wide text-dash-ink2">
+                        {spacedPhone(buyerOf(o).phone) || '—'}
                       </span>
                       <span className="block truncate text-xs text-dash-mute2">{buyerOf(o).college || '—'}</span>
                       <span className="mt-1 flex flex-wrap items-center gap-2">
@@ -1419,43 +1428,6 @@ export default function BookOrdersPage() {
                 {/* Expanded detail */}
                 {isOpen && (
                   <div className="border-t border-dash-line-soft bg-dash-soft/40 p-3 sm:p-4 space-y-3">
-                    {/* Items — one line each: what, how many, at what price. It
-                        was a table with its own header row, which spent five
-                        lines on the one book most orders hold and pushed the
-                        buyer and the address below the fold. */}
-                    <div className="overflow-hidden rounded-lg border border-dash-line bg-dash-card">
-                      {(o.items || []).map((it, i) => {
-                        const qty = Number(it.quantity) || 1;
-                        return (
-                          <div
-                            key={i}
-                            className="flex items-baseline justify-between gap-3 border-b border-dash-line-soft px-3 py-1.5 text-sm last:border-b-0"
-                          >
-                            <span className="min-w-0 truncate" title={it.title}>
-                              <span className="font-medium text-dash-ink3">{it.title}</span>
-                              <span className="ml-1.5 text-[11px] capitalize text-dash-mute2">{it.format}</span>
-                            </span>
-                            <span className="shrink-0 tabular-nums text-dash-mute2">
-                              <span className="font-bold text-dash-ink2">×{qty}</span>
-                              <span className="ml-2">{bdt(it.price)}</span>
-                              <span className="ml-2 font-semibold text-dash-ink3">{bdt(it.price * qty)}</span>
-                            </span>
-                          </div>
-                        );
-                      })}
-                      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-0.5 border-t border-dash-line bg-dash-soft/60 px-3 py-1.5 text-xs">
-                        <span className="text-dash-mute2">Subtotal <span className="text-dash-ink4">{bdt(o.subtotal)}</span></span>
-                        {o.discount > 0 && (
-                          <span className="text-dash-mute2">Discount <span className="text-emerald-600">−{bdt(o.discount)}</span></span>
-                        )}
-                        <span className="text-dash-mute2">Books <span className="text-dash-ink4">{bdt(bookMoneyOf(o))}</span></span>
-                        {o.deliveryCharge > 0 && (
-                          <span className="text-dash-mute2">Delivery <span className="text-dash-ink4">{bdt(o.deliveryCharge)}</span></span>
-                        )}
-                        <span className="text-sm font-semibold text-dash-ink3">Total {bdt(o.total)}</span>
-                      </div>
-                    </div>
-
                     {/* Buyer / shipping / payment — the complete picture of one
                         order, so the admin never has to look anything up elsewhere
                         before confirming it or calling the buyer. */}
@@ -1520,6 +1492,8 @@ export default function BookOrdersPage() {
 
                       <div className="space-y-1">
                         <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-dash-mute">Payment &amp; order</p>
+                        {/* Off the list row now — it is only needed when looking one order up. */}
+                        <DetailRow icon={FiHash} label="Order no." value={o.orderNumber} mono />
                         <DetailRow
                           icon={FiCreditCard}
                           label="Method"
@@ -1559,6 +1533,39 @@ export default function BookOrdersPage() {
                         {o.deliveredAt && <DetailRow icon={FiPackage} label="Delivered" value={fmtDate(o.deliveredAt)} />}
                         {o.courierName && <DetailRow icon={FiTruck} label="Courier" value={o.courierName} />}
                         {o.trackingCode && <DetailRow icon={FiHash} label="Tracking" value={o.trackingCode} mono />}
+
+                        {/* Books and money. This was a full-width strip above the
+                            three columns; the payment column is the short one, so
+                            it sits in the space under it and the whole panel gets
+                            one row shorter. */}
+                        <div className="mt-3 overflow-hidden rounded-md border border-dash-line-soft">
+                          {(o.items || []).map((it, i) => {
+                            const qty = Number(it.quantity) || 1;
+                            return (
+                              <div key={i} className="border-b border-dash-line-soft px-2.5 py-1.5 text-sm last:border-b-0">
+                                <span className="block truncate" title={it.title}>
+                                  <span className="font-medium text-dash-ink3">{it.title}</span>
+                                  <span className="ml-1.5 text-[11px] capitalize text-dash-mute2">{it.format}</span>
+                                </span>
+                                <span className="flex justify-between tabular-nums text-xs text-dash-mute2">
+                                  <span><span className="font-bold text-dash-ink2">×{qty}</span> · {bdt(it.price)}</span>
+                                  <span className="font-semibold text-dash-ink3">{bdt(it.price * qty)}</span>
+                                </span>
+                              </div>
+                            );
+                          })}
+                          <div className="space-y-0.5 border-t border-dash-line bg-dash-soft/60 px-2.5 py-1.5 text-xs tabular-nums">
+                            <p className="flex justify-between text-dash-mute2">Subtotal <span className="text-dash-ink4">{bdt(o.subtotal)}</span></p>
+                            {o.discount > 0 && (
+                              <p className="flex justify-between text-dash-mute2">Discount <span className="text-emerald-600">−{bdt(o.discount)}</span></p>
+                            )}
+                            <p className="flex justify-between text-dash-mute2">Books <span className="text-dash-ink4">{bdt(bookMoneyOf(o))}</span></p>
+                            {o.deliveryCharge > 0 && (
+                              <p className="flex justify-between text-dash-mute2">Delivery <span className="text-dash-ink4">{bdt(o.deliveryCharge)}</span></p>
+                            )}
+                            <p className="flex justify-between border-t border-dash-line-soft pt-1 text-sm font-semibold text-dash-ink3">Total <span>{bdt(o.total)}</span></p>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
