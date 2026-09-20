@@ -1656,7 +1656,7 @@ const EN = {
   codDigitalOnly: "Cash on delivery is only for printed books.",
   codHowTitle: "How cash on delivery works",
   codStep1: "Place the order — nothing is charged now.",
-  codStep2: "We confirm the order by phone and hand it to the courier.",
+  codStep2: "We pack the order and hand it to the courier.",
   codStep3: "Pay the courier in cash when the book reaches you.",
   manualNotConfiguredUseCod:
     "Online payment is not set up yet — please choose Cash on Delivery.",
@@ -1705,11 +1705,15 @@ const EN = {
   freeDelivery: "Free",
 
   // Cash-on-delivery confirmation screen
-  codSuccessTitle: "Order placed!",
-  // No promise of a phone call. The shop stopped making it (20 Sep 2026): the
-  // order is confirmed on the spot and the buyer's SMS says so, and a promised
-  // call that does not come is what the "where is my book" messages were.
-  codSuccessSub: "Your order is confirmed. We will send the book to your address.",
+  // No promise of a phone call anywhere on this screen. The shop stopped
+  // making it (20 Sep 2026): the order is confirmed on the spot, the buyer's
+  // SMS says exactly that, and a promised call that does not come is what the
+  // "where is my book" messages were.
+  codSuccessTitle: "Order confirmed!",
+  codSuccessSub: "Your order is confirmed. The book reaches your address within two to three days.",
+  // A pre-order has no two or three days to promise — the print run is not in
+  // yet. The release date is on the pre-order note just below this line.
+  codSuccessSubPreOrder: "Your pre-order is confirmed. The book is sent as soon as the print run arrives.",
   codCollectLabel: "Pay on delivery",
   codNextTitle: "What happens next",
   codNext1: "Your order is confirmed and is being packed.",
@@ -1922,7 +1926,7 @@ const BN: Copy = {
   codDigitalOnly: "ক্যাশ অন ডেলিভারি শুধু ছাপা বইয়ের জন্য।",
   codHowTitle: "ক্যাশ অন ডেলিভারি যেভাবে কাজ করে",
   codStep1: "অর্ডার দিন — এখন কোনো টাকা কাটা হবে না।",
-  codStep2: "আমরা ফোনে অর্ডারটি নিশ্চিত করে কুরিয়ারে পাঠিয়ে দেব।",
+  codStep2: "আমরা অর্ডারটি প্যাক করে কুরিয়ারে পাঠিয়ে দেব।",
   codStep3: "বই হাতে পাওয়ার সময় কুরিয়ারকে নগদ টাকা দেবেন।",
   manualNotConfiguredUseCod:
     "অনলাইন পেমেন্ট এখনো চালু হয়নি — ক্যাশ অন ডেলিভারি বেছে নিন।",
@@ -1971,8 +1975,9 @@ const BN: Copy = {
   freeDelivery: "ফ্রি",
 
   // Cash-on-delivery confirmation screen
-  codSuccessTitle: "অর্ডার হয়ে গেছে!",
-  codSuccessSub: "আপনার অর্ডার কনফার্ম হয়েছে। বইটি আপনার ঠিকানায় পাঠিয়ে দেওয়া হবে।",
+  codSuccessTitle: "অর্ডার কনফার্ম হয়েছে!",
+  codSuccessSub: "আপনার অর্ডার কনফার্ম হয়েছে। দুই থেকে তিন দিনের ভিতরে বইটি আপনার ঠিকানায় পৌঁছে যাবে।",
+  codSuccessSubPreOrder: "আপনার প্রি-অর্ডার কনফার্ম হয়েছে। বই ছাপা হয়ে এলেই আপনার ঠিকানায় পাঠিয়ে দেওয়া হবে।",
   codCollectLabel: "ডেলিভারির সময় দিতে হবে",
   codNextTitle: "এরপর যা হবে",
   codNext1: "আপনার অর্ডার কনফার্ম হয়েছে, প্যাক করা হচ্ছে।",
@@ -2303,6 +2308,7 @@ function successLabels(S: Copy, bn: string) {
     // Cash on delivery
     codTitle: S.codSuccessTitle,
     codSub: S.codSuccessSub,
+    codSubPreOrder: S.codSuccessSubPreOrder,
     codCollectLabel: S.codCollectLabel,
     codDeliveryLabel: S.deliveryCharge,
     codNextTitle: S.codNextTitle,
