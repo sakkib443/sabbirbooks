@@ -12,13 +12,16 @@
  * The hero's cover and its "নমুনা দেখুন" button both scroll here.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { LuBookOpen, LuDownload, LuExpand, LuX, LuExternalLink } from 'react-icons/lu';
 import { useLanguage } from '@/context/LanguageContext';
 
-// pdf.js is large and touches `window`, so it is kept out of the server bundle
-// and off the landing page's first paint entirely.
+// pdf.js is large and touches `window`, so it is kept out of the server
+// bundle. "ssr: false" alone does not keep it off the landing page, though:
+// the chunk and its 368KB worker were still fetched the moment the page
+// hydrated, for a section most visitors have not scrolled to yet. It is now
+// mounted only when the section comes near the viewport — see `nearby`.
 const PdfViewer = dynamic(() => import('@/components/shared/PdfViewer'), {
   ssr: false,
   loading: () => (
@@ -65,6 +68,41 @@ export default function LandingSample({ book }) {
   // too old for it. The reader is offered the file rather than a grey box.
   const [failed, setFailed] = useState(false);
 
+  /*
+   * Has the reader got anywhere near the sample?
+   *
+   * The viewer is the heaviest thing on the page — pdf.js, its worker and the
+   * sample file itself, most of a megabyte — and it sits well below the fold on
+   * a phone. An ad click that bounces at the hero paid for all of it and read
+   * none of it.
+   *
+   * 600px of rootMargin means it starts loading roughly a screen before it is
+   * reached, so by the time the section is on screen the viewer usually is too.
+   * No IntersectionObserver (an old browser, a test runner) means load it
+   * immediately, which is where this started.
+   */
+  const sectionRef = useRef(null);
+  const [nearby, setNearby] = useState(false);
+  useEffect(() => {
+    if (nearby) return;
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setNearby(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setNearby(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '600px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [nearby]);
+
   // Lock the page scroll while the full-screen viewer is up, and let Escape
   // close it — the same affordances a reader expects from any lightbox.
   useEffect(() => {
@@ -81,8 +119,9 @@ export default function LandingSample({ book }) {
 
   if (!pdfUrl) return null;
 
+
   return (
-    <section id="sample" className="scroll-mt-20 border-y border-border bg-surface-soft">
+    <section ref={sectionRef} id="sample" className="scroll-mt-20 border-y border-border bg-surface-soft">
       <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <span className={`mb-3 inline-flex items-center gap-2 rounded-full bg-primary-soft px-4 py-1.5 text-sm font-semibold text-primary ${bn}`}>
@@ -125,6 +164,12 @@ export default function LandingSample({ book }) {
 
           {failed ? (
             <PdfFallback L={L} bn={bn} pdfUrl={pdfUrl} />
+          ) : !nearby ? (
+            // The viewer's own loading box, held until the reader is close
+            // enough that loading it is worth a megabyte of their data.
+            <div className="flex h-[68vh] max-h-[840px] min-h-[440px] w-full items-center justify-center bg-muted">
+              <span className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+            </div>
           ) : (
             // The viewer scrolls inside its own box rather than growing the
             // page: the sample is 31 pages, and a section that pushes the rest

@@ -558,12 +558,17 @@
    ============================================================ */
 .font-heading { font-family: var(--font-outfit), sans-serif; }
 .font-poppins, .poppins { font-family: var(--font-poppins), "Poppins", sans-serif; }
-.font-roboto { font-family: var(--font-roboto), "Roboto", sans-serif; }
+/* Roboto, Lobster and Caveat are no longer downloaded — nothing was set in
+   them. Their classes are gone with them; anything that still asks for one
+   would simply have inherited the body face anyway. */
 .outfit { font-family: var(--font-outfit), "Outfit", sans-serif; font-weight: 800; }
 .outfit-semibold { font-family: var(--font-outfit), "Outfit", sans-serif; font-weight: 600; }
-.work { font-family: var(--font-work), "Work Sans", sans-serif; }
-.lobster-regular { font-family: var(--font-lobster), "Lobster", cursive; }
-.caveat { font-family: var(--font-caveat), "Caveat", cursive; }
+/* The course admin screens set their hint text in .work. Work Sans itself is
+   no longer loaded — it was 9 weights on every public page for a handful of
+   captions behind a login — so the class now names the body face rather than a
+   variable that resolves to nothing, which would have made the whole
+   declaration invalid. */
+.work { font-family: var(--font-poppins), system-ui, sans-serif; }
 
 /* Hind Siliguri for Bengali text — font-weight inherits so headings stay bold */
 .hind-siliguri {
