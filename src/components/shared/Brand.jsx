@@ -13,7 +13,9 @@
  */
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { LuStethoscope } from 'react-icons/lu';
+import { mediaSrc } from '@/lib/mediaSrc';
 import { useSettings } from '@/context/SettingsContext';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -61,10 +63,16 @@ export function BrandMark({ className = 'h-10 w-10', iconClass = 'text-[22px]' }
 
   if (logo) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={logo}
+      // Through the optimiser: the uploaded mark is whatever size the shop
+      // happened to upload — the current one is a 403x362 screenshot weighing
+      // 259KB — and it is drawn 40px square in the header of every page. 80
+      // covers a 2x screen; the file that arrives is a couple of kilobytes.
+      <Image
+        src={mediaSrc(logo)}
         alt={name}
+        width={80}
+        height={80}
+        priority
         className={`${className} rounded-xl object-contain bg-white/5`}
       />
     );
