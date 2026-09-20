@@ -59,6 +59,8 @@ interface Labels {
   // Cash on delivery
   codTitle: string;
   codSub: string;
+  /** Same line for a pre-order, which cannot promise a delivery window yet. */
+  codSubPreOrder: string;
   codCollectLabel: string;
   codDeliveryLabel: string;
   codNextTitle: string;
@@ -204,7 +206,9 @@ function CodBody({
         <h1 className={cn("font-heading text-2xl font-bold text-foreground sm:text-3xl", bn)}>
           {L.codTitle}
         </h1>
-        <p className={cn("mx-auto mt-2 max-w-md text-muted-foreground", bn)}>{L.codSub}</p>
+        <p className={cn("mx-auto mt-2 max-w-md text-muted-foreground", bn)}>
+          {result.preOrder ? L.codSubPreOrder : L.codSub}
+        </p>
 
         <div className="mt-6 rounded-xl border border-border bg-surface-soft p-4 text-left">
           <Row bn={bn} icon={<LuHash />} label={result.title} value="" isTitle />
@@ -232,11 +236,6 @@ function CodBody({
             <li>{L.codNext2}</li>
             <li>{L.codNext3}</li>
           </ol>
-          {result.deliveryNote && (
-            <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-              <LuClock className="mt-0.5 shrink-0" /> {result.deliveryNote}
-            </p>
-          )}
           {result.supportPhone && (
             <p className="mt-2 text-xs text-muted-foreground">
               {L.codSupport}{" "}
