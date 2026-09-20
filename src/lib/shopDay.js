@@ -38,6 +38,18 @@ export function dayWindow(fromDay, toDay = fromDay) {
   return { from: cutoffOf(addDays(fromDay, -1)), to: cutoffOf(toDay) };
 }
 
+/**
+ * Which day's list an instant belongs to — the inverse of cutoffOf.
+ *
+ * An order placed at 1 AM on the 20th belongs to the 20th (the day that closes
+ * at that noon); one placed at 3 PM belongs to the 21st. Used to read back a
+ * delivery date the admin set, which is stored as the instant its day opens.
+ */
+export function dayOf(instant) {
+  const day = bdDate(instant);
+  return instant.getTime() < cutoffOf(day).getTime() ? day : addDays(day, 1);
+}
+
 /** Has today's noon already passed in Bangladesh? New orders then count for tomorrow. */
 export function pastCutoff(now = new Date()) {
   return now.getTime() >= cutoffOf(bdDate(now)).getTime();

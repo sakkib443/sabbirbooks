@@ -17,7 +17,7 @@ import {
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
   FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
-  FiCalendar, FiDownload, FiLayers,
+  FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
@@ -25,12 +25,13 @@ import { useBrand } from '@/components/shared/Brand';
 import { getStoredUser } from '@/lib/permissions';
 import { buildOrderListPdf, downloadBlob } from '@/lib/orderListPdf';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
-import { addDays, bdDate, dayWindow, formatBd, pastCutoff } from '@/lib/shopDay';
+import { addDays, bdDate, dayOf, dayWindow, formatBd, pastCutoff } from '@/lib/shopDay';
 import {
   areaOf, collegeOf, copiesOf, countOptions, formatBdFull, matchesPlace, printRowOf, safeFileName,
 } from '@/lib/orderList';
 
 const CHANNEL_LABEL = { bkash: 'bKash', rocket: 'Rocket', nagad: 'Nagad' };
+const COLLEGE_TYPE_LABEL = { government: 'Government', private: 'Private', army: 'Army' };
 
 const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -253,6 +254,24 @@ function GuestBadge() {
 
 const isCod = (order) => order?.payment?.method === 'cod';
 
+// The methods that redirect the buyer to somebody else's payment page. An
+// order sitting on one of these with nothing paid never came back from it.
+const HOSTED_GATEWAYS = ['sslcommerz', 'bkash'];
+const PAY_LABEL = { sslcommerz: 'SSLCommerz', bkash: 'bKash', manual: 'ম্যানুয়াল', cod: 'ক্যাশ অন ডেলিভারি' };
+// Couriers hand out links in every shape, including a bare
+// "steadfast.com.bd/t/ABC123". Without a scheme a browser reads that as a
+// path on this site, so the admin's "open the tracking page" click lands on a
+// 404 of our own making.
+const trackingHref = (url) => {
+  const s = String(url || '').trim();
+  return s.toLowerCase().startsWith('http') ? s : 'https://' + s;
+};
+
+const startedOnline = (o) =>
+  HOSTED_GATEWAYS.includes(String(o?.payment?.method || '').toLowerCase()) &&
+  o?.payment?.status !== 'paid' &&
+  o?.status !== 'cancelled';
+
 function StatusBadge({ status }) {
   const meta = STATUS_META[status] || STATUS_META.pending;
   const Icon = meta.icon;
@@ -312,8 +331,23 @@ export default function BookOrdersPage() {
   const [selected, setSelected] = useState(() => new Set());
   // One flag for every bulk action, so two cannot run at once.
   const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Two bulk actions ask something before they fire. Moving a batch to the day
+  // it actually goes out needs that day; handing a batch to a courier needs the
+  // tracking link, because the buyer's text carries it and a text sent before
+  // the link exists is the one message nobody can act on.
+  const [datePanel, setDatePanel] = useState(false);
+  const [dispatchDay, setDispatchDay] = useState('');
+  const [shipPanel, setShipPanel] = useState(false);
+  const [shipForm, setShipForm] = useState({ courierName: '', trackingUrl: '' });
   // The owner's full correction pass over one order — a separate panel from the
   // payment-details edit above, because it also touches the buyer's own record.
+  // The courier line for ONE order, kept per-order so opening a second row
+  // does not inherit the first one's half-typed link.
+  const [courierId, setCourierId] = useState(null);
+  const [courierForm, setCourierForm] = useState({ courierName: '', trackingUrl: '' });
+  const [courierBusy, setCourierBusy] = useState(false);
+
   const [fullEditId, setFullEditId] = useState(null);
   const [fullForm, setFullForm] = useState({});
   const [savingFull, setSavingFull] = useState(false);
@@ -338,6 +372,15 @@ export default function BookOrdersPage() {
   // A PDF being made, and the last per-college set — kept so a file the browser
   // did not save can be downloaded again from the list under the filters.
   const [exporting, setExporting] = useState(false);
+
+  // The per-college PDF picker, and the college directory behind it. The
+  // directory is what lets the list show a college that has NOT ordered, and
+  // where each college's type and university come from.
+  const [picker, setPicker] = useState(null); // { rows, fromLatest } | null
+  const [pickerSort, setPickerSort] = useState('orders');
+  const [pickerEmpty, setPickerEmpty] = useState(false);
+  const [pickerPick, setPickerPick] = useState(() => new Set());
+  const [directory, setDirectory] = useState([]);
   const [batch, setBatch] = useState(null); // { files: [{ college, count, name, blob }] }
   const brand = useBrand();
 
@@ -400,6 +443,23 @@ export default function BookOrdersPage() {
 
   useEffect(() => { fetchOrders(); }, []); // initial load
 
+  // The college directory, once. Public route, 112 short rows, and the orders
+  // themselves only carry a college NAME — type and university live here.
+  useEffect(() => {
+    let alive = true;
+    fetch(`${API}/medical-colleges`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive && Array.isArray(j?.data)) setDirectory(j.data);
+      })
+      // A missing directory is not fatal: the picker then lists exactly the
+      // colleges that ordered, which is what it did before this existed.
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const place = useMemo(
     () => ({ college: collegeFilter, district: districtFilter, upazila: upazilaFilter }),
     [collegeFilter, districtFilter, upazilaFilter]
@@ -429,34 +489,44 @@ export default function BookOrdersPage() {
   const pdfCount = keepForPdf(filtered).length;
   const pdfColleges = new Set(keepForPdf(filtered).map(collegeOf)).size;
 
+  // Counted from `filtered` — everything the college, area and search boxes
+  // have narrowed the list to — rather than from the whole load. The cards sit
+  // directly over that list and have to describe it; a "42 orders" card above
+  // eight Cumilla rows is read as a bug, and was.
+  //
+  // The 500-row load limit still applies underneath: with more matches than
+  // that, these count the latest 500, which is what the amber line under the
+  // dates says.
   const stats = useMemo(() => {
-    const paid = orders.filter((o) => o.payment?.status === 'paid');
-    const live = orders.filter((o) => o.status !== 'cancelled');
+    const paid = filtered.filter((o) => o.payment?.status === 'paid');
+    const live = filtered.filter((o) => o.status !== 'cancelled');
     const codUnpaid = live.filter((o) => isCod(o) && o.payment?.status !== 'paid');
     return {
-      total: orders.length,
+      total: filtered.length,
       revenue: paid.reduce((s, o) => s + (o.total || 0), 0),
       revenueBooks: paid.reduce((s, o) => s + bookMoneyOf(o), 0),
       // Books in every order that still stands — a cancelled order sold nothing.
       books: live.reduce((s, o) => s + copiesOf(o), 0),
       // Orders waiting on a decision — the actual work queue.
-      pending: orders.filter((o) => o.status === 'pending').length,
+      pending: filtered.filter((o) => o.status === 'pending').length,
       // Cash still out with couriers: COD orders not yet collected. With the
       // delivery charge it is what the rider collects; without it, what the
       // books are owed — the same switch as the revenue card.
       codOutstanding: codUnpaid.reduce((s, o) => s + (o.total || 0), 0),
       codOutstandingBooks: codUnpaid.reduce((s, o) => s + bookMoneyOf(o), 0),
-      delivered: orders.filter((o) => o.status === 'delivered').length,
+      delivered: filtered.filter((o) => o.status === 'delivered').length,
     };
-  }, [orders]);
+  }, [filtered]);
 
-  const updateStatus = async (order, status) => {
+  const updateStatus = async (order, status, extra) => {
     setUpdatingId(order._id);
     try {
       const res = await fetch(`${API}/orders/${order._id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ status }),
+        // The courier details ride along with the status, because the server
+        // writes them before it sends the shipping text that links to them.
+        body: JSON.stringify({ status, ...(extra || {}) }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) throw new Error(json.message || 'Update failed');
@@ -528,6 +598,45 @@ export default function BookOrdersPage() {
     });
     if (!ok) return;
     runAction(order, '/reject', 'POST', {}, 'Payment rejected — order cancelled');
+  };
+
+  /**
+   * Save this order's courier line - and ship it, if it has not shipped yet.
+   *
+   * Two routes on purpose. Before shipping, the details go WITH the status
+   * change, so the server has the link in hand when it sends the buyer's text.
+   * Afterwards the text is long gone and this is a correction, which belongs
+   * on the owner-only edit route rather than on a second status write that
+   * would restamp the shipping time.
+   */
+  const saveCourier = async (o) => {
+    const body = {
+      courierName: courierForm.courierName.trim(),
+      trackingUrl: courierForm.trackingUrl.trim(),
+    };
+    const alreadyGone = o.status === 'shipped' || o.status === 'delivered';
+    if (!alreadyGone) {
+      setCourierId(null);
+      await updateStatus(o, 'shipped', body);
+      return;
+    }
+    setCourierBusy(true);
+    try {
+      const res = await fetch(`${API}/orders/${o._id}/admin-edit`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not save');
+      showToast('success', 'Tracking link saved');
+      setCourierId(null);
+      setOrders((prev) => prev.map((x) => (x._id === o._id ? { ...x, ...(json.data || body) } : x)));
+    } catch (e) {
+      showToast('error', e.message || 'Could not save the tracking link');
+    } finally {
+      setCourierBusy(false);
+    }
   };
 
   // Open the full editor prefilled with what the order says today, so an admin
@@ -646,7 +755,7 @@ export default function BookOrdersPage() {
 
   // Move every selected order to one status. Cancelling is destructive enough
   // (it puts stock back and fails the payment) to be worth confirming first.
-  const bulkStatus = async (status) => {
+  const bulkStatus = async (status, extra) => {
     const ids = [...selected];
     if (ids.length === 0) return;
     if (status === 'cancelled') {
@@ -663,15 +772,59 @@ export default function BookOrdersPage() {
       const res = await fetch(`${API}/orders/bulk-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ ids, status }),
+        body: JSON.stringify({ ids, status, ...(extra || {}) }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) throw new Error(json.message || 'Could not update');
       showToast('success', json.message || 'Orders updated');
       setSelected(new Set());
+      setShipPanel(false);
+      setShipForm({ courierName: '', trackingUrl: '' });
       fetchOrders();
     } catch (e) {
       showToast('error', e.message || 'Could not update the selected orders');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  /**
+   * Move the ticked orders to the day they actually go out — or back.
+   *
+   * The shop holds a college's orders and sends them together: everything for
+   * Cumilla from the 19th, 20th and 21st leaves on the 21st. Those orders then
+   * have to be on the 21st's packing list and off the 19th's and 20th's, which
+   * is what this does and all it does — no status moves, no text goes out.
+   *
+   * A day is sent as the instant it opens (the previous noon), because that is
+   * how every other date on this screen is expressed; the server stores it and
+   * the day filter compares it exactly as it compares the order's own date.
+   */
+  const applyDispatchDate = async (day) => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch(`${API}/orders/bulk-dispatch-date`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          ids,
+          dispatchDate: day ? dayWindow(day).from.toISOString() : null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not set the date');
+      showToast('success', json.message || 'Delivery date set');
+      setSelected(new Set());
+      setDatePanel(false);
+      setDispatchDay('');
+      // Refetch rather than patch in place: with a date filter on, the orders
+      // just moved are no longer part of what the screen is showing, and
+      // leaving them on it is how an order gets packed twice.
+      fetchOrders();
+    } catch (e) {
+      showToast('error', e.message || 'Could not set the delivery date');
     } finally {
       setBulkBusy(false);
     }
@@ -831,53 +984,139 @@ export default function BookOrdersPage() {
    * downloaded from one click — a day's parcels, sorted by where they go.
    * Orders with no college get a file of their own, so none is dropped.
    */
-  const exportPerCollege = async () => {
+  /**
+   * Step one of the per-college PDFs: work out what there is, and show it.
+   *
+   * This used to build every PDF and fire every download the moment it was
+   * pressed - twenty-three files landing in the downloads folder before the
+   * admin had decided which colleges the day's run was even for. The list
+   * comes first now: how many orders each college has, sorted the way the
+   * packing is being thought about, and only the ticked ones are built.
+   *
+   * Colleges with NO orders are in the list too (behind a toggle), because
+   * "who has not ordered yet" is a question this screen can answer and the
+   * shop was answering by hand. They cannot be ticked - an empty PDF is not
+   * a thing anyone wants - they are there to be read.
+   */
+  const openCollegePicker = async () => {
     if (exporting) return;
     if (!dateRange) {
       const ok = await confirm({
         title: 'No date picked',
         message:
-          'This makes one PDF for every medical college across ALL dates. For one day’s orders, pick the date first.',
-        confirmText: 'Make them anyway',
+          'This lists every medical college across ALL dates. For one day’s orders, pick the date first.',
+        confirmText: 'Show them anyway',
       });
       if (!ok) return;
     }
     setExporting(true);
     try {
       const { matching, list, fromLatest } = await collectForPdf();
-      if (list.length === 0) {
-        showToast('error', 'No orders to put in the PDFs');
-        return;
-      }
       const byCollege = new Map();
       for (const o of list) {
-        const college = collegeOf(o);
-        byCollege.set(college, [...(byCollege.get(college) || []), o]);
+        const name = collegeOf(o);
+        byCollege.set(name, [...(byCollege.get(name) || []), o]);
       }
-      // A→Z, and the orders without a college last.
-      const groups = [...byCollege].sort(([a], [b]) => (!a ? 1 : !b ? -1 : a.localeCompare(b, 'bn')));
-
-      const files = [];
-      for (const [college, group] of groups) {
-        const leftOut =
+      const meta = new Map(directory.map((c) => [c.name, c]));
+      const rows = [...byCollege].map(([name, group]) => ({
+        name,
+        group,
+        count: group.length,
+        books: group.reduce((n, o) => n + copiesOf(o), 0),
+        // Cancelled orders are left out of the PDF itself, so the count on
+        // screen has to be the count in the file, and this is what the file
+        // says it left behind.
+        leftOut:
           statusFilter === 'cancelled'
             ? 0
-            : matching.filter((o) => o.status === 'cancelled' && collegeOf(o) === college).length;
+            : matching.filter((o) => o.status === 'cancelled' && collegeOf(o) === name).length,
+        type: meta.get(name)?.type || '',
+        university: meta.get(name)?.university || '',
+      }));
+      for (const c of directory) {
+        if (!byCollege.has(c.name)) {
+          rows.push({
+            name: c.name,
+            group: [],
+            count: 0,
+            books: 0,
+            leftOut: 0,
+            type: c.type || '',
+            university: c.university || '',
+          });
+        }
+      }
+      setPicker({ rows, fromLatest });
+      // Everything with orders starts ticked: that is the old one-press
+      // behaviour, one confirmation later.
+      setPickerPick(new Set(rows.filter((r) => r.count > 0).map((r) => r.name)));
+    } catch (e) {
+      showToast('error', e.message || 'Could not read the orders');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+
+  // How the picker list is ordered. Four questions the shop actually asks of
+  // it: what is it called, who ordered most, is it government or private, and
+  // which university is it under. A college with no university filled in sorts
+  // last rather than first, so the unknowns do not head the list.
+  const pickerRows = useMemo(() => {
+    if (!picker) return [];
+    const rows = pickerEmpty ? picker.rows : picker.rows.filter((r) => r.count > 0);
+    const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'en');
+    const TYPE_ORDER = { government: 0, army: 1, private: 2 };
+    const sorted = [...rows];
+    if (pickerSort === 'orders') sorted.sort((a, b) => b.count - a.count || byName(a, b));
+    else if (pickerSort === 'type') {
+      sorted.sort(
+        (a, b) => (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9) || byName(a, b)
+      );
+    } else if (pickerSort === 'university') {
+      sorted.sort((a, b) => {
+        const au = a.university || '';
+        const bu = b.university || '';
+        if (!au !== !bu) return au ? -1 : 1;
+        return au.localeCompare(bu, 'en') || byName(a, b);
+      });
+    } else sorted.sort(byName);
+    return sorted;
+  }, [picker, pickerSort, pickerEmpty]);
+
+  const pickedCount = pickerRows.filter((r) => r.count > 0 && pickerPick.has(r.name)).length;
+  /** Step two: build a PDF for each ticked college and hand them over. */
+  const downloadCollegePdfs = async () => {
+    if (!picker || exporting) return;
+    const chosen = picker.rows.filter((r) => r.count > 0 && pickerPick.has(r.name));
+    if (chosen.length === 0) {
+      showToast('error', 'Tick at least one college');
+      return;
+    }
+    setExporting(true);
+    try {
+      const files = [];
+      for (const row of chosen) {
         const blob = await buildOrderListPdf({
           ...pdfText({
-            list: group,
-            leftOut,
-            fromLatest,
-            heading: `Medical college: ${college || 'not given'}`,
+            list: row.group,
+            leftOut: row.leftOut,
+            fromLatest: picker.fromLatest,
+            heading: `Medical college: ${row.name || 'not given'}`,
           }),
-          rows: group.map(printRowOf),
+          rows: row.group.map(printRowOf),
         });
-        files.push({ college, count: group.length, name: pdfFileName(college || 'No college'), blob });
+        files.push({
+          college: row.name,
+          count: row.group.length,
+          name: pdfFileName(row.name || 'No college'),
+          blob,
+        });
       }
-
       // A short gap between files: some browsers drop downloads fired together.
       files.forEach((file, i) => setTimeout(() => downloadBlob(file.blob, file.name), i * 400));
       setBatch({ files });
+      setPicker(null);
       showToast('success', `${files.length} PDF${files.length === 1 ? '' : 's'} — one per medical college`);
     } catch (e) {
       showToast('error', e.message || 'Could not make the PDFs');
@@ -907,74 +1146,13 @@ export default function BookOrdersPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-dash-ink2">{stats.total}</p>
-          <p className="text-xs text-dash-mute2 mt-1">Total orders</p>
-        </div>
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-brand-ink tabular-nums">{stats.books.toLocaleString('en-US')}</p>
-          <p className="text-xs text-dash-mute2 mt-1" title="Every book in orders that were not cancelled">Books ordered</p>
-        </div>
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-emerald-600 tabular-nums">
-            {bdt(deliveryMode === 'without' ? stats.revenueBooks : stats.revenue)}
-          </p>
-          <p className="text-xs text-dash-mute2 mt-1">
-            Paid revenue · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
-          </p>
-        </div>
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
-          <p className="text-xs text-dash-mute2 mt-1">Awaiting confirmation</p>
-        </div>
-        <div
-          className="bg-dash-card rounded-xl border border-dash-line p-4"
-          title={`The couriers collect ${bdt(stats.codOutstanding)}, delivery charge included`}
-        >
-          <p className="text-xl font-bold text-orange-600 tabular-nums">
-            {bdt(deliveryMode === 'without' ? stats.codOutstandingBooks : stats.codOutstanding)}
-          </p>
-          <p className="text-xs text-dash-mute2 mt-1">
-            COD to collect · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
-          </p>
-        </div>
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-sky-600">{stats.delivered}</p>
-          <p className="text-xs text-dash-mute2 mt-1">Delivered</p>
-        </div>
-      </div>
+      {/* The filters come first, above the counts, because they are what the
+          admin sets and the counts are what comes back: pick a day and a
+          college, then read the six cards for that day and that college.
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dash-mute2" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by order #, buyer, phone, email or book…"
-            className="w-full pl-10 pr-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => changeStatus(e.target.value)}
-          className="px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4"
-        >
-          <option value="all">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="paid">Paid</option>
-          <option value="processing">Processing</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
-          <option value="access-granted">Access granted</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-      </div>
-
-      {/* Dates. A day here runs noon → noon Bangladesh time, named by the date
-          it ends on — the stat cards above count the same window. */}
+          Dates. A day here runs noon → noon Bangladesh time, named by the date
+          it ends on. An order the admin moved to another delivery date answers
+          on THAT day instead — see the selection toolbar. */}
       <div className="space-y-1.5">
         <div className="flex flex-col gap-3 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -1092,9 +1270,9 @@ export default function BookOrdersPage() {
           </button>
           <button
             type="button"
-            onClick={exportPerCollege}
+            onClick={openCollegePicker}
             disabled={loading || exporting || (allLoaded && pdfCount === 0)}
-            title="A separate PDF for each medical college in the orders shown — pick the date first"
+            title="List the medical colleges, then download a PDF for the ones you pick"
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-brand/50 bg-dash-card px-4 py-2.5 font-semibold text-brand transition-colors hover:bg-brand-soft disabled:opacity-50 sm:flex-1 xl:flex-none"
           >
             {exporting ? <FiLoader className="animate-spin" /> : <FiLayers />}
@@ -1102,6 +1280,75 @@ export default function BookOrdersPage() {
             {allLoaded && <span className="rounded-md bg-brand-soft px-1.5 text-xs tabular-nums">{pdfColleges}</span>}
           </button>
         </div>
+      </div>
+
+      {/* Stats — for whatever the filters above have narrowed the list to,
+          not for the whole load. Picking Cumilla Medical College makes these
+          six cards Cumilla's numbers, which is the only reading that matches
+          the list they sit over. */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+          <p className="text-xl font-bold text-dash-ink2">{stats.total}</p>
+          <p className="text-xs text-dash-mute2 mt-1">Total orders</p>
+        </div>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+          <p className="text-xl font-bold text-brand-ink tabular-nums">{stats.books.toLocaleString('en-US')}</p>
+          <p className="text-xs text-dash-mute2 mt-1" title="Every book in orders that were not cancelled">Books ordered</p>
+        </div>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+          <p className="text-xl font-bold text-emerald-600 tabular-nums">
+            {bdt(deliveryMode === 'without' ? stats.revenueBooks : stats.revenue)}
+          </p>
+          <p className="text-xs text-dash-mute2 mt-1">
+            Paid revenue · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
+          </p>
+        </div>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+          <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
+          <p className="text-xs text-dash-mute2 mt-1">Awaiting confirmation</p>
+        </div>
+        <div
+          className="bg-dash-card rounded-xl border border-dash-line p-4"
+          title={`The couriers collect ${bdt(stats.codOutstanding)}, delivery charge included`}
+        >
+          <p className="text-xl font-bold text-orange-600 tabular-nums">
+            {bdt(deliveryMode === 'without' ? stats.codOutstandingBooks : stats.codOutstanding)}
+          </p>
+          <p className="text-xs text-dash-mute2 mt-1">
+            COD to collect · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
+          </p>
+        </div>
+        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+          <p className="text-xl font-bold text-sky-600">{stats.delivered}</p>
+          <p className="text-xs text-dash-mute2 mt-1">Delivered</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dash-mute2" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by order #, buyer, phone, email or book…"
+            className="w-full pl-10 pr-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => changeStatus(e.target.value)}
+          className="px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4"
+        >
+          <option value="all">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="processing">Processing</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="access-granted">Access granted</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
       </div>
 
       {/* The last per-college set. The files download by themselves; this is
@@ -1149,10 +1396,11 @@ export default function BookOrdersPage() {
           screen exists to avoid. Delete stays owner-only. */}
       {filtered.length > 0 && (
         <div
-          className={`flex flex-col gap-3 rounded-xl border px-4 py-3 transition-colors sm:flex-row sm:items-center sm:justify-between ${
+          className={`rounded-xl border px-4 py-3 transition-colors ${
             selected.size > 0 ? 'border-brand/40 bg-brand-soft/40' : 'border-dash-line bg-dash-card'
           }`}
         >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <label className="flex cursor-pointer select-none items-center gap-2.5">
             <input
               type="checkbox"
@@ -1174,7 +1422,17 @@ export default function BookOrdersPage() {
                 return (
                   <button
                     key={st}
-                    onClick={() => bulkStatus(st)}
+                    onClick={() => {
+                      // Shipping is the one status that carries something with
+                      // it: the courier's tracking link, which the buyer's text
+                      // is built around. Ask first, then fire.
+                      if (st === 'shipped') {
+                        setDatePanel(false);
+                        setShipPanel((open) => !open);
+                        return;
+                      }
+                      bulkStatus(st);
+                    }}
                     disabled={bulkBusy}
                     className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${
                       st === 'cancelled'
@@ -1188,6 +1446,24 @@ export default function BookOrdersPage() {
               })}
               {/* Only the ticked orders, as a PDF list — cancelled ones too,
                   since ticking them is asking for them. */}
+              {/* The day the batch goes out, which is not always the day it
+                  was ordered. Set apart from the status buttons by intent: it
+                  moves an order between packing lists without moving it along
+                  the ladder. */}
+              <button
+                onClick={() => {
+                  setShipPanel(false);
+                  setDatePanel((open) => !open);
+                }}
+                disabled={bulkBusy}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                  datePanel
+                    ? 'border-brand bg-brand text-white'
+                    : 'border-dash-line bg-dash-card text-dash-ink3 hover:border-brand/40 hover:text-brand'
+                }`}
+              >
+                <FiCalendar size={13} /> Delivery date
+              </button>
               <button
                 onClick={() => exportPdf(true)}
                 disabled={exporting}
@@ -1218,6 +1494,88 @@ export default function BookOrdersPage() {
               >
                 Clear
               </button>
+            </div>
+          )}
+          </div>
+
+          {/* Move the ticked orders to the day they go out. The date box starts
+              empty rather than on today: this is used to send orders FORWARD to
+              a batch day, and a default that is right one day in three is worse
+              than one that is never right. */}
+          {selected.size > 0 && datePanel && (
+            <div className="mt-3 flex flex-col gap-2 rounded-lg border border-dash-line bg-dash-card px-3 py-3 sm:flex-row sm:items-center">
+              <span className="text-xs font-semibold text-dash-ink3">
+                Send {selected.size} order{selected.size === 1 ? '' : 's'} out on
+              </span>
+              <input
+                type="date"
+                value={dispatchDay}
+                onChange={(e) => setDispatchDay(e.target.value)}
+                aria-label="Delivery date"
+                className="rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+              />
+              <button
+                onClick={() => applyDispatchDate(dispatchDay)}
+                disabled={!dispatchDay || bulkBusy}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
+              >
+                {bulkBusy ? <FiLoader className="animate-spin" size={13} /> : <FiCheck size={13} />}
+                Set date
+              </button>
+              <button
+                onClick={() => applyDispatchDate(null)}
+                disabled={bulkBusy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line px-3 py-1.5 text-xs font-semibold text-dash-ink4 transition-colors hover:text-dash-ink3 disabled:opacity-50"
+              >
+                <FiX size={13} /> Back to order date
+              </button>
+              <span className="text-xs text-dash-mute2 sm:ml-auto">
+                They leave their own day's list and join that day's. Nothing else changes.
+              </span>
+            </div>
+          )}
+
+          {/* Handing a batch to the courier. The link is optional - a shop that
+              has not been given one yet still has to be able to mark a sack of
+              parcels shipped - and the buyer's text says "the courier will
+              call" instead when it is missing. */}
+          {selected.size > 0 && shipPanel && (
+            <div className="mt-3 flex flex-col gap-2 rounded-lg border border-dash-line bg-dash-card px-3 py-3">
+              <span className="text-xs font-semibold text-dash-ink3">
+                Mark {selected.size} order{selected.size === 1 ? '' : 's'} shipped
+              </span>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  value={shipForm.courierName}
+                  onChange={(e) => setShipForm((f) => ({ ...f, courierName: e.target.value }))}
+                  placeholder="Courier (Steadfast, Sundarban...)"
+                  className="rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand sm:w-56"
+                />
+                <input
+                  value={shipForm.trackingUrl}
+                  onChange={(e) => setShipForm((f) => ({ ...f, trackingUrl: e.target.value }))}
+                  placeholder="Tracking link the courier gave"
+                  className="flex-1 rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+                />
+                <button
+                  onClick={() =>
+                    bulkStatus('shipped', {
+                      courierName: shipForm.courierName.trim(),
+                      trackingUrl: shipForm.trackingUrl.trim(),
+                    })
+                  }
+                  disabled={bulkBusy}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
+                >
+                  {bulkBusy ? <FiLoader className="animate-spin" size={13} /> : <FiTruck size={13} />}
+                  Shipped
+                </button>
+              </div>
+              <span className="text-xs text-dash-mute2">
+                {shipForm.trackingUrl.trim()
+                  ? 'Each buyer gets one SMS carrying this link.'
+                  : 'No link: the SMS asks them to keep their phone on for the courier call.'}
+              </span>
             </div>
           )}
         </div>
@@ -1298,6 +1656,17 @@ export default function BookOrdersPage() {
                     <span className="mt-0.5 block truncate text-[11px] tabular-nums text-dash-mute2" title={fmtDate(o.createdAt)}>
                       {fmtWhen(o.createdAt)}
                     </span>
+                    {/* Moved to another day's batch. Shown on the row because
+                        an order sitting in a list it was not ordered on is
+                        otherwise indistinguishable from a mistake. */}
+                    {o.dispatchDate && (
+                      <span
+                        className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-brand-ink"
+                        title={`Goes out on ${formatBdFull(new Date(dayOf(new Date(o.dispatchDate)) + 'T06:00:00Z'))}`}
+                      >
+                        <FiArrowRight size={10} aria-hidden /> {dayOf(new Date(o.dispatchDate))}
+                      </span>
+                    )}
                   </button>
 
                   <button onClick={() => setExpanded(isOpen ? null : o._id)} className="min-w-0 text-left">
@@ -1396,6 +1765,11 @@ export default function BookOrdersPage() {
                       </span>
                       <span className="mt-1 block text-[11px] tabular-nums text-dash-mute2" title={fmtDate(o.createdAt)}>
                         {fmtWhen(o.createdAt)}
+                        {o.dispatchDate && (
+                          <span className="ml-1.5 font-semibold text-brand-ink">
+                            &rarr; goes out {dayOf(new Date(o.dispatchDate))}
+                          </span>
+                        )}
                       </span>
                       <span className="mt-1 block font-mono text-base font-bold tracking-wide text-dash-ink2">
                         {spacedPhone(buyerOf(o).phone) || '—'}
@@ -1533,6 +1907,29 @@ export default function BookOrdersPage() {
                         {o.deliveredAt && <DetailRow icon={FiPackage} label="Delivered" value={fmtDate(o.deliveredAt)} />}
                         {o.courierName && <DetailRow icon={FiTruck} label="Courier" value={o.courierName} />}
                         {o.trackingCode && <DetailRow icon={FiHash} label="Tracking" value={o.trackingCode} mono />}
+                        {o.trackingUrl && (
+                          <DetailRow
+                            icon={FiLink}
+                            label="Tracking link"
+                            value={
+                              <a
+                                href={trackingHref(o.trackingUrl)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="break-all text-brand-ink underline decoration-dotted underline-offset-2"
+                              >
+                                {o.trackingUrl}
+                              </a>
+                            }
+                          />
+                        )}
+                        {o.dispatchDate && (
+                          <DetailRow
+                            icon={FiCalendar}
+                            label="Goes out on"
+                            value={dayOf(new Date(o.dispatchDate))}
+                          />
+                        )}
 
                         {/* Books and money. This was a full-width strip above the
                             three columns; the payment column is the short one, so
@@ -1639,6 +2036,24 @@ export default function BookOrdersPage() {
                         </div>
                       </div>
 
+                      {/* An online payment that was started and never finished.
+                          It looks exactly like an order waiting for a human to
+                          verify a bKash transaction - same panel, same Approve
+                          button - except no money moved and the transaction ID
+                          is the reference the gateway was HANDED, not proof of
+                          anything. Approving it would book a sale that does not
+                          exist, so the panel says so. The server closes these
+                          by itself 90 minutes after they were placed. */}
+                      {startedOnline(o) && (
+                        <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50/70 px-3 py-2 text-xs leading-relaxed text-dash-mute">
+                          অনলাইনে <b>{PAY_LABEL[o.payment?.method] || o.payment?.method}</b> দিয়ে পেমেন্ট শুরু
+                          হয়েছিল, কিন্তু শেষ হয়নি — <b>টাকা আসেনি</b>। উপরের ট্রানজেকশন আইডিটি গেটওয়েকে দেওয়া
+                          রেফারেন্স (অর্ডার নম্বরই), পেমেন্টের প্রমাণ নয়। অর্ডারের ৯০ মিনিট পর এটি নিজে থেকেই
+                          বাতিল হয়ে যাবে। <b>Approve</b>{' '}চাপলে টাকা না আসা অর্ডার &ldquo;পেইড&rdquo; হয়ে যাবে —
+                          ক্রেতা সত্যিই টাকা পাঠিয়ে থাকলে তবেই চাপুন।
+                        </p>
+                      )}
+
                       {isCod(o) && (
                         <p className="mt-3 text-xs text-dash-mute leading-relaxed bg-amber-50/70 border border-amber-100 rounded-lg px-3 py-2">
                           {o.status === 'pending' ? (
@@ -1731,8 +2146,20 @@ export default function BookOrdersPage() {
                         {FULFILLMENT_OPTIONS.map((s) => (
                           <button
                             key={s}
-                            onClick={() => updateStatus(o, s)}
-                            disabled={updatingId === o._id || o.status === s}
+                            onClick={() => {
+                              // Same reason as the bulk button: shipping is the
+                              // status that carries the buyer's tracking link.
+                              if (s === 'shipped') {
+                                setCourierForm({
+                                  courierName: o.courierName || '',
+                                  trackingUrl: o.trackingUrl || '',
+                                });
+                                setCourierId((id) => (id === o._id ? null : o._id));
+                                return;
+                              }
+                              updateStatus(o, s);
+                            }}
+                            disabled={updatingId === o._id || (o.status === s && s !== 'shipped')}
                             title={FULFILLMENT_HELP[s]}
                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition disabled:opacity-40 disabled:cursor-not-allowed
                               ${o.status === s
@@ -1748,6 +2175,53 @@ export default function BookOrdersPage() {
                         ))}
                       </div>
                     </div>
+
+                    {/* The courier line for this one order.
+                        Opened from the Shipped button rather than sitting open,
+                        because on a screen where most orders are still waiting
+                        to be confirmed, an always-visible courier form is noise.
+                        The link is what the buyer's SMS is built around, so it
+                        is written BEFORE the status moves - the server saves it
+                        first and then sends the text. */}
+                    {courierId === o._id && (
+                      <div className="flex flex-col gap-2 rounded-lg border border-dash-line bg-dash-card p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <input
+                            value={courierForm.courierName}
+                            onChange={(e) => setCourierForm((f) => ({ ...f, courierName: e.target.value }))}
+                            placeholder="Courier"
+                            className="rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand sm:w-44"
+                          />
+                          <input
+                            value={courierForm.trackingUrl}
+                            onChange={(e) => setCourierForm((f) => ({ ...f, trackingUrl: e.target.value }))}
+                            placeholder="Tracking link the courier gave"
+                            className="flex-1 rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+                          />
+                          <button
+                            onClick={() => saveCourier(o)}
+                            disabled={courierBusy || updatingId === o._id}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
+                          >
+                            {courierBusy ? <FiLoader className="animate-spin" size={13} /> : <FiTruck size={13} />}
+                            {o.status === 'shipped' || o.status === 'delivered' ? 'Save link' : 'Mark shipped'}
+                          </button>
+                          <button
+                            onClick={() => setCourierId(null)}
+                            className="px-2 py-1.5 text-xs font-medium text-dash-mute transition-colors hover:text-dash-ink3"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <span className="text-xs text-dash-mute2">
+                          {o.status === 'shipped' || o.status === 'delivered'
+                            ? 'Already shipped: this corrects the stored link. No new SMS goes out.'
+                            : courierForm.trackingUrl.trim()
+                              ? 'The buyer gets one SMS with this link.'
+                              : 'No link: the SMS asks them to keep their phone on for the courier call.'}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Owner correction pass. Buyers mistype their own address and
                         phone constantly, and a payment lands against the wrong
@@ -1900,6 +2374,148 @@ export default function BookOrdersPage() {
         </div>
       )}
 
+
+      {/* The per-college list. A dialog rather than a panel on the page: it is
+          a decision taken once, over a list that can run to a hundred rows,
+          and everything behind it is the list it was opened from. */}
+      {picker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6">
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-dash-line bg-dash-card shadow-xl sm:rounded-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-dash-line px-4 py-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-bold text-dash-ink2">
+                  <FiLayers className="text-brand" /> PDF per medical college
+                </h2>
+                <p className="mt-0.5 text-xs text-dash-mute2">
+                  {pickerRows.filter((r) => r.count > 0).length} college(s) ordered
+                  {picker.rows.length > pickerRows.length
+                    ? ` · ${picker.rows.length - pickerRows.length} hidden with no orders`
+                    : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setPicker(null)}
+                className="rounded-lg p-1.5 text-dash-mute transition-colors hover:bg-dash-soft hover:text-dash-ink3"
+                aria-label="Close"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 border-b border-dash-line bg-dash-soft/50 px-4 py-2.5">
+              <span className="text-xs font-semibold text-dash-mute">Sort by</span>
+              {[
+                { key: 'orders', label: 'Most orders' },
+                { key: 'name', label: 'Name A–Z' },
+                { key: 'type', label: 'Government / private' },
+                { key: 'university', label: 'University' },
+              ].map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => setPickerSort(s.key)}
+                  aria-pressed={pickerSort === s.key}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                    pickerSort === s.key
+                      ? 'bg-brand text-white'
+                      : 'text-dash-mute hover:bg-dash-soft hover:text-dash-ink3'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+              <label className="ml-auto flex cursor-pointer select-none items-center gap-2 text-xs text-dash-ink4">
+                <input
+                  type="checkbox"
+                  checked={pickerEmpty}
+                  onChange={(e) => setPickerEmpty(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-dash-line-strong text-brand focus:ring-brand"
+                />
+                Show colleges with no orders
+              </label>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {pickerRows.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-dash-mute2">No colleges to show.</p>
+              ) : (
+                pickerRows.map((r) => {
+                  const none = r.count === 0;
+                  return (
+                    <label
+                      key={r.name || '(none)'}
+                      className={`flex items-center gap-3 border-b border-dash-line-soft px-4 py-2.5 last:border-b-0 ${
+                        none ? 'opacity-55' : 'cursor-pointer hover:bg-dash-soft/60'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={none}
+                        checked={!none && pickerPick.has(r.name)}
+                        onChange={() =>
+                          setPickerPick((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(r.name)) next.delete(r.name);
+                            else next.add(r.name);
+                            return next;
+                          })
+                        }
+                        className="h-4 w-4 rounded border-dash-line-strong text-brand focus:ring-brand disabled:opacity-40"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-dash-ink3">
+                          {r.name || 'No college given'}
+                        </span>
+                        <span className="block truncate text-[11px] text-dash-mute2">
+                          {[
+                            r.type && COLLEGE_TYPE_LABEL[r.type],
+                            r.university,
+                            r.leftOut > 0 && `${r.leftOut} cancelled left out`,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ') || '—'}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right tabular-nums">
+                        <span className="block text-sm font-bold text-dash-ink2">
+                          {none ? '—' : r.count}
+                        </span>
+                        <span className="block text-[11px] text-dash-mute2">
+                          {none ? 'no orders' : `${r.books} book${r.books === 1 ? '' : 's'}`}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 border-t border-dash-line px-4 py-3">
+              <button
+                onClick={() =>
+                  setPickerPick(new Set(pickerRows.filter((r) => r.count > 0).map((r) => r.name)))
+                }
+                className="rounded-lg border border-dash-line px-3 py-1.5 text-xs font-semibold text-dash-ink4 transition-colors hover:text-dash-ink3"
+              >
+                Select all
+              </button>
+              <button
+                onClick={() => setPickerPick(new Set())}
+                className="rounded-lg border border-dash-line px-3 py-1.5 text-xs font-semibold text-dash-ink4 transition-colors hover:text-dash-ink3"
+              >
+                Clear
+              </button>
+              <button
+                onClick={downloadCollegePdfs}
+                disabled={exporting || pickedCount === 0}
+                className="ml-auto inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand/25 transition-colors hover:bg-brand-hover disabled:opacity-50"
+              >
+                {exporting ? <FiLoader className="animate-spin" /> : <FiDownload />}
+                Download {pickedCount} PDF{pickedCount === 1 ? '' : 's'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {toastNode}
       {confirmNode}
     </div>
