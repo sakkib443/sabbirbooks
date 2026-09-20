@@ -35,7 +35,7 @@ const TYPE_STYLE = {
 };
 
 const EMPTY_FORM = {
-  name: '', type: 'government', division: '', district: '', area: '',
+  name: '', type: 'government', university: '', division: '', district: '', area: '',
   established: '', seats: '', isActive: true, needsReview: false,
 };
 
@@ -165,6 +165,7 @@ export default function MedicalCollegesPage() {
     setForm({
       name: row.name || '',
       type: row.type || 'government',
+      university: row.university || '',
       division: row.division || '',
       district: row.district || '',
       area: row.area || '',
@@ -184,6 +185,7 @@ export default function MedicalCollegesPage() {
     const body = {
       name,
       type: form.type,
+      university: form.university.trim(),
       division: form.division.trim(),
       district: form.district.trim(),
       area: form.area.trim(),
@@ -572,6 +574,18 @@ export default function MedicalCollegesPage() {
                 <input
                   value={form.area}
                   onChange={(e) => setForm({ ...form, area: e.target.value })}
+                  className={inputCls}
+                />
+              </Field>
+
+              {/* Affiliation. Empty on every seeded row — the college list the
+                  shop supplied does not carry it — and the Book Orders screen
+                  can group its per-college PDFs by whatever is filled in here. */}
+              <Field label="University" hint="(অধিভুক্ত বিশ্ববিদ্যালয় — ঐচ্ছিক)">
+                <input
+                  value={form.university}
+                  onChange={(e) => setForm({ ...form, university: e.target.value })}
+                  placeholder="Chittagong Medical University"
                   className={inputCls}
                 />
               </Field>

@@ -1706,10 +1706,13 @@ const EN = {
 
   // Cash-on-delivery confirmation screen
   codSuccessTitle: "Order placed!",
-  codSuccessSub: "We will call you shortly to confirm, then send the book to your address.",
+  // No promise of a phone call. The shop stopped making it (20 Sep 2026): the
+  // order is confirmed on the spot and the buyer's SMS says so, and a promised
+  // call that does not come is what the "where is my book" messages were.
+  codSuccessSub: "Your order is confirmed. We will send the book to your address.",
   codCollectLabel: "Pay on delivery",
   codNextTitle: "What happens next",
-  codNext1: "We call you to confirm the order and your address.",
+  codNext1: "Your order is confirmed and is being packed.",
   codNext2: "The book is handed to the courier and sent to you.",
   codNext3: "Pay the courier in cash and receive your book.",
   codSupport: "Any problem? Call",
@@ -1969,10 +1972,10 @@ const BN: Copy = {
 
   // Cash-on-delivery confirmation screen
   codSuccessTitle: "অর্ডার হয়ে গেছে!",
-  codSuccessSub: "আমরা একটু পরেই ফোন করে অর্ডারটি নিশ্চিত করব, তারপর আপনার ঠিকানায় বই পাঠিয়ে দেব।",
+  codSuccessSub: "আপনার অর্ডার কনফার্ম হয়েছে। বইটি আপনার ঠিকানায় পাঠিয়ে দেওয়া হবে।",
   codCollectLabel: "ডেলিভারির সময় দিতে হবে",
   codNextTitle: "এরপর যা হবে",
-  codNext1: "আমরা ফোন করে অর্ডার ও ঠিকানা নিশ্চিত করব।",
+  codNext1: "আপনার অর্ডার কনফার্ম হয়েছে, প্যাক করা হচ্ছে।",
   codNext2: "বইটি কুরিয়ারে দিয়ে আপনার ঠিকানায় পাঠানো হবে।",
   codNext3: "বই হাতে পেয়ে কুরিয়ারকে নগদ টাকা দেবেন।",
   codSupport: "কোনো সমস্যা হলে কল করুন",
