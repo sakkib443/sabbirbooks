@@ -15,6 +15,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { mediaSrc } from '@/lib/mediaSrc';
 import {
   LuArrowRight,
   LuBanknote,
@@ -366,9 +368,49 @@ function HeroVideo({ book }) {
     };
   }, [muted, unmute]);
 
+  /*
+   * Hold the player back until the visitor is nearly looking at it.
+   *
+   * An autoplaying YouTube embed is not one request: it is the player, its
+   * CSS, its thumbnails and then the video stream itself, and all of it
+   * competed with the hero's own cover for a phone's first two seconds. On a
+   * narrow screen the video sits below the fold anyway, so an ad click that
+   * bounced at the headline paid for a video nobody saw.
+   *
+   * 300px of margin, not the sample section's 600: where it IS on screen — any
+   * desktop — this fires immediately and the behaviour is exactly what it was,
+   * which is the point. Autoplay is the shop's decision and this does not
+   * touch it.
+   */
+  const boxRef = useRef(null);
+  const [nearby, setNearby] = useState(false);
+  useEffect(() => {
+    if (nearby) return undefined;
+    const el = boxRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setNearby(true);
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setNearby(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [nearby]);
+
   return (
-    <div className="group relative overflow-hidden rounded-3xl border border-border bg-black shadow-card">
-      {direct ? (
+    <div ref={boxRef} className="group relative overflow-hidden rounded-3xl border border-border bg-black shadow-card">
+      {!nearby ? (
+        // The player's own black box, so the hero's shape is final before it
+        // arrives and nothing jumps when it does.
+        <div className="aspect-video w-full bg-black" />
+      ) : direct ? (
         <video
           ref={videoRef}
           src={url}
@@ -438,15 +480,28 @@ function CoverCard({ book, price, sampleHref }) {
 
       <div className="relative overflow-hidden rounded-2xl border border-border shadow-card motion-safe:animate-float-soft">
         {showCover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={book.coverImage}
-            // Describes the cover the way image search is queried, when the book
-            // has search copy; otherwise just its title.
-            alt={landingSeoFor(book)?.coverAlt || book.title}
-            onError={() => setFailed(true)}
-            className="w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
-          />
+          // The cover is the page's largest paint and, as a raw upload, was its
+          // largest download: a 2550x3300 PNG, 1.6MB, drawn 320px wide. Through
+          // the optimiser the same cover is a ~30KB WebP at the size it is
+          // actually shown, which on a phone over mobile data is most of the
+          // wait. `priority` preloads it — it is above the fold, and the point
+          // of the page.
+          //
+          // A fixed 3:4 box, matching the fallback tile below, so the layout
+          // does not jump when a cover of another shape loads.
+          <div className="relative aspect-[3/4] w-full">
+            <Image
+              src={mediaSrc(book.coverImage)}
+              // Describes the cover the way image search is queried, when the book
+              // has search copy; otherwise just its title.
+              alt={landingSeoFor(book)?.coverAlt || book.title}
+              onError={() => setFailed(true)}
+              fill
+              priority
+              sizes="(min-width: 1024px) 300px, 320px"
+              className="object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
         ) : (
           <div className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 bg-primary-soft px-6 text-center">
             <LuBookOpen className="text-6xl text-primary" />

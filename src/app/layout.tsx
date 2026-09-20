@@ -1,14 +1,5 @@
 import type { Metadata } from "next";
-import {
-  Poppins,
-  Roboto,
-  Lobster,
-  Caveat,
-  Work_Sans,
-  Outfit,
-  Sora,
-  Hind_Siliguri,
-} from "next/font/google";
+import { Poppins, Outfit, Sora, Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import SiteChrome from "@/components/shared/SiteChrome";
@@ -17,48 +8,44 @@ import ThemeScript from "@/components/theme/ThemeScript";
 import MetaPixel from "@/components/analytics/MetaPixel";
 import { SITE_URL } from "@/config/site";
 
-// Google Fonts (ported from the Aptech Learning setup)
+/*
+ * The faces this site actually sets text in — and only the weights it sets it
+ * at.
+ *
+ * Every weight here is a file every visitor downloads before the page settles,
+ * and this list used to be eight families at nine weights each: 25 files,
+ * 532KB, on a landing page reached from a phone ad. Four of those families
+ * (Roboto, Lobster, Caveat, Work Sans) were never set on anything public —
+ * Work Sans is used by the course admin screens and is loaded there instead,
+ * and the other three were not used at all.
+ *
+ * A weight that is asked for but not loaded is synthesised from the nearest
+ * one, so the cost of being wrong here is a slightly-off heading, not a broken
+ * page. The cost of being generous is a second of blank text on 3G.
+ */
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-poppins",
-});
-const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["100", "300", "400", "500", "700", "900"],
-  variable: "--font-roboto",
-});
-const lobster = Lobster({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-lobster",
-});
-const caveat = Caveat({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-caveat",
-});
-const worksans = Work_Sans({
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-work",
 });
 const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  weight: ["500", "600", "700", "800"],
   variable: "--font-outfit",
 });
 // Sora — the hero's display face. Modern, geometric and a touch techy, it
 // matches the cover's neon-clinical look and reads distinctly from Outfit.
 const sora = Sora({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["600", "700", "800"],
   variable: "--font-sora",
 });
 // Hind Siliguri renders Bangla (Bengali) text cleanly.
+// Bengali is the whole site's reading face, and a Bengali weight is a big file
+// — the glyph set is large. Four weights, not five.
 const hindSiliguri = Hind_Siliguri({
   subsets: ["bengali", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-hind-siliguri",
 });
 
@@ -130,7 +117,7 @@ export default function RootLayout({
     <html
       lang="bn"
       suppressHydrationWarning
-      className={`${poppins.variable} ${roboto.variable} ${lobster.variable} ${caveat.variable} ${worksans.variable} ${outfit.variable} ${sora.variable} ${hindSiliguri.variable} h-full antialiased`}
+      className={`${poppins.variable} ${outfit.variable} ${sora.variable} ${hindSiliguri.variable} h-full antialiased`}
     >
       <head>
         <ThemeScript />
