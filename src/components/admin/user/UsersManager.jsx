@@ -179,18 +179,37 @@ export default function UsersManager({ group = 'students' }) {
 
   const submitEdit = async () => {
     if (!editForm.firstName.trim() || !editForm.email.trim()) return showToast('error', 'Name ও email দিন');
-    if (editForm.newPassword && editForm.newPassword.length < 6) return showToast('error', 'Password অন্তত ৬ অক্ষর');
+    if (editForm.newPassword && (editForm.newPassword.length < 6 || editForm.newPassword.length > 64)) {
+      return showToast('error', 'Password ৬ থেকে ৬৪ অক্ষরের হতে হবে');
+    }
     setSavingEdit(true);
     try {
       const body = { firstName: editForm.firstName, lastName: editForm.lastName, email: editForm.email, phoneNumber: editForm.phoneNumber };
-      if (editForm.newPassword) body.password = editForm.newPassword;
       const res = await fetch(`${API}/user/${editUser.id}`, { method: 'PATCH', headers: jhdr(), body: JSON.stringify(body) });
       const data = await res.json();
-      if (res.ok && data.success !== false) {
-        setUsers(prev => prev.map(x => x._id === editUser._id ? { ...x, firstName: body.firstName, lastName: body.lastName, email: body.email, phoneNumber: body.phoneNumber } : x));
-        showToast('success', editForm.newPassword ? 'ডিটেলস + নতুন পাসওয়ার্ড সেট হয়েছে' : 'ডিটেলস আপডেট হয়েছে');
-        setEditUser(null);
-      } else showToast('error', data.message || 'Failed to update');
+      if (!res.ok || data.success === false) {
+        showToast('error', data.message || 'Failed to update');
+        return;
+      }
+      setUsers(prev => prev.map(x => x._id === editUser._id ? { ...x, firstName: body.firstName, lastName: body.lastName, email: body.email, phoneNumber: body.phoneNumber } : x));
+
+      // The password goes on its own route, after the details: that is the one
+      // that signs the person out of every device and emails them, which a
+      // password tucked into a profile edit never did.
+      if (editForm.newPassword) {
+        const pr = await fetch(`${API}/user/${editUser.id}/password`, {
+          method: 'PATCH', headers: jhdr(), body: JSON.stringify({ newPassword: editForm.newPassword }),
+        });
+        const pd = await pr.json().catch(() => ({}));
+        if (!pr.ok || pd.success === false) {
+          showToast('error', `ডিটেলস সেভ হয়েছে, কিন্তু পাসওয়ার্ড বদলায়নি — ${pd.message || 'আবার চেষ্টা করুন'}`);
+          return;
+        }
+        showToast('success', 'নতুন পাসওয়ার্ড সেট হয়েছে — সব ডিভাইস থেকে লগআউট করা হয়েছে, ইমেইলে জানানো হয়েছে');
+      } else {
+        showToast('success', 'ডিটেলস আপডেট হয়েছে');
+      }
+      setEditUser(null);
     } catch { showToast('error', 'Network error'); }
     finally { setSavingEdit(false); }
   };
@@ -615,12 +634,17 @@ export default function UsersManager({ group = 'students' }) {
 
               {/* password reset */}
               <div className="rounded-xl border border-brand-line bg-brand-soft/50 p-3">
-                <label className="text-[10px] font-bold text-brand-deep uppercase flex items-center gap-1.5 mb-1.5"><FiLock size={11} /> Reset Password <span className="text-dash-mute2 font-medium normal-case">(ফাঁকা রাখলে অপরিবর্তিত)</span></label>
+                <label className="text-[10px] font-bold text-brand-deep uppercase flex items-center gap-1.5 mb-1.5"><FiLock size={11} /> Set New Password <span className="text-dash-mute2 font-medium normal-case">(ফাঁকা রাখলে অপরিবর্তিত)</span></label>
                 <div className="relative">
                   <input type={showEditPw ? 'text' : 'password'} value={editForm.newPassword} onChange={e => setEditForm({ ...editForm, newPassword: e.target.value })} placeholder="নতুন পাসওয়ার্ড (min ৬)" autoComplete="new-password"
                     className="w-full px-3 py-2 pr-10 text-sm border border-dash-line rounded-lg focus:outline-none focus:border-brand font-mono bg-dash-card" />
                   <button type="button" onClick={() => setShowEditPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-dash-mute2 hover:text-dash-ink4">{showEditPw ? <FiEyeOff size={15} /> : <FiEye size={15} />}</button>
                 </div>
+                {editForm.newPassword && (
+                  <p className="mt-1.5 text-[11px] leading-snug text-dash-mute">
+                    সেভ করলে উনি সব ডিভাইস থেকে লগআউট হয়ে যাবেন, আর ইমেইলে জানানো হবে যে অ্যাডমিন পাসওয়ার্ড বদলেছেন। নতুন পাসওয়ার্ডটা ওনাকে জানিয়ে দিন — লগইনের পর উনি নিজের একটা দিতে পারবেন।
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-dash-line-soft">

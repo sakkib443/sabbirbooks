@@ -116,6 +116,44 @@ export async function apiLogin(params: {
   };
 }
 
+// ── Forgot / reset password ──────────────────────────────────────────────────
+//
+// The server answers forgot-password identically whether or not the address
+// has an account, so there is nothing here to branch on but "did it reach us".
+export async function apiForgotPassword(email: string): Promise<ApiResult<null>> {
+  const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const json = await readJson(res);
+  return {
+    ok: res.ok,
+    success: Boolean(json.success),
+    message: typeof json.message === "string" ? json.message : undefined,
+    raw: json,
+  };
+}
+
+export async function apiResetPassword(params: {
+  email: string;
+  token: string;
+  newPassword: string;
+}): Promise<ApiResult<null>> {
+  const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  const json = await readJson(res);
+  return {
+    ok: res.ok,
+    success: Boolean(json.success),
+    message: typeof json.message === "string" ? json.message : undefined,
+    raw: json,
+  };
+}
+
 // ── Sign in with Google ───────────────────────────────────────────────────────
 //
 // The OAuth client id, or "" when Google sign-in is switched off.
