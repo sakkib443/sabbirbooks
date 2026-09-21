@@ -32,7 +32,6 @@ export default function LoginPage() {
 
   const [mode, setMode] = useState<Mode>("email");
   const [apiError, setApiError] = useState("");
-  const [forgotNote, setForgotNote] = useState(false);
 
   const S = isBengali
     ? {
@@ -50,7 +49,6 @@ export default function LoginPage() {
         showPw: "পাসওয়ার্ড দেখান",
         hidePw: "পাসওয়ার্ড লুকান",
         forgot: "পাসওয়ার্ড ভুলে গেছেন?",
-        forgotNote: "পাসওয়ার্ড রিসেট শীঘ্রই আসছে — সহায়তার জন্য যোগাযোগ করুন।",
         submit: "লগইন করুন",
         submitting: "লগইন হচ্ছে...",
         or: "অথবা",
@@ -78,7 +76,6 @@ export default function LoginPage() {
         showPw: "Show password",
         hidePw: "Hide password",
         forgot: "Forgot password?",
-        forgotNote: "Password reset is coming soon — please contact support for help.",
         submit: "Log in",
         submitting: "Logging in...",
         or: "or",
@@ -221,17 +218,10 @@ export default function LoginPage() {
             {...register("password")}
           />
           <div className="mt-2 text-right">
-            <button
-              type="button"
-              onClick={() => setForgotNote((v) => !v)}
-              className={cn("text-xs font-medium text-primary hover:underline", bn)}
-            >
+            <Link href="/forgot-password" className={cn("text-xs font-medium text-primary hover:underline", bn)}>
               {S.forgot}
-            </button>
+            </Link>
           </div>
-          {forgotNote && (
-            <p className={cn("mt-1 text-right text-xs text-muted-foreground", bn)}>{S.forgotNote}</p>
-          )}
         </div>
 
         {/* API error */}
