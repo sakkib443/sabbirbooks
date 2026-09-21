@@ -27,7 +27,7 @@ import {
 
 import { can, getStoredUser } from '@/lib/permissions';
 import {
-  MoneyCard, RangeBar, RevenueChart, ChartLegend, resolvePreset, tk,
+  MoneyCard, RangeBar, RevenueChart, ChartLegend, MetricToggle, RangeSummary, resolvePreset, tk,
   DeliveryToggle, BooksAndDelivery, useDeliveryMode, moneyIn, modeNote, booksLabel,
 } from '@/components/admin/stats/OrderStats';
 
@@ -50,6 +50,8 @@ export default function AdminDashboard() {
   const [draft, setDraft] = useState(() => resolvePreset('30d'));
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Orders first: how many came in, then what they were worth.
+  const [metric, setMetric] = useState('orders');
   const [mode, setMode] = useDeliveryMode();
 
   const showOrderDashboard = can(getStoredUser(), 'orders.read');
@@ -119,7 +121,6 @@ export default function AdminDashboard() {
   const t = stats?.totals;
   // The three money figures, with or without the delivery charge as chosen.
   const tm = moneyIn(t, mode);
-  const rm = moneyIn(r, mode);
   const todayM = moneyIn(stats?.today, mode);
 
   return (
@@ -185,42 +186,36 @@ export default function AdminDashboard() {
         onApply={applyCustom}
       />
 
-      {/* Revenue chart for the selected range */}
-      <div className="rounded-xl border border-dash-line/60 bg-dash-card shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-2 pt-5">
-          <div>
-            <h2 className="text-base font-semibold text-dash-ink2 outfit-semibold">Order Revenue</h2>
-            <p className="mt-0.5 text-xs text-dash-mute2">
-              {r ? `${r.from} → ${r.to} · ${modeNote(mode)}` : 'Loading…'}
-            </p>
+      {/* The selected range, day by day, with its figures beside it.
+          Two-thirds chart, one-third summary: the chart used to span the page
+          at 455px tall with five numbers crammed into its header, which made
+          it the loudest thing on the dashboard while saying the least. Stacked
+          on a phone, where a third of the width is no width at all. */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div className="flex flex-col rounded-xl border border-dash-line/60 bg-dash-card shadow-sm lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-1 pt-4">
+            <div>
+              <h2 className="text-base font-semibold text-dash-ink2 outfit-semibold">
+                {metric === 'orders' ? 'Daily Orders' : 'Daily Revenue'}
+              </h2>
+              <p className="mt-0.5 text-xs text-dash-mute2">
+                {r
+                  ? `${r.from} → ${r.to}${metric === 'revenue' ? ` · ${modeNote(mode)}` : ''}`
+                  : 'Loading…'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {metric === 'revenue' && <ChartLegend />}
+              <MetricToggle metric={metric} onChange={setMetric} />
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-5">
-            <div className="text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Sold</p>
-              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{tk(rm.value)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Earned</p>
-              <p className="text-sm font-bold text-emerald-600 outfit tabular-nums">{tk(rm.earned)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Orders</p>
-              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{(r?.orders ?? 0).toLocaleString('en-US')}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Books</p>
-              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{(r?.copies ?? 0).toLocaleString('en-US')}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">Delivery</p>
-              <p className="text-sm font-bold text-dash-ink outfit tabular-nums">{tk(r?.delivery?.value)}</p>
-            </div>
-            <ChartLegend />
+          {/* Centred in whatever height the summary beside it sets, so a taller
+              summary leaves even space around the chart, not a gap under it. */}
+          <div className="flex flex-1 items-center px-2 pb-2">
+            <RevenueChart daily={r?.daily} loading={loading} mode={mode} metric={metric} height={250} />
           </div>
         </div>
-        <div className="px-2 pb-2">
-          <RevenueChart daily={r?.daily} loading={loading} mode={mode} />
-        </div>
+        <RangeSummary range={r} mode={mode} loading={loading} />
       </div>
 
       {/* Today + shortcuts */}
