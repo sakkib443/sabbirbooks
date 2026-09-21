@@ -293,48 +293,100 @@ export function MoneyCard({ icon: Icon, label, value, note, tone = 'brand', load
 
 // ── Revenue chart ──────────────────────────────────────────────────────────
 /**
- * Two stacked areas: what was SOLD (value) and what was actually EARNED, so the
- * gap between the lines is the money still out with couriers — the one thing a
- * single-line revenue chart cannot show.
+ * The day-by-day chart, in one of two readings:
+ *
+ *   metric 'orders'   how many orders came in each day — one line.
+ *   metric 'revenue'  two stacked areas: what was SOLD (value) and what was
+ *                     actually EARNED, so the gap between the lines is the money
+ *                     still out with couriers — the one thing a single-line
+ *                     revenue chart cannot show.
  *
  * Plain SVG on purpose: no chart library in this project, and the shapes here
  * are simple enough that adding one would cost more than it saves.
  *
- * `mode` 'without' draws both lines with each day's delivery charge taken out.
+ * `mode` 'without' draws the money with each day's delivery charge taken out.
+ * `height` is the drawing's height in viewBox units; the width is always 760,
+ * so a smaller height is a flatter, shorter chart wherever it is placed.
  */
-export function RevenueChart({ daily, loading, mode = 'with' }) {
-  const W = 760, H = 260, PL = 52, PR = 16, PT = 16, PB = 34;
-  const iw = W - PL - PR, ih = H - PT - PB;
 
-  const { valuePath, valueArea, earnedPath, earnedArea, grid, ticks, max, points } = useMemo(() => {
+/**
+ * A smooth line that never overshoots.
+ *
+ * The old curve was Catmull-Rom, which bulges past its points: a quiet day
+ * between two busy ones dipped BELOW the zero line and a busy day's peak read
+ * higher than it was. Monotone cubic (Fritsch–Carlson) is as smooth to the eye
+ * but only ever rises where the data rises, so zero stays on the axis and a
+ * peak is exactly as tall as the day.
+ */
+const monotonePath = (pts) => {
+  const n = pts.length;
+  if (n < 2) return '';
+  const dx = [], slope = [];
+  for (let i = 0; i < n - 1; i++) {
+    dx[i] = pts[i + 1][0] - pts[i][0] || 1;
+    slope[i] = (pts[i + 1][1] - pts[i][1]) / dx[i];
+  }
+  const m = new Array(n);
+  m[0] = slope[0];
+  m[n - 1] = slope[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    m[i] = slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2;
+  }
+  for (let i = 0; i < n - 1; i++) {
+    if (slope[i] === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+      continue;
+    }
+    const a = m[i] / slope[i], b = m[i + 1] / slope[i], h = a * a + b * b;
+    if (h > 9) {
+      const t = 3 / Math.sqrt(h);
+      m[i] = t * a * slope[i];
+      m[i + 1] = t * b * slope[i];
+    }
+  }
+  let d = `M ${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], t = dx[i] / 3;
+    d += ` C ${x0 + t},${y0 + m[i] * t} ${x1 - t},${y1 - m[i + 1] * t} ${x1},${y1}`;
+  }
+  return d;
+};
+
+/** "12" for a count axis; money keeps its short ৳ form. */
+const countShort = (n) => (n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(Math.round(n)));
+
+export function RevenueChart({ daily, loading, mode = 'with', metric = 'revenue', height = 260 }) {
+  const W = 760, H = height, PL = 48, PR = 14, PT = 14, PB = 30;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const orders = metric === 'orders';
+  // Unique per chart, so two charts on one page never share a gradient.
+  const gid = React.useId().split(':').join('');
+
+  const { mainPath, mainArea, earnedPath, earnedArea, grid, ticks, points } = useMemo(() => {
     const rows = (daily || []).map((d) =>
       mode === 'without'
         ? { ...d, value: (d.value || 0) - (d.delivery || 0), earned: (d.earned || 0) - (d.earnedDelivery || 0) }
         : d
     );
-    const max = Math.max(...rows.map((d) => d.value), 1);
+    const main = (d) => (orders ? d.orders || 0 : d.value || 0);
+    // A count axis tops out on a round number with a little headroom, so a
+    // 3-order peak is not drawn touching the ceiling.
+    const peak = Math.max(...rows.map(main), 0);
+    const max = orders ? Math.max(4, Math.ceil((peak * 1.15) / 4) * 4) : Math.max(peak, 1);
     const x = (i) => PL + (rows.length <= 1 ? iw / 2 : (i / (rows.length - 1)) * iw);
     const y = (v) => PT + ih - (v / max) * ih;
 
-    const smooth = (pts) => {
-      if (pts.length < 2) return '';
-      let d = `M ${pts[0][0]},${pts[0][1]}`;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, pts.length - 1)];
-        d += ` C ${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`;
-      }
-      return d;
-    };
     const close = (path, pts) =>
       pts.length < 2 ? '' : `${path} L ${pts[pts.length - 1][0]},${PT + ih} L ${pts[0][0]},${PT + ih} Z`;
 
-    const vp = rows.map((d, i) => [x(i), y(d.value)]);
-    const ep = rows.map((d, i) => [x(i), y(d.earned)]);
-    const vPath = smooth(vp), ePath = smooth(ep);
+    const mp = rows.map((d, i) => [x(i), y(main(d))]);
+    const ep = orders ? [] : rows.map((d, i) => [x(i), y(d.earned || 0)]);
+    const mPath = monotonePath(mp), ePath = orders ? '' : monotonePath(ep);
 
     const grid = Array.from({ length: 5 }, (_, i) => ({
       y: PT + (i / 4) * ih,
-      label: tkShort((max * (4 - i)) / 4),
+      label: orders ? countShort((max * (4 - i)) / 4) : tkShort((max * (4 - i)) / 4),
     }));
 
     // At most ~8 date labels, whatever the range length, so they never collide.
@@ -345,63 +397,74 @@ export function RevenueChart({ daily, loading, mode = 'with' }) {
       .map(({ i, d }) => ({ x: x(i), label: d.date?.slice(5).replace('-', '/') || d.day }));
 
     return {
-      valuePath: vPath, valueArea: close(vPath, vp),
-      earnedPath: ePath, earnedArea: close(ePath, ep),
-      grid, ticks, max,
-      points: rows.map((d, i) => ({ x: x(i), yv: y(d.value), ye: y(d.earned), d })),
+      mainPath: mPath, mainArea: close(mPath, mp),
+      earnedPath: ePath, earnedArea: ePath ? close(ePath, ep) : '',
+      grid, ticks,
+      points: rows.map((d, i) => ({ x: x(i), ym: y(main(d)), ye: y(d.earned || 0), d })),
     };
-  }, [daily, mode, iw, ih]);
+  }, [daily, mode, orders, iw, ih]);
 
-  if (loading) return <div className="mx-3 my-2 h-[250px] animate-pulse rounded-lg bg-dash-soft" />;
+  if (loading) {
+    return <div className="mx-3 my-2 animate-pulse rounded-lg bg-dash-soft" style={{ height: Math.round(height * 0.85) }} />;
+  }
 
+  const tipW = orders ? 108 : 128;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <linearGradient id="gValue" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.20" />
-          <stop offset="100%" stopColor="var(--brand)" stopOpacity="0.01" />
+        <linearGradient id={`${gid}m`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id="gEarned" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#10b981" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+        <linearGradient id={`${gid}e`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
         </linearGradient>
       </defs>
 
       {grid.map((g, i) => (
         <g key={i}>
-          <line x1={PL} y1={g.y} x2={PL + iw} y2={g.y} stroke="var(--dash-line-soft)" strokeWidth="1" />
+          <line x1={PL} y1={g.y} x2={PL + iw} y2={g.y} stroke="var(--dash-line-soft)" strokeWidth="1" strokeDasharray={i === 4 ? undefined : '3 4'} />
           <text x={PL - 8} y={g.y + 3.5} fontSize="9" fill="var(--dash-mute2)" textAnchor="end" fontFamily="Inter, sans-serif">
             {g.label}
           </text>
         </g>
       ))}
-      <line x1={PL} y1={PT + ih} x2={PL + iw} y2={PT + ih} stroke="var(--dash-line)" strokeWidth="1" />
 
-      {valueArea && <path d={valueArea} fill="url(#gValue)" />}
-      {earnedArea && <path d={earnedArea} fill="url(#gEarned)" />}
-      {valuePath && <path d={valuePath} fill="none" stroke="var(--brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-      {earnedPath && <path d={earnedPath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+      {mainArea && <path d={mainArea} fill={`url(#${gid}m)`} />}
+      {earnedArea && <path d={earnedArea} fill={`url(#${gid}e)`} />}
+      {mainPath && <path d={mainPath} fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
+      {earnedPath && <path d={earnedPath} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
 
       {ticks.map((t, i) => (
-        <text key={i} x={t.x} y={H - 10} fontSize="9" fill="var(--dash-mute2)" textAnchor="middle" fontFamily="Inter, sans-serif">
+        <text key={i} x={t.x} y={H - 9} fontSize="9" fill="var(--dash-mute2)" textAnchor="middle" fontFamily="Inter, sans-serif">
           {t.label}
         </text>
       ))}
 
-      {points.map((p, i) => (
-        <g key={i} className="group/dot">
-          <rect x={p.x - 8} y={PT} width="16" height={ih} fill="transparent" className="cursor-pointer" />
-          <circle cx={p.x} cy={p.yv} r="3.5" fill="var(--brand)" stroke="white" strokeWidth="2" className="opacity-0 transition-opacity group-hover/dot:opacity-100" />
-          <circle cx={p.x} cy={p.ye} r="3.5" fill="#10b981" stroke="white" strokeWidth="2" className="opacity-0 transition-opacity group-hover/dot:opacity-100" />
-          <g className="pointer-events-none opacity-0 transition-opacity group-hover/dot:opacity-100">
-            <rect x={Math.min(Math.max(p.x - 58, 2), W - 118)} y={Math.max(p.yv - 44, 2)} width="116" height="38" rx="6" fill="#0f172a" />
-            <text x={Math.min(Math.max(p.x - 58, 2), W - 118) + 8} y={Math.max(p.yv - 44, 2) + 15} fontSize="9" fill="#cbd5e1">{p.d.date}</text>
-            <text x={Math.min(Math.max(p.x - 58, 2), W - 118) + 8} y={Math.max(p.yv - 44, 2) + 29} fontSize="10" fill="#fff" fontWeight="700">
-              {tk(p.d.value)} · earned {tk(p.d.earned)}
-            </text>
+      {points.map((p, i) => {
+        const tx = Math.min(Math.max(p.x - tipW / 2, 2), W - tipW - 2);
+        const ty = Math.max(p.ym - 46, 2);
+        return (
+          <g key={i} className="group/dot">
+            <rect x={p.x - 8} y={PT} width="16" height={ih} fill="transparent" className="cursor-pointer" />
+            <line x1={p.x} y1={PT} x2={p.x} y2={PT + ih} stroke="var(--dash-line)" strokeWidth="1" className="opacity-0 transition-opacity group-hover/dot:opacity-100" />
+            <circle cx={p.x} cy={p.ym} r="3.5" fill="var(--brand)" stroke="white" strokeWidth="2" className="opacity-0 transition-opacity group-hover/dot:opacity-100" />
+            {!orders && (
+              <circle cx={p.x} cy={p.ye} r="3.5" fill="#10b981" stroke="white" strokeWidth="2" className="opacity-0 transition-opacity group-hover/dot:opacity-100" />
+            )}
+            <g className="pointer-events-none opacity-0 transition-opacity group-hover/dot:opacity-100">
+              <rect x={tx} y={ty} width={tipW} height="38" rx="7" fill="#0f172a" />
+              <text x={tx + 9} y={ty + 15} fontSize="9" fill="#cbd5e1">{p.d.date}</text>
+              <text x={tx + 9} y={ty + 29} fontSize="10" fill="#fff" fontWeight="700">
+                {orders
+                  ? `${p.d.orders || 0} orders · ${p.d.copies || 0} books`
+                  : `${tk(p.d.value)} · earned ${tk(p.d.earned)}`}
+              </text>
+            </g>
           </g>
-        </g>
-      ))}
+        );
+      })}
     </svg>
   );
 }
@@ -415,6 +478,124 @@ export function ChartLegend() {
       <span className="flex items-center gap-1.5">
         <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Earned
       </span>
+    </div>
+  );
+}
+
+/**
+ * Orders first, then revenue — the order the shop reads the day in: how many
+ * came in, and then what they were worth. Styled as the delivery switch beside
+ * it, so the two controls read as one family.
+ */
+export function MetricToggle({ metric, onChange }) {
+  const options = [
+    { key: 'orders', label: 'Orders' },
+    { key: 'revenue', label: 'Revenue' },
+  ];
+  return (
+    <div
+      role="radiogroup"
+      aria-label="What the chart shows"
+      className="inline-flex items-center rounded-lg border border-dash-line bg-dash-soft p-0.5"
+    >
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          role="radio"
+          aria-checked={metric === o.key}
+          onClick={() => onChange(o.key)}
+          className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+            metric === o.key ? 'bg-brand text-white shadow-sm' : 'text-dash-mute hover:text-dash-ink3'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The period at a glance, beside the chart.
+ *
+ * These five figures used to sit in a row across the top of the chart card,
+ * crowding its title and making the card as tall as the page was wide. Here
+ * they are one column, read top to bottom — how many, how much, how much of it
+ * is in hand — with the two things the row never said: the average order, and
+ * the day the shop sold most.
+ */
+export function RangeSummary({ range, mode, loading }) {
+  const m = moneyIn(range, mode);
+  const orders = range?.orders ?? 0;
+  const copies = range?.copies ?? 0;
+  const inHand = m.value > 0 ? Math.min(100, Math.round((m.earned / m.value) * 100)) : 0;
+  const best = (range?.daily || []).reduce(
+    (b, d) => ((d.orders || 0) > (b?.orders || 0) ? d : b),
+    null
+  );
+  const bestValue = best ? (mode === 'without' ? (best.value || 0) - (best.delivery || 0) : best.value || 0) : 0;
+  const fmtDay = (iso) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+  const Row = ({ label, value, tone = 'text-dash-ink', sub }) => (
+    <div className="flex items-baseline justify-between gap-3 py-1.5">
+      <span className="text-xs text-dash-mute">{label}</span>
+      <span className="text-right">
+        <span className={`text-sm font-bold tabular-nums outfit ${tone}`}>{value}</span>
+        {sub && <span className="block text-[10px] text-dash-mute2">{sub}</span>}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="flex h-full flex-col rounded-xl border border-dash-line/60 bg-dash-card px-5 py-4 shadow-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">This period</p>
+
+      {loading ? (
+        <div className="mt-3 space-y-3">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-5 animate-pulse rounded-md bg-dash-soft2" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="mt-2 flex items-end gap-2">
+            <span className="text-2xl font-bold leading-none text-dash-ink outfit tabular-nums">
+              {orders.toLocaleString('en-US')}
+            </span>
+            <span className="pb-0.5 text-xs text-dash-mute">orders · {booksLabel(copies)}</span>
+          </div>
+
+          <div className="mt-2 divide-y divide-dash-line-soft">
+            <Row label="Sold" value={tk(m.value)} />
+            <Row label="Earned" value={tk(m.earned)} tone="text-emerald-600" />
+            <Row label="Still to collect" value={tk(Math.max(0, m.value - m.earned))} tone="text-amber-600" />
+            <Row label="Delivery charge" value={tk(range?.delivery?.value)} />
+            <Row label="Average order" value={orders ? tk(m.value / orders) : '—'} />
+          </div>
+
+          {/* How much of what was sold is actually in hand. */}
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-[11px] text-dash-mute">
+              <span>Collected</span>
+              <span className="font-semibold tabular-nums text-dash-ink3">{inHand}%</span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-dash-soft2">
+              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${inHand}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-auto" />
+          {best && best.orders > 0 && (
+            <div className="mt-2.5 rounded-lg bg-dash-soft px-3 py-1.5 text-xs">
+              <span className="text-dash-mute">Best day · </span>
+              <span className="font-semibold text-dash-ink3">{fmtDay(best.date)}</span>
+              <span className="text-dash-mute"> — {best.orders} orders, {tk(bestValue)}</span>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
