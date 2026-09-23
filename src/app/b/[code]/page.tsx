@@ -12,7 +12,7 @@
  * siblings) — this page could not widen the scope even if it tried.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -34,6 +34,26 @@ import AnswerStyles from "@/components/books/AnswerStyles";
 import Lightbox from "@/components/books/Lightbox";
 import { priceBook, type BookOffers } from "@/lib/bookOffers";
 import { isVerticalVideo, toEmbedUrl } from "@/lib/videoEmbed";
+import dynamic from "next/dynamic";
+import {
+  attachAnswerImageFallback,
+  lightenAnswerHtml,
+  onVariantError,
+  variantUrl,
+} from "@/lib/mediaVariant";
+
+// The same page-by-page viewer the sample chapter uses. Loaded only when a
+// reader actually opens a PDF: pdf.js is heavy, and most readers never tap one.
+// It fetches a page at a time over HTTP range requests, so a twenty-page file
+// shows its first page in about a second instead of after the whole download.
+const PdfViewer = dynamic(() => import("@/components/shared/PdfViewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center">
+      <LuLoaderCircle className="w-6 h-6 animate-spin text-slate-500" />
+    </div>
+  ),
+});
 
 type Video = {
   _id?: string;
@@ -184,6 +204,15 @@ export default function BookTopicScanPage() {
     allowed: boolean;
   } | null>(null);
   const [loadingNext, setLoadingNext] = useState(false);
+  // A PDF opened inside the page rather than downloaded whole.
+  const [pdf, setPdf] = useState<{ url: string; title: string } | null>(null);
+  // The pictures inside an answer are swapped for their lighter copies in the
+  // HTML itself; this ref is how each one gets its fallback (lib/mediaVariant).
+  const answerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    attachAnswerImageFallback(answerRef.current);
+  });
 
   const load = useCallback(async () => {
     if (!code) return;
@@ -314,7 +343,14 @@ export default function BookTopicScanPage() {
           {book?.coverImage && (
             <div className="relative w-28 h-40 mx-auto mb-4 rounded-lg overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
+              <img
+                src={variantUrl(book.coverImage, "thumb")}
+                onError={onVariantError}
+                alt={book.title}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
             </div>
           )}
           {book && <p className="text-white font-medium mb-4">{book.title}</p>}
@@ -483,6 +519,31 @@ export default function BookTopicScanPage() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-slate-200">
       <AnswerStyles dark />
+      {pdf && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#0f0f0f]">
+          <div className="flex items-center gap-2 border-b border-[#282828] px-4 py-3">
+            <LuFileText className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span className="flex-1 truncate text-sm text-slate-200">{pdf.title}</span>
+            <a
+              href={pdf.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex shrink-0 items-center gap-1.5 rounded-md border border-[#333] px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-emerald-500/60 hover:text-emerald-400"
+            >
+              <LuDownload className="w-3.5 h-3.5" /> ডাউনলোড
+            </a>
+            <button
+              type="button"
+              onClick={() => setPdf(null)}
+              aria-label="বন্ধ করুন"
+              className="shrink-0 rounded-md p-1.5 text-slate-400 transition hover:text-white"
+            >
+              <LuX className="w-4 h-4" />
+            </button>
+          </div>
+          <PdfViewer url={pdf.url} className="flex-1 bg-[#161616]" />
+        </div>
+      )}
       {lightbox && (
         <Lightbox
           images={lightbox.images}
@@ -599,7 +660,12 @@ export default function BookTopicScanPage() {
                           <button
                             key={`${src}-${i}`}
                             type="button"
-                            onClick={() => setLightbox({ images: active.images, index: i })}
+                            onClick={() =>
+                              setLightbox({
+                                images: active.images.map((u) => variantUrl(u, "view")),
+                                index: i,
+                              })
+                            }
                             className="group relative w-full aspect-square rounded-lg overflow-hidden bg-[#1c1c1c] border border-[#282828] hover:border-emerald-500/60 transition"
                           >
                             {/* Plain <img>, not next/image: these URLs point at
@@ -608,9 +674,16 @@ export default function BookTopicScanPage() {
                                 into an error instead of a picture. */}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={src}
+                              /* The tile is 150px wide; the original is a
+                                 print-resolution photograph. This asks for the
+                                 thumbnail the server keeps beside it, and
+                                 onVariantError puts the original back if there
+                                 is none. See lib/mediaVariant. */
+                              src={variantUrl(src, "thumb")}
+                              onError={onVariantError}
                               alt={`ছবি ${i + 1}`}
                               loading="lazy"
+                              decoding="async"
                               draggable={false}
                               onContextMenu={(e) => e.preventDefault()}
                               onDragStart={(e) => e.preventDefault()}
@@ -716,8 +789,9 @@ export default function BookTopicScanPage() {
                         মূল উত্তরটি বইয়ের পাতাতেই আছে — এখানে বাড়তি ব্যাখ্যা ও তথ্য।
                       </p>
                       <div
+                        ref={answerRef}
                         className="sb-answer prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: active.answerHtml ?? "" }}
+                        dangerouslySetInnerHTML={{ __html: lightenAnswerHtml(active.answerHtml ?? "") }}
                       />
                     </section>
                   )}
@@ -727,20 +801,42 @@ export default function BookTopicScanPage() {
                       <SectionLabel icon={<LuFileText className="w-3.5 h-3.5" />}>
                         ফাইল ({active.attachments.length})
                       </SectionLabel>
+                      {/* A PDF opens here, page by page, instead of being
+                          downloaded whole first — on mobile data a five-megabyte
+                          file took the better part of a minute before anything
+                          appeared. The download is still one tap away. */}
                       <div className="space-y-2">
-                        {active.attachments.map((a, i) => (
-                          <a
-                            key={a._id ?? i}
-                            href={a.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 rounded-lg bg-[#1c1c1c] hover:bg-[#282828] px-4 py-3 transition"
-                          >
-                            <LuFileText className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span className="text-sm truncate flex-1">{a.title}</span>
-                            <LuDownload className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          </a>
-                        ))}
+                        {active.attachments.map((a, i) => {
+                          const isPdf =
+                            /\.pdf(\?|#|$)/i.test(a.fileUrl) || (a.fileType || "").toLowerCase() === "pdf";
+                          return (
+                            <div
+                              key={a._id ?? i}
+                              className="flex items-center gap-2 rounded-lg bg-[#1c1c1c] px-4 py-3"
+                            >
+                              <LuFileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                              <span className="text-sm truncate flex-1">{a.title}</span>
+                              {isPdf && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPdf({ url: a.fileUrl, title: a.title })}
+                                  className="shrink-0 rounded-md border border-[#333] px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-emerald-500/60 hover:text-emerald-400"
+                                >
+                                  এখানে দেখুন
+                                </button>
+                              )}
+                              <a
+                                href={a.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="ডাউনলোড"
+                                className="shrink-0 rounded-md p-1.5 text-slate-500 transition hover:text-emerald-400"
+                              >
+                                <LuDownload className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          );
+                        })}
                       </div>
                     </section>
                   )}
