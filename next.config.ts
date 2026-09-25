@@ -32,6 +32,22 @@ const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker runtime stage.
   output: "standalone",
+  experimental: {
+    /*
+     * How many worker processes render the static pages at build time.
+     *
+     * Next's default is "one per CPU", which on the shop's VPS meant fifteen
+     * Node processes each holding its own copy of the compiled app — on a box
+     * with 7.8GB of RAM already running two other projects and a database.
+     * Every build pushed the machine into swap, and a build that takes three
+     * minutes on a laptop took over an hour there.
+     *
+     * Two workers build the 105 pages a little slower in theory and far faster
+     * in practice, because nothing has to be paged back off the disk. Raise it
+     * if the server ever gets more memory, not more cores.
+     */
+    cpus: 2,
+  },
   // Same-origin proxy: keeps the backend's (sslip.io) host off the browser, so
   // a visitor whose network blocks sslip.io can still reach the API through the
   // site's own domain.

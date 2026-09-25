@@ -18,6 +18,11 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+# A ceiling on the build's heap. Without one, Node sizes it from the HOST's
+# total memory and will happily grow past what is actually free, taking the
+# server into swap and the build from minutes to an hour. 2GB is comfortably
+# more than this build needs and leaves room for the apps already running.
+ENV NODE_OPTIONS=--max-old-space-size=2048
 
 RUN npm run build
 
