@@ -24,6 +24,18 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # more than this build needs and leaves room for the apps already running.
 ENV NODE_OPTIONS=--max-old-space-size=2048
 
+# And a ceiling on how much of the machine the compiler takes.
+#
+# The server has four cores and runs about thirty containers on them. Turbopack
+# sizes its thread pools from the core count and takes the lot: during a deploy
+# the load average sat above 20 with zero idle CPU, every other project on the
+# box crawled, and the build itself died with no error at all — starved, not
+# out of memory (nothing in dmesg, swap untouched).
+#
+# Two threads each. The compile is somewhat slower in isolation and far more
+# likely to finish, and the shop's other sites stay answerable while it runs.
+ENV TOKIO_WORKER_THREADS=2 RAYON_NUM_THREADS=2 UV_THREADPOOL_SIZE=2
+
 RUN npm run build
 
 # ─── Runtime ────────────────────────────────────────────────
