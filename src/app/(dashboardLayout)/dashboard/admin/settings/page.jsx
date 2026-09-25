@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FiSettings, FiSave, FiRefreshCw, FiUser, FiLock, FiGlobe, FiEye, FiEyeOff, FiLoader, FiShield, FiUploadCloud } from 'react-icons/fi';
+import { FiSettings, FiSave, FiRefreshCw, FiUser, FiLock, FiGlobe, FiEye, FiEyeOff, FiLoader, FiShield, FiUploadCloud, FiLayers, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { LuGlobe, LuPhone, LuMail, LuMapPin, LuFacebook, LuYoutube, LuLinkedin } from 'react-icons/lu';
 import { useToast } from '@/components/shared/Toast';
 import { currentCan, getStoredUser, ROLE_LABELS } from '@/lib/permissions';
@@ -244,6 +244,8 @@ const SiteSettingsTab = ({ showToast }) => {
     deliveryChargeInsideDhaka: 120, deliveryChargeOutsideDhaka: 120,
     freeDeliveryAbove: 0, codExtraCharge: 0,
     deliveryNote: '', orderSupportPhone: '',
+    // Bulk discount ladder — [{ minQty, type, value, label }]
+    quantityDiscounts: [],
     // Landing page
     landingBookSlug: '', landingHeadline: '', landingSubheadline: '',
   });
@@ -290,6 +292,25 @@ const SiteSettingsTab = ({ showToast }) => {
     setSettings(prev => ({ ...prev, [name]: value }));
   };
 
+  // ── Bulk discount ladder ──────────────────────────────────────────────────
+  // Rows are edited as typed text and only coerced on save: forcing a number on
+  // every keystroke makes the field impossible to clear, so a "10" you meant to
+  // make "3" becomes "103".
+  const tiers = Array.isArray(settings.quantityDiscounts) ? settings.quantityDiscounts : [];
+  const writeTiers = (next) => setSettings(prev => ({ ...prev, quantityDiscounts: next }));
+  const setTier = (i, patch) => writeTiers(tiers.map((t, n) => (n === i ? { ...t, ...patch } : t)));
+  const removeTier = (i) => writeTiers(tiers.filter((_, n) => n !== i));
+  const addTier = () => {
+    // Suggest the next rung above the largest one, so adding three in a row
+    // gives 3 / 4 / 5 rather than three identical rows.
+    const highest = tiers.reduce((m, t) => Math.max(m, Number(t.minQty) || 0), 1);
+    writeTiers([...tiers, { minQty: highest + 1, type: 'percent', value: 5, label: '' }]);
+  };
+  const tierPreview = (t) =>
+    t.type === 'fixed'
+      ? `${t.minQty || 0}+ কপিতে ৳${t.value || 0} ছাড়`
+      : `${t.minQty || 0}+ কপিতে ${t.value || 0}% ছাড়`;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -300,6 +321,20 @@ const SiteSettingsTab = ({ showToast }) => {
       const body = Object.fromEntries(
         Object.entries(settings).filter(([k]) => !DELIVERY_OWNED_ELSEWHERE.has(k))
       );
+      // The ladder is edited as text; numbers and the 90% ceiling are applied
+      // here. Half-typed rows (blank qty or no discount) are dropped rather
+      // than saved as a rung that would silently never fire.
+      body.quantityDiscounts = tiers
+        .map(t => ({
+          minQty: Math.max(2, Math.round(Number(t.minQty) || 0)),
+          type: t.type === 'fixed' ? 'fixed' : 'percent',
+          value: t.type === 'fixed'
+            ? Math.max(0, Math.round(Number(t.value) || 0))
+            : Math.min(90, Math.max(0, Number(t.value) || 0)),
+          label: (t.label || '').trim(),
+        }))
+        .filter(t => t.minQty >= 2 && t.value > 0)
+        .sort((a, b) => a.minQty - b.minQty);
       const response = await fetch(`${API_URL}/api/settings`, {
         method: 'PATCH', headers: authHdr(), body: JSON.stringify(body),
       });
@@ -671,6 +706,88 @@ const SiteSettingsTab = ({ showToast }) => {
             <input type="text" name="orderSupportPhone" value={settings.orderSupportPhone || ''} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm font-mono" />
           </div>
         </div>
+      </div>
+
+      {/* Bulk discount — "buy N copies, get X off" */}
+      <div className="bg-dash-card rounded-xl border border-dash-line p-6 mt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <FiLayers className="text-brand" />
+          <h2 className="text-lg font-semibold text-dash-ink2">একসাথে বেশি বই কিনলে ছাড়</h2>
+        </div>
+        <p className="text-xs text-dash-mute mb-4">
+          অর্ডারে মোট কত কপি থাকলে কত ছাড় — সব বই মিলিয়ে গোনা হয়। একটা অর্ডার একাধিক ধাপে পড়লে
+          <b className="text-dash-ink3"> সবচেয়ে বড় ধাপটাই</b> প্রযোজ্য হবে, ধাপগুলো যোগ হবে না।
+          ছাড়টা বসবে বইয়ের দামের উপর (বইয়ের নিজের অফার বাদ দেওয়ার পর, ডেলিভারি চার্জের আগে)।
+          কোনো ধাপ না থাকলে এই সুবিধাটা বন্ধ থাকে।
+        </p>
+
+        {tiers.length === 0 && (
+          <p className="mb-3 rounded-lg border border-dashed border-dash-line-strong px-3 py-4 text-center text-sm text-dash-mute2">
+            এখনো কোনো ধাপ নেই — বেশি কপি কিনলেও বাড়তি ছাড় পাবে না।
+          </p>
+        )}
+
+        <div className="space-y-2">
+          {tiers.map((t, i) => (
+            <div key={i} className="flex flex-wrap items-end gap-2 rounded-lg border border-dash-line p-3">
+              <div className="w-28">
+                <label className="block text-[11px] font-medium text-dash-mute mb-1">কপি (সর্বনিম্ন)</label>
+                <input
+                  type="number" min="2" value={t.minQty}
+                  onChange={e => setTier(i, { minQty: e.target.value })}
+                  className="w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                />
+              </div>
+              <div className="w-36">
+                <label className="block text-[11px] font-medium text-dash-mute mb-1">ছাড়ের ধরন</label>
+                <select
+                  value={t.type} onChange={e => setTier(i, { type: e.target.value })}
+                  className="w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                >
+                  <option value="percent">শতকরা (%)</option>
+                  <option value="fixed">টাকা (৳)</option>
+                </select>
+              </div>
+              <div className="w-28">
+                <label className="block text-[11px] font-medium text-dash-mute mb-1">
+                  {t.type === 'fixed' ? 'কত টাকা' : 'কত শতাংশ'}
+                </label>
+                <input
+                  type="number" min="0" max={t.type === 'fixed' ? undefined : 90} value={t.value}
+                  onChange={e => setTier(i, { value: e.target.value })}
+                  className="w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                />
+              </div>
+              <div className="min-w-[10rem] flex-1">
+                <label className="block text-[11px] font-medium text-dash-mute mb-1">নাম (ঐচ্ছিক)</label>
+                <input
+                  type="text" value={t.label || ''} placeholder={tierPreview(t)}
+                  onChange={e => setTier(i, { label: e.target.value })}
+                  className="w-full px-3 py-2 border border-dash-line rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                />
+              </div>
+              <button
+                type="button" onClick={() => removeTier(i)} title="এই ধাপটি মুছুন"
+                className="rounded-lg border border-dash-line p-2.5 text-dash-mute hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+              >
+                <FiTrash2 size={15} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button" onClick={addTier}
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dash-line px-3 py-2 text-sm font-medium text-dash-ink3 hover:bg-dash-soft"
+        >
+          <FiPlus size={15} /> নতুন ধাপ যোগ করুন
+        </button>
+
+        {tiers.length > 0 && (
+          <p className="mt-3 text-xs text-dash-mute2">
+            যেমন: {tiers.map(tierPreview).join(' · ')}
+          </p>
+        )}
       </div>
 
       {/* Landing page — which book the public site is about */}
