@@ -119,7 +119,11 @@ const DATE_PRESETS = [
   { key: 'all', label: 'All dates' },
   { key: 'yesterday', label: 'Yesterday' },
   { key: 'today', label: 'Today' },
-  { key: 'tomorrow', label: 'Tomorrow (after 12 PM)', afterCutoffOnly: true },
+  // Shown at every hour now. It used to appear only after noon — before that
+  // its window has not opened and would come back empty — but a button that
+  // comes and goes is read as a fault, and the dates printed under each one
+  // now say plainly why it is empty.
+  { key: 'tomorrow', label: 'Tomorrow' },
   { key: '7d', label: 'Last 7 days' },
 ];
 
@@ -132,6 +136,28 @@ const daysForPreset = (key) => {
   if (key === '7d') return { fromDay: addDays(today, -6), toDay: today };
   return null;
 };
+
+/**
+ * The two noons a shortcut runs between — "24 → 25 Sep".
+ *
+ * Printed under every button, because the names lie a little: on this screen
+ * "Today" means the day that ENDS at today's noon, so at 9 in the evening it is
+ * a window that closed nine hours ago and the order that just came in is under
+ * "Tomorrow". The label argues; the dates settle it.
+ */
+const presetWindow = (key) => {
+  const days = daysForPreset(key);
+  if (!days) return 'everything';
+  const { from, to } = dayWindow(days.fromDay, days.toDay);
+  const d = (x) => x.toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'short' });
+  return `${d(from)} → ${d(to)}`;
+};
+
+/**
+ * The day new orders are landing in right now: today's, until noon passes, and
+ * tomorrow's after it. The one shortcut worth marking on the row.
+ */
+const liveDay = () => (pastCutoff() ? addDays(bdDate(), 1) : bdDate());
 
 /** "3 books", on a chip, so the count reads at a glance in a long list. */
 function BooksChip({ order, className = '' }) {
@@ -459,6 +485,10 @@ export default function BookOrdersPage() {
       alive = false;
     };
   }, []);
+
+  // Which shortcut is the one filling up right now (see liveDay).
+  const live_day = liveDay();
+  const liveKey = pastCutoff() ? 'tomorrow' : 'today';
 
   const place = useMemo(
     () => ({ college: collegeFilter, district: districtFilter, upazila: upazilaFilter }),
@@ -1157,21 +1187,38 @@ export default function BookOrdersPage() {
         <div className="flex flex-col gap-3 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-1.5">
             <FiCalendar className="mr-1 text-dash-mute2" aria-hidden />
-            {DATE_PRESETS.filter((p) => !p.afterCutoffOnly || pastCutoff()).map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => applyDatePreset(p.key)}
-                aria-pressed={datePreset === p.key}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  datePreset === p.key
-                    ? 'bg-brand text-white shadow-sm shadow-brand/25'
-                    : 'text-dash-mute hover:bg-dash-soft hover:text-dash-ink3'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+            {DATE_PRESETS.map((p) => {
+              const days = daysForPreset(p.key);
+              const live = !!days && days.fromDay === days.toDay && days.toDay === live_day;
+              const on = datePreset === p.key;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => applyDatePreset(p.key)}
+                  aria-pressed={on}
+                  title={live ? 'New orders are landing in this one right now' : undefined}
+                  className={`flex flex-col items-center rounded-lg px-3 py-1 text-xs font-semibold leading-tight transition-colors ${
+                    on
+                      ? 'bg-brand text-white shadow-sm shadow-brand/25'
+                      : 'text-dash-mute hover:bg-dash-soft hover:text-dash-ink3'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {p.label}
+                    {live && (
+                      <span
+                        aria-label="live"
+                        className={`h-1.5 w-1.5 rounded-full motion-safe:animate-pulse ${on ? 'bg-white' : 'bg-emerald-500'}`}
+                      />
+                    )}
+                  </span>
+                  <span className={`text-[10px] font-medium tabular-nums ${on ? 'text-white/75' : 'text-dash-mute2'}`}>
+                    {presetWindow(p.key)}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -1214,6 +1261,12 @@ export default function BookOrdersPage() {
             'All dates'
           )}
           {' · '}A day here runs 12 PM → 12 PM, Bangladesh time.
+          {datePreset !== liveKey && (
+            <>
+              {' '}New orders right now land in{' '}
+              <span className="font-semibold text-dash-ink3">{liveKey === 'tomorrow' ? 'Tomorrow' : 'Today'}</span>.
+            </>
+          )}
           {!loading && matchCount > orders.length && (
             <span className="text-amber-700">
               {' '}Showing the latest {orders.length.toLocaleString('en-US')} of {matchCount.toLocaleString('en-US')} — pick dates to see and count the rest.
