@@ -38,7 +38,53 @@ export interface CheckoutOptions {
   deliveryNote: string;
   supportPhone: string;
   wallets: { bkash: string; rocket: string; nagad: string; instructions: string };
+  // "Buy N copies, get X off", set by the admin in Settings. Already filtered
+  // and sorted by the server; absent on an older server, hence optional.
+  quantityDiscounts?: QuantityTier[];
 }
+
+// One rung of the bulk ladder. Mirrors IQuantityDiscountTier on the server.
+export interface QuantityTier {
+  minQty: number;
+  type: "percent" | "fixed";
+  value: number;
+  label?: string;
+}
+
+/**
+ * The bulk discount this order earns — the same rule as the server's
+ * pickQuantityTier, so the summary and the invoice agree.
+ *
+ * Best qualifying rung only; rungs never add up. `base` is the book total
+ * after the book's own offers, and a fixed rung never exceeds it.
+ */
+export const quantityDiscountFor = (
+  tiers: QuantityTier[] | undefined,
+  quantity: number,
+  base: number
+): { amount: number; label: string } | null => {
+  const qty = Math.max(0, Number(quantity) || 0);
+  const money = Math.max(0, Number(base) || 0);
+  if (qty < 2 || money <= 0 || !Array.isArray(tiers)) return null;
+
+  const eligible = tiers
+    .filter((t) => t && Number(t.minQty) >= 2 && Number(t.value) > 0 && qty >= Number(t.minQty))
+    .sort((a, b) => Number(a.minQty) - Number(b.minQty));
+  const tier = eligible[eligible.length - 1];
+  if (!tier) return null;
+
+  const amount =
+    tier.type === "fixed"
+      ? Math.min(Math.max(0, Math.round(Number(tier.value) || 0)), money)
+      : Math.round((money * Math.min(90, Math.max(0, Number(tier.value) || 0))) / 100);
+  if (amount <= 0) return null;
+
+  const fallback =
+    tier.type === "fixed"
+      ? `${tier.minQty}+ কপিতে ৳${tier.value} ছাড়`
+      : `${tier.minQty}+ কপিতে ${tier.value}% ছাড়`;
+  return { amount, label: (tier.label || "").trim() || fallback };
+};
 
 // The Send-Money details the buyer submits at checkout for admin verification.
 export interface ManualDetails {

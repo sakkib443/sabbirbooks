@@ -77,6 +77,7 @@ import {
   effectiveCoursePrice,
   formatReleaseDate,
   formatTk,
+  quantityDiscountFor,
 } from "./types";
 import { upazilasOf } from "./bdGeoData";
 import { priceBook, resolveOffers } from "@/lib/bookOffers";
@@ -280,19 +281,28 @@ export default function CheckoutView() {
   // The coupon discount, on the product price AFTER the book's own offers — the
   // same base and formula the server uses, so the summary and the invoice agree.
   // Recomputes when the pay mode (and thus the online offer) changes the base.
+  // Bulk discount — "buy N copies, get X off". Priced before the coupon and on
+  // the post-offer book total, exactly as order.service does it.
+  const bulk = useMemo(
+    () => quantityDiscountFor(options?.quantityDiscounts, quantity, bp?.payable ?? 0),
+    [options?.quantityDiscounts, quantity, bp?.payable]
+  );
+  const bulkDiscount = bulk?.amount ?? 0;
+
   const couponDiscount = useMemo(() => {
     if (!appliedCoupon || !bp) return 0;
-    const base = bp.payable;
+    // Bulk comes off first, so the two together can never exceed the books.
+    const base = Math.max(0, bp.payable - bulkDiscount);
     if (appliedCoupon.discountType === "percent") {
       const pct = Math.min(90, Math.max(0, Number(appliedCoupon.discountValue) || 0));
       return Math.min(Math.round((base * pct) / 100), base);
     }
     return Math.min(Math.max(0, Number(appliedCoupon.discountValue) || 0), base);
-  }, [appliedCoupon, bp]);
+  }, [appliedCoupon, bp, bulkDiscount]);
 
-  // Total taka off (offers + coupon). Kept for the delivery-threshold maths; the
-  // summary itemises it with names via discountLines below.
-  const discount = (bp?.saved ?? 0) + couponDiscount;
+  // Total taka off (offers + bulk + coupon). Kept for the delivery-threshold
+  // maths; the summary itemises it with names via discountLines below.
+  const discount = (bp?.saved ?? 0) + bulkDiscount + couponDiscount;
 
   /**
    * "৳20 off" / "5% off" — the extra for paying now, shown above that option so
@@ -327,6 +337,9 @@ export default function CheckoutView() {
         amount: bp.onlineSaved,
       });
     }
+    if (bulk && bulkDiscount > 0) {
+      out.push({ label: bulk.label, amount: bulkDiscount });
+    }
     if (couponDiscount > 0 && appliedCoupon) {
       out.push({
         label: appliedCoupon.name?.trim() || S.couponLine(appliedCoupon.code),
@@ -334,7 +347,7 @@ export default function CheckoutView() {
       });
     }
     return out;
-  }, [bp, S, couponDiscount, appliedCoupon]);
+  }, [bp, S, bulk, bulkDiscount, couponDiscount, appliedCoupon]);
 
   // ── Shipping form (only enforced for printed books) ───────────────────────
   const shippingSchema = useMemo(
