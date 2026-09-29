@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LuMenu, LuX, LuArrowRight } from "react-icons/lu";
 import { HiOutlineUserCircle } from "react-icons/hi2";
 import LanguageSwitcher from "./LanguageSwitcher";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn, buttonVariants } from "@/components/ui";
 // Name and logo come from site settings so they can be changed from the admin
@@ -124,8 +125,12 @@ const Navbar = () => {
         </div>
 
         <div className="flex h-[calc(100%-73px)] flex-col p-5">
-          <div className="mb-5">
+          {/* Wraps: the language switcher carries two full words, and on a
+              narrow drawer the two controls together run past the edge —
+              the theme toggle's last button was clipped. */}
+          <div className="mb-5 flex flex-wrap items-center gap-3">
             <LanguageSwitcher variant="compact" />
+            <ThemeToggle tone="site" />
           </div>
           <nav className="flex-1">
             <ul className="space-y-1">
@@ -250,8 +255,21 @@ const Navbar = () => {
             </nav>
           </div>
 
-          {/* Right: language + login + mobile toggle */}
+          {/* Right: theme + language + login + mobile toggle */}
           <div className="flex items-center gap-2.5">
+            {/* Wrapped rather than given `hidden sm:inline-flex` directly: the
+                toggle carries its own `inline-flex`, and between two
+                single-class rules the stylesheet order decides — the same trap
+                the login button hit below. A wrapper div has no display of its
+                own to argue with.
+
+                Hidden on a phone, where it lives in the drawer instead: three
+                more buttons is what pushed this bar into a sideways scroll on
+                a 375px screen once already. */}
+            <div className="hidden sm:block">
+              <ThemeToggle tone="site" />
+            </div>
+
             <div className="hidden sm:block">
               <LanguageSwitcher />
             </div>
