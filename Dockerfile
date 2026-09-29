@@ -36,9 +36,16 @@ ENV NODE_OPTIONS=--max-old-space-size=2048
 # box crawled, and the build itself died with no error at all — starved, not
 # out of memory (nothing in dmesg, swap untouched).
 #
-# Two threads each. The compile is somewhat slower in isolation and far more
-# likely to finish, and the shop's other sites stay answerable while it runs.
-ENV TOKIO_WORKER_THREADS=2 RAYON_NUM_THREADS=2 UV_THREADPOOL_SIZE=2
+# ONE thread each, down from two (29 Sep): two was still not enough headroom.
+# The box now sits at a load average around 7 on its four cores BEFORE a deploy
+# starts — Coolify's own panel alone eats a full core — so a build asking for
+# two more found nothing to run on and died exactly as before: exit 255, no
+# error, one second in.
+#
+# A single thread makes the compile slower in isolation and is the only version
+# that reliably finishes on a box this busy. Put it back to 2 when the server
+# has room (fewer containers, or more cores).
+ENV TOKIO_WORKER_THREADS=1 RAYON_NUM_THREADS=1 UV_THREADPOOL_SIZE=1
 
 # The same for Next's own build cache — the expensive half of a deploy.
 #
