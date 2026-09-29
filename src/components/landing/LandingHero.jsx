@@ -274,6 +274,11 @@ export default function LandingHero({
           <div className="animate-fade-up delay-200 flex flex-col lg:col-start-2 lg:row-start-3">
             <FeaturePanel features={features} />
           </div>
+
+          {/* ── The handover photo ──────────────────────────────────── */}
+          <div className="animate-fade-up delay-200 lg:col-span-2 lg:row-start-4">
+            <HandoverPhoto checkoutHref={checkoutHref} isPreOrder={price?.isPreOrder ?? book?.isPreOrder} />
+          </div>
         </div>
       </div>
     </section>
@@ -455,6 +460,88 @@ function HeroVideo({ book }) {
           <LuVolume2 /> {isBengali ? 'সাউন্ড চালু' : 'Sound on'}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * The handover photo — the book going into a real pair of hands.
+ *
+ * A full-width band closing the hero, not a thumbnail inside the price card.
+ * It sat there first and was wrong twice over: at 270px the faces were too
+ * small to read as people, and stacking it under the cover made the left
+ * column overrun the right by half a screen.
+ *
+ * Side by side instead — the photo held to its own portrait proportions on the
+ * left, the words and the button on the right, both vertically centred, so the
+ * band reads as one composed row at any width. On a phone the grid collapses
+ * and the photo leads, which is the order it is worth seeing in.
+ *
+ * The photo is capped by HEIGHT rather than width (`max-h`): it is the only
+ * portrait image on a page of landscape ones, and a width cap would let it run
+ * taller than the text beside it and reopen the imbalance this replaced.
+ *
+ * Not `priority` — the cover above wins the first bytes; this loads after.
+ */
+function HandoverPhoto({ checkoutHref, isPreOrder }) {
+  const { isBengali } = useLanguage();
+  const L = isBengali ? T.bn : T.en;
+
+  const points = isBengali
+    ? ['সারা দেশে কুরিয়ারে পৌঁছে দেওয়া হচ্ছে', 'হাতে পেয়ে টাকা — ক্যাশ অন ডেলিভারি', 'প্রতিটি বইয়ে QR, ভেতরে ভিডিও ও ছবি']
+    : ['Couriered anywhere in the country', 'Pay the courier when it arrives', 'A QR on every topic — video and figures inside'];
+
+  return (
+    <div className="mt-2 grid items-center gap-5 rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:mt-3 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-9 lg:p-6 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+      <figure className="relative mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl border border-border lg:max-w-none">
+        <Image
+          src="/hero-handover.jpg"
+          alt={
+            isBengali
+              ? 'ম্যাজিক ভাইভা অ্যানাটমি বইটি হাতে তুলে দেওয়া হচ্ছে'
+              : 'The Magic Viva Anatomy book being handed over'
+          }
+          width={3000}
+          height={3494}
+          sizes="(min-width: 1280px) 380px, (min-width: 1024px) 340px, 320px"
+          className="h-auto w-full"
+        />
+      </figure>
+
+      <div className="text-center lg:text-left">
+        <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1.5 text-sm font-bold text-accent hind-siliguri">
+          <LuBookOpen className="shrink-0" />
+          {isBengali ? 'বইটি এখন শিক্ষার্থীদের হাতে' : 'Already in students’ hands'}
+        </span>
+
+        <h2 className="mt-3 font-display text-2xl font-extrabold leading-snug text-foreground text-balance sm:text-3xl hind-siliguri">
+          {isBengali
+            ? 'ছাপা হয়ে গেছে — অর্ডার করলেই বাসায় পৌঁছে যাবে'
+            : 'Printed and shipping — order and it arrives at your door'}
+        </h2>
+
+        {/* Two columns from `sm` up and never one again: on a wide screen this
+            sits in the roomy half of the band, and a single stack left the
+            right third of the row empty. */}
+        <ul className="mx-auto mt-4 grid max-w-md gap-x-6 gap-y-2 text-left sm:max-w-none sm:grid-cols-2 lg:mx-0">
+          {points.map((p) => (
+            <li key={p} className="flex items-start gap-2.5">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+                <LuCheck className="text-[11px]" />
+              </span>
+              <span className="text-sm leading-relaxed text-muted-foreground hind-siliguri">{p}</span>
+            </li>
+          ))}
+        </ul>
+
+        <Link
+          href={checkoutHref}
+          className="group mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-base font-bold text-primary-foreground shadow-glow transition-all hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 hind-siliguri"
+        >
+          {isPreOrder ? L.preOrder : L.order}
+          <LuArrowRight className="transition-transform group-hover:translate-x-1" />
+        </Link>
+      </div>
     </div>
   );
 }
