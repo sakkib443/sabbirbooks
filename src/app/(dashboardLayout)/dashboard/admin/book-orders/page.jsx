@@ -17,7 +17,7 @@ import {
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
   FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
-  FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight,
+  FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight, FiFileText,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
@@ -74,7 +74,7 @@ const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
 // xl — below that (a tablet, a small laptop with the sidebar open) the stacked
 // card is used, rather than a table with its last columns cut off.
 const GRID_COLS =
-  'grid-cols-[32px_30px_120px_minmax(116px,1.2fr)_minmax(96px,1fr)_minmax(104px,1fr)_92px_84px_128px_28px]';
+  'grid-cols-[32px_30px_120px_minmax(116px,1.2fr)_minmax(96px,1fr)_minmax(104px,1fr)_92px_84px_128px_54px_28px]';
 
 // Which books, as one short line: "MAGIC VIVA ANATOMY ×2 · PHYSIOLOGY ×1".
 const titlesOf = (o) =>
@@ -339,6 +339,33 @@ const DetailRow = ({ icon: Icon, label, value, mono }) => (
   </div>
 );
 
+/**
+ * The admin's sticky note on an order.
+ *
+ * An order that HAS a note has to be findable while scanning a long list, so it
+ * pulses amber; an empty one is a quiet outline that does not compete with the
+ * status and payment chips beside it. The note itself is the tooltip, so the
+ * common case — remembering what it said — needs no click at all.
+ */
+const NoteButton = ({ order, onOpen }) => {
+  const note = (order.adminNote || '').trim();
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(order)}
+      title={note || 'নোট লিখুন'}
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-bold transition ${
+        note
+          ? 'animate-pulse border-amber-400 bg-amber-50 text-amber-700 shadow-[0_0_8px_rgba(245,158,11,0.55)] hover:animate-none'
+          : 'border-dash-line text-dash-mute2 hover:border-brand hover:text-brand'
+      }`}
+    >
+      <FiFileText size={12} />
+      {note ? 'নোট' : '+'}
+    </button>
+  );
+};
+
 export default function BookOrdersPage() {
   const { showToast, toastNode } = useToast();
   const { confirm, confirmNode } = useConfirm();
@@ -352,6 +379,38 @@ export default function BookOrdersPage() {
   const [busyId, setBusyId] = useState(null); // approve/reject/edit in flight
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  // The note being written, if any: { id, orderSeq, text }. Held apart from the
+  // order list so typing does not re-render every row.
+  const [noteDraft, setNoteDraft] = useState(null);
+  const [noteSaving, setNoteSaving] = useState(false);
+
+  const openNote = (o) =>
+    setNoteDraft({ id: o._id, orderSeq: o.orderSeq, text: o.adminNote || '' });
+
+  const saveNote = async () => {
+    if (!noteDraft) return;
+    setNoteSaving(true);
+    try {
+      const res = await fetch(`${API}/orders/${noteDraft.id}/note`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ adminNote: noteDraft.text }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) throw new Error(body.message || 'নোট সংরক্ষণ হয়নি');
+      // Patch the one row rather than refetching the list: a reload would throw
+      // away the admin's filters and scroll position mid-packing.
+      const saved = (body.data?.adminNote || '').trim();
+      setOrders((list) => list.map((o) => (o._id === noteDraft.id ? { ...o, adminNote: saved } : o)));
+      setNoteDraft(null);
+      showToast('success', saved ? 'নোট সংরক্ষিত হয়েছে' : 'নোট মুছে ফেলা হয়েছে');
+    } catch (err) {
+      showToast('error', err.message);
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+
   // Multi-select for bulk delete. Only owner accounts (superAdmin/admin) may
   // delete an order at all — the server enforces it; this only hides the UI.
   const [selected, setSelected] = useState(() => new Set());
@@ -1667,6 +1726,7 @@ export default function BookOrdersPage() {
             <span className="text-right">Total</span>
             <span className="text-center">Payment</span>
             <span>Status</span>
+            <span className="text-center">Note</span>
             <span />
           </div>
 
@@ -1781,6 +1841,10 @@ export default function BookOrdersPage() {
                     </select>
                   </div>
 
+                  <div className="flex justify-center">
+                    <NoteButton order={o} onOpen={openNote} />
+                  </div>
+
                   <button
                     onClick={() => setExpanded(isOpen ? null : o._id)}
                     className="flex items-center justify-center text-dash-mute2 hover:text-brand"
@@ -1837,7 +1901,10 @@ export default function BookOrdersPage() {
                       </span>
                       <span className="mt-0.5 block truncate text-[11px] text-dash-mute2">{titlesOf(o)}</span>
                     </button>
-                    <FiChevronDown size={16} className={`mt-1 shrink-0 text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    <div className="mt-0.5 flex shrink-0 flex-col items-center gap-2">
+                      <FiChevronDown size={16} className={`text-dash-mute2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      <NoteButton order={o} onOpen={openNote} />
+                    </div>
                   </div>
                   <select
                     value={FULFILLMENT_OPTIONS.includes(o.status) ? o.status : ''}
@@ -2569,6 +2636,75 @@ export default function BookOrdersPage() {
           </div>
         </div>
       )}
+      {/* Note editor. Deliberately the whole feature: a textarea, save, and a
+          clear — an order note is scratch paper, not a record. */}
+      {noteDraft && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !noteSaving && setNoteDraft(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-dash-line bg-dash-card shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-dash-line px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-dash-ink2">
+                <FiFileText className="text-amber-500" />
+                নোট {noteDraft.orderSeq ? `— অর্ডার #${noteDraft.orderSeq}` : ''}
+              </h3>
+              <button
+                onClick={() => setNoteDraft(null)}
+                className="p-1 text-dash-mute2 hover:text-dash-ink2"
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <textarea
+                autoFocus
+                rows={5}
+                value={noteDraft.text}
+                onChange={(e) => setNoteDraft((d) => ({ ...d, text: e.target.value }))}
+                placeholder="যেমন: সন্ধ্যা ৬টার পর কল করতে বলেছে"
+                className="w-full resize-y rounded-lg border border-dash-line px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+              />
+              <p className="mt-2 text-[11px] text-dash-mute2">
+                শুধু আপনারা দেখবেন — ক্রেতার কাছে কোথাও যাবে না।
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 border-t border-dash-line bg-dash-soft px-5 py-3">
+              {/* Clearing is one click, not "select all and delete". */}
+              <button
+                onClick={() => setNoteDraft((d) => ({ ...d, text: '' }))}
+                disabled={noteSaving || !noteDraft.text}
+                className="text-xs font-medium text-dash-mute hover:text-red-600 disabled:opacity-40"
+              >
+                নোট মুছুন
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setNoteDraft(null)}
+                  disabled={noteSaving}
+                  className="rounded-lg px-3 py-1.5 text-sm text-dash-ink4 hover:bg-dash-soft3"
+                >
+                  বাতিল
+                </button>
+                <button
+                  onClick={saveNote}
+                  disabled={noteSaving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
+                >
+                  {noteSaving ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />}
+                  সংরক্ষণ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toastNode}
       {confirmNode}
     </div>
