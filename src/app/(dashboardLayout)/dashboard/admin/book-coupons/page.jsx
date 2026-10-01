@@ -21,7 +21,9 @@ import { listCoupons, removeCoupon, saveCoupon, formatTk } from '@/components/ad
 const discountText = (c) => {
   const parts = [];
   if (Number(c.discountValue) > 0) {
-    parts.push(c.discountType === 'fixed' ? formatTk(c.discountValue) + ' off' : `${c.discountValue}% off`);
+    parts.push(c.discountType === 'fixed'
+      ? formatTk(c.discountValue) + (c.fixedPer === 'book' ? ' off per book' : ' off')
+      : `${c.discountValue}% off`);
     // The cap belongs beside the percentage it caps — read apart they are two
     // numbers, read together they are the offer as the buyer will see it.
     if (c.discountType === 'percent' && Number(c.maxDiscount) > 0) {

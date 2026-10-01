@@ -27,7 +27,7 @@ import { getCoupon, saveCoupon } from '@/components/admin/bookCoupon/couponApi';
 
 const EMPTY = {
   code: '', name: '',
-  discountType: 'percent', discountValue: '', isActive: true,
+  discountType: 'percent', discountValue: '', fixedPer: 'order', isActive: true,
   // Every limit off by default, which is what a coupon with none of these
   // fields already behaves like. Empty string rather than 0 so the boxes
   // read as blank instead of pre-filled with a limit nobody asked for.
@@ -90,6 +90,7 @@ function CouponForm() {
           name: c.name || '',
           discountType: c.discountType || 'percent',
           discountValue: c.discountValue ?? '',
+          fixedPer: c.fixedPer === 'book' ? 'book' : 'order',
           isActive: c.isActive !== false,
           maxDiscount: c.maxDiscount || '',
           freeDelivery: !!c.freeDelivery,
@@ -133,6 +134,7 @@ function CouponForm() {
         name: form.name.trim(),
         discountType: form.discountType,
         discountValue: val,
+        fixedPer: form.fixedPer === 'book' ? 'book' : 'order',
         isActive: !!form.isActive,
         // Blank means "no limit", and the server reads 0 and null that way.
         maxDiscount: Number(form.maxDiscount) || 0,
@@ -271,6 +273,38 @@ function CouponForm() {
               (pre-order / online / normal){form.discountType === 'percent' ? '. Maximum 90%.' : '.'}
             </p>
           </div>
+
+          {/* Fixed amount only: once on the whole order, or once on every copy. */}
+          {form.discountType === 'fixed' && (
+            <div className="mt-4">
+              <span className="text-xs font-semibold text-dash-mute">Where does the discount apply?</span>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-dash-line bg-dash-soft p-1">
+                {[
+                  { id: 'order', label: 'Whole order', hint: 'once' },
+                  { id: 'book', label: 'Every book', hint: '× copies' },
+                ].map((t) => {
+                  const on = form.fixedPer === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => set('fixedPer', t.id)}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                        on ? 'bg-brand text-white shadow-sm' : 'text-dash-mute hover:bg-dash-card'
+                      }`}
+                    >
+                      {t.label} <span className="text-[11px] font-medium opacity-75">({t.hint})</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-[11px] text-dash-mute2">
+                {form.fixedPer === 'book'
+                  ? `e.g. ৳${Number(form.discountValue) || 20} off each copy — 3 books = ৳${(Number(form.discountValue) || 20) * 3} off.`
+                  : `৳${Number(form.discountValue) || 100} off the whole order, however many books.`}
+              </p>
+            </div>
+          )}
 
           <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-dash-line bg-dash-soft/50 p-3.5">
             <input type="checkbox" checked={form.isActive} onChange={(e) => set('isActive', e.target.checked)} className="mt-0.5 h-5 w-5 rounded border-dash-line-strong text-brand focus:ring-brand" />
