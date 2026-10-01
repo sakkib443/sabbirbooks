@@ -297,8 +297,10 @@ export default function CheckoutView() {
       const pct = Math.min(90, Math.max(0, Number(appliedCoupon.discountValue) || 0));
       return Math.min(Math.round((base * pct) / 100), base);
     }
-    return Math.min(Math.max(0, Number(appliedCoupon.discountValue) || 0), base);
-  }, [appliedCoupon, bp, bulkDiscount]);
+    const per = Math.max(0, Number(appliedCoupon.discountValue) || 0);
+    const fixed = appliedCoupon.fixedPer === "book" ? per * Math.max(1, quantity) : per;
+    return Math.min(fixed, base);
+  }, [appliedCoupon, bp, bulkDiscount, quantity]);
 
   // Total taka off (offers + bulk + coupon). Kept for the delivery-threshold
   // maths; the summary itemises it with names via discountLines below.
@@ -739,6 +741,7 @@ export default function CheckoutView() {
         deliveryCharge: deliveryBeforeCoupon,
         // A guest's "one use per buyer" is their phone number.
         phone: (getValues("phone") ?? "").trim() || undefined,
+        quantity,
       });
       setAppliedCoupon(c);
       setCouponInput("");

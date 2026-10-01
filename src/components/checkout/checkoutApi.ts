@@ -185,6 +185,8 @@ export interface AppliedCoupon {
   name: string;
   discountType: "percent" | "fixed";
   discountValue: number;
+  /** Fixed amount only: once per order, or once per copy. */
+  fixedPer?: "order" | "book";
   discountAmount: number;
   /** The code also waives the delivery charge. */
   freeDelivery?: boolean;
@@ -208,7 +210,7 @@ export async function validateBookCoupon(
   fallbackErr: string,
   // `phone` lets a guest's "one use per buyer" be checked in the preview too —
   // without an account, the phone number is who the buyer is.
-  ctx: { paymentMethod?: string | null; deliveryCharge?: number; phone?: string } = {}
+  ctx: { paymentMethod?: string | null; deliveryCharge?: number; phone?: string; quantity?: number } = {}
 ): Promise<AppliedCoupon> {
   return post<AppliedCoupon>(
     "/book-coupons/validate",
