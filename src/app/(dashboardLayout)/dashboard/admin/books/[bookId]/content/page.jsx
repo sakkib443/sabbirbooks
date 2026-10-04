@@ -48,6 +48,7 @@ import { MotionConfig, Reorder, useDragControls } from 'framer-motion';
 import FileDropZone from '@/components/shared/FileDropZone';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { currentCan } from '@/lib/permissions';
+import { DEFAULT_VIDEO_NOTE } from '@/lib/videoNote';
 
 // The editor touches window/document on mount, so it must not be part of the
 // server bundle.
@@ -373,6 +374,13 @@ export default function BookContentEditorPage() {
 
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
+  // Messages this book already uses where a video is missing, offered back so
+  // the same sentence is picked rather than retyped on every question.
+  const [videoNotes, setVideoNotes] = useState([]);
+  // Whether the admin is writing a message rather than choosing one. Kept
+  // apart from the text itself so typing something that happens to match an
+  // existing note does not yank the textarea away mid-sentence.
+  const [writingNote, setWritingNote] = useState(false);
   // The banner carries failures as well as successes — "could not save the new
   // order" printed in the success green is a message that reads as its own
   // opposite, so the tone travels with the text.
@@ -577,6 +585,18 @@ export default function BookContentEditorPage() {
       return { ...d, images };
     });
 
+  const loadVideoNotes = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/book-content/video-notes/${bookId}`, { headers: hdrs() });
+      const body = await res.json();
+      setVideoNotes(Array.isArray(body.data) ? body.data : []);
+    } catch {
+      // A dropdown with nothing in it is a fine failure mode — the admin can
+      // still type a message, which is what they would have done anyway.
+      setVideoNotes([]);
+    }
+  }, [bookId]);
+
   // ─── Load tree ────────────────────────────────────────────
   const loadTree = useCallback(async () => {
     setLoading(true);
@@ -586,6 +606,9 @@ export default function BookContentEditorPage() {
       const body = await res.json();
       if (!res.ok || !body.success) throw new Error(body.message || 'Could not load book');
       setTree(body.data);
+      // Rides along with the tree: same book, same lifetime, and one less
+      // effect watching the same id.
+      loadVideoNotes();
       // Open the first part so the editor is never a blank slate.
       const first = body.data?.parts?.[0];
       if (first) setExpanded(e => ({ ...e, [first._id]: true }));
@@ -594,7 +617,7 @@ export default function BookContentEditorPage() {
     } finally {
       setLoading(false);
     }
-  }, [bookId]);
+  }, [bookId, loadVideoNotes]);
 
   useEffect(() => {
     loadTree();
@@ -628,6 +651,10 @@ export default function BookContentEditorPage() {
 
   const openQuestion = q => {
     setActiveQuestionId(q._id);
+    // A note this book uses elsewhere is a choice; anything else is one the
+    // admin wrote here, and the textarea has to open on it.
+    const note = q.videoNote || '';
+    setWritingNote(Boolean(note) && !videoNotes.includes(note));
     setDraft({
       questionNo: q.questionNo || '',
       questionText: q.questionText || '',
@@ -638,6 +665,7 @@ export default function BookContentEditorPage() {
       // rendered it; this form simply never filled it in, so the gallery was
       // permanently empty no matter what the admin uploaded.
       images: q.images?.length ? q.images : [],
+      videoNote: note,
     });
   };
 
@@ -655,6 +683,7 @@ export default function BookContentEditorPage() {
           videos: draft.videos.filter(v => v.url?.trim()),
           attachments: draft.attachments.filter(a => a.fileUrl?.trim()),
           images: (draft.images || []).filter(src => String(src || '').trim()),
+          videoNote: (draft.videoNote || '').trim(),
         }),
       });
       const body = await res.json();
@@ -662,6 +691,8 @@ export default function BookContentEditorPage() {
 
       setQuestions(qs => qs.map(q => (q._id === activeQuestionId ? body.data : q)));
       notify('সংরক্ষিত হয়েছে');
+      // A message written just now should be on offer for the next question.
+      loadVideoNotes();
       // Progress counters live on the tree, so it has to be refetched.
       loadTree();
     } catch (err) {
@@ -1683,6 +1714,60 @@ export default function BookContentEditorPage() {
                         </button>
                       </div>
                     ))}
+
+                    {/* What the reader is told while the recording does not
+                        exist. Only offered when the question has no video,
+                        because that is the only time it is shown — an admin
+                        setting a message on a question that already plays one
+                        would be writing into a drawer nobody opens. */}
+                    {draft.videos.length === 0 && (
+                      <div className="mt-3 border-t border-dash-line pt-3">
+                        <label className="text-xs font-medium text-dash-ink4">
+                          পাঠক এখানে যা দেখবে
+                        </label>
+                        <select
+                          value={writingNote ? '__custom' : draft.videoNote || ''}
+                          onChange={e => {
+                            const choice = e.target.value;
+                            if (choice === '__custom') {
+                              setWritingNote(true);
+                              return;
+                            }
+                            setWritingNote(false);
+                            setDraft(d => ({ ...d, videoNote: choice }));
+                          }}
+                          className="mt-2 w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
+                        >
+                          <option value="">ডিফল্ট বার্তা</option>
+                          {videoNotes.map(note => (
+                            <option key={note} value={note}>
+                              {note.length > 60 ? `${note.slice(0, 60)}…` : note}
+                            </option>
+                          ))}
+                          <option value="__custom">নিজে লিখুন…</option>
+                        </select>
+
+                        {writingNote ? (
+                          <textarea
+                            value={draft.videoNote || ''}
+                            onChange={e => setDraft(d => ({ ...d, videoNote: e.target.value }))}
+                            rows={2}
+                            maxLength={500}
+                            placeholder="যেমন: এই প্রশ্নের ভিডিও শীঘ্রই যোগ করা হবে।"
+                            className="mt-2 w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
+                          />
+                        ) : (
+                          <p className="mt-2 rounded-lg bg-dash-soft px-3 py-2 text-xs leading-relaxed text-dash-ink4 whitespace-pre-line">
+                            {draft.videoNote || DEFAULT_VIDEO_NOTE}
+                          </p>
+                        )}
+
+                        <p className="mt-1.5 text-[11px] text-dash-mute2">
+                          নিজে লেখা বার্তা সংরক্ষণের পর এই বইয়ের অন্য প্রশ্নেও উপরের তালিকা থেকে
+                          বেছে নেওয়া যাবে। ভিডিও যোগ করলে বার্তাটি আর দেখাবে না।
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* PDFs / files — uploaded, not pasted */}
