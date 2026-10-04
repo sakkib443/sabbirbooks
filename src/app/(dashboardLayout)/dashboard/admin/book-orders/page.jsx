@@ -1502,14 +1502,21 @@ export default function BookOrdersPage() {
         </div>
       )}
 
-      {/* Selection toolbar. Appears above the list so the count and the actions
-          are never far from the checkboxes. Every fulfilment status can be set
-          in bulk — confirming twenty COD orders one at a time is the job this
-          screen exists to avoid. Delete stays owner-only. */}
+      {/* Selection toolbar — and it follows you down the list.
+          Ticking the fortieth order used to mean scrolling back to the top to
+          find the buttons, then scrolling down again to tick the next one. It
+          sticks under the page header now (64px, see DashboardShell), so the
+          actions are wherever the checkbox you just ticked is. Opaque
+          background and a shadow, or the rows would read straight through it.
+          Every fulfilment status can be set in bulk — confirming twenty COD
+          orders one at a time is the job this screen exists to avoid. Delete
+          stays owner-only. */}
       {filtered.length > 0 && (
         <div
-          className={`rounded-xl border px-4 py-3 transition-colors ${
-            selected.size > 0 ? 'border-brand/40 bg-brand-soft/40' : 'border-dash-line bg-dash-card'
+          className={`sticky top-[64px] z-20 rounded-xl border px-4 py-3 shadow-sm backdrop-blur-xl transition-colors ${
+            selected.size > 0
+              ? 'border-brand/50 bg-brand-soft/95 shadow-brand/10'
+              : 'border-dash-line bg-dash-card/95'
           }`}
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
