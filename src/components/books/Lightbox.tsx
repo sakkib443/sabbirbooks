@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LuChevronLeft, LuX, LuZoomIn, LuZoomOut, LuRotateCcw } from "react-icons/lu";
+import { onVariantError } from "@/lib/mediaVariant";
 
 // Below this, treat a touch as a tap or wobble rather than a swipe. Small
 // enough to feel responsive on a phone, large enough to survive shaky hands.
@@ -42,6 +43,10 @@ export default function Lightbox({
   // applied before the scale, so it means the same thing at every zoom level.
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  // The same number, readable from inside a handler. Two taps on + land in one
+  // render, and both would read the same stale `zoom` from the closure — so a
+  // quick double tap moved one step instead of two.
+  const zoomRef = useRef(1);
   const zoomed = zoom > 1.01;
   const stageRef = useRef<HTMLDivElement | null>(null);
 
@@ -52,6 +57,7 @@ export default function Lightbox({
       const next = (index + delta + images.length) % images.length;
       // A zoomed-in view of figure 3 means nothing once figure 4 is on screen,
       // so every move starts the next one whole.
+      zoomRef.current = 1;
       setZoom(1);
       setPan({ x: 0, y: 0 });
       onIndexChange(next);
@@ -78,19 +84,24 @@ export default function Lightbox({
   const zoomTo = useCallback(
     (next: number) => {
       const z = clamp(next, MIN_ZOOM, MAX_ZOOM);
+      zoomRef.current = z;
       setZoom(z);
       setPan((p) => (z <= 1.01 ? { x: 0, y: 0 } : clampPan(p, z)));
     },
     [clampPan]
   );
 
+  /** A step up or down from wherever the zoom actually is right now. */
+  const zoomBy = useCallback((delta: number) => zoomTo(zoomRef.current + delta), [zoomTo]);
+  const zoomTimes = useCallback((factor: number) => zoomTo(zoomRef.current * factor), [zoomTo]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowRight") go(1);
       if (e.key === "ArrowLeft") go(-1);
-      if (e.key === "+" || e.key === "=") zoomTo(zoom + 0.5);
-      if (e.key === "-") zoomTo(zoom - 0.5);
+      if (e.key === "+" || e.key === "=") zoomBy(0.5);
+      if (e.key === "-") zoomBy(-0.5);
       if (e.key === "0") zoomTo(1);
     };
     document.addEventListener("keydown", onKey);
@@ -101,7 +112,7 @@ export default function Lightbox({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
     };
-  }, [go, onClose, zoom, zoomTo]);
+  }, [go, onClose, zoomBy, zoomTo]);
 
   /*
    * Touch: one finger swipes (or pans, once zoomed), two fingers pinch.
@@ -125,7 +136,7 @@ export default function Lightbox({
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      pinch.current = { dist: spread(e.touches), zoom };
+      pinch.current = { dist: spread(e.touches), zoom: zoomRef.current };
       touchStart.current = null;
       setDrag(null);
       setInteracting(true);
@@ -185,6 +196,22 @@ export default function Lightbox({
     }
   };
 
+  /**
+   * A gesture the system took away — a call arriving, the app switching.
+   *
+   * Everything is put back without acting on it: the half-finished swipe the
+   * reader never completed must not turn the page, and a picture left nudged
+   * aside with its transition disabled would stay that way until the next
+   * touch.
+   */
+  const onTouchCancel = () => {
+    touchStart.current = null;
+    panStart.current = null;
+    pinch.current = null;
+    setDrag(null);
+    setInteracting(false);
+  };
+
   // Mouse: wheel zooms, and a zoomed picture can be dragged around.
   const mouseFrom = useRef<{ x: number; y: number; pan: { x: number; y: number } } | null>(null);
   const onMouseDown = (e: React.MouseEvent) => {
@@ -217,14 +244,19 @@ export default function Lightbox({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[100] flex select-none flex-col bg-black/95 backdrop-blur-sm"
+      // The browser's own pinch-zoom and scroll are off so the gestures below
+      // are the only ones acting on the picture.
       style={{ touchAction: "none" }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
       onWheel={(e) => {
         e.preventDefault();
-        zoomTo(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+        zoomTimes(e.deltaY < 0 ? 1.15 : 1 / 1.15);
       }}
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
@@ -236,7 +268,7 @@ export default function Lightbox({
         <div className="flex items-center gap-0.5">
           <button
             type="button"
-            onClick={() => zoomTo(zoom - 0.5)}
+            onClick={() => zoomBy(-0.5)}
             disabled={zoom <= MIN_ZOOM}
             aria-label="ছোট করুন"
             className={zoomButton}
@@ -245,7 +277,7 @@ export default function Lightbox({
           </button>
           <button
             type="button"
-            onClick={() => zoomTo(zoom + 0.5)}
+            onClick={() => zoomBy(0.5)}
             disabled={zoom >= MAX_ZOOM}
             aria-label="বড় করুন"
             className={zoomButton}
@@ -290,18 +322,33 @@ export default function Lightbox({
           tabIndex={-1}
         />
 
+        {/* Download button intentionally omitted, and right-click Save and
+            long-press Save Image are blocked here — figures are protected
+            content. A determined reader can still screenshot; the casual "save
+            it" path is what stays closed. */}
         {/* eslint-disable-next-line @next/next/no-img-element -- answer figures are
             arbitrary uploads on an unknown host, and this viewer needs the raw
             intrinsic size to zoom into. */}
         <img
           src={src}
-          alt=""
+          alt={`ছবি ${index + 1}`}
+          /* Callers hand this the lighter ".view.webp" copy. If the server
+             never managed to make one, the original goes up instead — heavy,
+             but a figure the reader can actually look at. */
+          onError={onVariantError}
           draggable={false}
           onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
           className={`relative max-h-full max-w-full select-none object-contain ${
             zoomed ? (interacting ? "cursor-grabbing" : "cursor-grab") : ""
           } ${interacting ? "" : "transition-transform duration-200"}`}
-          style={{ transform, transformOrigin: "center" }}
+          style={{
+            transform,
+            transformOrigin: "center",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
+          }}
         />
 
         {images.length > 1 && !zoomed && (
