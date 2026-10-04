@@ -34,6 +34,7 @@ import AnswerStyles from "@/components/books/AnswerStyles";
 import Lightbox from "@/components/books/Lightbox";
 import { priceBook, type BookOffers } from "@/lib/bookOffers";
 import { isVerticalVideo, toEmbedUrl } from "@/lib/videoEmbed";
+import { DEFAULT_VIDEO_NOTE } from "@/lib/videoNote";
 import dynamic from "next/dynamic";
 import {
   attachAnswerImageFallback,
@@ -79,6 +80,8 @@ type Question = {
   videos: Video[];
   attachments: Attachment[];
   images: string[];
+  /** What to say where the video would be. Empty = the default line below. */
+  videoNote?: string;
 };
 
 type ScanData = {
@@ -762,7 +765,12 @@ export default function BookTopicScanPage() {
                       coming. The notice keys on the video list alone: the
                       moment one is uploaded it disappears on its own, with
                       nothing for the shop to remember to switch off. Amber, not
-                      red — it is a notice, not a failure the reader caused. */}
+                      red — it is a notice, not a failure the reader caused.
+
+                      The wording is the question's own when the admin has
+                      written one: "শীঘ্রই যোগ করা হবে" is the truth for a
+                      recording nobody has made yet, and the default line blames
+                      a fault instead. */}
                   {!hasVideos && (
                     <section>
                       <SectionLabel icon={<LuVideo className="w-3.5 h-3.5" />}>
@@ -770,8 +778,8 @@ export default function BookTopicScanPage() {
                       </SectionLabel>
                       <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
                         <LuTriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-                        <p className="text-sm leading-relaxed text-amber-200">
-                          যান্ত্রিক ত্রুটির কারণে ভিডিওটি এই মুহূর্তে দেখা যাচ্ছে না। শীঘ্রই ঠিক করে দেওয়া হবে।
+                        <p className="whitespace-pre-line text-sm leading-relaxed text-amber-200">
+                          {active.videoNote?.trim() || DEFAULT_VIDEO_NOTE}
                         </p>
                       </div>
                     </section>
