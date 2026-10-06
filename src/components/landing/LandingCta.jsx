@@ -40,8 +40,9 @@ const T = {
 const discText = (kind, percent, amount) =>
   kind === 'fixed' ? formatTk(amount) : `${percent}%`;
 
-export default function LandingCta({ book, price, checkoutHref, supportPhone, deliveryNote }) {
+export default function LandingCta({ book, price, checkoutHref, supportPhone, deliveryNote: noteBn, deliveryNoteEn }) {
   const { isBengali } = useLanguage();
+  const deliveryNote = !isBengali && deliveryNoteEn?.trim() ? deliveryNoteEn : noteBn;
   const L = isBengali ? T.bn : T.en;
   const bn = isBengali ? 'hind-siliguri' : '';
 

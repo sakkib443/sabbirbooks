@@ -6,6 +6,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import BottomNav, { BottomNavSpacer } from "./BottomNav";
 import WhatsAppButton from "./WhatsAppButton";
+import { useLanguage } from "@/context/LanguageContext";
 import type { IconType } from "react-icons";
 
 // Routes that render their own shell (admin panel, student dashboard, learn player)
@@ -23,17 +24,19 @@ const FULLSCREEN_PREFIXES = ["/b"];
  * "নমুনা" is the landing page's sample section — a hash, so it works from any
  * page and simply scrolls when you are already home.
  */
-type Tab = { key: string; href: string; label: string; icon: IconType; exact?: boolean };
+type Tab = { key: string; href: string; label: string; en: string; icon: IconType; exact?: boolean };
 
 const PUBLIC_TABS: Tab[] = [
-  { key: "home", href: "/", label: "হোম", icon: LuHouse, exact: true },
-  { key: "sample", href: "/#sample", label: "নমুনা", icon: LuBookOpen },
-  { key: "orders", href: "/dashboard/user/orders", label: "অর্ডার", icon: LuShoppingBag },
-  { key: "account", href: "/dashboard/user", label: "অ্যাকাউন্ট", icon: LuUser },
+  { key: "home", href: "/", label: "হোম", en: "Home", icon: LuHouse, exact: true },
+  { key: "sample", href: "/#sample", label: "নমুনা", en: "Sample", icon: LuBookOpen },
+  { key: "orders", href: "/dashboard/user/orders", label: "অর্ডার", en: "Orders", icon: LuShoppingBag },
+  { key: "account", href: "/dashboard/user", label: "অ্যাকাউন্ট", en: "Account", icon: LuUser },
 ];
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
+  const { isBengali } = useLanguage();
+  const tabs = isBengali ? PUBLIC_TABS : PUBLIC_TABS.map((t) => ({ ...t, label: t.en }));
   const bare = BARE_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
@@ -50,7 +53,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       <Footer />
       {/* The spacer sits after the footer so the tab bar never covers it. */}
       <BottomNavSpacer />
-      <BottomNav items={PUBLIC_TABS} />
+      <BottomNav items={tabs} />
       {/* Every public screen, not just the landing page: a question can occur
           to someone on the book page or halfway through the policies. Left off
           the QR reader and the dashboards, which have their own shells. */}

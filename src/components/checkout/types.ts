@@ -36,6 +36,8 @@ export interface CheckoutOptions {
   codExtraCharge: number;
   freeDeliveryAbove: number;
   deliveryNote: string;
+  /** English mode's version of deliveryNote; blank = use deliveryNote. */
+  deliveryNoteEn?: string;
   supportPhone: string;
   wallets: { bkash: string; rocket: string; nagad: string; instructions: string };
   // "Buy N copies, get X off", set by the admin in Settings. Already filtered

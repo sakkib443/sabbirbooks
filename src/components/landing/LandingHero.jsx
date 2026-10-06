@@ -121,10 +121,12 @@ export default function LandingHero({
   price,
   features = [],
   headline,
-  subheadline,
+  subheadline: subheadlineBn,
+  subheadlineEn,
   checkoutHref,
 }) {
   const { isBengali } = useLanguage();
+  const subheadline = !isBengali && subheadlineEn?.trim() ? subheadlineEn : subheadlineBn;
   const L = isBengali ? T.bn : T.en;
   const hasSample = Boolean(book?.previewPdfUrl || book?.previewImages?.length);
   const hasVideo = Boolean(book?.promoVideoUrl);
@@ -655,6 +657,8 @@ function FeaturePanel({ features }) {
   const ordered = [...features].sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1));
   const lead = ordered.find((f) => f.highlight) ?? ordered[0];
   const rest = ordered.filter((f) => f !== lead);
+  // English mode reads the English line when the admin wrote one.
+  const textOf = (f) => (!isBengali && f.textEn?.trim() ? f.textEn : f.text);
 
   return (
     <div className="flex flex-1 flex-col rounded-3xl border border-border bg-card p-4 shadow-card lg:p-5">
@@ -666,7 +670,7 @@ function FeaturePanel({ features }) {
             <LuStar className="text-[11px]" />
           </span>
           <p className="text-sm font-semibold leading-relaxed text-coral hind-siliguri">
-            {renderRich(lead.text)}
+            {renderRich(textOf(lead))}
           </p>
         </div>
       )}
@@ -681,7 +685,7 @@ function FeaturePanel({ features }) {
               <LuCheck className="text-[11px]" />
             </span>
             <span className="text-sm leading-relaxed text-foreground hind-siliguri">
-              {renderRich(f.text)}
+              {renderRich(textOf(f))}
             </span>
           </li>
         ))}

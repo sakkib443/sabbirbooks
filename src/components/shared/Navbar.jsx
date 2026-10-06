@@ -271,7 +271,7 @@ const Navbar = () => {
             </div>
 
             <div className="hidden sm:block">
-              <LanguageSwitcher />
+              <LanguageSwitcher variant="header" />
             </div>
 
             {user ? (
@@ -297,7 +297,7 @@ const Navbar = () => {
             )}
 
             <div className="sm:hidden">
-              <LanguageSwitcher />
+              <LanguageSwitcher variant="header" />
             </div>
 
             <button

@@ -47,7 +47,7 @@ const slugify = (s) =>
     .replace(/^-|-$/g, '');
 
 const EMPTY = {
-  title: '', slug: '', author: '', category: '', description: '',
+  title: '', slug: '', author: '', category: '', description: '', descriptionEn: '',
   coverImage: '', price: '', offerPrice: '',
   language: 'both', format: 'printed',
   stock: '', secureFileUrl: '',
@@ -93,6 +93,7 @@ const toDateInput = (v) => {
 
 const toFeatureRow = (f) => ({
   text: f?.text ?? '',
+  textEn: f?.textEn ?? '',
   weight: f?.weight ?? 1,
   highlight: !!f?.highlight,
 });
@@ -244,7 +245,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
 
   // ── Landing-page features ───────────────────────────────────────────────
   const addFeature = () =>
-    setForm((p) => ({ ...p, features: [...p.features, { text: '', weight: 1, highlight: false }] }));
+    setForm((p) => ({ ...p, features: [...p.features, { text: '', textEn: '', weight: 1, highlight: false }] }));
 
   const setFeature = (i, patch) =>
     setForm((p) => ({
@@ -324,6 +325,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
       author: form.author.trim(),
       category: form.category.trim(),
       description: form.description.trim(),
+      descriptionEn: (form.descriptionEn || '').trim(),
       coverImage: form.coverImage.trim(),
       price: form.price === '' ? 0 : Number(form.price) || 0,
       language: form.language,
@@ -382,6 +384,7 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
       .filter((f) => (f.text || '').trim())
       .map((f) => ({
         text: f.text.trim(),
+        textEn: (f.textEn || '').trim(),
         weight: Number(f.weight) || 1,
         highlight: !!f.highlight,
       }));
@@ -508,6 +511,17 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                 className={`${inputCls} resize-none ${errors.description ? 'border-red-400' : 'border-dash-line'}`}
               />
               {err('description')}
+            </div>
+
+            {/* Shown when a visitor switches the site to English. Left blank,
+                the description above is shown in both languages. */}
+            <div className="mt-4">
+              <Label icon={FiAlignLeft}>Description (English)</Label>
+              <textarea
+                name="descriptionEn" value={form.descriptionEn || ''} onChange={handleChange}
+                rows={5} placeholder="Optional — shown when the site is in English"
+                className={`${inputCls} resize-none border-dash-line`}
+              />
             </div>
           </Card>
 
@@ -751,6 +765,13 @@ export default function BookForm({ mode = 'create', bookId, initialValues }) {
                       value={f.text}
                       onChange={(text) => setFeature(i, { text })}
                       placeholder="যেমন: মাত্র 267 পেজে সম্পূর্ণ Anatomy"
+                    />
+                    {/* Shown when a visitor switches the site to English. Left
+                        blank, the Bengali line is shown in both languages. */}
+                    <FeatureTextInput
+                      value={f.textEn}
+                      onChange={(textEn) => setFeature(i, { textEn })}
+                      placeholder="English (optional) — e.g. Complete Anatomy in only 267 pages"
                     />
                     <div className="flex flex-wrap items-center gap-3">
                       <label className="flex items-center gap-1.5 text-xs text-dash-mute">
