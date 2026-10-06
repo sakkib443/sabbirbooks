@@ -181,6 +181,8 @@ export default function CheckoutView() {
   };
 
   const S = useMemo(() => (isBengali ? BN : EN), [isBengali]);
+  const deliveryNote =
+    !isBengali && options?.deliveryNoteEn?.trim() ? options.deliveryNoteEn : options?.deliveryNote;
 
   // Channels the admin has configured a receiving number for.
   const availableChannels = useMemo<ManualChannel[]>(() => {
@@ -884,7 +886,7 @@ export default function CheckoutView() {
             amount: order.total,
             deliveryCharge: order.deliveryCharge ?? 0,
             supportPhone: options?.supportPhone,
-            deliveryNote: options?.deliveryNote,
+            deliveryNote,
             preOrder: preOrderFor(order),
           });
         } else {
@@ -1273,8 +1275,8 @@ export default function CheckoutView() {
                       <li>{S.codStep2}</li>
                       <li>{S.codStep3}</li>
                     </ol>
-                    {options?.deliveryNote && (
-                      <p className="mt-3 text-xs text-muted-foreground">{options.deliveryNote}</p>
+                    {deliveryNote && (
+                      <p className="mt-3 text-xs text-muted-foreground">{deliveryNote}</p>
                     )}
                   </div>
                 </div>

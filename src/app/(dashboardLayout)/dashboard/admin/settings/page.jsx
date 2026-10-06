@@ -700,6 +700,8 @@ const SiteSettingsTab = ({ showToast }) => {
           <div className="sm:col-span-3">
             <label className="block text-sm font-medium text-dash-ink3 mb-1">ডেলিভারি সম্পর্কে বার্তা</label>
             <input type="text" name="deliveryNote" value={settings.deliveryNote || ''} onChange={handleChange} placeholder="সারা দেশে ১-৩ কর্মদিবসের ভিতরে পৌঁছে যাবে ইনশাআল্লাহ" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm" />
+            <label className="block text-sm font-medium text-dash-ink3 mb-1 mt-3">ডেলিভারি বার্তা (English)</label>
+            <input type="text" name="deliveryNoteEn" value={settings.deliveryNoteEn || ''} onChange={handleChange} placeholder="Delivered anywhere in Bangladesh within 1–3 working days" className="w-full px-3 py-2 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-dash-ink3 mb-1">অর্ডার হেল্পলাইন</label>

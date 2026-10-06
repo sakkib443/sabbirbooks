@@ -31,6 +31,39 @@ const LanguageSwitcher = ({ variant = "default" }) => {
     return <div className="h-9 w-16 animate-pulse rounded-lg bg-muted" />;
   }
 
+  // Header pill: both languages always on show, one tap to switch. Short
+  // labels under 400px, where the phone header has no width to spare.
+  if (variant === "header") {
+    return (
+      <div
+        role="radiogroup"
+        aria-label="Language"
+        className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-muted/40 p-0.5"
+      >
+        {languages.map((lang) => {
+          const on = language === lang.code;
+          return (
+            <button
+              key={lang.code}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setLanguage(lang.code)}
+              className={cn(
+                "rounded-lg px-2 py-1 text-[13px] font-semibold transition-colors min-[400px]:px-2.5",
+                on ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                lang.code === "bn" && "hind-siliguri"
+              )}
+            >
+              <span className="min-[400px]:hidden">{lang.shortLabel}</span>
+              <span className="max-[399px]:hidden">{lang.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   // Compact segmented control — used inside the mobile menu.
   if (variant === "compact") {
     return (

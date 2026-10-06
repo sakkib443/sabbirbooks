@@ -66,6 +66,9 @@ export default function LandingPage({ book, settings }) {
         features={book.features?.length ? book.features : DEFAULT_FEATURES}
         headline={settings?.landingHeadline}
         subheadline={settings?.landingSubheadline || book.description}
+        // English mode reads the book's English description, when there is one
+        // and the admin has not set a landing subheadline of their own.
+        subheadlineEn={settings?.landingSubheadline ? '' : book.descriptionEn}
         checkoutHref={checkoutHref}
       />
 
@@ -87,6 +90,7 @@ export default function LandingPage({ book, settings }) {
         checkoutHref={checkoutHref}
         supportPhone={settings?.orderSupportPhone || settings?.phoneNumber}
         deliveryNote={settings?.deliveryNote}
+        deliveryNoteEn={settings?.deliveryNoteEn}
       />
     </main>
   );

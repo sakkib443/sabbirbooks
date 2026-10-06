@@ -12,6 +12,8 @@ const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace
 
 export interface LandingFeature {
   text: string;
+  /** English mode shows this; blank falls back to `text`. */
+  textEn?: string;
   weight?: number;
   highlight?: boolean;
 }
@@ -22,6 +24,7 @@ export interface LandingBook {
   slug: string;
   author?: string;
   description?: string;
+  descriptionEn?: string;
   coverImage?: string;
   price?: number;
   offerPrice?: number;
@@ -51,6 +54,7 @@ export interface LandingSettings {
   phoneNumber?: string;
   whatsappNumber?: string;
   deliveryNote?: string;
+  deliveryNoteEn?: string;
   facebookUrl?: string;
   youtubeUrl?: string;
 }
@@ -81,23 +85,28 @@ export async function getLandingSettings(): Promise<LandingSettings> {
 export const DEFAULT_FEATURES: LandingFeature[] = [
   {
     text: 'এনাটমির মত একটা ভাস্ট সাবজেক্ট মাত্র ২৮০ পেজে সম্পূর্ণ ভাইভা কমপ্লিট, সাথে রিটেন ৯০% কাভার।',
+    textEn: 'A subject as vast as Anatomy — the complete viva in only 280 pages, plus 90% of the written exam.',
     weight: 3,
   },
   {
     text: 'নতুন সিলেবাস অনুযায়ী Board-1 এ 70 Cards; Board-2 তে 100 Cards সংবলিত দেশের একমাত্র বই।',
+    textEn: 'The only book in the country with 70 cards for Board-1 and 100 for Board-2, per the new syllabus.',
     weight: 5,
     highlight: true,
   },
   {
     text: 'সম্পূর্ণ Practical (OSPE, Dissection, Surface Marking, Radiology) এর সমাধান এক জায়গাতেই।',
+    textEn: 'Every practical (OSPE, Dissection, Surface Marking, Radiology) solved in one place.',
     weight: 2,
   },
   {
     text: 'মাত্র ৩ ঘণ্টায় দুই বোর্ডের সমস্ত স্পেশাল ফিগার পড়ে ফেলার সুযোগ।',
+    textEn: 'Read every special figure from both boards in just 3 hours.',
     weight: 2,
   },
   {
     text: 'একটা বইয়ের সাথেই প্রয়োজনীয় সকল ম্যাটেরিয়ালস — ছবি, ভিডিও, এক্সট্রা ইনফরমেশন।',
+    textEn: 'Everything you need with one book — images, videos and extra information.',
     weight: 1,
   },
 ];
