@@ -32,6 +32,7 @@ import { Container, cn } from '@/components/ui';
 import API_BASE_URL from '@/config/api';
 import { apiLogin, apiRegister, persistSession, getDeviceId, STORAGE_KEYS } from '@/components/auth/authClient';
 import { track } from '@/lib/metaPixel';
+import { isReachableNumber, WHATSAPP_HINT } from '@/lib/phone';
 
 const inputCls =
   'w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -49,7 +50,7 @@ const T = {
     collegePick: 'নির্বাচন করুন',
     roll: 'ক্লাস রোল নম্বর',
     phone: 'হোয়াটসঅ্যাপ নম্বর',
-    errPhone: 'সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)',
+    errPhone: WHATSAPP_HINT.bn,
     account: 'আপনার অ্যাকাউন্ট',
     haveAccount: 'অ্যাকাউন্ট আছে',
     newAccount: 'নতুন অ্যাকাউন্ট',
@@ -82,7 +83,7 @@ const T = {
     collegePick: 'Select one',
     roll: 'Class roll number',
     phone: 'WhatsApp number',
-    errPhone: 'Enter a valid mobile number (01XXXXXXXXX)',
+    errPhone: WHATSAPP_HINT.en,
     account: 'Your account',
     haveAccount: 'I have an account',
     newAccount: 'Create an account',
@@ -178,7 +179,11 @@ export default function ActivateBook() {
         // number per person rather than a separate phone (see the checkout
         // form). Checking it on the sign-in tab would fail against a field
         // that is not on screen — an error nobody could act on.
-        if (!/^01[3-9]\d{8}$/.test(form.phone.replace(/\D/g, ''))) e.phone = S.errPhone;
+        //
+        // Any country's number: the reader holding this book may be on an
+        // attachment abroad, and the code inside their copy is theirs wherever
+        // they are. lib/phone keeps the local shape strict all the same.
+        if (!isReachableNumber(form.phone)) e.phone = S.errPhone;
       }
       if (mode === 'login' && !form.password) e.password = S.errPass;
     }
@@ -400,8 +405,11 @@ export default function ActivateBook() {
                       className={inputCls}
                       value={form.phone}
                       onChange={(e) => set('phone', e.target.value)}
-                      placeholder="01XXXXXXXXX"
-                      inputMode="numeric"
+                      placeholder="01XXXXXXXXX / +919876543210"
+                      // "tel", not "numeric": the numeric keypad on a phone has
+                      // no + key, and a number from outside Bangladesh needs
+                      // one. The other two forms already ask for this keypad.
+                      inputMode="tel"
                       autoComplete="tel"
                     />
                     {errors.phone && <ErrText bn={bn}>{errors.phone}</ErrText>}
