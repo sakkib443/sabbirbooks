@@ -22,6 +22,7 @@ import {
   LuBanknote,
   LuBookOpen,
   LuCheck,
+  LuChevronLeft,
   LuPlay,
   LuShieldCheck,
   LuStar,
@@ -71,6 +72,12 @@ const HANDOVER_PHOTOS = [
 // How long one photo holds before the next fades in. Slow enough to look at a
 // face, short enough that all four are seen while the band is on screen.
 const SLIDE_MS = 4500;
+
+// The phone strip at the top of the hero moves faster and shows two at once:
+// it is the first thing on the screen and has a visitor's attention for a few
+// seconds at most.
+const STRIP_MS = 2000;
+const STRIP_VISIBLE = 2;
 
 const T = {
   bn: {
@@ -201,14 +208,12 @@ export default function LandingHero({
           narrow columns; now it is nearly twice the width it was.
         */}
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:gap-7">
-          {/* ── The video ─────────────────────────────────────────────
-              First in the DOM, so a phone opens on it. On a desktop it is
-              placed into the second column of the second row instead. */}
-          {hasVideo && (
-            <div className="animate-fade-up lg:col-start-2 lg:row-start-2">
-              <HeroVideo book={book} />
-            </div>
-          )}
+          {/* ── The photographs, on a phone ───────────────────────────
+              First in the DOM and nowhere on a desktop, where the band at
+              the foot of the hero shows the same pictures. The shop asked
+              for the book in somebody's hands to be what a phone opens on,
+              ahead of the headline and the video. */}
+          <HandoverStrip />
 
           {/* ── The words ───────────────────────────────────────────── */}
           <div className="mx-auto max-w-2xl text-center lg:col-span-2 lg:row-start-1 lg:mb-1">
@@ -243,6 +248,17 @@ export default function LandingHero({
               </p>
             )}
           </div>
+
+          {/* ── The video ─────────────────────────────────────────────
+              After the words on a phone, which is the order the shop asked
+              for: photographs, then what the book is, then the video. On a
+              desktop it is placed into the second column of the second row
+              and the DOM order means nothing. */}
+          {hasVideo && (
+            <div className="animate-fade-up lg:col-start-2 lg:row-start-2">
+              <HeroVideo book={book} />
+            </div>
+          )}
 
           {/* ── The book, the price, the button ─────────────────────── */}
           <div className="animate-fade-up flex flex-col rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:col-start-1 lg:row-start-2 lg:row-span-2">
@@ -524,6 +540,93 @@ function HeroVideo({ book }) {
  * Not `priority` — the cover above wins the first bytes; this loads after.
  */
 /**
+ * The same photographs on a phone: two at a time, sliding, at the very top.
+ *
+ * A phone reads this page as one column, and the shop wants a visitor who
+ * arrives from a Facebook ad to see the book in people's hands before
+ * anything else — before the headline, before the video. Two at a time,
+ * because one portrait photograph at full phone width is most of a screen
+ * spent on one picture.
+ *
+ * It slides rather than fades: side by side, a fade would be two pictures
+ * dissolving into two others at once, which reads as a glitch. The window
+ * moves one photo at a time and starts over at the end — three positions for
+ * four photographs, so every one of them comes round.
+ *
+ * Hidden from `lg` up, where the photographs have their own band at the foot
+ * of the hero and the cover holds this slot.
+ */
+function HandoverStrip() {
+  const { isBengali } = useLanguage();
+  // The positions the window can take: [1,2], [2,3], [3,4].
+  const steps = Math.max(1, HANDOVER_PHOTOS.length - STRIP_VISIBLE + 1);
+  const [at, setAt] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused) return undefined;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (still) return undefined;
+    const id = setInterval(() => setAt((i) => (i + 1) % steps), STRIP_MS);
+    return () => clearInterval(id);
+  }, [paused, steps]);
+
+  const go = useCallback((delta) => setAt((i) => (i + delta + steps) % steps), [steps]);
+
+  const arrow =
+    'absolute top-1/2 z-10 -translate-y-1/2 rounded-full bg-card/90 p-2 text-foreground shadow-card backdrop-blur transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+  return (
+    <div
+      className="relative lg:hidden"
+      aria-roledescription={isBengali ? 'ছবির স্লাইড' : 'carousel'}
+      // A finger on the photos holds them still; lifting it starts them again.
+      onPointerDown={() => setPaused(true)}
+      onPointerUp={() => setPaused(false)}
+      onPointerCancel={() => setPaused(false)}
+    >
+      <div className="overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${at * (100 / STRIP_VISIBLE)}%)` }}
+        >
+          {HANDOVER_PHOTOS.map((photo) => (
+            <div key={photo.src} className="w-1/2 shrink-0 px-1">
+              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface-soft">
+                <Image
+                  src={photo.src}
+                  alt={isBengali ? photo.bn : photo.en}
+                  fill
+                  sizes="50vw"
+                  className="object-cover object-center"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => go(-1)}
+        aria-label={isBengali ? 'আগের ছবি' : 'Previous photo'}
+        className={`${arrow} left-1`}
+      >
+        <LuChevronLeft className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => go(1)}
+        aria-label={isBengali ? 'পরের ছবি' : 'Next photo'}
+        className={`${arrow} right-1 rotate-180`}
+      >
+        <LuChevronLeft className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+/**
  * The handover photos, one fading into the next.
  *
  * Four real photographs where there was one, because the shop kept taking
@@ -635,7 +738,11 @@ function HandoverPhoto({ checkoutHref, isPreOrder }) {
 
   return (
     <div className="mt-2 grid items-center gap-5 rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:mt-3 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-9 lg:p-6 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <HandoverSlides />
+      {/* Desktop only: a phone has already seen these at the top of the
+          hero, and showing them twice on one screen is once too many. */}
+      <div className="hidden lg:block">
+        <HandoverSlides />
+      </div>
 
       <div className="text-center lg:text-left">
         <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1.5 text-sm font-bold text-accent hind-siliguri">
