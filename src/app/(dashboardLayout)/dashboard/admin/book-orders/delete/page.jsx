@@ -39,6 +39,11 @@ const buyerName = (u) =>
     ? [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '—'
     : '—';
 
+// One request's worth, and the ceiling on how many are held in all. The same
+// numbers the Book Orders screen uses.
+const PAGE_SIZE = 500;
+const MAX_ORDERS = 20000;
+
 export default function DeleteOrderPage() {
   const { showToast, toastNode } = useToast();
   const [orders, setOrders] = useState([]);
@@ -51,15 +56,33 @@ export default function DeleteOrderPage() {
 
   const canDelete = ['superAdmin', 'admin'].includes(getStoredUser()?.role);
 
+  /*
+   * Every order, a page at a time.
+   *
+   * The search below runs over what is held here, so an order this never
+   * loaded cannot be found — and a page that stopped at the latest 500 could
+   * not delete anything older than that, silently. The whole point of this
+   * screen is finding one particular order, which is usually an old one.
+   */
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API}/orders?status=all&limit=500`, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || json.success === false) throw new Error(json.message || 'Failed to load orders');
-        setOrders(Array.isArray(json.data) ? json.data : []);
+        const byId = new Map();
+        for (let page = 1; ; page += 1) {
+          const res = await fetch(`${API}/orders?status=all&limit=${PAGE_SIZE}&page=${page}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || json.success === false) throw new Error(json.message || 'Failed to load orders');
+          const list = Array.isArray(json.data) ? json.data : [];
+          // Keyed by id: paging by skip over a list still being added to can
+          // hand the same order out on two pages.
+          list.forEach((o) => byId.set(o._id, o));
+          // The search box is live from the first page, so each one shows.
+          setOrders([...byId.values()]);
+          const total = Number(json.meta?.total) || byId.size;
+          if (list.length < PAGE_SIZE || byId.size >= Math.min(total, MAX_ORDERS)) break;
+        }
       } catch (e) {
         setError(e.message || 'Failed to load orders');
       } finally {
