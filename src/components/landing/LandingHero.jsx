@@ -246,7 +246,14 @@ export default function LandingHero({
 
           {/* ── The book, the price, the button ─────────────────────── */}
           <div className="animate-fade-up flex flex-col rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:col-start-1 lg:row-start-2 lg:row-span-2">
-            <CoverCard book={book} price={price} sampleHref={hasSample ? '#sample' : null} />
+            {/* The photos sit where the cover used to, at the top of the
+                buying card. The cover itself has moved down to the band —
+                the shop asked for the photographs to be the first thing seen,
+                and this is the slot that is seen first. */}
+            <div className="relative mx-auto w-full max-w-[320px] lg:max-w-[300px]">
+              <HandoverSlides sizes="(min-width: 1024px) 300px, 320px" eager />
+              <OfferBadge price={price} />
+            </div>
 
             <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
               <span className="font-heading text-[2rem] font-bold leading-none text-primary sm:text-4xl">
@@ -286,9 +293,18 @@ export default function LandingHero({
                 </span>
               </Link>
 
-              {/* The "নমুনা দেখুন" button used to sit here. It and the cover
-                  did the same thing, and two buttons for one action is one
-                  button too many — the cover IS the button now. */}
+              {/* Back, because the cover is no longer here to be it. This
+                  button and the cover did the same thing while they sat in
+                  the same card; now the cover is in the band at the foot of
+                  the hero and the buying card needs its own way in. */}
+              {hasSample && (
+                <a
+                  href="#sample"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-soft px-6 py-3 text-base font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 hind-siliguri"
+                >
+                  <LuBookOpen className="shrink-0" /> {L.viewSample}
+                </a>
+              )}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground hind-siliguri">
@@ -317,7 +333,12 @@ export default function LandingHero({
 
           {/* ── The handover photo ──────────────────────────────────── */}
           <div className="animate-fade-up delay-200 lg:col-span-2 lg:row-start-4">
-            <HandoverPhoto checkoutHref={checkoutHref} isPreOrder={price?.isPreOrder ?? book?.isPreOrder} />
+            <HandoverPhoto
+              book={book}
+              sampleHref={hasSample ? '#sample' : null}
+              checkoutHref={checkoutHref}
+              isPreOrder={price?.isPreOrder ?? book?.isPreOrder}
+            />
           </div>
         </div>
       </div>
@@ -528,6 +549,9 @@ function HeroVideo({ book }) {
  *
  * Four real photographs where there was one, because the shop kept taking
  * them and one still picture of a book in two hands says less than four.
+ * They sit at the top of the buying card, in the slot the cover held: the
+ * shop would rather a visitor's first sight of the page be the book in
+ * somebody's hands than the book on its own.
  *
  * Crossfade rather than a sliding strip: they are portraits of different
  * people in different rooms, with nothing continuous to slide along, and a
@@ -546,7 +570,7 @@ function HeroVideo({ book }) {
  * it changes with it — a separate effect watching the index would mount the
  * next photo a render late, which is the render it is needed in.
  */
-function HandoverSlides() {
+function HandoverSlides({ sizes, eager = false }) {
   const { isBengali } = useLanguage();
   // `i` is the photo showing; `seen` is how many are in the page at all —
   // always one ahead, so the next has loaded before its turn comes.
@@ -579,7 +603,7 @@ function HandoverSlides() {
 
   return (
     <figure
-      className="relative mx-auto w-full max-w-[320px] lg:max-w-none"
+      className="relative w-full"
       aria-roledescription={isBengali ? 'ছবির স্লাইড' : 'carousel'}
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
@@ -593,7 +617,10 @@ function HandoverSlides() {
             src={photo.src}
             alt={isBengali ? photo.bn : photo.en}
             fill
-            sizes="(min-width: 1280px) 380px, (min-width: 1024px) 340px, 320px"
+            sizes={sizes}
+            // The first photo is the page's first picture now, so it is
+            // preloaded where the cover used to be. The rest follow it.
+            priority={eager && i === 0}
             // Out of the way of a screen reader until it is the one showing:
             // four descriptions read one after another is not what is on the
             // page.
@@ -625,7 +652,7 @@ function HandoverSlides() {
   );
 }
 
-function HandoverPhoto({ checkoutHref, isPreOrder }) {
+function HandoverPhoto({ book, sampleHref, checkoutHref, isPreOrder }) {
   const { isBengali } = useLanguage();
   const L = isBengali ? T.bn : T.en;
 
@@ -635,7 +662,7 @@ function HandoverPhoto({ checkoutHref, isPreOrder }) {
 
   return (
     <div className="mt-2 grid items-center gap-5 rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:mt-3 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-9 lg:p-6 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <HandoverSlides />
+      <CoverCard book={book} sampleHref={sampleHref} sizes="(min-width: 1280px) 380px, (min-width: 1024px) 340px, 320px" />
 
       <div className="text-center lg:text-left">
         <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1.5 text-sm font-bold text-accent hind-siliguri">
@@ -683,25 +710,42 @@ function HandoverPhoto({ checkoutHref, isPreOrder }) {
  * broken-image glyph. A coral badge carries the discount; a soft teal glow lifts
  * the cover; the whole thing links to the sample.
  */
-function CoverCard({ book, price, sampleHref }) {
+/** The offer badge. Lives wherever the PRICE is, which is no longer the cover. */
+function OfferBadge({ price }) {
+  const { isBengali } = useLanguage();
+  if (!(price?.saved > 0)) return null;
+  return (
+    <span className="absolute -right-2 -top-2 z-10 inline-flex items-center gap-1.5 rounded-full bg-coral px-3 py-1.5 text-sm font-bold text-white shadow-lg hind-siliguri">
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+      </span>
+      {discText(price.kind, price.percent, price.amount)} {isBengali ? 'ছাড়' : 'off'}
+    </span>
+  );
+}
+
+function CoverCard({ book, price, sampleHref, sizes = '(min-width: 1024px) 300px, 320px', priority = false }) {
   const { isBengali } = useLanguage();
   const L = isBengali ? T.bn : T.en;
   const [failed, setFailed] = useState(false);
   const showCover = Boolean(book?.coverImage) && !failed;
 
   const inner = (
-    <div className="relative mx-auto w-full max-w-[320px] lg:max-w-[300px]">
+    <div className="relative mx-auto w-full max-w-[320px] lg:max-w-none">
       {/* soft glow halo */}
       <div className="pointer-events-none absolute -inset-5 rounded-[2rem] bg-primary/15 blur-3xl" />
 
       <div className="relative overflow-hidden rounded-2xl border border-border shadow-card motion-safe:animate-float-soft">
         {showCover ? (
-          // The cover is the page's largest paint and, as a raw upload, was its
-          // largest download: a 2550x3300 PNG, 1.6MB, drawn 320px wide. Through
-          // the optimiser the same cover is a ~30KB WebP at the size it is
-          // actually shown, which on a phone over mobile data is most of the
-          // wait. `priority` preloads it — it is above the fold, and the point
-          // of the page.
+          // As a raw upload this was the page's largest download: a 2550x3300
+          // PNG, 1.6MB, drawn 320px wide. Through the optimiser it is a ~30KB
+          // WebP at the size it is actually shown, which on a phone over
+          // mobile data is most of the wait.
+          //
+          // `priority` is now the caller's to decide: the cover sits in the
+          // band at the foot of the hero, below the fold, and preloading it
+          // would take bytes from the photographs above it.
           //
           // A fixed 3:4 box, matching the fallback tile below, so the layout
           // does not jump when a cover of another shape loads.
@@ -713,8 +757,8 @@ function CoverCard({ book, price, sampleHref }) {
               alt={landingSeoFor(book)?.coverAlt || book.title}
               onError={() => setFailed(true)}
               fill
-              priority
-              sizes="(min-width: 1024px) 300px, 320px"
+              priority={priority}
+              sizes={sizes}
               className="object-contain transition-transform duration-500 group-hover:scale-[1.02]"
             />
           </div>
@@ -735,15 +779,7 @@ function CoverCard({ book, price, sampleHref }) {
         )}
       </div>
 
-      {price?.saved > 0 && (
-        <span className="absolute -right-2 -top-2 z-10 inline-flex items-center gap-1.5 rounded-full bg-coral px-3 py-1.5 text-sm font-bold text-white shadow-lg hind-siliguri">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-          </span>
-          {discText(price.kind, price.percent, price.amount)} {isBengali ? 'ছাড়' : 'off'}
-        </span>
-      )}
+      <OfferBadge price={price} />
     </div>
   );
 
