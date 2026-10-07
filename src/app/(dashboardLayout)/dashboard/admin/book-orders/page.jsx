@@ -11,7 +11,7 @@
  *   processing | shipped | delivered | cancelled
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiShoppingBag, FiSearch, FiLoader, FiRefreshCw, FiAlertCircle,
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
@@ -83,9 +83,23 @@ const titlesOf = (o) =>
 // An order's money without the delivery charge — what its books sold for.
 const bookMoneyOf = (o) => (o?.total || 0) - (o?.deliveryCharge || 0);
 
-// How many orders one load brings. The stat cards are counted from what is
-// loaded, so a date filter is also how the admin gets exact figures past this.
-const LIST_LIMIT = 500;
+// How many orders ONE REQUEST brings. The screen then asks for the next page,
+// and the next, until it holds every order that matched — the stat cards, the
+// college and area filters and the PDFs are all counted from what is loaded,
+// so a list that stopped at the first page made every one of them wrong.
+const PAGE_SIZE = 500;
+
+// A ceiling, not a setting: somewhere past this the browser is being asked to
+// hold more orders than it can usefully draw, and the honest answer is to say
+// so and let the admin narrow by date. The shop would have to sell this many
+// before it matters.
+const MAX_ORDERS = 20000;
+
+// How many rows are drawn at once. Each row is a card the admin can open, so
+// a thousand of them is a slow paint and a janky scroll — the rest are drawn
+// as the list is scrolled. Nothing about what the screen KNOWS is limited by
+// this: the counts, the ticks and the PDFs all work from the full list.
+const RENDER_CHUNK = 300;
 
 // The most a PDF list fetches when more orders match than the screen loaded.
 const EXPORT_LIMIT = 5000;
@@ -102,9 +116,9 @@ const STATUS_TEXT = {
   cancelled: 'Cancelled',
 };
 
-/** The query GET /api/orders takes: status, a date window, how many. */
-const ordersQuery = (status, range, limit) => {
-  const params = new URLSearchParams({ status, limit: String(limit) });
+/** The query GET /api/orders takes: status, a date window, how many, which page. */
+const ordersQuery = (status, range, limit, page = 1) => {
+  const params = new URLSearchParams({ status, limit: String(limit), page: String(page) });
   if (range) {
     params.set('from', range.from.toISOString());
     params.set('to', range.to.toISOString());
@@ -448,6 +462,11 @@ export default function BookOrdersPage() {
   const [dayTo, setDayTo] = useState('');
   // Every order matching the filters on the server, which can be more than loaded.
   const [matchCount, setMatchCount] = useState(0);
+  // Pages after the first are still arriving.
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Which load is the current one. A filter changed mid-load abandons the
+  // pages still in the air rather than letting them land on the new list.
+  const loadSeq = useRef(0);
   // Medical college and area (district → upazila). Applied here, to the loaded
   // orders, and their choices are counted from them — only colleges and places
   // that actually have orders in the chosen dates are offered.
@@ -469,31 +488,66 @@ export default function BookOrdersPage() {
   const [batch, setBatch] = useState(null); // { files: [{ college, count, name, blob }] }
   const brand = useBrand();
 
-  // Accepts the status and the date window so a filter change can refetch with
-  // the new values immediately (state updates are async and wouldn't be visible
-  // in the same tick).
+  /*
+   * Every order that matched, not the first page of them.
+   *
+   * The first page lands on screen straight away and the rest arrive
+   * underneath it, a page at a time. Totals that counted only the latest 500
+   * were the complaint this answers: "মোট অর্ডার" has to mean all of them.
+   *
+   * Takes the status and the date window as arguments so a filter change can
+   * refetch with the new values immediately — state updates are async and
+   * would not be visible in the same tick.
+   */
   const fetchOrders = async (status = statusFilter, range = dateRange) => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setError('');
     // Those files were made from the orders being replaced.
     setBatch(null);
+    // A different list: a tick left over from the previous one would let a
+    // bulk action change orders that are no longer on the screen.
+    setSelected(new Set());
     try {
-      const params = ordersQuery(status, range, LIST_LIMIT);
-      const res = await fetch(`${API}/orders?${params}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json.success === false) throw new Error(json.message || 'Failed to load orders');
-      const list = Array.isArray(json.data) ? json.data : [];
-      setOrders(list);
-      setMatchCount(Number(json.meta?.total) || list.length);
-      // A different list: a tick left over from the previous one would let a
-      // bulk action change orders that are no longer on the screen.
-      setSelected(new Set());
+      // Keyed by id, because paging by skip through a list that is still being
+      // added to can hand the same order out on two pages.
+      const byId = new Map();
+      let page = 1;
+      for (;;) {
+        const params = ordersQuery(status, range, PAGE_SIZE, page);
+        const res = await fetch(`${API}/orders?${params}`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.success === false) throw new Error(json.message || 'Failed to load orders');
+        // A filter changed while this page was in the air — that list is gone,
+        // and writing its orders over the new one would be a ghost.
+        if (seq !== loadSeq.current) return;
+
+        const list = Array.isArray(json.data) ? json.data : [];
+        list.forEach((o) => byId.set(o._id, o));
+        const loaded = [...byId.values()];
+        const total = Number(json.meta?.total) || loaded.length;
+
+        setOrders(loaded);
+        setMatchCount(total);
+        // Page one is on screen; the admin can read and work while the rest
+        // loads, so only the first page blocks.
+        setLoading(false);
+
+        const done = list.length < PAGE_SIZE || loaded.length >= Math.min(total, MAX_ORDERS);
+        setLoadingMore(!done);
+        if (done) break;
+        page += 1;
+      }
     } catch (err) {
+      if (seq !== loadSeq.current) return;
       setError(err.message || 'Failed to load orders');
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   };
 
@@ -583,9 +637,8 @@ export default function BookOrdersPage() {
   // directly over that list and have to describe it; a "42 orders" card above
   // eight Cumilla rows is read as a bug, and was.
   //
-  // The 500-row load limit still applies underneath: with more matches than
-  // that, these count the latest 500, which is what the amber line under the
-  // dates says.
+  // Every order that matched is loaded (fetchOrders pages until it has them
+  // all), so these are the real figures and not the latest page's.
   const stats = useMemo(() => {
     const paid = filtered.filter((o) => o.payment?.status === 'paid');
     const live = filtered.filter((o) => o.status !== 'cancelled');
@@ -606,6 +659,41 @@ export default function BookOrdersPage() {
       delivered: filtered.filter((o) => o.status === 'delivered').length,
     };
   }, [filtered]);
+
+  /*
+   * How much of the filtered list is DRAWN.
+   *
+   * Everything above counts the whole of it; this is only about rows on the
+   * page, because each one is an openable card and a few thousand of them
+   * take seconds to paint. The window grows as the list is scrolled, and
+   * starts over whenever the filters change — which is what the signature is
+   * for: no effect resetting it after the fact, so there is never a frame
+   * showing the last filter's thousand rows.
+   */
+  const filterSig = `${statusFilter}|${datePreset}|${search}|${collegeFilter}|${districtFilter}|${upazilaFilter}`;
+  const [renderWindow, setRenderWindow] = useState({ sig: filterSig, n: RENDER_CHUNK });
+  const windowFor = renderWindow.sig === filterSig ? renderWindow.n : RENDER_CHUNK;
+  const shownCount = Math.min(windowFor, filtered.length);
+  const showMore = useCallback(
+    () => setRenderWindow((w) => ({ sig: filterSig, n: (w.sig === filterSig ? w.n : RENDER_CHUNK) + RENDER_CHUNK })),
+    [filterSig]
+  );
+
+  // The bottom of the drawn rows. Coming into view (a screen or two early)
+  // draws the next chunk, so scrolling never stops at a button.
+  const tailRef = useRef(null);
+  useEffect(() => {
+    const node = tailRef.current;
+    if (!node || shownCount >= filtered.length) return undefined;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) showMore();
+      },
+      { rootMargin: '800px' }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [shownCount, filtered.length, showMore]);
 
   const updateStatus = async (order, status, extra) => {
     setUpdatingId(order._id);
@@ -984,10 +1072,13 @@ export default function BookOrdersPage() {
   };
 
   /**
-   * The orders a PDF of the filtered list holds: every order the filters show —
-   * fetched in full first when the screen holds only the latest LIST_LIMIT —
+   * The orders a PDF of the filtered list holds: every order the filters show,
    * less the cancelled ones (keepForPdf). `matching` still has those, so a
    * heading can say how many were left out.
+   *
+   * The screen normally holds them all by the time anyone asks for a PDF, so
+   * the fetch below is the MAX_ORDERS case — a list too large to keep on
+   * screen can still be printed.
    */
   const collectForPdf = async () => {
     let pool = orders;
@@ -1326,9 +1417,17 @@ export default function BookOrdersPage() {
               <span className="font-semibold text-dash-ink3">{liveKey === 'tomorrow' ? 'Tomorrow' : 'Today'}</span>.
             </>
           )}
-          {!loading && matchCount > orders.length && (
+          {loadingMore && (
+            <span className="text-dash-mute2">
+              {' '}Loading the rest — {orders.length.toLocaleString('en-US')} of{' '}
+              {matchCount.toLocaleString('en-US')} so far.
+            </span>
+          )}
+          {!loading && !loadingMore && matchCount > orders.length && (
             <span className="text-amber-700">
-              {' '}Showing the latest {orders.length.toLocaleString('en-US')} of {matchCount.toLocaleString('en-US')} — pick dates to see and count the rest.
+              {' '}Holding the latest {orders.length.toLocaleString('en-US')} of{' '}
+              {matchCount.toLocaleString('en-US')} — more than one screen can usefully carry, so pick
+              dates to see and count the rest.
             </span>
           )}
         </p>
@@ -1737,7 +1836,7 @@ export default function BookOrdersPage() {
             <span />
           </div>
 
-          {filtered.map((o, index) => {
+          {filtered.slice(0, shownCount).map((o, index) => {
             const isOpen = expanded === o._id;
             const serial = index + 1;
             return (
@@ -2498,6 +2597,25 @@ export default function BookOrdersPage() {
               </div>
             );
           })}
+
+          {/* The rest of the list, a chunk at a time. It loads itself as it
+              comes into view; the button is for anyone who gets there first,
+              and says how many are still below. */}
+          {shownCount < filtered.length && (
+            <div ref={tailRef} className="flex flex-col items-center gap-1.5 py-4">
+              <button
+                onClick={showMore}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line bg-dash-card px-4 py-2 text-xs font-semibold text-dash-ink3 transition-colors hover:border-brand/40 hover:text-brand"
+              >
+                <FiChevronDown size={14} /> Show{' '}
+                {Math.min(RENDER_CHUNK, filtered.length - shownCount).toLocaleString('en-US')} more
+              </button>
+              <span className="text-[11px] text-dash-mute2">
+                {shownCount.toLocaleString('en-US')} of {filtered.length.toLocaleString('en-US')} drawn
+                {' · '}the counts above are for all {filtered.length.toLocaleString('en-US')}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
