@@ -34,6 +34,44 @@ import { landingSeoFor } from '@/lib/landingSeo';
 import { useLanguage } from '@/context/LanguageContext';
 import { renderRich } from '@/lib/richText';
 
+/*
+ * The handover photos, in the order they come round.
+ *
+ * Real photographs of the book going into real hands — the shop's proof that
+ * it is printed and arriving, which is the one thing a cover and a price
+ * cannot say. The first is the one the band has always shown; the rest were
+ * sent in afterwards and join the rotation behind it.
+ *
+ * Each carries its own description: "the book being handed over" four times
+ * would tell a screen reader nothing about which photo it is on.
+ */
+const HANDOVER_PHOTOS = [
+  {
+    src: '/hero-handover.jpg',
+    bn: 'ম্যাজিক ভাইভা অ্যানাটমি বইটি হাতে তুলে দেওয়া হচ্ছে',
+    en: 'The Magic Viva Anatomy book being handed over',
+  },
+  {
+    src: '/hero-handover-2.jpg',
+    bn: 'লেখক একজন শিক্ষকের হাতে ম্যাজিক ভাইভা অ্যানাটমি বইটি তুলে দিচ্ছেন',
+    en: 'The author handing the book to a teacher',
+  },
+  {
+    src: '/hero-handover-3.jpg',
+    bn: 'অ্যানাটমি ল্যাবে বইটি হাতে দুজন — পাশে কঙ্কাল ও হাড়ের নমুনা',
+    en: 'The book held in an anatomy lab, beside a skeleton and bone specimens',
+  },
+  {
+    src: '/hero-handover-4.jpg',
+    bn: 'ডিএমসি স্কুলে বইটি হাতে দুজন শিক্ষার্থী',
+    en: 'Two students holding the book at DMC School',
+  },
+];
+
+// How long one photo holds before the next fades in. Slow enough to look at a
+// face, short enough that all four are seen while the band is on screen.
+const SLIDE_MS = 4500;
+
 const T = {
   bn: {
     eyebrow: '1st Prof · Anatomy Viva',
@@ -485,6 +523,108 @@ function HeroVideo({ book }) {
  *
  * Not `priority` — the cover above wins the first bytes; this loads after.
  */
+/**
+ * The handover photos, one fading into the next.
+ *
+ * Four real photographs where there was one, because the shop kept taking
+ * them and one still picture of a book in two hands says less than four.
+ *
+ * Crossfade rather than a sliding strip: they are portraits of different
+ * people in different rooms, with nothing continuous to slide along, and a
+ * fade asks nothing of the layout — all four sit in the same 3:4 frame
+ * (`object-cover`), so the band never changes height as they come round. The
+ * photos themselves run from 0.72 to 0.86 wide-to-tall, and letting each set
+ * its own height would make the whole hero jump every few seconds.
+ *
+ * It stops while anyone is looking at it on purpose — pointer over it, or a
+ * dot focused — and never starts at all for a reader who has asked for less
+ * motion, who gets the first photo and the dots to move between them.
+ *
+ * A photo is only put in the page once it is the next one due, so a visitor
+ * who never scrolls this far downloads nothing and one who watches two
+ * downloads three. `seen` is carried in the same state as the index because
+ * it changes with it — a separate effect watching the index would mount the
+ * next photo a render late, which is the render it is needed in.
+ */
+function HandoverSlides() {
+  const { isBengali } = useLanguage();
+  // `i` is the photo showing; `seen` is how many are in the page at all —
+  // always one ahead, so the next has loaded before its turn comes.
+  const [slide, setSlide] = useState({ i: 0, seen: 2 });
+  const [paused, setPaused] = useState(false);
+  const { i: index } = slide;
+
+  const goTo = useCallback(
+    (next) =>
+      setSlide((s) => ({ i: next, seen: Math.min(HANDOVER_PHOTOS.length, Math.max(s.seen, next + 2)) })),
+    []
+  );
+
+  useEffect(() => {
+    if (paused) return undefined;
+    // Asked for less motion: the photos stay put and the dots are the way
+    // through them.
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (still) return undefined;
+    const id = setInterval(
+      () =>
+        setSlide((s) => {
+          const next = (s.i + 1) % HANDOVER_PHOTOS.length;
+          return { i: next, seen: Math.min(HANDOVER_PHOTOS.length, Math.max(s.seen, next + 2)) };
+        }),
+      SLIDE_MS
+    );
+    return () => clearInterval(id);
+  }, [paused]);
+
+  return (
+    <figure
+      className="relative mx-auto w-full max-w-[320px] lg:max-w-none"
+      aria-roledescription={isBengali ? 'ছবির স্লাইড' : 'carousel'}
+      onPointerEnter={() => setPaused(true)}
+      onPointerLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-border bg-surface-soft">
+        {HANDOVER_PHOTOS.slice(0, slide.seen).map((photo, i) => (
+          <Image
+            key={photo.src}
+            src={photo.src}
+            alt={isBengali ? photo.bn : photo.en}
+            fill
+            sizes="(min-width: 1280px) 380px, (min-width: 1024px) 340px, 320px"
+            // Out of the way of a screen reader until it is the one showing:
+            // four descriptions read one after another is not what is on the
+            // page.
+            aria-hidden={i === index ? undefined : true}
+            className={`object-cover object-center transition-opacity duration-700 ${
+              i === index ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* The dots. Also the whole of the controls: arrows on a photo this
+          size would cover a face, and the band moves on by itself. */}
+      <div className="mt-2.5 flex items-center justify-center gap-2">
+        {HANDOVER_PHOTOS.map((photo, i) => (
+          <button
+            key={photo.src}
+            type="button"
+            onClick={() => goTo(i)}
+            aria-label={isBengali ? `ছবি ${i + 1}` : `Photo ${i + 1}`}
+            aria-current={i === index ? 'true' : undefined}
+            className={`h-2 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+              i === index ? 'w-6 bg-primary' : 'w-2 bg-border hover:bg-primary/40'
+            }`}
+          />
+        ))}
+      </div>
+    </figure>
+  );
+}
+
 function HandoverPhoto({ checkoutHref, isPreOrder }) {
   const { isBengali } = useLanguage();
   const L = isBengali ? T.bn : T.en;
@@ -495,20 +635,7 @@ function HandoverPhoto({ checkoutHref, isPreOrder }) {
 
   return (
     <div className="mt-2 grid items-center gap-5 rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:mt-3 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-9 lg:p-6 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <figure className="relative mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl border border-border lg:max-w-none">
-        <Image
-          src="/hero-handover.jpg"
-          alt={
-            isBengali
-              ? 'ম্যাজিক ভাইভা অ্যানাটমি বইটি হাতে তুলে দেওয়া হচ্ছে'
-              : 'The Magic Viva Anatomy book being handed over'
-          }
-          width={3000}
-          height={3494}
-          sizes="(min-width: 1280px) 380px, (min-width: 1024px) 340px, 320px"
-          className="h-auto w-full"
-        />
-      </figure>
+      <HandoverSlides />
 
       <div className="text-center lg:text-left">
         <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1.5 text-sm font-bold text-accent hind-siliguri">
