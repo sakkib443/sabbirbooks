@@ -24,12 +24,11 @@ import { API_BASE, getToken, getUser, clearSession } from '@/lib/session';
 import { useLanguage } from '@/context/LanguageContext';
 import CollegePicker from './CollegePicker';
 import { track } from '@/lib/metaPixel';
+import { isReachableNumber, WHATSAPP_HINT } from '@/lib/phone';
 
 // Pages where the gate must stay out of the way: the user is either not signed
 // in yet, or is in the middle of the very flow that fixes this.
 const EXEMPT = ['/login', '/register'];
-
-const BD_MOBILE = /^(?:\+?88)?01[3-9]\d{8}$/;
 
 export default function ProfileGate() {
   const pathname = usePathname();
@@ -93,8 +92,11 @@ export default function ProfileGate() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!BD_MOBILE.test(whatsapp.trim())) {
-      setError(t('Enter a valid WhatsApp number, e.g. 01712345678', 'সঠিক WhatsApp নম্বর দিন, যেমন 01712345678'));
+    // The same rule as signup, and it has to be: this modal blocks the whole
+    // site until it is satisfied, so a reader who signed up with a foreign
+    // number would otherwise be locked out by a field they cannot fill.
+    if (!isReachableNumber(whatsapp)) {
+      setError(t(WHATSAPP_HINT.en, WHATSAPP_HINT.bn));
       return;
     }
     if (!college && !collegeName.trim()) {

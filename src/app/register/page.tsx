@@ -31,6 +31,7 @@ import {
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { homeRouteFor } from "@/lib/permissions";
 import { track } from "@/lib/metaPixel";
+import { isReachableNumber, WHATSAPP_HINT } from "@/lib/phone";
 
 export default function RegisterPage() {
   const { isBengali } = useLanguage();
@@ -55,7 +56,7 @@ export default function RegisterPage() {
         phoneOptional: "(ঐচ্ছিক)",
         phonePh: "01XXXXXXXXX",
         whatsapp: "WhatsApp নম্বর",
-        whatsappPh: "01XXXXXXXXX — অর্ডারের খবর এখানেই যাবে",
+        whatsappPh: "01XXXXXXXXX — দেশের বাইরে হলে কান্ট্রি কোড সহ",
         college: "মেডিকেল কলেজ",
         collegePh: "কলেজ বেছে নিন",
         password: "পাসওয়ার্ড",
@@ -72,7 +73,7 @@ export default function RegisterPage() {
         login: "লগইন করুন",
         deviceNote: "নিরাপত্তার জন্য প্রতিটি অ্যাকাউন্ট সর্বোচ্চ ২টি ডিভাইসে ব্যবহার করা যায়।",
         errFirst: "নামের প্রথম অংশ দিন",
-        errWhatsapp: "সঠিক WhatsApp নম্বর দিন, যেমন 01712345678",
+        errWhatsapp: WHATSAPP_HINT.bn,
         errCollege: "আপনার মেডিকেল কলেজ বেছে নিন",
         errLast: "নামের শেষ অংশ দিন",
         errEmail: "সঠিক ইমেইল দিন",
@@ -98,7 +99,7 @@ export default function RegisterPage() {
         phoneOptional: "(optional)",
         phonePh: "01XXXXXXXXX",
         whatsapp: "WhatsApp number",
-        whatsappPh: "01XXXXXXXXX — order updates go here",
+        whatsappPh: "01XXXXXXXXX — with the country code if outside Bangladesh",
         college: "Medical college",
         collegePh: "Choose your college",
         password: "Password",
@@ -115,7 +116,7 @@ export default function RegisterPage() {
         login: "Log in",
         deviceNote: "For your security, each account can be used on up to 2 devices.",
         errFirst: "Enter your first name",
-        errWhatsapp: "Enter a valid WhatsApp number, e.g. 01712345678",
+        errWhatsapp: WHATSAPP_HINT.en,
         errCollege: "Choose your medical college",
         errLast: "Enter your last name",
         errEmail: "Enter a valid email address",
@@ -135,11 +136,9 @@ export default function RegisterPage() {
       email: z.email(S.errEmail),
       phoneNumber: z.string().trim().optional(),
       // Required, and matched against the same rule the server enforces so a
-      // typo is caught before the round-trip. Accepts an optional +88/88.
-      whatsappNumber: z
-        .string()
-        .trim()
-        .regex(/^(?:\+?88)?01[3-9]\d{8}$/, S.errWhatsapp),
+      // typo is caught before the round-trip. Any country's number is fine;
+      // a Bangladeshi one is still held to the local shape. See lib/phone.
+      whatsappNumber: z.string().trim().refine(isReachableNumber, S.errWhatsapp),
       password: z.string().min(4, S.errPwMin).max(20, S.errPwMax),
       confirmPassword: z.string().min(1, S.errConfirm),
     })
