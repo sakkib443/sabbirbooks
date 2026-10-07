@@ -26,6 +26,7 @@ import {
 } from 'react-icons/fi';
 
 import { can, getStoredUser } from '@/lib/permissions';
+import { bdDate, dayWindow } from '@/lib/shopDay';
 import {
   MoneyCard, RangeBar, RevenueChart, ChartLegend, MetricToggle, RangeSummary, resolvePreset, tk,
   DeliveryToggle, BooksAndDelivery, useDeliveryMode, moneyIn, modeNote, booksLabel,
@@ -119,6 +120,14 @@ export default function AdminDashboard() {
 
   const r = stats?.range;
   const t = stats?.totals;
+  // "6 Oct 12 PM → 7 Oct 12 PM" — the shop day named by today's date, which is
+  // the one both this dashboard and the Book Orders screen mean by "today".
+  const todayWindow = dayWindow(bdDate());
+  const noon = (d) =>
+    d.toLocaleString('en-GB', {
+      timeZone: 'Asia/Dhaka', day: 'numeric', month: 'short', hour: 'numeric', hour12: true,
+    });
+  const todayWindowLabel = `${noon(todayWindow.from)} → ${noon(todayWindow.to)}`;
   // The three money figures, with or without the delivery charge as chosen.
   const tm = moneyIn(t, mode);
   const todayM = moneyIn(stats?.today, mode);
@@ -160,7 +169,11 @@ export default function AdminDashboard() {
         <MoneyCard
           icon={FiPackage} tone="indigo" loading={loading}
           label="Total Value" value={tk(tm.value)}
-          note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, all time`}
+          // Not the figure the Book Orders screen headlines: that one counts
+          // every order, this one leaves cancelled ones out, because a
+          // cancelled order sold nothing. Said out loud so the two reading
+          // differently is not read as one of them being wrong.
+          note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, all time · cancelled not counted`}
         />
         <MoneyCard
           icon={FiDollarSign} tone="emerald" loading={loading}
@@ -200,7 +213,9 @@ export default function AdminDashboard() {
               </h2>
               <p className="mt-0.5 text-xs text-dash-mute2">
                 {r
-                  ? `${r.from} → ${r.to}${metric === 'revenue' ? ` · ${modeNote(mode)}` : ''}`
+                  ? `${r.from} → ${r.to} · a day runs 12 PM → 12 PM${
+                      metric === 'revenue' ? ` · ${modeNote(mode)}` : ''
+                    }`
                   : 'Loading…'}
               </p>
             </div>
@@ -224,6 +239,14 @@ export default function AdminDashboard() {
           icon={FiShoppingCart} tone="brand" loading={loading}
           label="Today's Orders" value={(stats?.today?.orders ?? 0).toLocaleString('en-US')}
           note={`${booksLabel(stats?.today?.copies)} · ${tk(todayM.value)} sold · ${tk(todayM.earned)} earned`}
+          // The same window the Book Orders screen calls Today, printed the
+          // same way it prints it — because "Today" closed at noon, and an
+          // order taken this afternoon is on tomorrow's list, not in here.
+          foot={
+            <p className="mt-1.5 border-t border-dash-line-soft pt-1.5 text-[10px] text-dash-mute2">
+              {todayWindowLabel}
+            </p>
+          }
         />
         <MoneyCard
           icon={FiTag} tone="indigo" loading={loading}
