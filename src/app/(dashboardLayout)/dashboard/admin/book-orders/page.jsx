@@ -83,10 +83,14 @@ const titlesOf = (o) =>
 // An order's money without the delivery charge — what its books sold for.
 const bookMoneyOf = (o) => (o?.total || 0) - (o?.deliveryCharge || 0);
 
-// How many orders ONE REQUEST brings. The screen then asks for the next page,
-// and the next, until it holds every order that matched — the stat cards, the
-// college and area filters and the PDFs are all counted from what is loaded,
-// so a list that stopped at the first page made every one of them wrong.
+// What opening the screen brings: the most recent orders, and only those.
+// Nearly every visit is about today's and yesterday's work, and waiting on
+// four thousand rows to answer "what came in this morning" is a worse screen.
+const FIRST_LOAD = 200;
+
+// How many orders one request brings once the admin has asked for all of
+// them. Larger than the opening load because by then they are waiting for a
+// complete list and the round trips are the slow part.
 const PAGE_SIZE = 500;
 
 // A ceiling, not a setting: somewhere past this the browser is being asked to
@@ -464,6 +468,10 @@ export default function BookOrdersPage() {
   const [matchCount, setMatchCount] = useState(0);
   // Pages after the first are still arriving.
   const [loadingMore, setLoadingMore] = useState(false);
+  // The admin has asked for the whole list. Sticky on purpose: having asked
+  // once, they do not want the next status or date filter to go back to the
+  // most recent 200 and make them ask again.
+  const [wantAll, setWantAll] = useState(false);
   // Which load is the current one. A filter changed mid-load abandons the
   // pages still in the air rather than letting them land on the new list.
   const loadSeq = useRef(0);
@@ -489,17 +497,19 @@ export default function BookOrdersPage() {
   const brand = useBrand();
 
   /*
-   * Every order that matched, not the first page of them.
+   * The most recent FIRST_LOAD orders, or every order that matched.
    *
-   * The first page lands on screen straight away and the rest arrive
-   * underneath it, a page at a time. Totals that counted only the latest 500
-   * were the complaint this answers: "মোট অর্ডার" has to mean all of them.
+   * Opening the screen brings the recent ones and the TOTAL — the server
+   * counts the matches whether or not it sends them, so "Total orders" is the
+   * real figure from the first moment even when 200 rows are loaded. Asking
+   * for all of them (the card is a button) pages through the rest; the first
+   * page is on screen while the others arrive.
    *
    * Takes the status and the date window as arguments so a filter change can
    * refetch with the new values immediately — state updates are async and
    * would not be visible in the same tick.
    */
-  const fetchOrders = async (status = statusFilter, range = dateRange) => {
+  const fetchOrders = async (status = statusFilter, range = dateRange, everything = wantAll) => {
     const seq = ++loadSeq.current;
     setLoading(true);
     setError('');
@@ -513,8 +523,9 @@ export default function BookOrdersPage() {
       // added to can hand the same order out on two pages.
       const byId = new Map();
       let page = 1;
+      const size = everything ? PAGE_SIZE : FIRST_LOAD;
       for (;;) {
-        const params = ordersQuery(status, range, PAGE_SIZE, page);
+        const params = ordersQuery(status, range, size, page);
         const res = await fetch(`${API}/orders?${params}`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
@@ -535,7 +546,10 @@ export default function BookOrdersPage() {
         // loads, so only the first page blocks.
         setLoading(false);
 
-        const done = list.length < PAGE_SIZE || loaded.length >= Math.min(total, MAX_ORDERS);
+        // Without `everything` this is the whole job: the recent ones are on
+        // screen and the count beside them is the server's, not the list's.
+        const done =
+          !everything || list.length < size || loaded.length >= Math.min(total, MAX_ORDERS);
         setLoadingMore(!done);
         if (done) break;
         page += 1;
@@ -629,6 +643,24 @@ export default function BookOrdersPage() {
   // them or collects for them — unless cancelled orders are what was asked for.
   const keepForPdf = (list) => (statusFilter === 'cancelled' ? list : list.filter((o) => o.status !== 'cancelled'));
   const allLoaded = matchCount <= orders.length;
+  // A college, an area or a search narrows the list HERE, over the orders the
+  // screen holds — the server's count knows nothing about it. While the two
+  // disagree the card has to follow the list it sits over, or it would read
+  // 1,327 above forty Khulna rows.
+  const narrowed = Boolean(search.trim() || collegeFilter || districtFilter || upazilaFilter);
+
+  /**
+   * Fetch the rest of the matching orders.
+   *
+   * What the "Total orders" card does when it is a button. `wantAll` sticks,
+   * so the next status or date filter also brings everything — having asked
+   * once is answer enough.
+   */
+  const loadEverything = () => {
+    if (allLoaded || loading || loadingMore) return;
+    setWantAll(true);
+    fetchOrders(statusFilter, dateRange, true);
+  };
   const pdfCount = keepForPdf(filtered).length;
   const pdfColleges = new Set(keepForPdf(filtered).map(collegeOf)).size;
 
@@ -1424,10 +1456,10 @@ export default function BookOrdersPage() {
             </span>
           )}
           {!loading && !loadingMore && matchCount > orders.length && (
-            <span className="text-amber-700">
-              {' '}Holding the latest {orders.length.toLocaleString('en-US')} of{' '}
-              {matchCount.toLocaleString('en-US')} — more than one screen can usefully carry, so pick
-              dates to see and count the rest.
+            <span className="text-dash-mute2">
+              {' '}The list holds the latest {orders.length.toLocaleString('en-US')} of{' '}
+              {matchCount.toLocaleString('en-US')} — the cards below count what is loaded, and
+              <span className="font-semibold text-brand"> Total orders</span> loads the rest.
             </span>
           )}
         </p>
@@ -1498,10 +1530,36 @@ export default function BookOrdersPage() {
           six cards Cumilla's numbers, which is the only reading that matches
           the list they sit over. */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-dash-ink2">{stats.total}</p>
-          <p className="text-xs text-dash-mute2 mt-1">Total orders</p>
-        </div>
+        {/* The one card that knows more than the list below it: the server
+            counts every match whether or not it sends them, so this is the
+            true total even while the screen holds the most recent 200. It is
+            the way to the rest, which is the shape the shop asked for —
+            open on the recent ones, click the total to see everything. */}
+        <button
+          type="button"
+          onClick={loadEverything}
+          disabled={allLoaded || loading || loadingMore}
+          title={allLoaded ? undefined : 'Load every order that matches these filters'}
+          className={`rounded-xl border p-4 text-left transition-colors ${
+            allLoaded
+              ? 'cursor-default border-dash-line bg-dash-card'
+              : 'cursor-pointer border-brand/40 bg-dash-card hover:border-brand hover:bg-brand-soft/40'
+          }`}
+        >
+          <p className="text-xl font-bold text-dash-ink2 tabular-nums">
+            {(allLoaded || narrowed ? stats.total : matchCount).toLocaleString('en-US')}
+          </p>
+          <p className="mt-1 text-xs text-dash-mute2">Total orders</p>
+          {!allLoaded && (
+            <p className="mt-1 text-[11px] font-semibold text-brand">
+              {loadingMore
+                ? `Loading… ${orders.length.toLocaleString('en-US')}`
+                : narrowed
+                  ? `Within the latest ${orders.length.toLocaleString('en-US')} — click for all`
+                  : `Showing the latest ${orders.length.toLocaleString('en-US')} — click for all`}
+            </p>
+          )}
+        </button>
         <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-brand-ink tabular-nums">{stats.books.toLocaleString('en-US')}</p>
           <p className="text-xs text-dash-mute2 mt-1" title="Every book in orders that were not cancelled">Books ordered</p>
