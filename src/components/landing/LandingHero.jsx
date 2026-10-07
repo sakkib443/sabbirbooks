@@ -73,11 +73,10 @@ const HANDOVER_PHOTOS = [
 // face, short enough that all four are seen while the band is on screen.
 const SLIDE_MS = 4500;
 
-// The phone strip at the top of the hero moves faster and shows two at once:
-// it is the first thing on the screen and has a visitor's attention for a few
-// seconds at most.
+// The phone strip at the top of the hero moves faster than the band's slow
+// fade: it is the first thing on the screen and has a visitor's attention for
+// a few seconds at most.
 const STRIP_MS = 2000;
-const STRIP_VISIBLE = 2;
 
 const T = {
   bn: {
@@ -540,38 +539,56 @@ function HeroVideo({ book }) {
  * Not `priority` — the cover above wins the first bytes; this loads after.
  */
 /**
- * The same photographs on a phone: two at a time, sliding, at the very top.
+ * The same photographs on a phone: one at a time, sliding, at the very top.
  *
  * A phone reads this page as one column, and the shop wants a visitor who
  * arrives from a Facebook ad to see the book in people's hands before
- * anything else — before the headline, before the video. Two at a time,
- * because one portrait photograph at full phone width is most of a screen
- * spent on one picture.
+ * anything else — before the headline, before the video.
  *
- * It slides rather than fades: side by side, a fade would be two pictures
- * dissolving into two others at once, which reads as a glitch. The window
- * moves one photo at a time and starts over at the end — three positions for
- * four photographs, so every one of them comes round.
+ * It goes ONE WAY, for ever. The track carries a copy of the last photograph
+ * before the first and a copy of the first after the last, so there is always
+ * another picture waiting on the side the motion is heading for; when the
+ * slide lands on a copy, the track jumps to the real one with the animation
+ * off, which nothing can see because the two are the same picture in the same
+ * place. Without that the fourth photograph has to rewind through the other
+ * three to get back to the start, and a carousel that runs backwards every
+ * few seconds looks broken.
  *
  * Hidden from `lg` up, where the photographs have their own band at the foot
  * of the hero and the cover holds this slot.
  */
 function HandoverStrip() {
   const { isBengali } = useLanguage();
-  // The positions the window can take: [1,2], [2,3], [3,4].
-  const steps = Math.max(1, HANDOVER_PHOTOS.length - STRIP_VISIBLE + 1);
-  const [at, setAt] = useState(0);
+
+  // [copy of the last, …the real four…, copy of the first] — the real ones
+  // live at 1…LAST, and the copies at either end are only ever passed through.
+  const track = [
+    HANDOVER_PHOTOS[HANDOVER_PHOTOS.length - 1],
+    ...HANDOVER_PHOTOS,
+    HANDOVER_PHOTOS[0],
+  ];
+  const FIRST = 1;
+  const LAST = HANDOVER_PHOTOS.length;
+
+  const [slide, setSlide] = useState({ at: FIRST, animate: true });
   const [paused, setPaused] = useState(false);
+
+  const step = useCallback((delta) => setSlide((s) => ({ at: s.at + delta, animate: true })), []);
 
   useEffect(() => {
     if (paused) return undefined;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     if (still) return undefined;
-    const id = setInterval(() => setAt((i) => (i + 1) % steps), STRIP_MS);
+    const id = setInterval(() => step(1), STRIP_MS);
     return () => clearInterval(id);
-  }, [paused, steps]);
+  }, [paused, step]);
 
-  const go = useCallback((delta) => setAt((i) => (i + delta + steps) % steps), [steps]);
+  /** Landed on a copy: stand on the real one instead, without moving. */
+  const onSettled = (e) => {
+    if (e.target !== e.currentTarget) return;
+    if (slide.at > LAST) setSlide({ at: FIRST, animate: false });
+    else if (slide.at < FIRST) setSlide({ at: LAST, animate: false });
+  };
 
   const arrow =
     'absolute top-1/2 z-10 -translate-y-1/2 rounded-full bg-card/90 p-2 text-foreground shadow-card backdrop-blur transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
@@ -587,17 +604,23 @@ function HandoverStrip() {
     >
       <div className="overflow-hidden">
         <div
-          className="flex transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${at * (100 / STRIP_VISIBLE)}%)` }}
+          className="flex"
+          style={{
+            transform: `translateX(-${slide.at * 100}%)`,
+            transition: slide.animate ? 'transform 500ms ease-out' : 'none',
+          }}
+          onTransitionEnd={onSettled}
         >
-          {HANDOVER_PHOTOS.map((photo) => (
-            <div key={photo.src} className="w-1/2 shrink-0 px-1">
-              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface-soft">
+          {track.map((photo, i) => (
+            // Keyed by position, not by source: two of these are copies of
+            // another slide and would collide on it.
+            <div key={i} className="w-full shrink-0">
+              <div className="relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-border bg-surface-soft">
                 <Image
                   src={photo.src}
                   alt={isBengali ? photo.bn : photo.en}
                   fill
-                  sizes="50vw"
+                  sizes="280px"
                   className="object-cover object-center"
                 />
               </div>
@@ -608,7 +631,7 @@ function HandoverStrip() {
 
       <button
         type="button"
-        onClick={() => go(-1)}
+        onClick={() => step(-1)}
         aria-label={isBengali ? 'আগের ছবি' : 'Previous photo'}
         className={`${arrow} left-1`}
       >
@@ -616,7 +639,7 @@ function HandoverStrip() {
       </button>
       <button
         type="button"
-        onClick={() => go(1)}
+        onClick={() => step(1)}
         aria-label={isBengali ? 'পরের ছবি' : 'Next photo'}
         className={`${arrow} right-1 rotate-180`}
       >
