@@ -52,6 +52,12 @@ const HANDOVER_PHOTOS = [
     bn: 'ম্যাজিক ভাইভা অ্যানাটমি বইটি হাতে তুলে দেওয়া হচ্ছে',
     en: 'The Magic Viva Anatomy book being handed over',
   },
+  // Second by the shop's choice: it was last, and they wanted it seen early.
+  {
+    src: '/hero-handover-4.jpg',
+    bn: 'ডিএমসি স্কুলে বইটি হাতে দুজন শিক্ষার্থী',
+    en: 'Two students holding the book at DMC School',
+  },
   {
     src: '/hero-handover-2.jpg',
     bn: 'লেখক একজন শিক্ষকের হাতে ম্যাজিক ভাইভা অ্যানাটমি বইটি তুলে দিচ্ছেন',
@@ -61,11 +67,6 @@ const HANDOVER_PHOTOS = [
     src: '/hero-handover-3.jpg',
     bn: 'অ্যানাটমি ল্যাবে বইটি হাতে দুজন — পাশে কঙ্কাল ও হাড়ের নমুনা',
     en: 'The book held in an anatomy lab, beside a skeleton and bone specimens',
-  },
-  {
-    src: '/hero-handover-4.jpg',
-    bn: 'ডিএমসি স্কুলে বইটি হাতে দুজন শিক্ষার্থী',
-    en: 'Two students holding the book at DMC School',
   },
 ];
 
