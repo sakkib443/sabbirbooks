@@ -37,8 +37,12 @@ export function collegeRateApplies(
 /** The delivery charge before any free-delivery coupon, and the rule that set it. */
 export function quoteDelivery(opts: {
   isPrinted: boolean;
-  /** Settings.deliveryCharge, from checkout-options. */
+  /** Settings.deliveryCharge, from checkout-options — the ONE-book rate. */
   standard: number;
+  /** Settings.deliveryPerExtraBook: what each copy after the first adds. */
+  perExtraBook: number;
+  /** Printed copies in the order. */
+  copies: number;
   codExtra: number;
   isCod: boolean;
   /** Settings.freeDeliveryAbove; 0 = off. */
@@ -53,12 +57,19 @@ export function quoteDelivery(opts: {
   if (opts.freeAbove > 0 && opts.productTotal >= opts.freeAbove) return { charge: 0, rule: "free-above" };
 
   const codExtra = opts.isCod ? Math.max(0, opts.codExtra || 0) : 0;
+  // The quoted rate carries one book; each one after that is weight the
+  // courier charges for. Rides on a college's rate too, but never turns a
+  // free delivery into a paid one.
+  const weight = Math.max(0, Math.round(opts.copies || 1) - 1) * Math.max(0, opts.perExtraBook || 0);
 
   if (collegeRateApplies(opts.college, opts.district, opts.upazila)) {
     const rate = Math.max(0, Math.round(Number(opts.college!.deliveryCharge)));
-    // Free means free, whichever way the buyer pays.
-    return { charge: rate === 0 ? 0 : rate + codExtra, rule: "college" };
+    // Free means free, whichever way the buyer pays and however many they take.
+    return { charge: rate === 0 ? 0 : rate + weight + codExtra, rule: "college" };
   }
 
-  return { charge: Math.max(0, Math.round((opts.standard || 0) + codExtra)), rule: "standard" };
+  return {
+    charge: Math.max(0, Math.round((opts.standard || 0) + weight + codExtra)),
+    rule: "standard",
+  };
 }

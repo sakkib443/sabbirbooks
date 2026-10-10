@@ -48,7 +48,12 @@ export default function DeliveryChargesPage() {
   const [error, setError] = useState('');
 
   // ── The standard charge ──────────────────────────────────────────────────
-  const [general, setGeneral] = useState({ deliveryCharge: '', codExtraCharge: '', freeDeliveryAbove: '' });
+  const [general, setGeneral] = useState({
+    deliveryCharge: '',
+    deliveryPerExtraBook: '',
+    codExtraCharge: '',
+    freeDeliveryAbove: '',
+  });
   const [savedGeneral, setSavedGeneral] = useState(null);
   const [savingGeneral, setSavingGeneral] = useState(false);
 
@@ -72,6 +77,7 @@ export default function DeliveryChargesPage() {
       const s = settingsJson?.data || {};
       const g = {
         deliveryCharge: String(s.deliveryCharge ?? 120),
+        deliveryPerExtraBook: String(s.deliveryPerExtraBook ?? 20),
         codExtraCharge: String(s.codExtraCharge ?? 0),
         freeDeliveryAbove: String(s.freeDeliveryAbove ?? 0),
       };
@@ -108,7 +114,7 @@ export default function DeliveryChargesPage() {
     }
     setSavingGeneral(true);
     try {
-      // Only these three fields — never the whole settings document, so this
+      // Only these four fields — never the whole settings document, so this
       // screen cannot overwrite anything the Settings page owns.
       const res = await fetch(`${API}/settings`, {
         method: 'PATCH',
@@ -119,6 +125,7 @@ export default function DeliveryChargesPage() {
       if (!res.ok || json.success === false) throw new Error(json.message || 'সেভ হয়নি');
       const g = {
         deliveryCharge: String(values.deliveryCharge),
+        deliveryPerExtraBook: String(values.deliveryPerExtraBook),
         codExtraCharge: String(values.codExtraCharge),
         freeDeliveryAbove: String(values.freeDeliveryAbove),
       };
@@ -234,12 +241,18 @@ export default function DeliveryChargesPage() {
       <div className="bg-dash-card rounded-xl border border-dash-line p-5 sm:p-6">
         <h2 className="text-lg font-semibold text-dash-ink2">সাধারণ চার্জ</h2>
         <p className="text-sm text-dash-mute mt-1 mb-4">
-          যেকোনো অর্ডারে এটাই লাগে, যদি না নিচের কোনো কলেজের বিশেষ চার্জ প্রযোজ্য হয়। অর্ডার করার সময় যে চার্জ ছিল সেটাই
-          ওই অর্ডারে থাকে — পরে বদলালে পুরোনো অর্ডার বদলায় না।
+          যেকোনো অর্ডারে এটাই লাগে, যদি না নিচের কোনো কলেজের বিশেষ চার্জ প্রযোজ্য হয়। একাধিক বই হলে প্রথমটার পর
+          প্রতিটি বইয়ের জন্য বাড়তি চার্জ যোগ হয় — কলেজের নিজস্ব চার্জের সাথেও, তবে যেখানে ডেলিভারি ফ্রি সেখানে ফ্রিই
+          থাকে। অর্ডার করার সময় যে চার্জ ছিল সেটাই ওই অর্ডারে থাকে — পরে বদলালে পুরোনো অর্ডার বদলায় না।
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { key: 'deliveryCharge', label: 'সাধারণ ডেলিভারি চার্জ (৳)', hint: 'সারা দেশে' },
+            { key: 'deliveryCharge', label: '১ বইয়ের ডেলিভারি চার্জ (৳)', hint: 'সারা দেশে, একটি বইয়ের জন্য' },
+            {
+              key: 'deliveryPerExtraBook',
+              label: 'বাড়তি প্রতি বইয়ে (৳)',
+              hint: '২ বই হলে চার্জ + এটা, ৩ বই হলে + দুইবার। 0 = বাড়ে না',
+            },
             { key: 'codExtraCharge', label: 'ক্যাশ অন ডেলিভারিতে বাড়তি (৳)', hint: '0 = বাড়তি নেই' },
             { key: 'freeDeliveryAbove', label: 'এর বেশি অর্ডারে ফ্রি ডেলিভারি (৳)', hint: '0 = কখনো না' },
           ].map((f) => (
