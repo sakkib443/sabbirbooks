@@ -13,6 +13,20 @@ import {
   FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey, FiUnlock, FiTruck,
 } from 'react-icons/fi';
 
+/*
+ * Whole sections one role never sees, whatever its capabilities say.
+ *
+ * The shop's manager works on books and the orders going out now; the course
+ * side of the business is not theirs. That cannot be said in capabilities —
+ * `content.write` covers a book's QR topics and a course's lessons alike, and
+ * splitting it would mean a new capability threaded through every course
+ * route for one role's menu. So this one group is hidden by role, and every
+ * other item on this sidebar is still decided by what the server granted.
+ */
+const HIDDEN_GROUPS_BY_ROLE = {
+  manager: ['Course Management'],
+};
+
 const AdminSidebar = () => {
   // Site name comes from admin settings, not a hardcoded string.
   const { name: brandName, initials: brandInitials } = useBrand();
@@ -236,8 +250,11 @@ const AdminSidebar = () => {
 
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[260px]';
 
-  // Capability-aware menu: drop what this account cannot do + any empty group.
+  // Capability-aware menu: drop what this account cannot do + any empty group,
+  // and the whole sections this role is not in the business of.
+  const hiddenGroups = HIDDEN_GROUPS_BY_ROLE[role] || [];
   const visibleGroups = menuGroups
+    .filter(g => !hiddenGroups.includes(g.label))
     .map(g => ({ ...g, items: filterByCaps(g.items) }))
     .filter(g => g.items.length > 0);
 
