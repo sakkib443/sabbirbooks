@@ -56,6 +56,16 @@ export default function AdminDashboard() {
   const [mode, setMode] = useDeliveryMode();
 
   const showOrderDashboard = can(getStoredUser(), 'orders.read');
+  /*
+   * A manager's dashboard is two days: yesterday and today.
+   *
+   * The API is what decides — every figure it sends this account is already
+   * narrowed to those two days, the ones that read "all time" included (see
+   * managerScope.ts). This flag only makes the page say so, and takes away a
+   * date picker that could not change anything.
+   */
+  const twoDayView = getStoredUser()?.role === 'manager';
+  const scopeWord = twoDayView ? 'yesterday & today' : 'all time';
 
   const fetchData = useCallback(async () => {
     if (!showOrderDashboard) { setLoading(false); return; }
@@ -159,7 +169,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* All-time money — the three numbers the shop actually runs on */}
+      {/* The money, over whatever this account is allowed to see: all of it
+          for an owner, yesterday and today for a manager. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MoneyCard
           icon={FiClock} tone="amber" loading={loading}
@@ -173,7 +184,7 @@ export default function AdminDashboard() {
           // every order, this one leaves cancelled ones out, because a
           // cancelled order sold nothing. Said out loud so the two reading
           // differently is not read as one of them being wrong.
-          note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, all time · cancelled not counted`}
+          note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, ${scopeWord} · cancelled not counted`}
         />
         <MoneyCard
           icon={FiDollarSign} tone="emerald" loading={loading}
@@ -188,16 +199,18 @@ export default function AdminDashboard() {
       </div>
 
       {/* The two things the totals fold together: the books, and the delivery. */}
-      <BooksAndDelivery bucket={t} loading={loading} scope="all time" />
+      <BooksAndDelivery bucket={t} loading={loading} scope={scopeWord} />
 
-      {/* Date range */}
-      <RangeBar
-        preset={preset} onPreset={applyPreset}
-        from={draft.from} to={draft.to}
-        onFrom={(v) => setDraft((d) => ({ ...d, from: v }))}
-        onTo={(v) => setDraft((d) => ({ ...d, to: v }))}
-        onApply={applyCustom}
-      />
+      {/* Date range — not for an account that only has two days to look at. */}
+      {!twoDayView && (
+        <RangeBar
+          preset={preset} onPreset={applyPreset}
+          from={draft.from} to={draft.to}
+          onFrom={(v) => setDraft((d) => ({ ...d, from: v }))}
+          onTo={(v) => setDraft((d) => ({ ...d, to: v }))}
+          onApply={applyCustom}
+        />
+      )}
 
       {/* The selected range, day by day, with its figures beside it.
           Two-thirds chart, one-third summary: the chart used to span the page

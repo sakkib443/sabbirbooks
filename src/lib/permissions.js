@@ -130,8 +130,10 @@ export const ROLE_DEFAULT_CAPABILITIES = {
   ],
   contentManager: ['content.write', 'records.delete'],
   mentor: ['content.write', 'records.delete', 'training.manage', 'analytics.read'],
-  // Adds and edits, but never deletes and never sees orders, sales or people.
-  manager: ['content.write', 'training.manage'],
+  // The shop-floor manager: books and today's orders. Adds and edits, never
+  // deletes, no course management, and the orders it sees are narrowed to
+  // three days by the server (see the API's managerScope.ts).
+  manager: ['content.write', 'orders.read', 'orders.write'],
   student: [],
   // Their dashboard is gated on owning the coupon, not on any capability.
   affiliate: [],

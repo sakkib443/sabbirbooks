@@ -145,6 +145,16 @@ const DATE_PRESETS = [
   { key: '7d', label: 'Last 7 days' },
 ];
 
+// The three a day-scoped manager is offered — the same three the API will
+// answer for. Anything else would be a button that comes back empty.
+const SCOPED_PRESETS = ['yesterday', 'today', 'tomorrow'];
+
+/** The window a shortcut covers, ready for the query. Null = every date. */
+const presetRange = (key) => {
+  const days = daysForPreset(key);
+  return days ? dayWindow(days.fromDay, days.toDay) : null;
+};
+
 /** The first and last date a shortcut covers, or null for all dates. */
 const daysForPreset = (key) => {
   const today = bdDate();
@@ -263,7 +273,7 @@ const matchesSearch = (o, q) => {
 };
 
 /** A select with its options counted: "Dhaka Medical College (12)". */
-function CountSelect({ value, onChange, allLabel, options, disabled, label }) {
+function CountSelect({ value, onChange, allLabel, options, disabled, label, onOpen }) {
   // A choice the reloaded orders no longer contain stays listed, at 0, so the
   // select never shows a filter other than the one actually applied.
   const shown = value && !options.some((o) => o.value === value) ? [{ value, count: 0 }, ...options] : options;
@@ -271,6 +281,9 @@ function CountSelect({ value, onChange, allLabel, options, disabled, label }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      // Opening the list is the moment its counts have to be true, so it is
+      // also the moment the screen fetches whatever it is still missing.
+      onFocus={onOpen}
       disabled={disabled}
       aria-label={label}
       className="w-full min-w-0 px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4 disabled:opacity-50"
@@ -460,8 +473,16 @@ export default function BookOrdersPage() {
   const [deliveryMode, setDeliveryMode] = useDeliveryMode();
   // Date filter: the shortcut in use, the exact window it resolved to (sent to
   // the API as instants), and the two date inputs.
-  const [datePreset, setDatePreset] = useState('all');
-  const [dateRange, setDateRange] = useState(null); // { from: Date, to: Date } | null
+  /*
+   * A manager sees three days of orders — yesterday, today and tomorrow.
+   *
+   * The server is what enforces that (the API narrows every request from this
+   * account, see managerScope.ts); this only keeps the screen honest, so the
+   * shortcuts on offer are the ones that will actually answer with something.
+   */
+  const dayScoped = getStoredUser()?.role === 'manager';
+  const [datePreset, setDatePreset] = useState(dayScoped ? 'today' : 'all');
+  const [dateRange, setDateRange] = useState(() => (dayScoped ? presetRange('today') : null)); // { from, to } | null
   const [dayFrom, setDayFrom] = useState('');
   const [dayTo, setDayTo] = useState('');
   // Every order matching the filters on the server, which can be more than loaded.
@@ -660,6 +681,21 @@ export default function BookOrdersPage() {
     if (allLoaded || loading || loadingMore) return;
     setWantAll(true);
     fetchOrders(statusFilter, dateRange, true);
+  };
+
+  /*
+   * Narrowing the list is the moment to stop holding only the recent ones.
+   *
+   * A college, an area or a search is matched HERE, against the orders the
+   * screen is holding — so with the most recent 200 loaded, a college with
+   * fifteen orders behind it showed one, or none, and the count beside its
+   * name in the list was that same partial number. Picking one now pulls the
+   * rest in first, and so does opening any of those lists, because a count
+   * that is about to be read has to be the real one.
+   */
+  const narrow = (apply) => (value) => {
+    apply(value);
+    loadEverything();
   };
   const pdfCount = keepForPdf(filtered).length;
   const pdfColleges = new Set(keepForPdf(filtered).map(collegeOf)).size;
@@ -1369,7 +1405,7 @@ export default function BookOrdersPage() {
         <div className="flex flex-col gap-3 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-1.5">
             <FiCalendar className="mr-1 text-dash-mute2" aria-hidden />
-            {DATE_PRESETS.map((p) => {
+            {(dayScoped ? DATE_PRESETS.filter((p) => SCOPED_PRESETS.includes(p.key)) : DATE_PRESETS).map((p) => {
               const days = daysForPreset(p.key);
               const live = !!days && days.fromDay === days.toDay && days.toDay === live_day;
               const on = datePreset === p.key;
@@ -1402,7 +1438,7 @@ export default function BookOrdersPage() {
               );
             })}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className={`flex flex-wrap items-center gap-2 ${dayScoped ? 'hidden' : ''}`}>
             <input
               type="date"
               value={dayFrom}
@@ -1472,25 +1508,28 @@ export default function BookOrdersPage() {
         <CountSelect
           label="Medical college"
           value={collegeFilter}
-          onChange={setCollegeFilter}
+          onChange={narrow(setCollegeFilter)}
+          onOpen={loadEverything}
           allLabel="All medical colleges"
           options={collegeOptions}
         />
         <CountSelect
           label="District"
           value={districtFilter}
-          onChange={(v) => {
+          onChange={narrow((v) => {
             setDistrictFilter(v);
             // An upazila belongs to one district; a new district starts over.
             setUpazilaFilter('');
-          }}
+          })}
+          onOpen={loadEverything}
           allLabel="All districts"
           options={districtOptions}
         />
         <CountSelect
           label="Upazila / thana"
           value={upazilaFilter}
-          onChange={setUpazilaFilter}
+          onChange={narrow(setUpazilaFilter)}
+          onOpen={loadEverything}
           allLabel={districtFilter ? 'All upazilas / thanas' : 'Upazila — pick a district first'}
           options={upazilaOptions}
           disabled={!districtFilter}
@@ -1599,7 +1638,12 @@ export default function BookOrdersPage() {
           <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dash-mute2" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              // Searching looks for one order, and the one being looked for is
+              // usually not among the most recent.
+              if (e.target.value.trim()) loadEverything();
+            }}
             placeholder="Search by order #, buyer, phone, email or book…"
             className="w-full pl-10 pr-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none"
           />
