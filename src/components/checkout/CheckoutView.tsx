@@ -427,6 +427,8 @@ export default function CheckoutView() {
   const deliveryQuote = quoteDelivery({
     isPrinted: Boolean(isPrinted) && !!options,
     standard: options?.deliveryCharge ?? 0,
+    perExtraBook: options?.deliveryPerExtraBook ?? 0,
+    copies: quantity,
     codExtra: options?.codExtraCharge || 0,
     isCod: effectivePayMode === "cod",
     freeAbove: options?.freeDeliveryAbove || 0,

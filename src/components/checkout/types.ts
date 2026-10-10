@@ -33,6 +33,8 @@ export interface CheckoutOptions {
   // The standard charge. A college can have its own rate — it arrives with the
   // college list (CollegeOption.deliveryCharge), not here.
   deliveryCharge: number;
+  /** What each printed copy after the first adds to the delivery charge. */
+  deliveryPerExtraBook?: number;
   codExtraCharge: number;
   freeDeliveryAbove: number;
   deliveryNote: string;
