@@ -115,27 +115,32 @@ export function DeliveryToggle({ mode, onChange }) {
  * The two figures the totals hide: how many books were sold and what they
  * sold for, and the delivery charge on its own — whichever mode is chosen.
  */
-export function BooksAndDelivery({ bucket, loading, scope }) {
+export function BooksAndDelivery({ bucket, loading, scope, hideMoney }) {
   const books = bucket?.books;
   const delivery = bucket?.delivery;
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className={`grid grid-cols-1 gap-3 ${hideMoney ? '' : 'sm:grid-cols-2'}`}>
       <MoneyCard
         icon={FiBook} tone="indigo" loading={loading}
         label={`Books sold · ${scope}`}
         value={booksLabel(bucket?.copies)}
         note={`in ${(bucket?.orders ?? 0).toLocaleString('en-US')} orders`}
+        // How many books, and nothing about what they were worth, for an
+        // account that may not see money.
         foot={
-          <MiniFigures
-            loading={loading}
-            items={[
-              { label: 'Book sales', value: tk(books?.value) },
-              { label: 'Earned', value: tk(books?.earned), tone: 'text-emerald-600' },
-              { label: 'Upcoming', value: tk(books?.upcoming) },
-            ]}
-          />
+          hideMoney ? null : (
+            <MiniFigures
+              loading={loading}
+              items={[
+                { label: 'Book sales', value: tk(books?.value) },
+                { label: 'Earned', value: tk(books?.earned), tone: 'text-emerald-600' },
+                { label: 'Upcoming', value: tk(books?.upcoming) },
+              ]}
+            />
+          )
         }
       />
+      {hideMoney ? null : (
       <MoneyCard
         icon={FiTruck} tone="sky" loading={loading}
         label={`Delivery charges · ${scope}`}
@@ -151,6 +156,7 @@ export function BooksAndDelivery({ bucket, loading, scope }) {
           />
         }
       />
+      )}
     </div>
   );
 }
@@ -525,7 +531,7 @@ export function MetricToggle({ metric, onChange }) {
  * is in hand — with the two things the row never said: the average order, and
  * the day the shop sold most.
  */
-export function RangeSummary({ range, mode, loading }) {
+export function RangeSummary({ range, mode, loading, hideMoney }) {
   const m = moneyIn(range, mode);
   const orders = range?.orders ?? 0;
   const copies = range?.copies ?? 0;
@@ -567,16 +573,20 @@ export function RangeSummary({ range, mode, loading }) {
             <span className="pb-0.5 text-xs text-dash-mute">orders · {booksLabel(copies)}</span>
           </div>
 
-          <div className="mt-2 divide-y divide-dash-line-soft">
-            <Row label="Sold" value={tk(m.value)} />
-            <Row label="Earned" value={tk(m.earned)} tone="text-emerald-600" />
-            <Row label="Still to collect" value={tk(Math.max(0, m.value - m.earned))} tone="text-amber-600" />
-            <Row label="Delivery charge" value={tk(range?.delivery?.value)} />
-            <Row label="Average order" value={orders ? tk(m.value / orders) : '—'} />
-          </div>
+          {/* Every row here is money, so an account that may not see it gets
+              the count above and the best day below, and nothing between. */}
+          {!hideMoney && (
+            <div className="mt-2 divide-y divide-dash-line-soft">
+              <Row label="Sold" value={tk(m.value)} />
+              <Row label="Earned" value={tk(m.earned)} tone="text-emerald-600" />
+              <Row label="Still to collect" value={tk(Math.max(0, m.value - m.earned))} tone="text-amber-600" />
+              <Row label="Delivery charge" value={tk(range?.delivery?.value)} />
+              <Row label="Average order" value={orders ? tk(m.value / orders) : '—'} />
+            </div>
+          )}
 
           {/* How much of what was sold is actually in hand. */}
-          <div className="mt-2">
+          <div className={`mt-2 ${hideMoney ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between text-[11px] text-dash-mute">
               <span>Collected</span>
               <span className="font-semibold tabular-nums text-dash-ink3">{inHand}%</span>
@@ -591,7 +601,9 @@ export function RangeSummary({ range, mode, loading }) {
             <div className="mt-2.5 rounded-lg bg-dash-soft px-3 py-1.5 text-xs">
               <span className="text-dash-mute">Best day · </span>
               <span className="font-semibold text-dash-ink3">{fmtDay(best.date)}</span>
-              <span className="text-dash-mute"> — {best.orders} orders, {tk(bestValue)}</span>
+              <span className="text-dash-mute">
+                {' '}— {best.orders} orders{hideMoney ? '' : `, ${tk(bestValue)}`}
+              </span>
             </div>
           )}
         </>
