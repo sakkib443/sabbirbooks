@@ -76,6 +76,11 @@ const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
 const GRID_COLS =
   'grid-cols-[32px_30px_120px_minmax(116px,1.2fr)_minmax(96px,1fr)_minmax(104px,1fr)_92px_84px_128px_54px_28px]';
 
+// The same table without the Total column, for an account that may not see
+// money. A column of blanks would be worse than no column.
+const GRID_COLS_NO_MONEY =
+  'grid-cols-[32px_30px_120px_minmax(116px,1.2fr)_minmax(96px,1fr)_minmax(104px,1fr)_84px_128px_54px_28px]';
+
 // Which books, as one short line: "MAGIC VIVA ANATOMY ×2 · PHYSIOLOGY ×1".
 const titlesOf = (o) =>
   (o?.items || []).map((it) => `${it.title} ×${Number(it.quantity) || 1}`).join(' · ');
@@ -481,6 +486,15 @@ export default function BookOrdersPage() {
    * shortcuts on offer are the ones that will actually answer with something.
    */
   const dayScoped = getStoredUser()?.role === 'manager';
+  /*
+   * And the same account sees no money at all — not a taka.
+   *
+   * The server has already blanked every figure it sends this account (see
+   * managerScope.ts), so this is about not drawing empty rows and columns
+   * where the amounts used to be.
+   */
+  const moneyBlind = dayScoped;
+  const cols = moneyBlind ? GRID_COLS_NO_MONEY : GRID_COLS;
   const [datePreset, setDatePreset] = useState(dayScoped ? 'today' : 'all');
   const [dateRange, setDateRange] = useState(() => (dayScoped ? presetRange('today') : null)); // { from, to } | null
   const [dayFrom, setDayFrom] = useState('');
@@ -784,7 +798,7 @@ export default function BookOrdersPage() {
       showToast(
         'success',
         status === 'delivered' && isCod(order)
-          ? `Delivered — ${bdt(order.total)} recorded as paid`
+          ? (moneyBlind ? 'Delivered — recorded as paid' : `Delivered — ${bdt(order.total)} recorded as paid`)
           : `Order marked as ${status}`
       );
     } catch (err) {
@@ -1384,7 +1398,7 @@ export default function BookOrdersPage() {
           <p className="text-dash-mute text-sm">Track and fulfill customer book orders.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start">
-          <DeliveryToggle mode={deliveryMode} onChange={setDeliveryMode} />
+          {!moneyBlind && <DeliveryToggle mode={deliveryMode} onChange={setDeliveryMode} />}
           <button
             onClick={() => fetchOrders()}
             className="flex items-center gap-2 px-3.5 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
@@ -1568,7 +1582,7 @@ export default function BookOrdersPage() {
           not for the whole load. Picking Cumilla Medical College makes these
           six cards Cumilla's numbers, which is the only reading that matches
           the list they sit over. */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className={`grid grid-cols-2 gap-4 md:grid-cols-3 ${moneyBlind ? 'xl:grid-cols-4' : 'xl:grid-cols-6'}`}>
         {/* The one card that knows more than the list below it: the server
             counts every match whether or not it sends them, so this is the
             true total even while the screen holds the most recent 200. It is
@@ -1603,29 +1617,33 @@ export default function BookOrdersPage() {
           <p className="text-xl font-bold text-brand-ink tabular-nums">{stats.books.toLocaleString('en-US')}</p>
           <p className="text-xs text-dash-mute2 mt-1" title="Every book in orders that were not cancelled">Books ordered</p>
         </div>
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-emerald-600 tabular-nums">
-            {bdt(deliveryMode === 'without' ? stats.revenueBooks : stats.revenue)}
-          </p>
-          <p className="text-xs text-dash-mute2 mt-1">
-            Paid revenue · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
-          </p>
-        </div>
+        {!moneyBlind && (
+          <div className="bg-dash-card rounded-xl border border-dash-line p-4">
+            <p className="text-xl font-bold text-emerald-600 tabular-nums">
+              {bdt(deliveryMode === 'without' ? stats.revenueBooks : stats.revenue)}
+            </p>
+            <p className="text-xs text-dash-mute2 mt-1">
+              Paid revenue · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
+            </p>
+          </div>
+        )}
         <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
           <p className="text-xs text-dash-mute2 mt-1">Awaiting confirmation</p>
         </div>
-        <div
-          className="bg-dash-card rounded-xl border border-dash-line p-4"
-          title={`The couriers collect ${bdt(stats.codOutstanding)}, delivery charge included`}
-        >
-          <p className="text-xl font-bold text-orange-600 tabular-nums">
-            {bdt(deliveryMode === 'without' ? stats.codOutstandingBooks : stats.codOutstanding)}
-          </p>
-          <p className="text-xs text-dash-mute2 mt-1">
-            COD to collect · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
-          </p>
-        </div>
+        {!moneyBlind && (
+          <div
+            className="bg-dash-card rounded-xl border border-dash-line p-4"
+            title={`The couriers collect ${bdt(stats.codOutstanding)}, delivery charge included`}
+          >
+            <p className="text-xl font-bold text-orange-600 tabular-nums">
+              {bdt(deliveryMode === 'without' ? stats.codOutstandingBooks : stats.codOutstanding)}
+            </p>
+            <p className="text-xs text-dash-mute2 mt-1">
+              COD to collect · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
+            </p>
+          </div>
+        )}
         <div className="bg-dash-card rounded-xl border border-dash-line p-4">
           <p className="text-xl font-bold text-sky-600">{stats.delivered}</p>
           <p className="text-xs text-dash-mute2 mt-1">Delivered</p>
@@ -1922,7 +1940,7 @@ export default function BookOrdersPage() {
         <div className="space-y-2">
           {/* Column headers — desktop only; the mobile card labels its own
               fields inline, where a header row has nothing to align to. */}
-          <div className={`hidden xl:grid ${GRID_COLS} items-center gap-3 rounded-lg bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2`}>
+          <div className={`hidden xl:grid ${cols} items-center gap-3 rounded-lg bg-dash-soft px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-dash-mute2`}>
             <span />
             {/* Counts the list as it stands, so a date filter starts again at 1
                 — the same numbering the PDF of this list prints. */}
@@ -1931,7 +1949,7 @@ export default function BookOrdersPage() {
             <span>Buyer &amp; phone</span>
             <span>Medical college</span>
             <span>Books</span>
-            <span className="text-right">Total</span>
+            {!moneyBlind && <span className="text-right">Total</span>}
             <span className="text-center">Payment</span>
             <span>Status</span>
             <span className="text-center">Note</span>
@@ -1955,7 +1973,7 @@ export default function BookOrdersPage() {
                     is unreadable. The checkbox and the status select sit OUTSIDE
                     the expand button: nesting a control inside a button is
                     invalid, and every tick would also toggle the panel. */}
-                <div className={`hidden xl:grid ${GRID_COLS} items-center gap-3 px-3 py-2.5`}>
+                <div className={`hidden xl:grid ${cols} items-center gap-3 px-3 py-2.5`}>
                   <label className="flex cursor-pointer items-center justify-center">
                     <input
                       type="checkbox"
@@ -2020,10 +2038,12 @@ export default function BookOrdersPage() {
                     </span>
                   </button>
 
-                  <div className="text-right">
-                    <span className="block font-bold text-dash-ink2">{bdt(o.total)}</span>
-                    {isCod(o) && <span className="text-[10px] font-bold text-amber-600">COD</span>}
-                  </div>
+                  {!moneyBlind && (
+                    <div className="text-right">
+                      <span className="block font-bold text-dash-ink2">{bdt(o.total)}</span>
+                      {isCod(o) && <span className="text-[10px] font-bold text-amber-600">COD</span>}
+                    </div>
+                  )}
 
                   <div className="text-center">
                     <span className={`inline-block rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
@@ -2101,7 +2121,7 @@ export default function BookOrdersPage() {
                       </span>
                       <span className="block truncate text-xs text-dash-mute2">{buyerOf(o).college || '—'}</span>
                       <span className="mt-1 flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-dash-ink2">{bdt(o.total)}</span>
+                        {!moneyBlind && <span className="font-bold text-dash-ink2">{bdt(o.total)}</span>}
                         <BooksChip order={o} />
                         <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${PAY_STYLES[o.payment?.status] || PAY_STYLES.pending}`}>
                           {o.payment?.status || 'pending'}
@@ -2259,7 +2279,7 @@ export default function BookOrdersPage() {
                           />
                         )}
 
-                        {/* Books and money. This was a full-width strip above the
+                        {/* Books — and, for anyone allowed to see it, money. This was a full-width strip above the
                             three columns; the payment column is the short one, so
                             it sits in the space under it and the whole panel gets
                             one row shorter. */}
@@ -2273,13 +2293,17 @@ export default function BookOrdersPage() {
                                   <span className="ml-1.5 text-[11px] capitalize text-dash-mute2">{it.format}</span>
                                 </span>
                                 <span className="flex justify-between tabular-nums text-xs text-dash-mute2">
-                                  <span><span className="font-bold text-dash-ink2">×{qty}</span> · {bdt(it.price)}</span>
-                                  <span className="font-semibold text-dash-ink3">{bdt(it.price * qty)}</span>
+                                  <span className="font-bold text-dash-ink2">×{qty}</span>
+                                  {!moneyBlind && (
+                                    <span className="font-semibold text-dash-ink3">
+                                      {bdt(it.price)} · {bdt(it.price * qty)}
+                                    </span>
+                                  )}
                                 </span>
                               </div>
                             );
                           })}
-                          <div className="space-y-0.5 border-t border-dash-line bg-dash-soft/60 px-2.5 py-1.5 text-xs tabular-nums">
+                          <div className={`space-y-0.5 border-t border-dash-line bg-dash-soft/60 px-2.5 py-1.5 text-xs tabular-nums ${moneyBlind ? 'hidden' : ''}`}>
                             <p className="flex justify-between text-dash-mute2">Subtotal <span className="text-dash-ink4">{bdt(o.subtotal)}</span></p>
                             {o.discount > 0 && (
                               <p className="flex justify-between text-dash-mute2">Discount <span className="text-emerald-600">−{bdt(o.discount)}</span></p>
@@ -2388,13 +2412,13 @@ export default function BookOrdersPage() {
                             <>
                               কল করে অর্ডারটি নিশ্চিত করে <b>Confirm order</b> চাপুন — তখনই স্টক
                               কমবে আর ক্রেতা বইয়ের QR কনটেন্ট দেখতে পাবে। বই পৌঁছে দেওয়ার পর{' '}
-                              <b>delivered</b> চাপলে <b>{bdt(o.total)}</b> পেমেন্ট হিসেবে বসে যাবে।
+                              <b>delivered</b> চাপলে {moneyBlind ? 'টাকাটা' : <b>{bdt(o.total)}</b>} পেমেন্ট হিসেবে বসে যাবে।
                             </>
                           ) : o.payment?.status === 'paid' ? (
-                            <>ডেলিভারিতে <b>{bdt(o.total)}</b> নেওয়া হয়েছে।</>
+                            <>ডেলিভারিতে {moneyBlind ? 'টাকা' : <b>{bdt(o.total)}</b>} নেওয়া হয়েছে।</>
                           ) : (
                             <>
-                              কুরিয়ার ক্রেতার কাছ থেকে <b>{bdt(o.total)}</b> নেবে। বই পৌঁছে গেলে{' '}
+                              কুরিয়ার ক্রেতার কাছ থেকে {moneyBlind ? 'টাকা' : <b>{bdt(o.total)}</b>} নেবে। বই পৌঁছে গেলে{' '}
                               <b>delivered</b> চাপুন — তখনই টাকা বুঝে পাওয়া হিসেবে লেখা হবে।
                             </>
                           )}

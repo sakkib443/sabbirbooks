@@ -66,6 +66,16 @@ export default function AdminDashboard() {
    */
   const twoDayView = getStoredUser()?.role === 'manager';
   const scopeWord = twoDayView ? 'yesterday & today' : 'all time';
+  /*
+   * And not a taka of it.
+   *
+   * What the shop takes is not the manager's business, so every figure in
+   * money comes off this page for them — the API has already blanked them
+   * (managerScope.ts), and this is about not leaving ৳0 where an amount used
+   * to be. What is left is the work: how many orders, how many books, how
+   * many still waiting to be confirmed.
+   */
+  const moneyBlind = twoDayView;
 
   const fetchData = useCallback(async () => {
     if (!showOrderDashboard) { setLoading(false); return; }
@@ -156,7 +166,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <DeliveryToggle mode={mode} onChange={setMode} />
+          {!moneyBlind && <DeliveryToggle mode={mode} onChange={setMode} />}
           <button onClick={fetchData} className="flex items-center gap-1.5 rounded-lg border border-dash-line bg-dash-soft px-3 py-1.5 text-xs font-medium text-dash-ink4 transition hover:bg-dash-soft2">
             <FiRefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Reload
           </button>
@@ -177,6 +187,7 @@ export default function AdminDashboard() {
           label="New Orders" value={(stats?.newOrders ?? 0).toLocaleString('en-US')}
           note="Awaiting your confirmation" href="/dashboard/admin/book-orders"
         />
+        {!moneyBlind && (
         <MoneyCard
           icon={FiPackage} tone="indigo" loading={loading}
           label="Total Value" value={tk(tm.value)}
@@ -186,20 +197,32 @@ export default function AdminDashboard() {
           // differently is not read as one of them being wrong.
           note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, ${scopeWord} · cancelled not counted`}
         />
+        )}
+        {!moneyBlind && (
         <MoneyCard
           icon={FiDollarSign} tone="emerald" loading={loading}
           label="Total Earned" value={tk(tm.earned)}
           note="Delivered + paid online"
         />
+        )}
+        {!moneyBlind && (
         <MoneyCard
           icon={FiTruck} tone="sky" loading={loading}
           label="Upcoming" value={tk(tm.upcoming)}
           note="Sold, not yet collected"
         />
+        )}
+        {moneyBlind && (
+          <MoneyCard
+            icon={FiPackage} tone="indigo" loading={loading}
+            label="Orders" value={(t?.orders ?? 0).toLocaleString('en-US')}
+            note={`${scopeWord} · cancelled not counted`}
+          />
+        )}
       </div>
 
       {/* The two things the totals fold together: the books, and the delivery. */}
-      <BooksAndDelivery bucket={t} loading={loading} scope={scopeWord} />
+      <BooksAndDelivery bucket={t} loading={loading} scope={scopeWord} hideMoney={moneyBlind} />
 
       {/* Date range — not for an account that only has two days to look at. */}
       {!twoDayView && (
@@ -222,7 +245,7 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-1 pt-4">
             <div>
               <h2 className="text-base font-semibold text-dash-ink2 outfit-semibold">
-                {metric === 'orders' ? 'Daily Orders' : 'Daily Revenue'}
+                {moneyBlind || metric === 'orders' ? 'Daily Orders' : 'Daily Revenue'}
               </h2>
               <p className="mt-0.5 text-xs text-dash-mute2">
                 {r
@@ -234,16 +257,18 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {metric === 'revenue' && <ChartLegend />}
-              <MetricToggle metric={metric} onChange={setMetric} />
+              {/* Orders or revenue — one of those is money, so a money-blind
+                  account is given the orders chart and no switch. */}
+              {!moneyBlind && <MetricToggle metric={metric} onChange={setMetric} />}
             </div>
           </div>
           {/* Centred in whatever height the summary beside it sets, so a taller
               summary leaves even space around the chart, not a gap under it. */}
           <div className="flex flex-1 items-center px-2 pb-2">
-            <RevenueChart daily={r?.daily} loading={loading} mode={mode} metric={metric} height={250} />
+            <RevenueChart daily={r?.daily} loading={loading} mode={mode} metric={moneyBlind ? 'orders' : metric} height={250} />
           </div>
         </div>
-        <RangeSummary range={r} mode={mode} loading={loading} />
+        <RangeSummary range={r} mode={mode} loading={loading} hideMoney={moneyBlind} />
       </div>
 
       {/* Today + shortcuts */}
@@ -251,7 +276,11 @@ export default function AdminDashboard() {
         <MoneyCard
           icon={FiShoppingCart} tone="brand" loading={loading}
           label="Today's Orders" value={(stats?.today?.orders ?? 0).toLocaleString('en-US')}
-          note={`${booksLabel(stats?.today?.copies)} · ${tk(todayM.value)} sold · ${tk(todayM.earned)} earned`}
+          note={
+            moneyBlind
+              ? booksLabel(stats?.today?.copies)
+              : `${booksLabel(stats?.today?.copies)} · ${tk(todayM.value)} sold · ${tk(todayM.earned)} earned`
+          }
           // The same window the Book Orders screen calls Today, printed the
           // same way it prints it — because "Today" closed at noon, and an
           // order taken this afternoon is on tomorrow's list, not in here.
@@ -261,18 +290,22 @@ export default function AdminDashboard() {
             </p>
           }
         />
-        <MoneyCard
-          icon={FiTag} tone="indigo" loading={loading}
-          label="Coupon Sales" value={(stats?.coupons?.orders ?? 0).toLocaleString('en-US')}
-          note={`${tk(stats?.coupons?.discount)} discount given`}
-          href="/dashboard/admin/book-coupons/payouts"
-        />
-        <MoneyCard
-          icon={FiGift} tone="amber" loading={loading}
-          label="Owed to Coupon Owners" value={tk(stats?.coupons?.payout)}
-          note="See per-coupon payouts"
-          href="/dashboard/admin/book-coupons/payouts"
-        />
+        {!moneyBlind && (
+          <MoneyCard
+            icon={FiTag} tone="indigo" loading={loading}
+            label="Coupon Sales" value={(stats?.coupons?.orders ?? 0).toLocaleString('en-US')}
+            note={`${tk(stats?.coupons?.discount)} discount given`}
+            href="/dashboard/admin/book-coupons/payouts"
+          />
+        )}
+        {!moneyBlind && (
+          <MoneyCard
+            icon={FiGift} tone="amber" loading={loading}
+            label="Owed to Coupon Owners" value={tk(stats?.coupons?.payout)}
+            note="See per-coupon payouts"
+            href="/dashboard/admin/book-coupons/payouts"
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
