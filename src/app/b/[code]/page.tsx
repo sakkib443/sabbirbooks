@@ -27,7 +27,6 @@ import {
   LuTriangleAlert,
   LuTruck,
   LuVideo,
-  LuX,
 } from "react-icons/lu";
 import API_BASE_URL from "@/config/api";
 import AnswerStyles from "@/components/books/AnswerStyles";
@@ -35,26 +34,15 @@ import Lightbox from "@/components/books/Lightbox";
 import { priceBook, type BookOffers } from "@/lib/bookOffers";
 import { isVerticalVideo, toEmbedUrl } from "@/lib/videoEmbed";
 import { DEFAULT_VIDEO_NOTE } from "@/lib/videoNote";
-import dynamic from "next/dynamic";
 import {
   attachAnswerImageFallback,
   lightenAnswerHtml,
   onVariantError,
   variantUrl,
 } from "@/lib/mediaVariant";
-
-// The same page-by-page viewer the sample chapter uses. Loaded only when a
-// reader actually opens a PDF: pdf.js is heavy, and most readers never tap one.
-// It fetches a page at a time over HTTP range requests, so a twenty-page file
-// shows its first page in about a second instead of after the whole download.
-const PdfViewer = dynamic(() => import("@/components/shared/PdfViewer"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center">
-      <LuLoaderCircle className="w-6 h-6 animate-spin text-slate-500" />
-    </div>
-  ),
-});
+import { downloadLink, fileNameFor, isOurFile, isPdfAttachment, onThisSite } from "@/lib/answerFiles";
+// A PDF is shown the way the home page shows its sample — see AnswerPdf.
+import AnswerPdf from "@/components/books/AnswerPdf";
 
 type Video = {
   _id?: string;
@@ -71,42 +59,6 @@ type Attachment = {
   fileType: string;
   fileSize?: number;
 };
-
-const isPdfAttachment = (a: Attachment) =>
-  /\.pdf(\?|#|$)/i.test(a.fileUrl) || (a.fileType || "").toLowerCase() === "pdf";
-
-/** Uploaded answer files live behind this route; anything else is an outside link. */
-const isOurFile = (url: string) => /\/api\/book-content\/media\//.test(url);
-
-/**
- * The link that makes the phone SAVE a file instead of opening it.
- *
- * Opening it was the problem: Android Chrome shows a PDF in a tab only after
- * the whole file has arrived, so tapping "download" on a large answer PDF left
- * the reader on a blank grey page with no progress — and, if the signal
- * dropped, there for good. ?download=1 has the server send it as an attachment
- * (named after its title), which goes to the phone's download manager: a
- * progress bar in the notifications, carries on in the background, ends up in
- * Downloads. Kept same-site (path only) so the `download` attribute applies too.
- */
-function downloadLink(fileUrl: string, name: string): string {
-  if (!isOurFile(fileUrl)) return fileUrl;
-  try {
-    const u = new URL(fileUrl, "https://magicviva.com");
-    u.searchParams.set("download", "1");
-    if (name) u.searchParams.set("name", name);
-    return `${u.pathname}${u.search}`;
-  } catch {
-    return fileUrl;
-  }
-}
-
-/** The name the saved file gets, extension included. */
-function fileNameFor(a: Pick<Attachment, "title" | "fileUrl">): string {
-  const ext = (a.fileUrl.split("?")[0].match(/\.([a-z0-9]{2,5})$/i)?.[1] || "").toLowerCase();
-  const title = (a.title || "file").trim();
-  return ext && !title.toLowerCase().endsWith(`.${ext}`) ? `${title}.${ext}` : title;
-}
 
 type Question = {
   _id: string;
@@ -243,8 +195,6 @@ export default function BookTopicScanPage() {
     allowed: boolean;
   } | null>(null);
   const [loadingNext, setLoadingNext] = useState(false);
-  // A PDF opened inside the page rather than downloaded whole.
-  const [pdf, setPdf] = useState<{ url: string; title: string } | null>(null);
   // "Download all" — every PDF in this topic's questions, as one file.
   const [allPdfs, setAllPdfs] = useState<
     | { kind: "idle" }
@@ -301,7 +251,9 @@ export default function BookTopicScanPage() {
         return;
       }
 
-      setState({ kind: "ok", data: body.data });
+      // Every link to our own uploads made relative to this site: files from
+      // the first months still carry the old, now dead, server's address.
+      setState({ kind: "ok", data: onThisSite(body.data as ScanData) });
       setActiveIndex(0);
       setNextTopic(null);
     } catch {
@@ -600,30 +552,6 @@ export default function BookTopicScanPage() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-slate-200">
       <AnswerStyles dark />
-      {pdf && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#0f0f0f]">
-          <div className="flex items-center gap-2 border-b border-[#282828] px-4 py-3">
-            <LuFileText className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span className="flex-1 truncate text-sm text-slate-200">{pdf.title}</span>
-            <a
-              href={downloadLink(pdf.url, pdf.title)}
-              download={fileNameFor({ title: pdf.title, fileUrl: pdf.url })}
-              className="flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-emerald-400"
-            >
-              <LuDownload className="w-3.5 h-3.5" /> ডাউনলোড
-            </a>
-            <button
-              type="button"
-              onClick={() => setPdf(null)}
-              aria-label="বন্ধ করুন"
-              className="shrink-0 rounded-md p-1.5 text-slate-400 transition hover:text-white"
-            >
-              <LuX className="w-4 h-4" />
-            </button>
-          </div>
-          <PdfViewer url={pdf.url} className="flex-1 bg-[#161616]" />
-        </div>
-      )}
       {lightbox && (
         <Lightbox
           images={lightbox.images}
@@ -931,47 +859,35 @@ export default function BookTopicScanPage() {
                       <SectionLabel icon={<LuFileText className="w-3.5 h-3.5" />}>
                         ফাইল ({active.attachments.length})
                       </SectionLabel>
-                      {/* Two clear buttons per file. "দেখুন" opens a PDF right
-                          here, page by page — on mobile data a five-megabyte
-                          file took the better part of a minute before anything
-                          appeared when it was downloaded whole first.
-                          "ডাউনলোড" saves it to the phone (see downloadLink). */}
-                      <div className="space-y-2">
-                        {active.attachments.map((a, i) => {
-                          const isPdf = isPdfAttachment(a);
-                          const ours = isOurFile(a.fileUrl);
-                          return (
+                      {/* A PDF is shown right here, the way the home page shows
+                          its sample: the pages in a box, "বড় করে দেখুন" for
+                          full screen, "ডাউনলোড" to save it (see AnswerPdf).
+                          Any other file gets a download button. */}
+                      <div className="space-y-3">
+                        {active.attachments.map((a, i) =>
+                          isPdfAttachment(a) ? (
+                            <AnswerPdf key={a._id ?? i} title={a.title} url={a.fileUrl} />
+                          ) : (
                             <div
                               key={a._id ?? i}
-                              className="rounded-lg bg-[#1c1c1c] px-4 py-3"
+                              className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-[#1c1c1c] px-4 py-3"
                             >
-                              <div className="flex items-center gap-2">
+                              <span className="flex min-w-0 flex-1 basis-40 items-center gap-2 text-sm">
                                 <LuFileText className="w-4 h-4 text-emerald-400 shrink-0" />
-                                <span className="text-sm flex-1 min-w-0 break-words">{a.title}</span>
-                              </div>
-                              <div className="mt-2.5 flex gap-2">
-                                {isPdf && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setPdf({ url: a.fileUrl, title: a.title })}
-                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[#333] px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
-                                  >
-                                    <LuFileText className="w-3.5 h-3.5" /> দেখুন
-                                  </button>
-                                )}
-                                <a
-                                  href={downloadLink(a.fileUrl, a.title)}
-                                  {...(ours
-                                    ? { download: fileNameFor(a) }
-                                    : { target: "_blank", rel: "noopener noreferrer" })}
-                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-400"
-                                >
-                                  <LuDownload className="w-3.5 h-3.5" /> ডাউনলোড
-                                </a>
-                              </div>
+                                <span className="break-words">{a.title}</span>
+                              </span>
+                              <a
+                                href={downloadLink(a.fileUrl, a.title)}
+                                {...(isOurFile(a.fileUrl)
+                                  ? { download: fileNameFor(a) }
+                                  : { target: "_blank", rel: "noopener noreferrer" })}
+                                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-400 sm:w-auto"
+                              >
+                                <LuDownload className="w-3.5 h-3.5" /> ডাউনলোড
+                              </a>
                             </div>
-                          );
-                        })}
+                          )
+                        )}
                       </div>
                     </section>
                   )}
