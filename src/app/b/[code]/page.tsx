@@ -72,6 +72,42 @@ type Attachment = {
   fileSize?: number;
 };
 
+const isPdfAttachment = (a: Attachment) =>
+  /\.pdf(\?|#|$)/i.test(a.fileUrl) || (a.fileType || "").toLowerCase() === "pdf";
+
+/** Uploaded answer files live behind this route; anything else is an outside link. */
+const isOurFile = (url: string) => /\/api\/book-content\/media\//.test(url);
+
+/**
+ * The link that makes the phone SAVE a file instead of opening it.
+ *
+ * Opening it was the problem: Android Chrome shows a PDF in a tab only after
+ * the whole file has arrived, so tapping "download" on a large answer PDF left
+ * the reader on a blank grey page with no progress — and, if the signal
+ * dropped, there for good. ?download=1 has the server send it as an attachment
+ * (named after its title), which goes to the phone's download manager: a
+ * progress bar in the notifications, carries on in the background, ends up in
+ * Downloads. Kept same-site (path only) so the `download` attribute applies too.
+ */
+function downloadLink(fileUrl: string, name: string): string {
+  if (!isOurFile(fileUrl)) return fileUrl;
+  try {
+    const u = new URL(fileUrl, "https://magicviva.com");
+    u.searchParams.set("download", "1");
+    if (name) u.searchParams.set("name", name);
+    return `${u.pathname}${u.search}`;
+  } catch {
+    return fileUrl;
+  }
+}
+
+/** The name the saved file gets, extension included. */
+function fileNameFor(a: Pick<Attachment, "title" | "fileUrl">): string {
+  const ext = (a.fileUrl.split("?")[0].match(/\.([a-z0-9]{2,5})$/i)?.[1] || "").toLowerCase();
+  const title = (a.title || "file").trim();
+  return ext && !title.toLowerCase().endsWith(`.${ext}`) ? `${title}.${ext}` : title;
+}
+
 type Question = {
   _id: string;
   questionNo: string;
@@ -209,6 +245,13 @@ export default function BookTopicScanPage() {
   const [loadingNext, setLoadingNext] = useState(false);
   // A PDF opened inside the page rather than downloaded whole.
   const [pdf, setPdf] = useState<{ url: string; title: string } | null>(null);
+  // "Download all" — every PDF in this topic's questions, as one file.
+  const [allPdfs, setAllPdfs] = useState<
+    | { kind: "idle" }
+    | { kind: "busy" }
+    | { kind: "started"; count: number; skipped: string[] }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
   // The pictures inside an answer are swapped for their lighter copies in the
   // HTML itself; this ref is how each one gets its fallback (lib/mediaVariant).
   const answerRef = useRef<HTMLDivElement>(null);
@@ -220,6 +263,7 @@ export default function BookTopicScanPage() {
   const load = useCallback(async () => {
     if (!code) return;
     setState({ kind: "loading" });
+    setAllPdfs({ kind: "idle" });
 
     // No token is fine. A chapter the shop has marked FREE opens for anyone
     // holding the printed page, and only the server knows which chapter this QR
@@ -295,6 +339,33 @@ export default function BookTopicScanPage() {
       })
       .finally(() => setLoadingNext(false));
   }, [state, activeIndex, nextTopic, loadingNext]);
+
+  // Two steps: ask the server to get the merged PDF ready (the first reader of
+  // a topic waits a few seconds while it is built; everyone after gets it at
+  // once), then hand its link to the phone's download manager. Navigating to an
+  // attachment does not leave this page.
+  const downloadAllPdfs = async (topicId: string) => {
+    setAllPdfs({ kind: "busy" });
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    try {
+      const res = await fetch(`${API_BASE_URL}/book-content/topic-pdfs/${topicId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        router.replace(`/login?redirect=${encodeURIComponent(`/b/${code}`)}`);
+        return;
+      }
+      if (!res.ok || !body.success || !body.data?.url) {
+        setAllPdfs({ kind: "error", message: body.message || "ডাউনলোড শুরু করা গেল না — আবার চেষ্টা করুন" });
+        return;
+      }
+      window.location.href = body.data.url;
+      setAllPdfs({ kind: "started", count: body.data.count ?? 0, skipped: body.data.skipped ?? [] });
+    } catch {
+      setAllPdfs({ kind: "error", message: "নেটওয়ার্কে সমস্যা — আবার চেষ্টা করুন" });
+    }
+  };
 
   // ─── Loading ──────────────────────────────────────────────
   if (state.kind === "loading") {
@@ -519,6 +590,13 @@ export default function BookTopicScanPage() {
     .filter(Boolean)
     .join(" › ");
 
+  // Every PDF across the topic's questions (one file attached twice counts once).
+  const topicPdfCount = new Set(
+    questions.flatMap((q) =>
+      (q.attachments || []).filter(isPdfAttachment).map((a) => a.fileUrl.split("?")[0])
+    )
+  ).size;
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-slate-200">
       <AnswerStyles dark />
@@ -528,10 +606,9 @@ export default function BookTopicScanPage() {
             <LuFileText className="w-4 h-4 shrink-0 text-emerald-400" />
             <span className="flex-1 truncate text-sm text-slate-200">{pdf.title}</span>
             <a
-              href={pdf.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex shrink-0 items-center gap-1.5 rounded-md border border-[#333] px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-emerald-500/60 hover:text-emerald-400"
+              href={downloadLink(pdf.url, pdf.title)}
+              download={fileNameFor({ title: pdf.title, fileUrl: pdf.url })}
+              className="flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-emerald-400"
             >
               <LuDownload className="w-3.5 h-3.5" /> ডাউনলোড
             </a>
@@ -591,6 +668,51 @@ export default function BookTopicScanPage() {
       <div className="max-w-6xl mx-auto lg:flex lg:gap-6 lg:px-4 lg:py-6">
         {/* Content */}
         <main className="flex-1 px-4 py-5 lg:px-0 lg:py-0 min-w-0">
+          {/* First thing on the page, not buried under one question's files:
+              most readers want the topic's PDFs on their phone, all of them. */}
+          {topicPdfCount > 0 && (
+            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+              <button
+                type="button"
+                onClick={() => downloadAllPdfs(topic._id)}
+                disabled={allPdfs.kind === "busy"}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-70"
+              >
+                {allPdfs.kind === "busy" ? (
+                  <>
+                    <LuLoaderCircle className="h-4 w-4 animate-spin" /> PDF তৈরি হচ্ছে…
+                  </>
+                ) : (
+                  <>
+                    <LuDownload className="h-4 w-4" />
+                    {topicPdfCount > 1
+                      ? `এই টপিকের সব PDF একসাথে ডাউনলোড (${topicPdfCount}টা)`
+                      : "এই টপিকের PDF ডাউনলোড"}
+                  </>
+                )}
+              </button>
+              {allPdfs.kind === "idle" && topicPdfCount > 1 && (
+                <p className="mt-2 text-center text-xs text-slate-400">
+                  সব প্রশ্নের PDF মিলিয়ে একটা ফাইল — ফোনের Downloads-এ সেভ হবে
+                </p>
+              )}
+              {allPdfs.kind === "started" && (
+                <p className="mt-2 text-center text-xs text-emerald-300">
+                  ডাউনলোড শুরু হয়েছে — ফোনের নোটিফিকেশনে দেখুন।
+                </p>
+              )}
+              {allPdfs.kind === "started" && allPdfs.skipped.length > 0 && (
+                <p className="mt-1 text-center text-xs text-amber-300">
+                  এগুলো একসাথে করা যায়নি, নিচে প্রশ্নের ভিতর থেকে আলাদা ডাউনলোড করুন:{" "}
+                  {allPdfs.skipped.join(", ")}
+                </p>
+              )}
+              {allPdfs.kind === "error" && (
+                <p className="mt-2 text-center text-xs text-red-300">{allPdfs.message}</p>
+              )}
+            </div>
+          )}
+
           {questions.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-slate-400 text-sm">
@@ -809,39 +931,44 @@ export default function BookTopicScanPage() {
                       <SectionLabel icon={<LuFileText className="w-3.5 h-3.5" />}>
                         ফাইল ({active.attachments.length})
                       </SectionLabel>
-                      {/* A PDF opens here, page by page, instead of being
-                          downloaded whole first — on mobile data a five-megabyte
+                      {/* Two clear buttons per file. "দেখুন" opens a PDF right
+                          here, page by page — on mobile data a five-megabyte
                           file took the better part of a minute before anything
-                          appeared. The download is still one tap away. */}
+                          appeared when it was downloaded whole first.
+                          "ডাউনলোড" saves it to the phone (see downloadLink). */}
                       <div className="space-y-2">
                         {active.attachments.map((a, i) => {
-                          const isPdf =
-                            /\.pdf(\?|#|$)/i.test(a.fileUrl) || (a.fileType || "").toLowerCase() === "pdf";
+                          const isPdf = isPdfAttachment(a);
+                          const ours = isOurFile(a.fileUrl);
                           return (
                             <div
                               key={a._id ?? i}
-                              className="flex items-center gap-2 rounded-lg bg-[#1c1c1c] px-4 py-3"
+                              className="rounded-lg bg-[#1c1c1c] px-4 py-3"
                             >
-                              <LuFileText className="w-4 h-4 text-emerald-400 shrink-0" />
-                              <span className="text-sm truncate flex-1">{a.title}</span>
-                              {isPdf && (
-                                <button
-                                  type="button"
-                                  onClick={() => setPdf({ url: a.fileUrl, title: a.title })}
-                                  className="shrink-0 rounded-md border border-[#333] px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-emerald-500/60 hover:text-emerald-400"
+                              <div className="flex items-center gap-2">
+                                <LuFileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <span className="text-sm flex-1 min-w-0 break-words">{a.title}</span>
+                              </div>
+                              <div className="mt-2.5 flex gap-2">
+                                {isPdf && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPdf({ url: a.fileUrl, title: a.title })}
+                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[#333] px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+                                  >
+                                    <LuFileText className="w-3.5 h-3.5" /> দেখুন
+                                  </button>
+                                )}
+                                <a
+                                  href={downloadLink(a.fileUrl, a.title)}
+                                  {...(ours
+                                    ? { download: fileNameFor(a) }
+                                    : { target: "_blank", rel: "noopener noreferrer" })}
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-400"
                                 >
-                                  এখানে দেখুন
-                                </button>
-                              )}
-                              <a
-                                href={a.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label="ডাউনলোড"
-                                className="shrink-0 rounded-md p-1.5 text-slate-500 transition hover:text-emerald-400"
-                              >
-                                <LuDownload className="w-3.5 h-3.5" />
-                              </a>
+                                  <LuDownload className="w-3.5 h-3.5" /> ডাউনলোড
+                                </a>
+                              </div>
                             </div>
                           );
                         })}
