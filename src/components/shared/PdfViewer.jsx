@@ -94,6 +94,21 @@ export default function PdfViewer({ url, className = '', onError, maxPages }) {
           // The sample is served from our own origin through the /uploads
           // rewrite, so no credentials are needed and none are sent.
           withCredentials: false,
+          // Fetch only what is looked at. By default pdf.js also streams the
+          // WHOLE file in the background from the moment it opens — so a reader
+          // who glances at page one of a thirty-page answer PDF still pulls all
+          // of it, and on a phone that download competes with the very pages
+          // they are waiting for. When a class opens the same topic at once,
+          // the server was sending every one of them every page. With these
+          // two off, pages arrive as the reader scrolls to them (PRERENDER_MARGIN
+          // fetches a little ahead). A server that cannot answer a range simply
+          // gets the whole file as before.
+          disableStream: true,
+          disableAutoFetch: true,
+          // Fewer, larger range requests: every request crosses the link to the
+          // server in Europe, so a round trip saved is worth more than the few
+          // extra kilobytes a 256 KB chunk can over-fetch.
+          rangeChunkSize: 256 * 1024,
         });
         const loaded = await task.promise;
         if (cancelled) {

@@ -47,6 +47,16 @@ const nextConfig: NextConfig = {
      * if the server ever gets more memory, not more cores.
      */
     cpus: 2,
+    /*
+     * How long the /api and /uploads proxy below lets the backend connection
+     * sit silent before it cuts it. Next's default is 30 seconds, and it is an
+     * IDLE timer, not a total one: when a phone on a weak signal stops reading
+     * a PDF for half a minute — a dead patch, the screen locked, a crowded
+     * campus network — the proxy stops pulling from the backend, the timer runs
+     * out and the download dies half way. Five minutes lets a stalled phone
+     * pick up where it left off.
+     */
+    proxyTimeout: 5 * 60 * 1000,
   },
   // Same-origin proxy: keeps the backend's (sslip.io) host off the browser, so
   // a visitor whose network blocks sslip.io can still reach the API through the
