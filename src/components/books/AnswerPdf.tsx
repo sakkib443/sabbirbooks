@@ -16,9 +16,10 @@
  */
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LuDownload, LuExpand, LuExternalLink, LuFileText, LuX } from "react-icons/lu";
 import { downloadLink, fileNameFor } from "@/lib/answerFiles";
+import { chromeLink, isAndroid, isInAppBrowser } from "@/lib/inAppBrowser";
 
 const Spinner = () => (
   <div className="flex h-full min-h-[320px] w-full items-center justify-center">
@@ -31,6 +32,8 @@ const PdfViewer = dynamic(() => import("@/components/shared/PdfViewer"), {
   ssr: false,
   loading: Spinner,
 });
+
+const noSubscribe = () => () => {};
 
 const BOX = "h-[60vh] max-h-[720px] min-h-[380px] w-full bg-[#1c1c1c]";
 
@@ -53,7 +56,9 @@ export default function AnswerPdf({ title, url }: { title: string; url: string }
           io.disconnect();
         }
       },
-      { rootMargin: "600px 0px" }
+      // Close, not "a screen away": an answer can carry several PDFs, and
+      // starting them all at once on a phone slowed every one of them down.
+      { rootMargin: "200px 0px" }
     );
     io.observe(boxRef.current);
     return () => io.disconnect();
@@ -73,6 +78,16 @@ export default function AnswerPdf({ title, url }: { title: string; url: string }
   }, [full]);
 
   const save = { href: downloadLink(url, title), download: fileNameFor({ title, fileUrl: url }) };
+
+  // Inside a scanner app's own browser a download is often dropped silently —
+  // say so, and on Android offer the same page in Chrome. "none" on the server
+  // so the server render and the first client render agree.
+  const browser = useSyncExternalStore(
+    noSubscribe,
+    () => (isInAppBrowser() ? (isAndroid() ? "android" : "other") : "none"),
+    () => "none"
+  );
+  const inApp = browser === "none" ? null : { android: browser === "android" };
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#161616]">
@@ -97,6 +112,22 @@ export default function AnswerPdf({ title, url }: { title: string; url: string }
           </a>
         </div>
       </div>
+
+      {inApp && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#282828] bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <span className="flex-1 basis-48">
+            ডাউনলোড না হলে বা PDF না খুললে পাতাটা Chrome-এ খুলুন।
+          </span>
+          {inApp.android && (
+            <a
+              href={chromeLink(window.location.href)}
+              className="shrink-0 rounded-md border border-amber-400/50 px-3 py-1.5 font-semibold text-amber-100 transition hover:bg-amber-400/10"
+            >
+              Chrome-এ খুলুন
+            </a>
+          )}
+        </div>
+      )}
 
       <div ref={boxRef}>
         {failed ? (
