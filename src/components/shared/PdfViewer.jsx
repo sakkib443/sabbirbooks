@@ -47,6 +47,57 @@ const loadPdfjs = () => {
 };
 
 /**
+ * One open document per URL, shared by every viewer showing it.
+ *
+ * The inline viewer and the full-screen one show the same file; each opening
+ * its own copy meant "বড় করে দেখুন" fetched the whole PDF from the start again,
+ * on a phone, while the first copy was still loading. Counted, and destroyed
+ * only when the last viewer using it goes.
+ */
+const openDocs = new Map();
+
+const acquireDoc = async (url) => {
+  let entry = openDocs.get(url);
+  if (!entry) {
+    const pdfjs = await loadPdfjs();
+    entry = openDocs.get(url); // another viewer may have opened it meanwhile
+    if (!entry) {
+      const task = pdfjs.getDocument({
+        url,
+        // The sample is served from our own origin through the /uploads
+        // rewrite, so no credentials are needed and none are sent.
+        withCredentials: false,
+        // Fetch only what is looked at. By default pdf.js also streams the
+        // WHOLE file in the background from the moment it opens, competing on
+        // a phone with the very pages the reader is waiting for. With these two
+        // off, pages arrive as the reader scrolls to them. A server that cannot
+        // answer a range simply gets the whole file as before.
+        disableStream: true,
+        disableAutoFetch: true,
+        // Fewer, larger range requests: a round trip saved is worth more than
+        // the few extra kilobytes a 256 KB chunk can over-fetch.
+        rangeChunkSize: 256 * 1024,
+      });
+      entry = { task, refs: 0 };
+      openDocs.set(url, entry);
+      // A failed open must not stay cached, or a retry gets the same failure.
+      task.promise.catch(() => openDocs.get(url) === entry && openDocs.delete(url));
+    }
+  }
+  entry.refs += 1;
+  return entry;
+};
+
+const releaseDoc = (url, entry) => {
+  entry.refs -= 1;
+  if (entry.refs > 0) return;
+  if (openDocs.get(url) === entry) openDocs.delete(url);
+  // destroy() aborts the in-flight range requests too, so navigating away
+  // mid-download does not keep pulling a 5 MB file over someone's data.
+  entry.task.destroy?.();
+};
+
+/**
  * Cap on the backing-store resolution. A phone reports devicePixelRatio 3, and
  * painting an A4 page at 3× is a 2500×3500 bitmap — enough to make an older
  * handset drop the tab. 2× is already past what the screen resolves.
@@ -75,6 +126,10 @@ export default function PdfViewer({ url, className = '', onError, maxPages }) {
   const [doc, setDoc] = useState(null);
   const [numPages, setNumPages] = useState(0);
   const [error, setError] = useState(null);
+  // Page one's shape, used for every page until that page is painted. Asking
+  // each page for its own up front meant opening a forty-page PDF fired forty
+  // lookups before page one could show — the long wait on a phone.
+  const [firstRatio, setFirstRatio] = useState(1.414);
   // The viewer owns its scroll box so it can hand it to each page's
   // IntersectionObserver as the root. With the default root (the viewport) the
   // scroll box clips everything outside it, the prerender margin buys nothing,
@@ -84,37 +139,22 @@ export default function PdfViewer({ url, className = '', onError, maxPages }) {
 
   useEffect(() => {
     let cancelled = false;
-    let task = null;
+    let entry = null;
 
     (async () => {
       try {
-        const pdfjs = await loadPdfjs();
-        task = pdfjs.getDocument({
-          url,
-          // The sample is served from our own origin through the /uploads
-          // rewrite, so no credentials are needed and none are sent.
-          withCredentials: false,
-          // Fetch only what is looked at. By default pdf.js also streams the
-          // WHOLE file in the background from the moment it opens — so a reader
-          // who glances at page one of a thirty-page answer PDF still pulls all
-          // of it, and on a phone that download competes with the very pages
-          // they are waiting for. When a class opens the same topic at once,
-          // the server was sending every one of them every page. With these
-          // two off, pages arrive as the reader scrolls to them (PRERENDER_MARGIN
-          // fetches a little ahead). A server that cannot answer a range simply
-          // gets the whole file as before.
-          disableStream: true,
-          disableAutoFetch: true,
-          // Fewer, larger range requests: every request crosses the link to the
-          // server in Europe, so a round trip saved is worth more than the few
-          // extra kilobytes a 256 KB chunk can over-fetch.
-          rangeChunkSize: 256 * 1024,
-        });
-        const loaded = await task.promise;
+        entry = await acquireDoc(url);
         if (cancelled) {
-          loaded.destroy();
+          releaseDoc(url, entry);
+          entry = null;
           return;
         }
+        const loaded = await entry.task.promise;
+        if (cancelled) return;
+        const first = await loaded.getPage(1);
+        if (cancelled) return;
+        const v = first.getViewport({ scale: 1 });
+        setFirstRatio(v.height / v.width);
         setDoc(loaded);
         setNumPages(loaded.numPages);
       } catch (e) {
@@ -126,9 +166,7 @@ export default function PdfViewer({ url, className = '', onError, maxPages }) {
 
     return () => {
       cancelled = true;
-      // destroy() aborts the in-flight range requests too, so navigating away
-      // mid-download does not keep pulling a 5 MB file over someone's data.
-      task?.destroy?.();
+      if (entry) releaseDoc(url, entry);
     };
     // onError is a render-time callback in practice; re-subscribing on it would
     // tear the document down on every parent render.
@@ -149,14 +187,14 @@ export default function PdfViewer({ url, className = '', onError, maxPages }) {
       )}
       {doc &&
         Array.from({ length: Math.min(numPages, maxPages || numPages) }, (_, i) => (
-          <PdfPage key={i} doc={doc} pageNumber={i + 1} rootRef={scrollRef} />
+          <PdfPage key={i} doc={doc} pageNumber={i + 1} rootRef={scrollRef} initialRatio={firstRatio} />
         ))}
     </div>
   );
 }
 
 /** One page. Paints when it comes near, and lets the bitmap go when it leaves. */
-function PdfPage({ doc, pageNumber, rootRef }) {
+function PdfPage({ doc, pageNumber, rootRef, initialRatio }) {
   const holderRef = useRef(null);
   const canvasRef = useRef(null);
   // The in-flight RenderTask, so a second paint can cancel it rather than
@@ -173,7 +211,7 @@ function PdfPage({ doc, pageNumber, rootRef }) {
   // Kept so the placeholder reserves the right height before the page is
   // painted — without it every page is the same guessed height and the
   // scrollbar jumps as each one resolves.
-  const [ratio, setRatio] = useState(1.414); // A4 until the page says otherwise
+  const [ratio, setRatio] = useState(initialRatio || 1.414); // page one's shape until this page says otherwise
 
   useEffect(() => {
     const el = holderRef.current;
@@ -185,19 +223,6 @@ function PdfPage({ doc, pageNumber, rootRef }) {
     io.observe(el);
     return () => io.disconnect();
   }, [rootRef]);
-
-  // The page's own aspect ratio, cheap to get and needed before painting.
-  useEffect(() => {
-    let cancelled = false;
-    doc.getPage(pageNumber).then((page) => {
-      if (cancelled) return;
-      const v = page.getViewport({ scale: 1 });
-      setRatio(v.height / v.width);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [doc, pageNumber]);
 
   const paint = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -224,6 +249,9 @@ function PdfPage({ doc, pageNumber, rootRef }) {
 
     const page = await doc.getPage(pageNumber);
     const base = page.getViewport({ scale: 1 });
+    // This page's real shape, known only now that it was fetched: a landscape
+    // page in a portrait PDF reserves the right height from here on.
+    setRatio(base.height / base.width);
     const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
     const viewport = page.getViewport({ scale: (cssWidth / base.width) * dpr });
 
