@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FiSettings, FiSave, FiRefreshCw, FiUser, FiLock, FiGlobe, FiEye, FiEyeOff, FiLoader, FiShield, FiUploadCloud, FiLayers, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { LuGlobe, LuPhone, LuMail, LuMapPin, LuFacebook, LuYoutube, LuLinkedin } from 'react-icons/lu';
 import { useToast } from '@/components/shared/Toast';
+import HandoverPhotosEditor, { handoverPhotosForSave } from '@/components/admin/settings/HandoverPhotosEditor';
 import { currentCan, getStoredUser, ROLE_LABELS } from '@/lib/permissions';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '');
@@ -324,6 +325,11 @@ const SiteSettingsTab = ({ showToast }) => {
       // The ladder is edited as text; numbers and the 90% ceiling are applied
       // here. Half-typed rows (blank qty or no discount) are dropped rather
       // than saved as a rung that would silently never fire.
+      // Undefined (never touched, list empty) is left out, so the built-in
+      // photos stay in charge until the admin actually edits the list.
+      const photos = handoverPhotosForSave(settings.handoverPhotos);
+      if (photos) body.handoverPhotos = photos;
+      else delete body.handoverPhotos;
       body.quantityDiscounts = tiers
         .map(t => ({
           minQty: Math.max(2, Math.round(Number(t.minQty) || 0)),
@@ -849,6 +855,13 @@ const SiteSettingsTab = ({ showToast }) => {
           </div>
         </div>
       </div>
+
+      <HandoverPhotosEditor
+        value={settings.handoverPhotos}
+        onChange={(list) => setSettings((prev) => ({ ...prev, handoverPhotos: list }))}
+        apiUrl={API_URL}
+        showToast={showToast}
+      />
 
       {/* Save Button */}
       <div className="mt-6 flex gap-3">

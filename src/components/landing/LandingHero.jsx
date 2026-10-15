@@ -34,6 +34,8 @@ import { formatTk } from '@/lib/landingBook';
 import { landingSeoFor } from '@/lib/landingSeo';
 import { useLanguage } from '@/context/LanguageContext';
 import { renderRich } from '@/lib/richText';
+import { onVariantError, variantUrl } from '@/lib/mediaVariant';
+import { DEFAULT_HANDOVER_PHOTOS } from '@/lib/handoverPhotos';
 
 /*
  * The handover photos, in the order they come round.
@@ -46,29 +48,7 @@ import { renderRich } from '@/lib/richText';
  * Each carries its own description: "the book being handed over" four times
  * would tell a screen reader nothing about which photo it is on.
  */
-const HANDOVER_PHOTOS = [
-  {
-    src: '/hero-handover.jpg',
-    bn: 'ম্যাজিক ভাইভা অ্যানাটমি বইটি হাতে তুলে দেওয়া হচ্ছে',
-    en: 'The Magic Viva Anatomy book being handed over',
-  },
-  // Second by the shop's choice: it was last, and they wanted it seen early.
-  {
-    src: '/hero-handover-4.jpg',
-    bn: 'ডিএমসি স্কুলে বইটি হাতে দুজন শিক্ষার্থী',
-    en: 'Two students holding the book at DMC School',
-  },
-  {
-    src: '/hero-handover-2.jpg',
-    bn: 'লেখক একজন শিক্ষকের হাতে ম্যাজিক ভাইভা অ্যানাটমি বইটি তুলে দিচ্ছেন',
-    en: 'The author handing the book to a teacher',
-  },
-  {
-    src: '/hero-handover-3.jpg',
-    bn: 'অ্যানাটমি ল্যাবে বইটি হাতে দুজন — পাশে কঙ্কাল ও হাড়ের নমুনা',
-    en: 'The book held in an anatomy lab, beside a skeleton and bone specimens',
-  },
-];
+
 
 // How long one photo holds before the next fades in. Slow enough to look at a
 // face, short enough that all four are seen while the band is on screen.
@@ -169,7 +149,11 @@ export default function LandingHero({
   subheadline: subheadlineBn,
   subheadlineEn,
   checkoutHref,
+  photos: photosFromAdmin,
 }) {
+  // The admin's list from Settings, in their order; the built-in photos until
+  // they have saved one.
+  const photos = photosFromAdmin?.length ? photosFromAdmin : DEFAULT_HANDOVER_PHOTOS;
   const { isBengali } = useLanguage();
   const subheadline = !isBengali && subheadlineEn?.trim() ? subheadlineEn : subheadlineBn;
   const L = isBengali ? T.bn : T.en;
@@ -213,7 +197,7 @@ export default function LandingHero({
               the foot of the hero shows the same pictures. The shop asked
               for the book in somebody's hands to be what a phone opens on,
               ahead of the headline and the video. */}
-          <HandoverStrip />
+          <HandoverStrip photos={photos} />
 
           {/* ── The words ───────────────────────────────────────────── */}
           <div className="mx-auto max-w-2xl text-center lg:col-span-2 lg:row-start-1 lg:mb-1">
@@ -333,7 +317,7 @@ export default function LandingHero({
 
           {/* ── The handover photo ──────────────────────────────────── */}
           <div className="animate-fade-up delay-200 lg:col-span-2 lg:row-start-4">
-            <HandoverPhoto checkoutHref={checkoutHref} isPreOrder={price?.isPreOrder ?? book?.isPreOrder} />
+            <HandoverPhoto checkoutHref={checkoutHref} isPreOrder={price?.isPreOrder ?? book?.isPreOrder} photos={photos} />
           </div>
         </div>
       </div>
@@ -558,18 +542,44 @@ function HeroVideo({ book }) {
  * Hidden from `lg` up, where the photographs have their own band at the foot
  * of the hero and the cover holds this slot.
  */
-function HandoverStrip() {
+/**
+ * One slide photo. The built-in ones are files of this site and go through
+ * next/image; one the admin uploaded lives on the API server, so it is drawn
+ * as a plain <img> of its small copy (falling back to the original).
+ */
+function SlidePhoto({ photo, alt, sizes, hidden, className = '' }) {
+  const style = photo.pos ? { objectPosition: photo.pos } : undefined;
+  const cls = `object-cover object-center ${className}`;
+  if (photo.src.startsWith('/uploads/')) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={variantUrl(photo.src, 'view')}
+        onError={onVariantError}
+        alt={alt}
+        aria-hidden={hidden}
+        loading="lazy"
+        decoding="async"
+        style={style}
+        className={`absolute inset-0 h-full w-full ${cls}`}
+      />
+    );
+  }
+  return <Image src={photo.src} alt={alt} fill sizes={sizes} aria-hidden={hidden} style={style} className={cls} />;
+}
+
+function HandoverStrip({ photos }) {
   const { isBengali } = useLanguage();
 
   // [copy of the last, …the real four…, copy of the first] — the real ones
   // live at 1…LAST, and the copies at either end are only ever passed through.
   const track = [
-    HANDOVER_PHOTOS[HANDOVER_PHOTOS.length - 1],
-    ...HANDOVER_PHOTOS,
-    HANDOVER_PHOTOS[0],
+    photos[photos.length - 1],
+    ...photos,
+    photos[0],
   ];
   const FIRST = 1;
-  const LAST = HANDOVER_PHOTOS.length;
+  const LAST = photos.length;
 
   const [slide, setSlide] = useState({ at: FIRST, animate: true });
   const [paused, setPaused] = useState(false);
@@ -617,13 +627,7 @@ function HandoverStrip() {
             // another slide and would collide on it.
             <div key={i} className="w-full shrink-0">
               <div className="relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-border bg-surface-soft">
-                <Image
-                  src={photo.src}
-                  alt={isBengali ? photo.bn : photo.en}
-                  fill
-                  sizes="280px"
-                  className="object-cover object-center"
-                />
+                <SlidePhoto photo={photo} alt={isBengali ? photo.bn : photo.en} sizes="280px" />
               </div>
             </div>
           ))}
@@ -673,7 +677,7 @@ function HandoverStrip() {
  * it changes with it — a separate effect watching the index would mount the
  * next photo a render late, which is the render it is needed in.
  */
-function HandoverSlides() {
+function HandoverSlides({ photos }) {
   const { isBengali } = useLanguage();
   // `i` is the photo showing; `seen` is how many are in the page at all —
   // always one ahead, so the next has loaded before its turn comes.
@@ -683,7 +687,7 @@ function HandoverSlides() {
 
   const goTo = useCallback(
     (next) =>
-      setSlide((s) => ({ i: next, seen: Math.min(HANDOVER_PHOTOS.length, Math.max(s.seen, next + 2)) })),
+      setSlide((s) => ({ i: next, seen: Math.min(photos.length, Math.max(s.seen, next + 2)) })),
     []
   );
 
@@ -696,8 +700,8 @@ function HandoverSlides() {
     const id = setInterval(
       () =>
         setSlide((s) => {
-          const next = (s.i + 1) % HANDOVER_PHOTOS.length;
-          return { i: next, seen: Math.min(HANDOVER_PHOTOS.length, Math.max(s.seen, next + 2)) };
+          const next = (s.i + 1) % photos.length;
+          return { i: next, seen: Math.min(photos.length, Math.max(s.seen, next + 2)) };
         }),
       SLIDE_MS
     );
@@ -714,20 +718,17 @@ function HandoverSlides() {
       onBlurCapture={() => setPaused(false)}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-border bg-surface-soft">
-        {HANDOVER_PHOTOS.slice(0, slide.seen).map((photo, i) => (
-          <Image
+        {photos.slice(0, slide.seen).map((photo, i) => (
+          // Out of the way of a screen reader until it is the one showing:
+          // several descriptions read one after another is not what is on
+          // the page.
+          <SlidePhoto
             key={photo.src}
-            src={photo.src}
+            photo={photo}
             alt={isBengali ? photo.bn : photo.en}
-            fill
             sizes="(min-width: 1280px) 380px, (min-width: 1024px) 340px, 320px"
-            // Out of the way of a screen reader until it is the one showing:
-            // four descriptions read one after another is not what is on the
-            // page.
-            aria-hidden={i === index ? undefined : true}
-            className={`object-cover object-center transition-opacity duration-700 ${
-              i === index ? 'opacity-100' : 'opacity-0'
-            }`}
+            hidden={i === index ? undefined : true}
+            className={`transition-opacity duration-700 ${i === index ? 'opacity-100' : 'opacity-0'}`}
           />
         ))}
       </div>
@@ -735,7 +736,7 @@ function HandoverSlides() {
       {/* The dots. Also the whole of the controls: arrows on a photo this
           size would cover a face, and the band moves on by itself. */}
       <div className="mt-2.5 flex items-center justify-center gap-2">
-        {HANDOVER_PHOTOS.map((photo, i) => (
+        {photos.map((photo, i) => (
           <button
             key={photo.src}
             type="button"
@@ -752,7 +753,7 @@ function HandoverSlides() {
   );
 }
 
-function HandoverPhoto({ checkoutHref, isPreOrder }) {
+function HandoverPhoto({ checkoutHref, isPreOrder, photos }) {
   const { isBengali } = useLanguage();
   const L = isBengali ? T.bn : T.en;
 
@@ -765,7 +766,7 @@ function HandoverPhoto({ checkoutHref, isPreOrder }) {
       {/* Desktop only: a phone has already seen these at the top of the
           hero, and showing them twice on one screen is once too many. */}
       <div className="hidden lg:block">
-        <HandoverSlides />
+        <HandoverSlides photos={photos} />
       </div>
 
       <div className="text-center lg:text-left">

@@ -659,6 +659,23 @@
   100% { transform: translateX(200%); }
 }
 .animate-nudge { animation: nudge 3.6s ease-in-out infinite; }
+
+/* The "আজকের কুপন" pop-up: slides up into place, then every few seconds a
+   short shake so it is noticed without flashing. */
+@keyframes coupon-in {
+  from { opacity: 0; transform: translateY(40px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes coupon-wiggle {
+  0%, 80%, 100% { transform: rotate(0); }
+  83% { transform: rotate(-3deg); }
+  86% { transform: rotate(3deg); }
+  89% { transform: rotate(-2deg); }
+  92% { transform: rotate(2deg); }
+  95% { transform: rotate(0); }
+}
+.animate-coupon-in { animation: coupon-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-coupon-wiggle { animation: coupon-wiggle 4s ease-in-out 1s infinite; transform-origin: bottom right; }
 .animate-sheen { animation: sheen 3.2s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 .animate-ecg { stroke-dasharray: 600; animation: ecg-dash 3.2s linear infinite; }
