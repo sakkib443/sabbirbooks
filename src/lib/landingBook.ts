@@ -55,6 +55,8 @@ export interface LandingSettings {
   whatsappNumber?: string;
   deliveryNote?: string;
   deliveryNoteEn?: string;
+  /** Landing-page slide photos, in order. Empty = the built-in ones. */
+  handoverPhotos?: { url: string; bn?: string; en?: string }[];
   facebookUrl?: string;
   youtubeUrl?: string;
 }

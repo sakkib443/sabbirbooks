@@ -730,8 +730,8 @@ export default function CheckoutView() {
 
   // Validate the typed code against the current post-offer price and apply it.
   // The server re-checks on create, so this is a preview that cannot be forged.
-  const applyCoupon = async () => {
-    const code = couponInput.trim();
+  const applyCoupon = async (typed?: string) => {
+    const code = (typed ?? couponInput).trim();
     if (!code || !bp) return;
     setCouponBusy(true);
     setCouponErr("");
@@ -757,6 +757,24 @@ export default function CheckoutView() {
       setCouponBusy(false);
     }
   };
+  // ?coupon=CODE — the landing page's "আজকের কুপন" pop-up sends the buyer here
+  // with its code. Applied once, as soon as there is a price to apply it to;
+  // after that it is an ordinary applied coupon the buyer can remove.
+  const couponFromLink = searchParams.get("coupon");
+  const couponLinkTried = useRef(false);
+  useEffect(() => {
+    if (!couponFromLink || couponLinkTried.current || !bp || appliedCoupon) return;
+    // Marked tried inside the timer: a re-render that cancels it must leave
+    // the next run free to try again.
+    const t = setTimeout(() => {
+      couponLinkTried.current = true;
+      void applyCoupon(couponFromLink);
+    }, 0);
+    return () => clearTimeout(t);
+    // applyCoupon reads the current price itself; re-running on it would retry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponFromLink, bp, appliedCoupon]);
+
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponErr("");

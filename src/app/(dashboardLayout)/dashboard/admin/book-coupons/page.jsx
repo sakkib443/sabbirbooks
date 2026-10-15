@@ -88,6 +88,22 @@ export default function BookCouponsPage() {
     } finally { setBusyId(''); }
   };
 
+  // The landing page's "আজকের কুপন" pop-up shows one coupon; the server turns
+  // it off on every other one, and so does this list.
+  const togglePopup = async (c) => {
+    setBusyId(c._id);
+    try {
+      const on = !c.showInPopup;
+      await saveCoupon(c._id, { showInPopup: on });
+      setState((s) => ({
+        ...s,
+        rows: s.rows.map((r) => ({ ...r, showInPopup: r._id === c._id ? on : on ? false : r.showInPopup })),
+      }));
+    } catch (e) {
+      alert(e.message || 'Could not update');
+    } finally { setBusyId(''); }
+  };
+
   const rows = useMemo(() => {
     if (kind === 'plain') return state.rows.filter((c) => !c.affiliate);
     if (kind === 'affiliate') return state.rows.filter((c) => c.affiliate);
@@ -263,6 +279,14 @@ export default function BookCouponsPage() {
                     >
                       {c.isActive ? <FiCheckCircle size={12} /> : <FiXCircle size={12} />}
                       {c.isActive ? 'Active' : 'Off'}
+                    </button>
+                    <button
+                      onClick={() => togglePopup(c)}
+                      disabled={busyId === c._id}
+                      className={`mt-1.5 block mx-auto rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors ${c.showInPopup ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-dash-soft2 text-dash-mute2 hover:bg-dash-soft3'}`}
+                      title="ওয়েবসাইটের 'আজকের কুপন' পপআপে এই কুপনটা দেখান"
+                    >
+                      {c.showInPopup ? 'পপআপে চলছে' : 'পপআপে দেখান'}
                     </button>
                   </td>
                   <td className="px-4 py-3">

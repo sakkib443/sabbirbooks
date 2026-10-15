@@ -18,11 +18,13 @@ import Link from 'next/link';
 import { LuBookOpen } from 'react-icons/lu';
 import { landingPrice, DEFAULT_FEATURES } from '@/lib/landingBook';
 import LandingHero from './LandingHero';
+import { handoverPhotosFrom } from '@/lib/handoverPhotos';
 import TrackOrder from './TrackOrder';
 import LandingSample from './LandingSample';
 import LandingQr from './LandingQr';
 import LandingSeo from './LandingSeo';
 import LandingCta from './LandingCta';
+import CouponPopup from './CouponPopup';
 
 export default function LandingPage({ book, settings }) {
   // Nothing to sell yet. Better an honest holding page than a broken one — this
@@ -70,6 +72,7 @@ export default function LandingPage({ book, settings }) {
         // and the admin has not set a landing subheadline of their own.
         subheadlineEn={settings?.landingSubheadline ? '' : book.descriptionEn}
         checkoutHref={checkoutHref}
+        photos={handoverPhotosFrom(settings?.handoverPhotos)}
       />
 
       {/* The sample viewer the hero's cover and "নমুনা দেখুন" button point at. */}
@@ -92,6 +95,9 @@ export default function LandingPage({ book, settings }) {
         deliveryNote={settings?.deliveryNote}
         deliveryNoteEn={settings?.deliveryNoteEn}
       />
+
+      {/* "আজকের কুপন" — only when the admin has picked one that is usable now. */}
+      <CouponPopup checkoutHref={checkoutHref} />
     </main>
   );
 }

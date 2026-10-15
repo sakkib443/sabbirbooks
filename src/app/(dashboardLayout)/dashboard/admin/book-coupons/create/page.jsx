@@ -25,6 +25,25 @@ import {
 
 import { getCoupon, saveCoupon } from '@/components/admin/bookCoupon/couponApi';
 
+/**
+ * A stored instant as a datetime-local value, in the admin's own clock.
+ * Date AND time now: the landing page counts down to the exact end, and "ends
+ * on the 20th" alone meant midnight UTC — six in the morning in Dhaka.
+ */
+const toLocalInput = (v) => {
+  if (!v) return '';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+/** The datetime-local value back to an instant (read in the admin's clock). */
+const fromLocalInput = (v) => {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
 const EMPTY = {
   code: '', name: '',
   discountType: 'percent', discountValue: '', fixedPer: 'order', isActive: true,
@@ -96,8 +115,8 @@ function CouponForm() {
           freeDelivery: !!c.freeDelivery,
           // <input type="date"> only accepts yyyy-mm-dd; an ISO instant with
           // a time on it renders as blank, silently losing a live window.
-          validFrom: c.validFrom ? String(c.validFrom).slice(0, 10) : '',
-          validUntil: c.validUntil ? String(c.validUntil).slice(0, 10) : '',
+          validFrom: toLocalInput(c.validFrom),
+          validUntil: toLocalInput(c.validUntil),
           maxUses: c.maxUses || '',
           maxUsesPerBuyer: c.maxUsesPerBuyer || '',
           minPurchase: c.minPurchase || '',
@@ -139,8 +158,8 @@ function CouponForm() {
         // Blank means "no limit", and the server reads 0 and null that way.
         maxDiscount: Number(form.maxDiscount) || 0,
         freeDelivery: !!form.freeDelivery,
-        validFrom: form.validFrom || null,
-        validUntil: form.validUntil || null,
+        validFrom: fromLocalInput(form.validFrom),
+        validUntil: fromLocalInput(form.validUntil),
         maxUses: Number(form.maxUses) || 0,
         maxUsesPerBuyer: Number(form.maxUsesPerBuyer) || 0,
         minPurchase: Number(form.minPurchase) || 0,
@@ -353,7 +372,7 @@ function CouponForm() {
             <div>
               <span className="text-xs font-semibold text-dash-mute">Starts</span>
               <input
-                type="date"
+                type="datetime-local"
                 value={form.validFrom}
                 onChange={(e) => set('validFrom', e.target.value)}
                 className={`${inputCls} mt-1.5`}
@@ -363,13 +382,15 @@ function CouponForm() {
             <div>
               <span className="text-xs font-semibold text-dash-mute">Ends</span>
               <input
-                type="date"
+                type="datetime-local"
                 value={form.validUntil}
                 min={form.validFrom || undefined}
                 onChange={(e) => set('validUntil', e.target.value)}
                 className={`${inputCls} mt-1.5`}
               />
-              <p className="mt-1.5 text-[11px] text-dash-mute2">Blank — never expires.</p>
+              <p className="mt-1.5 text-[11px] text-dash-mute2">
+                Blank — never expires. The website&rsquo;s &ldquo;আজকের কুপন&rdquo; pop-up counts down to this.
+              </p>
             </div>
           </div>
         </Section>
