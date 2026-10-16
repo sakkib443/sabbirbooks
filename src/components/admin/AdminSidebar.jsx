@@ -112,10 +112,6 @@ const AdminSidebar = () => {
           title: 'Book Orders', icon: FiShoppingBag, need: ['orders.read'],
           submenu: [
             { title: 'All Orders', href: '/dashboard/admin/book-orders', exact: true, need: ['orders.read'] },
-            // Deliberately its own screen, and deliberately named for what it
-            // does. Deleting used to be a button on the orders list; it now
-            // takes a decision to get here. See book-orders/delete.
-            { title: 'Delete an Order', href: '/dashboard/admin/book-orders/delete', need: ['records.delete'] },
           ],
         },
         // The standard charge and each medical college's own rate. A rate is a
