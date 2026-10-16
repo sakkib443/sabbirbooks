@@ -90,6 +90,9 @@ const ProtectedRoute = ({ children, role, allowedRoles = [], requireCapabilities
         user =
           mergeStoredUser({
             role: fresh.role,
+            // Set only while the Super Admin views as another role; null
+            // clears a stale one.
+            realRole: fresh.realRole || null,
             capabilities: Array.isArray(fresh.capabilities) ? fresh.capabilities : undefined,
             permissions: fresh.permissions,
           }) || user;

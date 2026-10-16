@@ -43,6 +43,8 @@ export interface LoginData {
 
 export function persistSession(data: LoginData): void {
   if (typeof window === "undefined" || !data) return;
+  // A fresh login starts in the account's own panel, never a leftover "view as".
+  localStorage.removeItem("sb_view_as");
   const accessToken = data.accessToken || data.token;
   if (accessToken) localStorage.setItem(STORAGE_KEYS.token, accessToken);
   if (data.refreshToken) localStorage.setItem(STORAGE_KEYS.refresh, data.refreshToken);
@@ -66,6 +68,7 @@ export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEYS.user);
   localStorage.removeItem("token");
   localStorage.removeItem("user");
+  localStorage.removeItem("sb_view_as");
 }
 
 // ── API result shape ─────────────────────────────────────────────────────────
