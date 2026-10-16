@@ -65,6 +65,14 @@ const AdminLayout = ({ children }) => {
       // The sidebar's mobile toggle floats over the top-left corner.
       headerPaddingClassName="pl-16 pr-4 lg:px-7"
     >
+      {/* An Admin works the last fifteen days; the whole history is the Super
+          Admin's. Said on every screen so a short list is not read as missing
+          orders. The server is what enforces it. */}
+      {user?.role === 'admin' && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+          Admin অ্যাকাউন্ট: অর্ডার, টাকার হিসাব, কুপন আর কুরিয়ার — শুধু শেষ ১৫ দিনের দেখা যাবে। পুরো হিসাব Super Admin দেখেন।
+        </div>
+      )}
       {children}
     </DashboardShell>
   );
