@@ -307,7 +307,9 @@ export default function UsersManager({ group = 'students' }) {
       { label: 'Pending', value: users.filter(u => inGroup(u) && u.status === 'pending').length, icon: FiClock, c: 'text-amber-600', b: 'bg-amber-50' },
     ];
 
-  const roleOpts = group === 'staff' ? ['admin', 'trainingManager', 'contentManager', 'manager', 'mentor'] : ['student'];
+  const roleOpts = group === 'staff'
+    ? [...(isSuperAdmin ? ['superAdmin'] : []), 'admin', 'trainingManager', 'contentManager', 'manager', 'mentor']
+    : ['student'];
   const statusOpts = ['active', 'pending', 'blocked'];
 
   return (
@@ -446,7 +448,7 @@ export default function UsersManager({ group = 'students' }) {
                           {roleDropdown === u._id && (
                             <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-dash-card rounded-xl shadow-2xl border border-dash-line-soft py-1.5">
                               {roleOpts.map(r => {
-                                const disabledAdmin = (r === 'admin') && !isSuperAdmin;
+                                const disabledAdmin = (r === 'admin' || r === 'superAdmin') && !isSuperAdmin;
                                 return (
                                   <button key={r} disabled={u.role === r || disabledAdmin}
                                     onClick={() => patch(u, { role: r }, 'role')}
@@ -524,7 +526,9 @@ export default function UsersManager({ group = 'students' }) {
                 <label className="text-[10px] font-bold text-dash-mute uppercase block mb-1.5">Account Type</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { r: 'admin', label: 'Admin', only: !isSuperAdmin },
+                    // Super Admin sees everything; Admin, the last 15 days.
+                    { r: 'superAdmin', label: 'Super Admin', only: !isSuperAdmin },
+                    { r: 'admin', label: 'Admin (15 days)', only: !isSuperAdmin },
                     { r: 'trainingManager', label: 'Training Manager' },
                     { r: 'contentManager', label: 'Content Manager' },
                     { r: 'manager', label: 'Manager' },
@@ -536,7 +540,8 @@ export default function UsersManager({ group = 'students' }) {
                     </button>
                   ))}
                 </div>
-                {!isSuperAdmin && <p className="text-[10px] text-dash-mute2 mt-1">Admin accounts can only be created by a Super Admin.</p>}
+                {!isSuperAdmin && <p className="text-[10px] text-dash-mute2 mt-1">Admin and Super Admin accounts can only be created by a Super Admin.</p>}
+                {staffRole === 'admin' && <p className="text-[10px] text-amber-600 mt-1">An Admin sees orders, money, coupons and the courier for the last 15 days only. A Super Admin sees everything.</p>}
               </div>
 
               {staffRole === 'mentor' ? (

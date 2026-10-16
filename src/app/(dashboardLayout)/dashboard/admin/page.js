@@ -297,7 +297,14 @@ export default function AdminDashboard() {
           <RangeSummary range={r} mode={mode} loading={loading} hideMoney={moneyBlind} />
         ) : (
           // All time, from the first order: the whole picture beside the chart.
-          <RangeSummary range={allTime} mode={mode} loading={loading} hideMoney={moneyBlind} title="All time" />
+          <RangeSummary
+            range={allTime}
+            mode={mode}
+            loading={loading}
+            hideMoney={moneyBlind}
+            // An Admin's "all time" is the last fifteen days (the server's scope).
+            title={getStoredUser()?.role === 'admin' ? 'Last 15 days' : 'All time'}
+          />
         )}
       </div>
 
