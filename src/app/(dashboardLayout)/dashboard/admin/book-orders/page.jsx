@@ -493,7 +493,8 @@ export default function BookOrdersPage() {
   const [fullEditId, setFullEditId] = useState(null);
   const [fullForm, setFullForm] = useState({});
   const [savingFull, setSavingFull] = useState(false);
-  const canDelete = ['superAdmin', 'admin'].includes(getStoredUser()?.role);
+  // Deleting an order is the Super Admin's alone (the API refuses everyone else).
+  const canDelete = getStoredUser()?.role === 'superAdmin';
   // Paid revenue with or without the delivery charge — the same switch, and the
   // same remembered choice, as the dashboard and the analytics page.
   const [deliveryMode, setDeliveryMode] = useDeliveryMode();
