@@ -155,6 +155,19 @@ const DATE_PRESETS = [
 const SCOPED_PRESETS = ['yesterday', 'today', 'tomorrow'];
 
 /** The window a shortcut covers, ready for the query. Null = every date. */
+/**
+ * ?day=today — the dashboard's "New Orders" card links here with it. Opens on
+ * the shop day new orders are landing in right now: "Today" until noon, then
+ * "Tomorrow" (a day runs 12 PM → 12 PM). Read straight from the address bar:
+ * this page only renders in the browser, after the sign-in check.
+ */
+const dayFromLink = () => {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('day') === 'today'
+    ? (pastCutoff() ? 'tomorrow' : 'today')
+    : null;
+};
+
 const presetRange = (key) => {
   const days = daysForPreset(key);
   return days ? dayWindow(days.fromDay, days.toDay) : null;
@@ -495,8 +508,12 @@ export default function BookOrdersPage() {
    */
   const moneyBlind = dayScoped;
   const cols = moneyBlind ? GRID_COLS_NO_MONEY : GRID_COLS;
-  const [datePreset, setDatePreset] = useState(dayScoped ? 'today' : 'all');
-  const [dateRange, setDateRange] = useState(() => (dayScoped ? presetRange('today') : null)); // { from, to } | null
+  const [datePreset, setDatePreset] = useState(() => (dayScoped ? 'today' : dayFromLink() || 'all'));
+  const [dateRange, setDateRange] = useState(() => {
+    if (dayScoped) return presetRange('today');
+    const linked = dayFromLink();
+    return linked ? presetRange(linked) : null;
+  }); // { from, to } | null
   const [dayFrom, setDayFrom] = useState('');
   const [dayTo, setDayTo] = useState('');
   // Every order matching the filters on the server, which can be more than loaded.

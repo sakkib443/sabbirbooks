@@ -210,7 +210,7 @@ export default function AdminDashboard() {
         <MoneyCard
           icon={FiClock} tone="amber" loading={loading}
           label="New Orders" value={(stats?.newOrders ?? 0).toLocaleString('en-US')}
-          note="Awaiting your confirmation" href="/dashboard/admin/book-orders"
+          note="Awaiting your confirmation" href="/dashboard/admin/book-orders?day=today"
         />
         {!moneyBlind && (
         <MoneyCard
