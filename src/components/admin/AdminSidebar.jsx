@@ -56,6 +56,8 @@ const AdminSidebar = () => {
   // Hide what this account cannot do; drop submenu parents left empty.
   // `need: [...]` shows the item when the user holds ANY of those capabilities.
   const filterByCaps = (items) => items
+    // superOnly: the whole-history money screens are the Super Admin's.
+    .filter(it => !it.superOnly || role === 'superAdmin')
     .filter(it => !it.need || canAny({ capabilities: caps }, ...it.need))
     .map(it => it.submenu ? { ...it, submenu: filterByCaps(it.submenu) } : it)
     .filter(it => !it.submenu || it.submenu.length > 0);
@@ -126,7 +128,7 @@ const AdminSidebar = () => {
           submenu: [
             { title: 'Send to Courier', href: '/dashboard/admin/courier/send', need: ['staff.manage'] },
             { title: 'Parcels', href: '/dashboard/admin/courier', exact: true, need: ['staff.manage'] },
-            { title: 'Payouts & Accounts', href: '/dashboard/admin/courier/payouts', need: ['staff.manage'] },
+            { title: 'Payouts & Accounts', href: '/dashboard/admin/courier/payouts', need: ['staff.manage'], superOnly: true },
           ],
         },
         { title: 'Delivery Charges', href: '/dashboard/admin/delivery-charges', icon: FiTruck, need: ['settings.write'] },

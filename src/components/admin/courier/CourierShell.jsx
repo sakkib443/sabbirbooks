@@ -14,12 +14,23 @@ import { courierFilters, courierStatus, customWindow, DATE_PRESETS, presetWindow
 const TABS = [
   { href: '/dashboard/admin/courier/send', label: 'Send to courier' },
   { href: '/dashboard/admin/courier', label: 'Parcels', exact: true },
-  { href: '/dashboard/admin/courier/payouts', label: 'Payouts & accounts' },
+  // Super Admin only — the courier's money, all time (the API refuses an Admin too).
+  { href: '/dashboard/admin/courier/payouts', label: 'Payouts & accounts', superOnly: true },
 ];
+
+const isSuperAdmin = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}').role === 'superAdmin';
+  } catch {
+    return false;
+  }
+};
 
 export function CourierHeader({ subtitle }) {
   const path = usePathname();
   const [st, setSt] = useState(null);
+  // Read once: the admin pages render only in the browser, after sign-in.
+  const [tabs] = useState(() => (isSuperAdmin() ? TABS : TABS.filter((t) => !t.superOnly)));
   useEffect(() => {
     courierStatus().then(setSt).catch((e) => setSt({ configured: false, error: e.message }));
   }, []);
@@ -56,7 +67,7 @@ export function CourierHeader({ subtitle }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const on = t.exact ? path === t.href : path?.startsWith(t.href);
           return (
             <Link

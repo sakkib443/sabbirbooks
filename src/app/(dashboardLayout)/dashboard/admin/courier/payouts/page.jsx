@@ -93,7 +93,11 @@ export default function CourierPayoutsPage() {
         }
       />
 
-      {error && <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {/not authorized|Access denied/i.test(error) ? 'এই পাতা শুধু Super Admin দেখতে পারেন।' : error}
+        </p>
+      )}
 
       {loading && !s ? (
         <div className="flex justify-center p-10"><FiLoader className="animate-spin text-brand" size={22} /></div>
