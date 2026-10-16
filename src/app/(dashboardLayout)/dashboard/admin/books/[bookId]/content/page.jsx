@@ -49,6 +49,7 @@ import FileDropZone from '@/components/shared/FileDropZone';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { currentCan } from '@/lib/permissions';
 import { DEFAULT_VIDEO_NOTE } from '@/lib/videoNote';
+import VideoNotePanel from '@/components/admin/book/VideoNotePanel';
 
 // The editor touches window/document on mount, so it must not be part of the
 // server bundle.
@@ -666,6 +667,7 @@ export default function BookContentEditorPage() {
       // permanently empty no matter what the admin uploaded.
       images: q.images?.length ? q.images : [],
       videoNote: note,
+      hideVideoNote: Boolean(q.hideVideoNote),
     });
   };
 
@@ -684,6 +686,7 @@ export default function BookContentEditorPage() {
           attachments: draft.attachments.filter(a => a.fileUrl?.trim()),
           images: (draft.images || []).filter(src => String(src || '').trim()),
           videoNote: (draft.videoNote || '').trim(),
+          hideVideoNote: Boolean(draft.hideVideoNote),
         }),
       });
       const body = await res.json();
@@ -1327,6 +1330,17 @@ export default function BookContentEditorPage() {
                 </button>
               </div>
 
+              {/* The "video unavailable" notice, on or off for many questions. */}
+              <VideoNotePanel
+                key={activeTopic._id}
+                questions={questions}
+                bookId={bookId}
+                api={API}
+                headers={hdrs}
+                onApplied={(map) => setQuestions((qs) => qs.map(map))}
+                notify={notify}
+              />
+
               {/* Question numbers */}
               <div className="py-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
@@ -1722,6 +1736,19 @@ export default function BookContentEditorPage() {
                         would be writing into a drawer nobody opens. */}
                     {draft.videos.length === 0 && (
                       <div className="mt-3 border-t border-dash-line pt-3">
+                        {/* Off switch: some questions simply have no video, and
+                            an apology there is wrong. */}
+                        <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs font-medium text-dash-ink3">
+                          <input
+                            type="checkbox"
+                            checked={!draft.hideVideoNote}
+                            onChange={e => setDraft(d => ({ ...d, hideVideoNote: !e.target.checked }))}
+                            className="h-4 w-4 rounded border-dash-line-strong text-brand focus:ring-brand"
+                          />
+                          ভিডিও নেই — পাঠককে বার্তা দেখান
+                        </label>
+                        {!draft.hideVideoNote && (
+                        <>
                         <label className="text-xs font-medium text-dash-ink4">
                           পাঠক এখানে যা দেখবে
                         </label>
@@ -1766,6 +1793,8 @@ export default function BookContentEditorPage() {
                           নিজে লেখা বার্তা সংরক্ষণের পর এই বইয়ের অন্য প্রশ্নেও উপরের তালিকা থেকে
                           বেছে নেওয়া যাবে। ভিডিও যোগ করলে বার্তাটি আর দেখাবে না।
                         </p>
+                        </>
+                        )}
                       </div>
                     )}
                   </div>
