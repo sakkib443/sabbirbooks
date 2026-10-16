@@ -54,7 +54,8 @@ export default function DeleteOrderPage() {
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const canDelete = ['superAdmin', 'admin'].includes(getStoredUser()?.role);
+  // Deleting an order is the Super Admin's alone (the API refuses everyone else).
+  const canDelete = getStoredUser()?.role === 'superAdmin';
 
   /*
    * Every order, a page at a time.
