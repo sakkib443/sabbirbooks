@@ -108,12 +108,7 @@ const AdminSidebar = () => {
         // we sold reach who we sold it to'.
         { title: 'Book Access', href: '/dashboard/admin/book-access', icon: FiUnlock, need: ['orders.read'] },
         // Book Orders is the "who is buying" screen — orders.read, not content.
-        {
-          title: 'Book Orders', icon: FiShoppingBag, need: ['orders.read'],
-          submenu: [
-            { title: 'All Orders', href: '/dashboard/admin/book-orders', exact: true, need: ['orders.read'] },
-          ],
-        },
+        { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag, need: ['orders.read'] },
         // The standard charge and each medical college's own rate. A rate is a
         // price, so settings.write — the same gate as the API behind it.
         // The courier: hand parcels to Steadfast, follow them, and keep the
