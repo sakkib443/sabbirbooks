@@ -159,6 +159,9 @@ const AdminSidebar = () => {
     },
     {
       label: 'Course Management',
+      // Hidden from everyone for now: this site sells books only. The pages
+      // still exist and work; set this to false to bring the menu back.
+      hidden: true,
       items: [
         {
           title: 'Management', icon: FiLayers,
@@ -265,7 +268,7 @@ const AdminSidebar = () => {
   // and the whole sections this role is not in the business of.
   const hiddenGroups = HIDDEN_GROUPS_BY_ROLE[role] || [];
   const visibleGroups = menuGroups
-    .filter(g => !hiddenGroups.includes(g.label))
+    .filter(g => !g.hidden && !hiddenGroups.includes(g.label))
     .map(g => ({ ...g, items: filterByCaps(g.items) }))
     .filter(g => g.items.length > 0);
 
