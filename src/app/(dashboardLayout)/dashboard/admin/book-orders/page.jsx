@@ -23,6 +23,7 @@ import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { useBrand } from '@/components/shared/Brand';
 import { getStoredUser } from '@/lib/permissions';
+import { sendToCourier } from '@/components/admin/courier/courierApi';
 import { buildOrderListPdf, downloadBlob } from '@/lib/orderListPdf';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
 import { addDays, bdDate, dayOf, dayWindow, formatBd, pastCutoff } from '@/lib/shopDay';
@@ -495,6 +496,11 @@ export default function BookOrdersPage() {
   const [savingFull, setSavingFull] = useState(false);
   // Deleting an order is the Super Admin's alone (the API refuses everyone else).
   const canDelete = getStoredUser()?.role === 'superAdmin';
+  // Steadfast is an Admin / Super Admin job — the same gate as the Courier menu.
+  const canCourier = ['admin', 'superAdmin'].includes(getStoredUser()?.role);
+  // What the last "Send to courier" did, order by order — the ones that did not
+  // go are listed with the reason, so nobody has to guess.
+  const [courierResults, setCourierResults] = useState(null);
   // Paid revenue with or without the delivery charge — the same switch, and the
   // same remembered choice, as the dashboard and the analytics page.
   const [deliveryMode, setDeliveryMode] = useDeliveryMode();
@@ -1019,6 +1025,36 @@ export default function BookOrdersPage() {
       'Payment details updated'
     );
     if (ok) setEditingId(null);
+  };
+
+  // ── Send the ticked orders to Steadfast ────────────────────────────────────
+  // The server decides what may go (confirmed, printed, not sent yet, a valid
+  // phone) and says why for each one it refuses.
+  const sendSelectedToCourier = async () => {
+    const ids = [...selected];
+    if (!ids.length) return;
+    const ok = await confirm({
+      title: `${ids.length}টি অর্ডার Steadfast কুরিয়ারে পাঠাবেন?`,
+      message:
+        'শুধু কনফার্ম করা অর্ডার যাবে (Pending গেলে না)। পাঠানোর পর অর্ডারগুলো "Shipped" হবে আর ক্রেতা ট্র্যাকিং লিংকসহ SMS পাবেন। যেগুলো যাবে না, কারণসহ নিচে দেখাবে।',
+      confirmText: 'কুরিয়ারে পাঠান',
+      danger: false,
+    });
+    if (!ok) return;
+    setBulkBusy(true);
+    setCourierResults(null);
+    try {
+      const results = (await sendToCourier(ids)) || [];
+      const sent = results.filter((r) => r.ok).length;
+      setCourierResults(results);
+      showToast(sent ? 'success' : 'error', `${sent}টি কুরিয়ারে গেছে${results.length - sent ? `, ${results.length - sent}টি যায়নি` : ''}`);
+      if (sent) setSelected(new Set());
+      fetchOrders();
+    } catch (e) {
+      showToast('error', e.message || 'Could not send to the courier');
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   // ── Selection + bulk delete ───────────────────────────────────────────────
@@ -1835,6 +1871,15 @@ export default function BookOrdersPage() {
               >
                 <FiDownload size={13} /> PDF
               </button>
+              {canCourier && (
+                <button
+                  onClick={sendSelectedToCourier}
+                  disabled={bulkBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50"
+                >
+                  {bulkBusy ? <FiLoader className="animate-spin" size={13} /> : <FiSend size={13} />} Send to courier
+                </button>
+              )}
               {/* Deleting, set apart on purpose.
                   A divider and its own colour, because everything to the left
                   moves an order along and this one ends it. Owner-only, and
@@ -1861,6 +1906,24 @@ export default function BookOrdersPage() {
             </div>
           )}
           </div>
+
+          {courierResults && courierResults.some((r) => !r.ok) && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <b>কুরিয়ারে যায়নি:</b>
+                <button onClick={() => setCourierResults(null)} className="text-amber-700 hover:text-amber-900" aria-label="Close">
+                  <FiX size={13} />
+                </button>
+              </div>
+              <ul className="space-y-0.5">
+                {courierResults.filter((r) => !r.ok).map((r) => (
+                  <li key={r.orderId || r.orderNumber}>
+                    <span className="font-mono font-semibold">{r.orderNumber}</span> — {r.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Move the ticked orders to the day they go out. The date box starts
               empty rather than on today: this is used to send orders FORWARD to
