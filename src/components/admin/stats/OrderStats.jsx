@@ -531,7 +531,7 @@ export function MetricToggle({ metric, onChange }) {
  * is in hand — with the two things the row never said: the average order, and
  * the day the shop sold most.
  */
-export function RangeSummary({ range, mode, loading, hideMoney }) {
+export function RangeSummary({ range, mode, loading, hideMoney, title = 'This period' }) {
   const m = moneyIn(range, mode);
   const orders = range?.orders ?? 0;
   const copies = range?.copies ?? 0;
@@ -556,7 +556,7 @@ export function RangeSummary({ range, mode, loading, hideMoney }) {
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-dash-line/60 bg-dash-card px-5 py-4 shadow-sm">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">This period</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-dash-mute2">{title}</p>
 
       {loading ? (
         <div className="mt-3 space-y-3">
