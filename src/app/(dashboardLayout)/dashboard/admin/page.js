@@ -50,6 +50,9 @@ export default function AdminDashboard() {
   const [range, setRange] = useState(() => resolvePreset('30d'));
   const [draft, setDraft] = useState(() => resolvePreset('30d'));
   const [stats, setStats] = useState(null);
+  // This month's figures, for the cards at the top (the shop's choice: the
+  // month up top, all time in the side panel).
+  const [monthStats, setMonthStats] = useState(null);
   const [loading, setLoading] = useState(true);
   // Orders first: how many came in, then what they were worth.
   const [metric, setMetric] = useState('orders');
@@ -81,17 +84,25 @@ export default function AdminDashboard() {
     if (!showOrderDashboard) { setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/orders/stats?from=${range.from}&to=${range.to}`,
-        { headers: headers() }
-      ).then((r) => r.json());
+      // The chart's range, and — for the cards at the top — this month. A
+      // manager's figures are already narrowed to two days by the API, so
+      // they get no second request.
+      const month = resolvePreset('month');
+      const [res, monthRes] = await Promise.all([
+        fetch(`${API}/orders/stats?from=${range.from}&to=${range.to}`, { headers: headers() }).then((r) => r.json()),
+        twoDayView
+          ? Promise.resolve(null)
+          : fetch(`${API}/orders/stats?from=${month.from}&to=${month.to}`, { headers: headers() }).then((r) => r.json()),
+      ]);
       setStats(res?.data || null);
+      setMonthStats(monthRes?.data?.range || null);
     } catch {
       setStats(null);
+      setMonthStats(null);
     } finally {
       setLoading(false);
     }
-  }, [range, showOrderDashboard]);
+  }, [range, showOrderDashboard, twoDayView]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -139,7 +150,16 @@ export default function AdminDashboard() {
   }
 
   const r = stats?.range;
-  const t = stats?.totals;
+  // The cards at the top read this month; a manager keeps their two-day
+  // figures there. The side panel beside the chart reads all time.
+  const allTime = stats?.totals;
+  const t = twoDayView ? allTime : monthStats;
+  const topScope = twoDayView ? scopeWord : 'this month';
+  const monthLabel = (() => {
+    const m = resolvePreset('month');
+    const f = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    return `${f(m.from)} – ${f(m.to)}`;
+  })();
   // "6 Oct 12 PM → 7 Oct 12 PM" — the shop day named by today's date, which is
   // the one both this dashboard and the Book Orders screen mean by "today".
   const todayWindow = dayWindow(bdDate());
@@ -179,8 +199,13 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* The money, over whatever this account is allowed to see: all of it
-          for an owner, yesterday and today for a manager. */}
+      {/* The money, this month for an owner; yesterday and today for a manager. */}
+      {!twoDayView && (
+        <div className="flex items-center gap-2 px-1">
+          <span className="rounded-full bg-brand/15 px-3 py-1 text-xs font-bold text-brand">This month</span>
+          <span className="text-xs text-dash-mute2">{monthLabel}</span>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MoneyCard
           icon={FiClock} tone="amber" loading={loading}
@@ -195,7 +220,7 @@ export default function AdminDashboard() {
           // every order, this one leaves cancelled ones out, because a
           // cancelled order sold nothing. Said out loud so the two reading
           // differently is not read as one of them being wrong.
-          note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, ${scopeWord} · cancelled not counted`}
+          note={`${(t?.orders ?? 0).toLocaleString('en-US')} orders, ${topScope} · cancelled not counted`}
         />
         )}
         {!moneyBlind && (
@@ -216,13 +241,13 @@ export default function AdminDashboard() {
           <MoneyCard
             icon={FiPackage} tone="indigo" loading={loading}
             label="Orders" value={(t?.orders ?? 0).toLocaleString('en-US')}
-            note={`${scopeWord} · cancelled not counted`}
+            note={`${topScope} · cancelled not counted`}
           />
         )}
       </div>
 
       {/* The two things the totals fold together: the books, and the delivery. */}
-      <BooksAndDelivery bucket={t} loading={loading} scope={scopeWord} hideMoney={moneyBlind} />
+      <BooksAndDelivery bucket={t} loading={loading} scope={topScope} hideMoney={moneyBlind} />
 
       {/* Date range — not for an account that only has two days to look at. */}
       {!twoDayView && (
@@ -268,7 +293,12 @@ export default function AdminDashboard() {
             <RevenueChart daily={r?.daily} loading={loading} mode={mode} metric={moneyBlind ? 'orders' : metric} height={250} />
           </div>
         </div>
-        <RangeSummary range={r} mode={mode} loading={loading} hideMoney={moneyBlind} />
+        {twoDayView ? (
+          <RangeSummary range={r} mode={mode} loading={loading} hideMoney={moneyBlind} />
+        ) : (
+          // All time, from the first order: the whole picture beside the chart.
+          <RangeSummary range={allTime} mode={mode} loading={loading} hideMoney={moneyBlind} title="All time" />
+        )}
       </div>
 
       {/* Today + shortcuts */}
