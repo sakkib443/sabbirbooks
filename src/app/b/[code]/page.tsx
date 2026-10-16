@@ -70,6 +70,8 @@ type Question = {
   images: string[];
   /** What to say where the video would be. Empty = the default line below. */
   videoNote?: string;
+  /** The admin switched the "video unavailable" notice off for this question. */
+  hideVideoNote?: boolean;
 };
 
 type ScanData = {
@@ -821,7 +823,7 @@ export default function BookTopicScanPage() {
                       written one: "শীঘ্রই যোগ করা হবে" is the truth for a
                       recording nobody has made yet, and the default line blames
                       a fault instead. */}
-                  {!hasVideos && (
+                  {!hasVideos && !active.hideVideoNote && (
                     <section>
                       <SectionLabel icon={<LuVideo className="w-3.5 h-3.5" />}>
                         ভিডিও

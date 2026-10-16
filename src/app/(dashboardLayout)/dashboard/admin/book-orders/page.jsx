@@ -66,7 +66,9 @@ const fmtWhen = (d) =>
 
 // Manual fulfillment transitions the admin can set (payment-driven states
 // 'pending' / 'paid' / 'access-granted' are set by the payment flow, not here).
-const FULFILLMENT_OPTIONS = ['processing', 'shipped', 'delivered', 'cancelled'];
+// Pending first: orders confirm themselves now, and this is how the admin
+// puts one back on hold.
+const FULFILLMENT_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 // The desktop table's column widths. Declared once and used by BOTH the header
 // strip and every row, because a table whose header does not line up with its
@@ -222,12 +224,14 @@ function BooksChip({ order, className = '' }) {
 // click actually does — which matters most for `delivered`, since on a COD order
 // it is also the moment the money is recorded.
 const FULFILLMENT_LABEL = {
+  pending: 'Pending',
   processing: 'Confirmed',
   shipped: 'Shipped',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
 const FULFILLMENT_HELP = {
+  pending: 'Put the order on hold — not confirmed; reserved stock goes back until it is confirmed again',
   processing: 'Order confirmed — stock reserved and the buyer can open this book’s QR content',
   shipped: 'Handed to the courier',
   delivered: 'Book received by the buyer — cash-on-delivery orders are marked paid here',
