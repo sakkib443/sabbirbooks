@@ -10,7 +10,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiSettings, FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiBell, FiChevronLeft, FiTag, FiGlobe, FiClipboard, FiLink,
-  FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey, FiUnlock, FiTruck,
+  FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey, FiUnlock, FiTruck, FiPackage,
 } from 'react-icons/fi';
 
 /*
@@ -118,6 +118,17 @@ const AdminSidebar = () => {
         },
         // The standard charge and each medical college's own rate. A rate is a
         // price, so settings.write — the same gate as the API behind it.
+        // The courier: hand parcels to Steadfast, follow them, and keep the
+        // books on what it owes. Owner territory — it moves parcels and shows
+        // money — so the same gate as the staff screens.
+        {
+          title: 'Courier', icon: FiPackage, need: ['staff.manage'],
+          submenu: [
+            { title: 'Send to Courier', href: '/dashboard/admin/courier/send', need: ['staff.manage'] },
+            { title: 'Parcels', href: '/dashboard/admin/courier', exact: true, need: ['staff.manage'] },
+            { title: 'Payouts & Accounts', href: '/dashboard/admin/courier/payouts', need: ['staff.manage'] },
+          ],
+        },
         { title: 'Delivery Charges', href: '/dashboard/admin/delivery-charges', icon: FiTruck, need: ['settings.write'] },
         // Two menus, because there are two different things.
         //
