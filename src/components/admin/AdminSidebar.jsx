@@ -235,6 +235,8 @@ const AdminSidebar = () => {
           ],
         },
         { title: 'Partners', href: '/dashboard/admin/partners', icon: FiLink, need: ['content.write'] },
+        // Device approvals and who is signed in where — the Super Admin's alone.
+        { title: 'Security & Devices', href: '/dashboard/admin/security', icon: FiShield, superOnly: true },
         {
           title: 'Users', icon: FiUsers, need: ['users.read', 'staff.manage'],
           submenu: [

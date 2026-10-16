@@ -23,8 +23,14 @@ import {
   LuLogOut,
   LuSettings,
   LuChevronDown,
+  LuShieldCheck,
+  LuCheck,
 } from "react-icons/lu";
 import { ROLE_LABELS } from "@/lib/permissions";
+import { isRealSuperAdmin, setViewAs, VIEW_AS_LABEL } from "@/lib/viewAs";
+
+// The panels the Super Admin can switch between — and only the Super Admin.
+const PANELS = ["superAdmin", "admin", "manager"];
 
 const STAFF_ROLES = ["admin", "superAdmin", "trainingManager", "contentManager", "manager"];
 
@@ -69,15 +75,23 @@ export default function UserMenu({ user, onLogout, dashHref, className = "" }) {
   const role = user.role === "user" ? "student" : user.role;
   const isStaff = STAFF_ROLES.includes(role);
   const showAvatar = avatar && !imgFailed;
+  const superAdmin = isRealSuperAdmin(user);
+  const openPanel = panel => {
+    close();
+    setViewAs(panel);
+    // A full load, so every page and menu starts over as the chosen role.
+    window.location.assign("/dashboard/admin");
+  };
 
   // Only link to pages that exist for this role. There is no personal profile
   // page in the admin panel — pointing "প্রোফাইল" at /dashboard/admin would just
   // repeat the dashboard link. Site settings is capability-gated, so a manager
   // never sees a link the API would refuse.
   const capabilities = Array.isArray(user.capabilities) ? user.capabilities : [];
-  const links = [
-    { href: dashHref, label: isStaff ? "অ্যাডমিন প্যানেল" : "ড্যাশবোর্ড", icon: LuLayoutDashboard },
-  ];
+  // The Super Admin picks a panel below instead of one "admin panel" link.
+  const links = superAdmin
+    ? []
+    : [{ href: dashHref, label: isStaff ? "অ্যাডমিন প্যানেল" : "ড্যাশবোর্ড", icon: LuLayoutDashboard }];
 
   if (role === "mentor") {
     links.push({ href: "/dashboard/mentor/profile", label: "প্রোফাইল", icon: LuUser });
@@ -154,6 +168,30 @@ export default function UserMenu({ user, onLogout, dashHref, className = "" }) {
               )}
             </div>
           </div>
+
+          {superAdmin && (
+            <div className="border-b border-border py-1">
+              <p className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                কোন প্যানেলে যাবেন?
+              </p>
+              {PANELS.map(panel => {
+                const current = user.role === panel;
+                return (
+                  <button
+                    key={panel}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => openPanel(panel)}
+                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-muted ${current ? "font-semibold text-primary" : "text-foreground"}`}
+                  >
+                    <LuShieldCheck className={`text-base ${current ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="flex-1">{VIEW_AS_LABEL[panel]} প্যানেল</span>
+                    {current && <LuCheck className="text-sm" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <nav className="py-1">
             {links.map(({ href, label, icon: Icon }) => (

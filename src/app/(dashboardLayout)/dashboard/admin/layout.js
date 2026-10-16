@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import NotificationBell from '@/components/shared/NotificationBell';
+import ViewAsBanner from '@/components/admin/ViewAsBanner';
 import DashboardShell from '../_components/DashboardShell';
 import { ADMIN_SHELL_ROLES, ROLE_LABELS } from '@/lib/permissions';
 import { FiUser, FiSettings, FiBell, FiHome, FiShoppingBag, FiBook, FiTag, FiTrendingUp } from 'react-icons/fi';
@@ -65,6 +66,7 @@ const AdminLayout = ({ children }) => {
       // The sidebar's mobile toggle floats over the top-left corner.
       headerPaddingClassName="pl-16 pr-4 lg:px-7"
     >
+      <ViewAsBanner />
       {children}
     </DashboardShell>
   );

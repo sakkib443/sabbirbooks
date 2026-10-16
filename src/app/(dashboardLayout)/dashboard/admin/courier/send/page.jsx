@@ -176,7 +176,7 @@ export default function CourierSendPage() {
                       <input type="checkbox" readOnly checked={selected.has(r._id)} className="h-4 w-4 rounded border-dash-line-strong text-brand" />
                     </td>
                     <td className="px-2 py-2.5">
-                      <div className="font-mono text-xs font-semibold text-dash-ink2">{r.orderNumber}</div>
+                      <div className="font-mono text-xs font-semibold text-dash-ink2"><span className="mr-1.5 inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-sans text-xs font-extrabold text-indigo-700">#{r.orderSeq ?? '—'}</span>{r.orderNumber}</div>
                       <div className="text-[11px] text-dash-mute2">{fmt(r.dispatchDate || r.createdAt)} · {r.status === 'processing' ? 'Confirmed' : r.status}</div>
                     </td>
                     <td className="px-2 py-2.5">

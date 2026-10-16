@@ -17,6 +17,8 @@
  * Only when the refresh itself fails is the session actually over.
  */
 
+import { getViewAs, clearViewAs } from './viewAs';
+
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(
   /\/api\/?$/i,
   ''
@@ -76,6 +78,7 @@ export const clearSession = () => {
   [KEYS.token, KEYS.refresh, KEYS.user, KEYS.legacyToken, KEYS.legacyUser].forEach((k) =>
     localStorage.removeItem(k)
   );
+  clearViewAs();
   // sb_device_id deliberately survives: it identifies the browser, not the login.
 };
 
@@ -171,6 +174,8 @@ const withFreshAuth = (input, init, token) => {
     init?.headers || (input instanceof Request ? input.headers : undefined)
   );
   headers.set('Authorization', `Bearer ${token}`);
+  const viewAs = getViewAs();
+  if (viewAs) headers.set('x-view-as', viewAs);
 
   if (input instanceof Request && !init) {
     return [new Request(input, { headers }), undefined];
@@ -202,6 +207,15 @@ export function installFetchInterceptor() {
     })();
 
     let args = [input, init];
+
+    // The Super Admin's "view as" panel choice rides on every API call (the
+    // server ignores it on anyone else's token).
+    const viewAs = getViewAs();
+    if (viewAs) {
+      const h = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+      h.set('x-view-as', viewAs);
+      args = input instanceof Request && !init ? [new Request(input, { headers: h }), undefined] : [input, { ...(init || {}), headers: h }];
+    }
 
     // Pre-emptive renewal: if the token we're about to send is within 90s of
     // expiring, swap it now. Cheaper than a guaranteed 401 + retry, and it means
