@@ -149,12 +149,15 @@ const DATE_PRESETS = [
   // comes and goes is read as a fault, and the dates printed under each one
   // now say plainly why it is empty.
   { key: 'tomorrow', label: 'Tomorrow' },
+  // The three above in one list — what a manager works through in a shift
+  // (asked for 16 Oct 2026: switching between three lists was slowing them).
+  { key: '3d', label: 'All 3 days' },
   { key: '7d', label: 'Last 7 days' },
 ];
 
 // The three a day-scoped manager is offered — the same three the API will
 // answer for. Anything else would be a button that comes back empty.
-const SCOPED_PRESETS = ['yesterday', 'today', 'tomorrow'];
+const SCOPED_PRESETS = ['yesterday', 'today', 'tomorrow', '3d'];
 
 /** The window a shortcut covers, ready for the query. Null = every date. */
 /**
@@ -181,6 +184,7 @@ const daysForPreset = (key) => {
   if (key === 'today') return { fromDay: today, toDay: today };
   if (key === 'yesterday') return { fromDay: addDays(today, -1), toDay: addDays(today, -1) };
   if (key === 'tomorrow') return { fromDay: addDays(today, 1), toDay: addDays(today, 1) };
+  if (key === '3d') return { fromDay: addDays(today, -1), toDay: addDays(today, 1) };
   if (key === '7d') return { fromDay: addDays(today, -6), toDay: today };
   return null;
 };
