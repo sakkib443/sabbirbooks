@@ -17,6 +17,7 @@ import {
   FiDollarSign, FiCheckCircle, FiXCircle, FiUsers, FiExternalLink,
 } from 'react-icons/fi';
 import { listCoupons, removeCoupon, saveCoupon, formatTk } from '@/components/admin/bookCoupon/couponApi';
+import { getStoredUser } from '@/lib/permissions';
 
 const discountText = (c) => {
   const parts = [];
@@ -63,6 +64,9 @@ const FILTERS = [
 ];
 
 export default function BookCouponsPage() {
+  // A manager looks at the coupons; creating, editing, switching on or off
+  // and deleting are the admin's (18 Oct 2026). The server refuses it too.
+  const [canEdit] = useState(() => getStoredUser()?.role !== 'manager');
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
   const [busyId, setBusyId] = useState('');
   const [kind, setKind] = useState('all');
@@ -135,6 +139,7 @@ export default function BookCouponsPage() {
             phone has left after the page padding — unwrapped, they pushed the
             whole page sideways. */}
         <div className="flex flex-wrap items-center gap-2">
+          {canEdit && (<>
           <Link
             href="/dashboard/admin/affiliates"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dash-line text-dash-ink3 font-medium hover:bg-dash-soft transition-colors"
@@ -153,6 +158,7 @@ export default function BookCouponsPage() {
           >
             <FiPlus /> Add Coupon
           </Link>
+          </>)}
         </div>
       </div>
 
@@ -273,7 +279,7 @@ export default function BookCouponsPage() {
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => toggleActive(c)}
-                      disabled={busyId === c._id}
+                      disabled={!canEdit || busyId === c._id}
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors ${c.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-dash-soft2 text-dash-mute2 hover:bg-dash-soft3'}`}
                       title="Toggle active"
                     >
@@ -282,7 +288,7 @@ export default function BookCouponsPage() {
                     </button>
                     <button
                       onClick={() => togglePopup(c)}
-                      disabled={busyId === c._id}
+                      disabled={!canEdit || busyId === c._id}
                       className={`mt-1.5 block mx-auto rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors ${c.showInPopup ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-dash-soft2 text-dash-mute2 hover:bg-dash-soft3'}`}
                       title="ওয়েবসাইটের 'আজকের কুপন' পপআপে এই কুপনটা দেখান"
                     >
@@ -290,6 +296,7 @@ export default function BookCouponsPage() {
                     </button>
                   </td>
                   <td className="px-4 py-3">
+                    {canEdit && (
                     <div className="flex items-center justify-end gap-1">
                       <Link
                         href={`/dashboard/admin/book-coupons/create?id=${c._id}`}
@@ -320,6 +327,7 @@ export default function BookCouponsPage() {
                         </button>
                       )}
                     </div>
+                    )}
                   </td>
                 </tr>
               ))}

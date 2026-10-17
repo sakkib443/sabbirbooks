@@ -27,6 +27,7 @@ import {
   listApplications, reviewApplication, deleteAffiliate,
   formatTk, formatDate, STATUS_TONE, STATUS_LABEL,
 } from './ambassadorApi';
+import { getStoredUser } from '@/lib/permissions';
 import AffiliateForm from './AffiliateForm';
 import AffiliateFilters from './AffiliateFilters';
 import AffiliateDetail from './AffiliateDetail';
@@ -44,6 +45,9 @@ const BLANK_FILTERS = {
 };
 
 export default function AffiliatesManager({ defaultTab = 'approved' }) {
+  // Each affiliate's own sales and commission are shown; added up across
+  // everyone, they are the Super Admin's alone (18 Oct 2026: no sums).
+  const [showSums] = useState(() => getStoredUser()?.role === 'superAdmin');
   const [filters, setFilters] = useState({ ...BLANK_FILTERS, status: defaultTab });
   const [state, setState] = useState({
     loading: true, error: '', rows: [], counts: {}, facets: {},
@@ -174,8 +178,8 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <Kpi icon={FiUsers} label="জন" value={totals.people} />
           <Kpi icon={FiShoppingBag} label="অর্ডার" value={totals.orders} />
-          <Kpi icon={FiDollarSign} label="বিক্রি" value={formatTk(totals.sales)} />
-          <Kpi icon={FiTag} label="কমিশন" value={formatTk(totals.commission)} />
+          {showSums && <Kpi icon={FiDollarSign} label="বিক্রি" value={formatTk(totals.sales)} />}
+          {showSums && <Kpi icon={FiTag} label="কমিশন" value={formatTk(totals.commission)} />}
           <button
             onClick={exportCsv}
             disabled={!state.rows.length}

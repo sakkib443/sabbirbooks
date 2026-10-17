@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation';
 import { useBrand } from '@/components/shared/Brand';
 import { canAny, getStoredUser, resolveCapabilities, ROLE_LABELS } from '@/lib/permissions';
 import {
-  FiHome, FiUsers, FiAward, FiMessageSquare,
+  FiHome, FiAward,
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
-  FiSettings, FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
-  FiBarChart2, FiBell, FiChevronLeft, FiTag, FiGlobe, FiClipboard, FiLink,
+  FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
+  FiBarChart2, FiChevronLeft, FiTag,
   FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage,
 } from 'react-icons/fi';
 
@@ -58,6 +58,9 @@ const AdminSidebar = () => {
   const filterByCaps = (items) => items
     // superOnly: the whole-history money screens are the Super Admin's.
     .filter(it => !it.superOnly || role === 'superAdmin')
+    // roles: only these roles (the Super Admin always) — e.g. a manager may look
+    // at coupons but not add one.
+    .filter(it => !it.roles || role === 'superAdmin' || it.roles.includes(role))
     .filter(it => !it.need || canAny({ capabilities: caps }, ...it.need))
     .map(it => it.submenu ? { ...it, submenu: filterByCaps(it.submenu) } : it)
     .filter(it => !it.submenu || it.submenu.length > 0);
@@ -121,11 +124,12 @@ const AdminSidebar = () => {
           title: 'Coupons', icon: FiTag, need: ['orders.read', 'users.read'],
           submenu: [
             { title: 'All Coupons', href: '/dashboard/admin/book-coupons', exact: true, need: ['orders.read'] },
-            { title: 'Add Coupon', href: '/dashboard/admin/book-coupons/create', need: ['orders.write'] },
+            { title: 'Add Coupon', href: '/dashboard/admin/book-coupons/create', need: ['orders.write'], roles: ['admin'] },
             // An affiliate record is about a person — users.read.
             { title: 'Affiliates', href: '/dashboard/admin/affiliates', exact: true, need: ['users.read'] },
             { title: 'Affiliate Applications', href: '/dashboard/admin/affiliates/applications', need: ['users.read'] },
-            { title: 'Affiliate Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'], superOnly: true },
+            // Each owner's payout is shown to the admin; the grand totals are not.
+            { title: 'Affiliate Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'], roles: ['admin'] },
           ],
         },
         // The printed book's QR side: the content each QR opens, the codes
@@ -210,50 +214,53 @@ const AdminSidebar = () => {
         { title: 'Certifications', href: '/dashboard/admin/certification', icon: FiAward, need: ['training.manage'] },
       ],
     },
+    // Everything that is not the day's work — notices, feedback, site pages,
+    // users, settings — folded under one "More" (18 Oct 2026), so the menu
+    // shows the shop's work first.
     {
-      label: 'Communication',
-      items: [
-        { title: 'Notice Board', href: '/dashboard/admin/notice-board', icon: FiClipboard, need: ['content.write'] },
-        { title: 'Notifications', href: '/dashboard/admin/notifications', icon: FiBell },
-        // Feedback = contact-form submissions, i.e. names, emails and phone numbers.
-        { title: 'Feedback', href: '/dashboard/admin/feedback', icon: FiMessageSquare, need: ['users.read'] },
-        { title: 'Reviews', href: '/dashboard/admin/reviews', icon: FiAward, need: ['content.write'] },
-      ],
-    },
-    {
-      label: 'Others',
+      label: 'More',
       items: [
         {
-          title: 'Site Content', icon: FiGlobe, need: ['content.write'],
+          title: 'More', icon: FiGrid,
           submenu: [
-            { title: 'Contact Page', href: '/dashboard/admin/site-content/contact' },
+            { title: 'Notice Board', href: '/dashboard/admin/notice-board', need: ['content.write'] },
+            { title: 'Notifications', href: '/dashboard/admin/notifications' },
+            // Feedback = contact-form submissions, i.e. names, emails and phone numbers.
+            { title: 'Feedback', href: '/dashboard/admin/feedback', need: ['users.read'] },
+            { title: 'Reviews', href: '/dashboard/admin/reviews', need: ['content.write'] },
+            {
+              title: 'Site Content', need: ['content.write'],
+              submenu: [
+                { title: 'Contact Page', href: '/dashboard/admin/site-content/contact' },
+              ],
+            },
+            { title: 'Partners', href: '/dashboard/admin/partners', need: ['content.write'] },
+            // Device approvals and who is signed in where — the Super Admin's alone.
+            { title: 'Security & Devices', href: '/dashboard/admin/security', superOnly: true },
+            {
+              title: 'Users', need: ['users.read', 'staff.manage'],
+              submenu: [
+                // Staff accounts and their permissions: the Super Admin's alone (18 Oct 2026).
+                { title: 'Team / Staff', href: '/dashboard/admin/user/staff', need: ['staff.manage'], superOnly: true },
+                { title: 'Permissions', href: '/dashboard/admin/user/permissions', need: ['staff.manage'], superOnly: true },
+                { title: 'Students', href: '/dashboard/admin/user/students', need: ['users.read'] },
+                // Directory behind the signup form's college dropdown — reference
+                // data about students' institutions, so it rides with users.write.
+                { title: 'Medical Colleges', href: '/dashboard/admin/medical-colleges', need: ['users.write'] },
+              ],
+            },
+            // No `need`: this page also hosts My Profile and Password, which every
+            // staff account must be able to reach. The Site Settings TAB inside it
+            // is what carries the settings.write gate.
+            { title: 'Settings', href: '/dashboard/admin/settings' },
+            // Reads deployment configuration and can spend a message, so it is
+            // owner territory — same gate as the staff screens.
+            { title: 'SMS', href: '/dashboard/admin/sms', need: ['staff.manage'] },
           ],
         },
-        { title: 'Partners', href: '/dashboard/admin/partners', icon: FiLink, need: ['content.write'] },
-        // Device approvals and who is signed in where — the Super Admin's alone.
-        { title: 'Security & Devices', href: '/dashboard/admin/security', icon: FiShield, superOnly: true },
-        {
-          title: 'Users', icon: FiUsers, need: ['users.read', 'staff.manage'],
-          submenu: [
-            { title: 'Team / Staff', href: '/dashboard/admin/user/staff', need: ['staff.manage'] },
-            { title: 'Permissions', href: '/dashboard/admin/user/permissions', need: ['staff.manage'] },
-            { title: 'Students', href: '/dashboard/admin/user/students', need: ['users.read'] },
-            // Directory behind the signup form's college dropdown — reference
-            // data about students' institutions, so it rides with users.write.
-            { title: 'Medical Colleges', href: '/dashboard/admin/medical-colleges', need: ['users.write'] },
-          ],
-        },
-        // No `need`: this page also hosts My Profile and Password, which every
-        // staff account must be able to reach. The Site Settings TAB inside it
-        // is what carries the settings.write gate.
-        { title: 'Settings', href: '/dashboard/admin/settings', icon: FiSettings },
-        // Reads deployment configuration and can spend a message, so it is
-        // owner territory — same gate as the staff screens.
-        { title: 'SMS', href: '/dashboard/admin/sms', icon: FiMessageSquare, need: ['staff.manage'] },
       ],
     },
   ];
-
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[260px]';
 
   // Capability-aware menu: drop what this account cannot do + any empty group,

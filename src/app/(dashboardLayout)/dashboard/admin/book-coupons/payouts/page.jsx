@@ -37,7 +37,8 @@ export default function CouponPayoutsPage() {
       try {
         const data = await fetchPayouts();
         if (!alive) return;
-        setState({ loading: false, error: '', rows: data?.rows || [], totals: data?.totals || { sales: 0, discount: 0, payout: 0 } });
+        setState({ loading: false, error: '', rows: data?.rows || [], // null for an admin: the grand totals are the Super Admin's (18 Oct 2026).
+        totals: data?.totals ?? null });
       } catch (e) {
         if (alive) setState((s) => ({ ...s, loading: false, error: e.message || 'Failed to load payouts' }));
       }
@@ -67,12 +68,14 @@ export default function CouponPayoutsPage() {
         </div>
       ) : (
         <>
-          {/* Totals */}
+          {/* Totals — Super Admin only; an admin sees each owner's figure below. */}
+          {state.totals && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard icon={FiShoppingBag} label="Coupon sales" value={state.totals.sales} tone="brand" />
             <StatCard icon={FiGift} label="Discount given to buyers" value={formatTk(state.totals.discount)} tone="green" />
             <StatCard icon={FiDollarSign} label="Total owed to owners" value={formatTk(state.totals.payout)} tone="amber" />
           </div>
+          )}
 
           {/* Per-coupon */}
           {state.rows.length === 0 ? (
@@ -119,6 +122,7 @@ export default function CouponPayoutsPage() {
                     </tr>
                   ))}
                 </tbody>
+                {state.totals && (
                 <tfoot>
                   <tr className="border-t-2 border-dash-line bg-dash-soft/40 font-bold text-dash-ink2">
                     <td className="px-4 py-3" colSpan={3}>Total</td>
@@ -128,6 +132,7 @@ export default function CouponPayoutsPage() {
                     <td className="px-4 py-3 text-right tabular-nums text-amber-600">{formatTk(state.totals.payout)}</td>
                   </tr>
                 </tfoot>
+                )}
               </table>
             </div>
           )}

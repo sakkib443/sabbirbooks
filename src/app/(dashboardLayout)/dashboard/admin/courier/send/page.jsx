@@ -22,8 +22,9 @@ export default function CourierSendPage() {
   const { confirm, confirmNode } = useConfirm();
   // Opens on today's orders — the batch going out now; any other day is a click away.
   const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, preset: 'today' }));
-  // Only the Super Admin is shown money (the server blanks it for everyone else).
-  const [showMoney] = useState(isSuperAdmin);
+  // Each parcel's COD is shown to whoever sends it; the COD of the ticked
+  // parcels ADDED UP is the Super Admin's alone (18 Oct 2026: no sums).
+  const [showSums] = useState(isSuperAdmin);
   const [data, setData] = useState({ rows: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,7 +65,7 @@ export default function CourierSendPage() {
     if (!picked.length) return;
     const ok = await confirm({
       title: `${picked.length}টি অর্ডার Steadfast-এ পাঠাবেন?`,
-      message: `${showMoney ? `মোট COD ${tk(pickedCod)}। ` : ''}পাঠানোর পর অর্ডারগুলো "Shipped" হবে আর ক্রেতা ট্র্যাকিং লিংকসহ SMS পাবেন।`,
+      message: `${showSums ? `মোট COD ${tk(pickedCod)}। ` : ''}পাঠানোর পর অর্ডারগুলো "Shipped" হবে আর ক্রেতা ট্র্যাকিং লিংকসহ SMS পাবেন।`,
       confirmText: 'পাঠান',
       danger: false,
     });
@@ -134,7 +135,7 @@ export default function CourierSendPage() {
               onChange={() => setSelected(allOn ? new Set() : new Set(rows.map((r) => r._id)))}
               className="h-4 w-4 rounded border-dash-line-strong text-brand focus:ring-brand"
             />
-            {selected.size ? `${selected.size} selected${showMoney ? ` · COD ${tk(pickedCod)}` : ''}` : `Select all (${rows.length}${data.total > rows.length ? ` of ${data.total}` : ''})`}
+            {selected.size ? `${selected.size} selected${showSums ? ` · COD ${tk(pickedCod)}` : ''}` : `Select all (${rows.length}${data.total > rows.length ? ` of ${data.total}` : ''})`}
           </label>
           <div className="flex items-center gap-2">
             <button onClick={load} className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line px-3 py-2 text-xs font-semibold text-dash-ink3 hover:bg-dash-soft">
@@ -169,7 +170,7 @@ export default function CourierSendPage() {
                   <th className="px-2 py-2">Customer</th>
                   <th className="px-2 py-2">College / area</th>
                   <th className="px-2 py-2">Books</th>
-                  <th className="px-2 py-2 text-right">{showMoney ? 'COD' : 'Payment'}</th>
+                  <th className="px-2 py-2 text-right">COD</th>
                 </tr>
               </thead>
               <tbody>
@@ -192,9 +193,7 @@ export default function CourierSendPage() {
                     </td>
                     <td className="px-2 py-2.5 text-xs text-dash-ink3">{(r.items || []).map((i) => `${i.title} ×${i.quantity}`).join(', ')}</td>
                     <td className="px-2 py-2.5 text-right font-semibold tabular-nums text-dash-ink2">
-                      {!showMoney ? (
-                        r.payment?.method === 'cod' ? <span className="text-xs font-medium text-amber-600">COD</span> : <span className="text-xs font-medium text-emerald-600">Prepaid</span>
-                      ) : r.codAmount ? tk(r.codAmount) : <span className="text-xs font-medium text-emerald-600">Prepaid</span>}
+                      {r.codAmount ? tk(r.codAmount) : <span className="text-xs font-medium text-emerald-600">Prepaid</span>}
                     </td>
                   </tr>
                 ))}
