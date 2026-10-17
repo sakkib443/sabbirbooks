@@ -63,7 +63,7 @@ export default function CouponPayoutsPage() {
         </div>
       ) : state.error ? (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600">
-          <FiAlertCircle /> {state.error}
+          <FiAlertCircle /> {/Access denied|not authorized/i.test(state.error) ? 'এই পাতা শুধু Super Admin দেখতে পারেন।' : state.error}
         </div>
       ) : (
         <>

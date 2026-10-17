@@ -143,6 +143,10 @@ export default function CheckoutView() {
   const [college, setCollege] = useState<CollegeOption | null>(null);
   const [collegeName, setCollegeName] = useState("");
   const [collegeError, setCollegeError] = useState("");
+  // "Deliver to my medical college": only when the buyer ticks it does a
+  // listed college fill the address below; otherwise they write their own
+  // (asked for 17 Oct 2026 — the college used to fill it for everyone).
+  const [toCollege, setToCollege] = useState(false);
   // A signed-in buyer's college from their profile, matched to the directory
   // once it has loaded.
   const [profileCollege, setProfileCollege] = useState<{ id?: string; name?: string } | null>(null);
@@ -687,11 +691,15 @@ export default function CheckoutView() {
    * the child value belongs to. The buyer can change any of them afterwards;
    * the college's own delivery rate simply stops applying if they do.
    */
-  const pickCollege = (picked: CollegeOption | null, typed = "") => {
+  const pickCollege = (picked: CollegeOption | null, typed = "", fill = toCollege) => {
     setCollege(picked);
     setCollegeName(picked ? "" : typed);
     setCollegeError("");
-    if (!picked) return;
+    if (picked && fill) fillFromCollege(picked);
+  };
+
+  /** The college's campus as the delivery address: geography + its name. */
+  const fillFromCollege = (picked: CollegeOption) => {
     const division = (picked.division ?? "").trim();
     const district = (picked.district ?? "").trim();
     if (!division || !district) return;
@@ -699,7 +707,26 @@ export default function CheckoutView() {
     setValue("division", division);
     setValue("district", district);
     setValue("upazila", upazila && upazilasOf(division, district).includes(upazila) ? upazila : "");
+    setValue("address", picked.name);
     setPrefilled({ division, district, college: picked.name });
+  };
+
+  /** The tick box: fill from the college now, or hand the address back. */
+  const chooseCollegeAddress = (on: boolean) => {
+    setToCollege(on);
+    if (on) {
+      if (college) fillFromCollege(college);
+      return;
+    }
+    // Unticked: clear only what the college filled in, so the buyer writes
+    // their own address.
+    if (prefilled?.college) {
+      setValue("division", "");
+      setValue("district", "");
+      setValue("upazila", "");
+      setValue("address", "");
+      setPrefilled(null);
+    }
   };
 
   // A signed-in buyer's profile college, once both it and the directory are in.
@@ -1200,6 +1227,18 @@ export default function CheckoutView() {
                       label={S.shipCollege}
                       placeholder={S.shipCollegePh}
                     />
+                    <label className={cn("mt-2.5 flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-colors", toCollege ? "border-primary/50 bg-primary-soft/60" : "border-border bg-card hover:border-primary/30", bn)}>
+                      <input
+                        type="checkbox"
+                        checked={toCollege}
+                        onChange={(e) => chooseCollegeAddress(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                      />
+                      <span>
+                        <span className="font-semibold text-foreground">{S.shipToCollege}</span>
+                        <span className="block text-xs text-muted-foreground">{S.shipToCollegeHint}</span>
+                      </span>
+                    </label>
                   </div>
                 }
                 deliveryHint={deliveryHint}
@@ -1824,6 +1863,8 @@ const EN = {
   shipEmailPh: "you@example.com",
   shipCollege: "Medical college",
   shipCollegePh: "Choose your medical college",
+  shipToCollege: "Deliver to my medical college's address",
+  shipToCollegeHint: "Tick it and the address below follows your college. Leave it and write your own address.",
   shipErrAltPhone: "The second number is not a valid mobile number",
   shipErrEmail: "Enter a valid email address",
   shipErrCollege: "Choose your medical college",
@@ -2082,6 +2123,8 @@ const BN: Copy = {
   shipEmailPh: "you@example.com",
   shipCollege: "মেডিকেল কলেজ",
   shipCollegePh: "আপনার মেডিকেল কলেজ বেছে নিন",
+  shipToCollege: "মেডিকেল কলেজের ঠিকানায় ডেলিভারি নিন",
+  shipToCollegeHint: "টিক দিলে নিচের ঠিকানা কলেজ অনুযায়ী বসে যাবে। না দিলে নিজের ঠিকানা লিখুন।",
   shipErrAltPhone: "দ্বিতীয় নম্বরটি সঠিক মোবাইল নম্বর নয়",
   shipErrEmail: "সঠিক ইমেইল দিন",
   shipErrCollege: "মেডিকেল কলেজ বেছে নিন",

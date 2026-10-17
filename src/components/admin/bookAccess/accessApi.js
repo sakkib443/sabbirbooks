@@ -81,4 +81,5 @@ export const HOW_TONE = {
 export const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-export const formatTk = (n) => '৳' + Math.round(Number(n) || 0).toLocaleString('en-US');
+// No amount at all (the server blanks money for accounts not shown it) → a dash, not a made-up ৳0.
+export const formatTk = (n) => (n == null ? '—' : '৳' + Math.round(Number(n) || 0).toLocaleString('en-US'));
