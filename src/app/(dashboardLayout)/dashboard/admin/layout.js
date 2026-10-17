@@ -52,7 +52,8 @@ const AdminLayout = ({ children }) => {
     <DashboardShell
       allowedRoles={ADMIN_SHELL_ROLES}
       sidebar={<AdminSidebar />}
-      bottomTabs={ADMIN_TABS}
+      // Reports are sales and money — the Super Admin's tab alone.
+      bottomTabs={user?.role === 'superAdmin' ? ADMIN_TABS : ADMIN_TABS.filter((t) => t.key !== 'analytics')}
       rootSegment="admin"
       subtitle={`${userRole} Dashboard`}
       userName={userName}
