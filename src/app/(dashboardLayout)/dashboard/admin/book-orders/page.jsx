@@ -17,7 +17,7 @@ import {
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
   FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
-  FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight, FiFileText,
+  FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight, FiFileText, FiSliders,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
@@ -26,7 +26,7 @@ import { getStoredUser } from '@/lib/permissions';
 import { sendToCourier } from '@/components/admin/courier/courierApi';
 import { buildOrderListPdf, downloadBlob } from '@/lib/orderListPdf';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
-import { addDays, bdDate, dayOf, dayWindow, formatBd, pastCutoff } from '@/lib/shopDay';
+import { addDays, bdDate, dayOf, dayWindow, pastCutoff } from '@/lib/shopDay';
 import {
   areaOf, collegeOf, copiesOf, countOptions, formatBdFull, matchesPlace, printRowOf, safeFileName,
 } from '@/lib/orderList';
@@ -159,6 +159,11 @@ const DATE_PRESETS = [
 // The three a day-scoped manager is offered — the same three the API will
 // answer for. Anything else would be a button that comes back empty.
 const SCOPED_PRESETS = ['yesterday', 'today', 'tomorrow', '3d', '7d'];
+
+// The two on the bar itself (18 Oct 2026); the rest live under "Sort by".
+const QUICK_PRESETS = ['today', 'tomorrow'];
+// The PDF menu's "one file per college" choice.
+const EACH_COLLEGE = '__each__';
 
 /** The window a shortcut covers, ready for the query. Null = every date. */
 /**
@@ -300,7 +305,7 @@ const matchesSearch = (o, q) => {
 };
 
 /** A select with its options counted: "Dhaka Medical College (12)". */
-function CountSelect({ value, onChange, allLabel, options, disabled, label, onOpen }) {
+function CountSelect({ value, onChange, allLabel, options, disabled, label, onOpen, compact = false }) {
   // A choice the reloaded orders no longer contain stays listed, at 0, so the
   // select never shows a filter other than the one actually applied.
   const shown = value && !options.some((o) => o.value === value) ? [{ value, count: 0 }, ...options] : options;
@@ -313,7 +318,7 @@ function CountSelect({ value, onChange, allLabel, options, disabled, label, onOp
       onFocus={onOpen}
       disabled={disabled}
       aria-label={label}
-      className="w-full min-w-0 px-4 py-2.5 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4 disabled:opacity-50"
+      className={`w-full min-w-0 border border-dash-line rounded-lg focus:ring-2 focus:ring-brand/25 focus:border-brand outline-none text-dash-ink4 disabled:opacity-50 ${compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5'}`}
     >
       <option value="">{allLabel}</option>
       {shown.map((o) => (
@@ -521,14 +526,19 @@ export default function BookOrdersPage() {
    * managerScope.ts), so this is about not drawing empty rows and columns
    * where the amounts used to be.
    */
-  // The admin too, from 17 Oct 2026: every order, but no money.
-  const moneyBlind = dayScoped || getStoredUser()?.role === 'admin';
+  const moneyBlind = dayScoped;
+  /*
+   * Money added up — revenue, COD to collect, the delivery split — is the
+   * Super Admin's alone (18 Oct 2026). An admin sees each order's own price;
+   * a manager sees no money at all (moneyBlind).
+   */
+  const totalsBlind = getStoredUser()?.role !== 'superAdmin';
   const cols = moneyBlind ? GRID_COLS_NO_MONEY : GRID_COLS;
-  const [datePreset, setDatePreset] = useState(() => (dayScoped ? 'today' : dayFromLink() || 'all'));
+  // Opens on Today, always (18 Oct 2026) — unless a link names a day.
+  const [datePreset, setDatePreset] = useState(() => (dayScoped ? 'today' : dayFromLink() || 'today'));
   const [dateRange, setDateRange] = useState(() => {
     if (dayScoped) return presetRange('today');
-    const linked = dayFromLink();
-    return linked ? presetRange(linked) : null;
+    return presetRange(dayFromLink() || 'today');
   }); // { from, to } | null
   const [dayFrom, setDayFrom] = useState('');
   const [dayTo, setDayTo] = useState('');
@@ -539,7 +549,9 @@ export default function BookOrdersPage() {
   // The admin has asked for the whole list. Sticky on purpose: having asked
   // once, they do not want the next status or date filter to go back to the
   // most recent 200 and make them ask again.
-  const [wantAll, setWantAll] = useState(false);
+  // 18 Oct 2026: no more "the latest 200" — whatever the dates, every order
+  // in them is loaded. (Today is the default, so this is a small load.)
+  const [wantAll, setWantAll] = useState(true);
   // Which load is the current one. A filter changed mid-load abandons the
   // pages still in the air rather than letting them land on the new list.
   const loadSeq = useRef(0);
@@ -552,6 +564,24 @@ export default function BookOrdersPage() {
   // A PDF being made, and the last per-college set — kept so a file the browser
   // did not save can be downloaded again from the list under the filters.
   const [exporting, setExporting] = useState(false);
+  // The "Sort by" and "PDF" menus, and what the PDF menu is set to.
+  const [sortOpen, setSortOpen] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfMode, setPdfMode] = useState('shown'); // shown | all | dates
+  const [pdfDates, setPdfDates] = useState({ from: '', to: '' });
+  const [pdfCollege, setPdfCollege] = useState(''); // '' all together | EACH_COLLEGE | a name
+  const sortRef = useRef(null);
+  const pdfRef = useRef(null);
+  // A click anywhere else closes an open menu.
+  useEffect(() => {
+    if (!sortOpen && !pdfOpen) return undefined;
+    const onDown = (e) => {
+      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
+      if (pdfRef.current && !pdfRef.current.contains(e.target)) setPdfOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [sortOpen, pdfOpen]);
 
   // The per-college PDF picker, and the college directory behind it. The
   // directory is what lets the list show a college that has NOT ordered, and
@@ -683,7 +713,6 @@ export default function BookOrdersPage() {
 
   // Which shortcut is the one filling up right now (see liveDay).
   const live_day = liveDay();
-  const liveKey = pastCutoff() ? 'tomorrow' : 'today';
 
   const place = useMemo(
     () => ({ college: collegeFilter, district: districtFilter, upazila: upazilaFilter }),
@@ -698,6 +727,11 @@ export default function BookOrdersPage() {
   // The choices, counted from the loaded orders. The upazilas are the chosen
   // district's; with no district chosen there is nothing to narrow.
   const collegeOptions = useMemo(() => countOptions(orders.map(collegeOf)), [orders]);
+  // Every college the PDF menu can name: the directory, plus any typed name that ordered.
+  const pdfCollegeNames = useMemo(
+    () => [...new Set([...directory.map((c) => c.name), ...collegeOptions.map((o) => o.value)])].filter(Boolean).sort((x, y) => x.localeCompare(y)),
+    [directory, collegeOptions]
+  );
   const districtOptions = useMemo(() => countOptions(orders.map((o) => areaOf(o).district)), [orders]);
   const upazilaOptions = useMemo(
     () =>
@@ -711,11 +745,6 @@ export default function BookOrdersPage() {
   // them or collects for them — unless cancelled orders are what was asked for.
   const keepForPdf = (list) => (statusFilter === 'cancelled' ? list : list.filter((o) => o.status !== 'cancelled'));
   const allLoaded = matchCount <= orders.length;
-  // A college, an area or a search narrows the list HERE, over the orders the
-  // screen holds — the server's count knows nothing about it. While the two
-  // disagree the card has to follow the list it sits over, or it would read
-  // 1,327 above forty Khulna rows.
-  const narrowed = Boolean(search.trim() || collegeFilter || districtFilter || upazilaFilter);
 
   /**
    * Fetch the rest of the matching orders.
@@ -730,22 +759,7 @@ export default function BookOrdersPage() {
     fetchOrders(statusFilter, dateRange, true);
   };
 
-  /*
-   * Narrowing the list is the moment to stop holding only the recent ones.
-   *
-   * A college, an area or a search is matched HERE, against the orders the
-   * screen is holding — so with the most recent 200 loaded, a college with
-   * fifteen orders behind it showed one, or none, and the count beside its
-   * name in the list was that same partial number. Picking one now pulls the
-   * rest in first, and so does opening any of those lists, because a count
-   * that is about to be read has to be the real one.
-   */
-  const narrow = (apply) => (value) => {
-    apply(value);
-    loadEverything();
-  };
   const pdfCount = keepForPdf(filtered).length;
-  const pdfColleges = new Set(keepForPdf(filtered).map(collegeOf)).size;
 
   // Counted from `filtered` — everything the college, area and search boxes
   // have narrowed the list to — rather than from the whole load. The cards sit
@@ -1249,9 +1263,11 @@ export default function BookOrdersPage() {
   // the front to tell one day's six files apart.
   const pdfArea = [upazilaFilter, districtFilter].filter(Boolean).join(', ');
   const pdfDays = dayFrom && dayTo ? (dayFrom === dayTo ? dayTo : `${dayFrom} to ${dayTo}`) : bdDate();
-  const pdfFileName = (subject) =>
-    `${safeFileName(`${subject || pdfArea || brand.englishName} - ${pdfDays}`)} orders.pdf`;
-  const pdfText = ({ list, leftOut = 0, fromLatest = 0, onlySelected = false, heading = '' }) => {
+  const pdfFileName = (subject, days = pdfDays) =>
+    `${safeFileName(`${subject || pdfArea || brand.englishName} - ${days || pdfDays}`)} orders.pdf`;
+  const pdfText = ({ list, leftOut = 0, fromLatest = 0, onlySelected = false, heading = '', range }) => {
+    // The PDF menu can print dates other than the screen's.
+    const win = range === undefined ? dateRange : range;
     const madeAt = formatBdFull(new Date());
     // What the courier or the campus rep has to bring back, on the first line.
     const cod = list.filter((o) => isCod(o) && o.payment?.status !== 'paid');
@@ -1260,7 +1276,7 @@ export default function BookOrdersPage() {
       title: `${brand.englishName} - Order list`,
       heading,
       filters: [
-        `Date: ${dateRange ? `${formatBdFull(dateRange.from)} to ${formatBdFull(dateRange.to)}` : 'all dates'}`,
+        `Date: ${win ? `${formatBdFull(win.from)} to ${formatBdFull(win.to)}` : 'all dates'}`,
         `Status: ${STATUS_TEXT[statusFilter] || statusFilter}`,
         !heading && collegeFilter && `Medical college: ${collegeFilter}`,
         pdfArea && `Area: ${pdfArea}`,
@@ -1269,7 +1285,10 @@ export default function BookOrdersPage() {
       summary: [
         `${list.length} order${list.length === 1 ? '' : 's'}`,
         `${list.reduce((n, o) => n + copiesOf(o), 0)} books`,
-        cod.length > 0 && `${cod.length} cash on delivery, Tk ${toCollect.toLocaleString('en-US')} to collect`,
+        cod.length > 0 &&
+          (totalsBlind
+            ? `${cod.length} cash on delivery`
+            : `${cod.length} cash on delivery, Tk ${toCollect.toLocaleString('en-US')} to collect`),
         onlySelected && 'only the ticked orders',
         leftOut > 0 && `${leftOut} cancelled left out`,
         fromLatest > 0 && `from the latest ${fromLatest} orders`,
@@ -1323,9 +1342,9 @@ export default function BookOrdersPage() {
    * shop was answering by hand. They cannot be ticked - an empty PDF is not
    * a thing anyone wants - they are there to be read.
    */
-  const openCollegePicker = async () => {
+  const openCollegePicker = async (pre = null, range, dayLabel) => {
     if (exporting) return;
-    if (!dateRange) {
+    if (!pre && !dateRange) {
       const ok = await confirm({
         title: 'No date picked',
         message:
@@ -1336,7 +1355,7 @@ export default function BookOrdersPage() {
     }
     setExporting(true);
     try {
-      const { matching, list, fromLatest } = await collectForPdf();
+      const { matching, list, fromLatest } = pre || (await collectForPdf());
       const byCollege = new Map();
       for (const o of list) {
         const name = collegeOf(o);
@@ -1371,7 +1390,7 @@ export default function BookOrdersPage() {
           });
         }
       }
-      setPicker({ rows, fromLatest });
+      setPicker({ rows, fromLatest, range: pre ? range : undefined, dayLabel: pre ? dayLabel : undefined });
       // Everything with orders starts ticked: that is the old one-press
       // behaviour, one confirmation later.
       setPickerPick(new Set(rows.filter((r) => r.count > 0).map((r) => r.name)));
@@ -1427,6 +1446,7 @@ export default function BookOrdersPage() {
             list: row.group,
             leftOut: row.leftOut,
             fromLatest: picker.fromLatest,
+            range: picker.range,
             heading: `Medical college: ${row.name || 'not given'}`,
           }),
           rows: row.group.map(printRowOf),
@@ -1434,7 +1454,7 @@ export default function BookOrdersPage() {
         files.push({
           college: row.name,
           count: row.group.length,
-          name: pdfFileName(row.name || 'No college'),
+          name: pdfFileName(row.name || 'No college', picker.dayLabel),
           blob,
         });
       }
@@ -1450,267 +1470,383 @@ export default function BookOrdersPage() {
     }
   };
 
+  /** Every order in a date window (null = all dates), for a PDF of dates other than the screen's. */
+  const fetchWindowOrders = async (range) => {
+    const byId = new Map();
+    let page = 1;
+    for (;;) {
+      const res = await fetch(`${API}/orders?${ordersQuery(statusFilter, range, PAGE_SIZE, page)}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not load the orders');
+      const list = Array.isArray(json.data) ? json.data : [];
+      list.forEach((o) => byId.set(o._id, o));
+      const total = Number(json.meta?.total) || byId.size;
+      if (list.length < PAGE_SIZE || byId.size >= Math.min(total, EXPORT_LIMIT)) break;
+      page += 1;
+    }
+    return [...byId.values()];
+  };
+
+  /** One PDF: the orders given (or the screen's), narrowed to one college if asked. */
+  const exportPdfFor = async ({ pre = null, college = '', range, dayLabel } = {}) => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const base = pre || (await collectForPdf());
+      const pick = (l) => (college ? l.filter((o) => collegeOf(o) === college) : l);
+      const matching = pick(base.matching);
+      const list = pick(base.list);
+      if (list.length === 0) {
+        showToast('error', 'No orders to put in the PDF');
+        return;
+      }
+      const blob = await buildOrderListPdf({
+        ...pdfText({
+          list,
+          leftOut: matching.length - list.length,
+          fromLatest: base.fromLatest,
+          range,
+          heading: college ? `Medical college: ${college}` : '',
+        }),
+        rows: list.map(printRowOf),
+      });
+      downloadBlob(blob, pdfFileName(college || collegeFilter, dayLabel));
+    } catch (e) {
+      showToast('error', e.message || 'Could not make the PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  /**
+   * The PDF menu's Download. Which orders: the dates on screen, every date,
+   * or dates picked in the menu. Which colleges: all together in one file,
+   * one file per college (through the college list), or a single college.
+   */
+  const runPdf = async () => {
+    if (exporting) return;
+    let pre = null;
+    let range;
+    let dayLabel;
+    if (pdfMode !== 'shown') {
+      if (pdfMode === 'all') {
+        range = null;
+        dayLabel = 'all dates';
+      } else {
+        let first = pdfDates.from || pdfDates.to;
+        let last = pdfDates.to || pdfDates.from;
+        if (first > last) [first, last] = [last, first];
+        range = dayWindow(first, last);
+        dayLabel = first === last ? last : `${first} to ${last}`;
+      }
+      setExporting(true);
+      try {
+        const pool = await fetchWindowOrders(range);
+        const q = search.trim().toLowerCase();
+        // The college is the menu's own choice here, not the screen's.
+        const matching = pool.filter((o) => matchesSearch(o, q) && matchesPlace(o, { ...place, college: '' }));
+        pre = { matching, list: keepForPdf(matching), fromLatest: 0 };
+      } catch (e) {
+        showToast('error', e.message || 'Could not load the orders');
+        return;
+      } finally {
+        setExporting(false);
+      }
+    }
+    setPdfOpen(false);
+    if (pdfCollege === EACH_COLLEGE) return openCollegePicker(pre, range, dayLabel);
+    return exportPdfFor({ pre, college: pdfCollege, range, dayLabel });
+  };
+
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-dash-ink2 flex items-center gap-2.5">
-            <FiShoppingBag className="text-brand" /> Book Orders
-          </h1>
-          <p className="text-dash-mute text-sm">Track and fulfill customer book orders.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 self-start">
-          {!moneyBlind && <DeliveryToggle mode={deliveryMode} onChange={setDeliveryMode} />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-dash-ink2 flex items-center gap-2.5">
+          <FiShoppingBag className="text-brand" /> Book Orders
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          {!totalsBlind && <DeliveryToggle mode={deliveryMode} onChange={setDeliveryMode} />}
           <button
             onClick={() => fetchOrders()}
-            className="flex items-center gap-2 px-3.5 py-2.5 border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
           >
             <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
       </div>
 
-      {/* The filters come first, above the counts, because they are what the
-          admin sets and the counts are what comes back: pick a day and a
-          college, then read the six cards for that day and that college.
-
-          Dates. A day here runs noon → noon Bangladesh time, named by the date
-          it ends on. An order the admin moved to another delivery date answers
-          on THAT day instead — see the selection toolbar. */}
-      <div className="space-y-1.5">
-        <div className="flex flex-col gap-3 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <FiCalendar className="mr-1 text-dash-mute2" aria-hidden />
-            {(dayScoped ? DATE_PRESETS.filter((p) => SCOPED_PRESETS.includes(p.key)) : DATE_PRESETS).map((p) => {
-              const days = daysForPreset(p.key);
-              const live = !!days && days.fromDay === days.toDay && days.toDay === live_day;
-              const on = datePreset === p.key;
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => applyDatePreset(p.key)}
-                  aria-pressed={on}
-                  title={live ? 'New orders are landing in this one right now' : undefined}
-                  className={`flex flex-col items-center rounded-lg px-3 py-1 text-xs font-semibold leading-tight transition-colors ${
-                    on
-                      ? 'bg-brand text-white shadow-sm shadow-brand/25'
-                      : 'text-dash-mute hover:bg-dash-soft hover:text-dash-ink3'
-                  }`}
-                >
-                  <span className="flex items-center gap-1.5">
-                    {p.label}
-                    {live && (
-                      <span
-                        aria-label="live"
-                        className={`h-1.5 w-1.5 rounded-full motion-safe:animate-pulse ${on ? 'bg-white' : 'bg-emerald-500'}`}
-                      />
-                    )}
-                  </span>
-                  <span className={`text-[10px] font-medium tabular-nums ${on ? 'text-white/75' : 'text-dash-mute2'}`}>
-                    {presetWindow(p.key)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className={`flex flex-wrap items-center gap-2 ${dayScoped ? 'hidden' : ''}`}>
-            <input
-              type="date"
-              value={dayFrom}
-              onChange={(e) => setDayFrom(e.target.value)}
-              aria-label="First date"
-              className="rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
-            />
-            <span className="text-dash-mute2">–</span>
-            <input
-              type="date"
-              value={dayTo}
-              onChange={(e) => setDayTo(e.target.value)}
-              aria-label="Last date"
-              className="rounded-lg border border-dash-line bg-dash-card px-2.5 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
-            />
+      {/* One bar (18 Oct 2026, the shop asked for a simpler screen): Today
+          and Tomorrow up front, every other date choice and the area under
+          "Sort by", the medical college beside them, and one small PDF menu.
+          A day still runs noon → noon Bangladesh time (lib/shopDay). */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5">
+        <FiCalendar className="text-dash-mute2" aria-hidden />
+        {QUICK_PRESETS.map((key) => {
+          const p = DATE_PRESETS.find((x) => x.key === key);
+          const days = daysForPreset(key);
+          const live = !!days && days.fromDay === days.toDay && days.toDay === live_day;
+          const on = datePreset === key;
+          return (
             <button
+              key={key}
               type="button"
-              onClick={applyCustomDays}
-              disabled={!dayFrom && !dayTo}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                datePreset === 'custom'
-                  ? 'bg-brand text-white shadow-sm shadow-brand/25'
-                  : 'bg-dash-soft2 text-dash-ink4 hover:bg-dash-soft3'
+              onClick={() => applyDatePreset(key)}
+              aria-pressed={on}
+              title={live ? 'New orders are landing in this one right now' : presetWindow(key)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                on ? 'bg-brand text-white shadow-sm shadow-brand/25' : 'text-dash-mute hover:bg-dash-soft hover:text-dash-ink3'
               }`}
             >
-              Apply
+              {p?.label}
+              {live && (
+                <span
+                  aria-label="live"
+                  className={`h-1.5 w-1.5 rounded-full motion-safe:animate-pulse ${on ? 'bg-white' : 'bg-emerald-500'}`}
+                />
+              )}
             </button>
-          </div>
-        </div>
-        <p className="px-1 text-xs text-dash-mute2">
-          {dateRange ? (
-            <>
-              Orders placed <span className="font-semibold text-dash-ink3">{formatBd(dateRange.from)}</span>
-              {' → '}
-              <span className="font-semibold text-dash-ink3">{formatBd(dateRange.to)}</span>
-            </>
-          ) : (
-            'All dates'
-          )}
-          {' · '}A day here runs 12 PM → 12 PM, Bangladesh time.
-          {datePreset !== liveKey && (
-            <>
-              {' '}New orders right now land in{' '}
-              <span className="font-semibold text-dash-ink3">{liveKey === 'tomorrow' ? 'Tomorrow' : 'Today'}</span>.
-            </>
-          )}
-          {loadingMore && (
-            <span className="text-dash-mute2">
-              {' '}Loading the rest — {orders.length.toLocaleString('en-US')} of{' '}
-              {matchCount.toLocaleString('en-US')} so far.
-            </span>
-          )}
-          {!loading && !loadingMore && matchCount > orders.length && (
-            <span className="text-dash-mute2">
-              {' '}The list holds the latest {orders.length.toLocaleString('en-US')} of{' '}
-              {matchCount.toLocaleString('en-US')} — the cards below count what is loaded, and
-              <span className="font-semibold text-brand"> Total orders</span> loads the rest.
-            </span>
-          )}
-        </p>
-      </div>
-
-      {/* Medical college and area, then the PDFs of whatever the filters show.
-          One row on a wide screen; the selects three across and the buttons
-          under them on a tablet; everything stacked on a phone. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
-        <CountSelect
-          label="Medical college"
-          value={collegeFilter}
-          onChange={narrow(setCollegeFilter)}
-          onOpen={loadEverything}
-          allLabel="All medical colleges"
-          options={collegeOptions}
-        />
-        <CountSelect
-          label="District"
-          value={districtFilter}
-          onChange={narrow((v) => {
-            setDistrictFilter(v);
-            // An upazila belongs to one district; a new district starts over.
-            setUpazilaFilter('');
-          })}
-          onOpen={loadEverything}
-          allLabel="All districts"
-          options={districtOptions}
-        />
-        <CountSelect
-          label="Upazila / thana"
-          value={upazilaFilter}
-          onChange={narrow(setUpazilaFilter)}
-          onOpen={loadEverything}
-          allLabel={districtFilter ? 'All upazilas / thanas' : 'Upazila — pick a district first'}
-          options={upazilaOptions}
-          disabled={!districtFilter}
-        />
-        <div className="flex flex-col gap-2 sm:col-span-3 sm:flex-row xl:col-span-1">
-          <button
-            type="button"
-            onClick={() => exportPdf(false)}
-            disabled={loading || exporting || (allLoaded && pdfCount === 0)}
-            title={
-              statusFilter === 'cancelled'
-                ? 'One PDF with every order shown'
-                : 'One PDF with every order shown, cancelled ones left out'
-            }
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand px-4 py-2.5 font-semibold text-white shadow-sm shadow-brand/25 transition-colors hover:bg-brand-hover disabled:opacity-50 sm:flex-1 xl:flex-none"
-          >
-            {exporting ? <FiLoader className="animate-spin" /> : <FiDownload />}
-            Download PDF
-            {allLoaded && <span className="rounded-md bg-white/20 px-1.5 text-xs tabular-nums">{pdfCount}</span>}
-          </button>
-          <button
-            type="button"
-            onClick={openCollegePicker}
-            disabled={loading || exporting || (allLoaded && pdfCount === 0)}
-            title="List the medical colleges, then download a PDF for the ones you pick"
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-brand/50 bg-dash-card px-4 py-2.5 font-semibold text-brand transition-colors hover:bg-brand-soft disabled:opacity-50 sm:flex-1 xl:flex-none"
-          >
-            {exporting ? <FiLoader className="animate-spin" /> : <FiLayers />}
-            PDF per college
-            {allLoaded && <span className="rounded-md bg-brand-soft px-1.5 text-xs tabular-nums">{pdfColleges}</span>}
-          </button>
-        </div>
-      </div>
-
-      {/* Stats — for whatever the filters above have narrowed the list to,
-          not for the whole load. Picking Cumilla Medical College makes these
-          six cards Cumilla's numbers, which is the only reading that matches
-          the list they sit over. */}
-      <div className={`grid grid-cols-2 gap-4 md:grid-cols-3 ${moneyBlind ? 'xl:grid-cols-4' : 'xl:grid-cols-6'}`}>
-        {/* The one card that knows more than the list below it: the server
-            counts every match whether or not it sends them, so this is the
-            true total even while the screen holds the most recent 200. It is
-            the way to the rest, which is the shape the shop asked for —
-            open on the recent ones, click the total to see everything. */}
-        <button
-          type="button"
-          onClick={loadEverything}
-          disabled={allLoaded || loading || loadingMore}
-          title={allLoaded ? undefined : 'Load every order that matches these filters'}
-          className={`rounded-xl border p-4 text-left transition-colors ${
-            allLoaded
-              ? 'cursor-default border-dash-line bg-dash-card'
-              : 'cursor-pointer border-brand/40 bg-dash-card hover:border-brand hover:bg-brand-soft/40'
-          }`}
-        >
-          <p className="text-xl font-bold text-dash-ink2 tabular-nums">
-            {(allLoaded || narrowed ? stats.total : matchCount).toLocaleString('en-US')}
-          </p>
-          <p className="mt-1 text-xs text-dash-mute2">Total orders</p>
-          {!allLoaded && (
-            <p className="mt-1 text-[11px] font-semibold text-brand">
-              {loadingMore
-                ? `Loading… ${orders.length.toLocaleString('en-US')}`
-                : narrowed
-                  ? `Within the latest ${orders.length.toLocaleString('en-US')} — click for all`
-                  : `Showing the latest ${orders.length.toLocaleString('en-US')} — click for all`}
-            </p>
-          )}
-        </button>
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-brand-ink tabular-nums">{stats.books.toLocaleString('en-US')}</p>
-          <p className="text-xs text-dash-mute2 mt-1" title="Every book in orders that were not cancelled">Books ordered</p>
-        </div>
-        {!moneyBlind && (
-          <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-            <p className="text-xl font-bold text-emerald-600 tabular-nums">
-              {bdt(deliveryMode === 'without' ? stats.revenueBooks : stats.revenue)}
-            </p>
-            <p className="text-xs text-dash-mute2 mt-1">
-              Paid revenue · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
-            </p>
-          </div>
+          );
+        })}
+        {/* Whatever else is chosen under Sort by, said once here. */}
+        {!QUICK_PRESETS.includes(datePreset) && (
+          <span className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white">
+            {datePreset === 'custom'
+              ? `${dayFrom}${dayTo && dayTo !== dayFrom ? ` → ${dayTo}` : ''}`
+              : DATE_PRESETS.find((x) => x.key === datePreset)?.label || 'All dates'}
+          </span>
         )}
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
-          <p className="text-xs text-dash-mute2 mt-1">Awaiting confirmation</p>
-        </div>
-        {!moneyBlind && (
-          <div
-            className="bg-dash-card rounded-xl border border-dash-line p-4"
-            title={`The couriers collect ${bdt(stats.codOutstanding)}, delivery charge included`}
+
+        <div className="relative" ref={sortRef}>
+          <button
+            type="button"
+            onClick={() => setSortOpen((o) => !o)}
+            aria-expanded={sortOpen}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              sortOpen || districtFilter ? 'border-brand text-brand' : 'border-dash-line text-dash-ink4 hover:bg-dash-soft'
+            }`}
           >
-            <p className="text-xl font-bold text-orange-600 tabular-nums">
+            <FiSliders size={13} /> Sort by
+            {districtFilter && <span className="rounded bg-brand-soft px-1.5 text-[10px]">{upazilaFilter || districtFilter}</span>}
+            <FiChevronDown size={13} className={sortOpen ? 'rotate-180' : ''} />
+          </button>
+          {sortOpen && (
+            <div className="absolute left-0 z-30 mt-2 w-[min(92vw,22rem)] space-y-3 rounded-xl border border-dash-line bg-dash-card p-3 shadow-xl">
+              <div>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Date</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(dayScoped ? DATE_PRESETS.filter((p) => SCOPED_PRESETS.includes(p.key)) : DATE_PRESETS)
+                    .filter((p) => !QUICK_PRESETS.includes(p.key))
+                    .map((p) => {
+                      const on = datePreset === p.key;
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => {
+                            applyDatePreset(p.key);
+                            setSortOpen(false);
+                          }}
+                          className={`flex flex-col items-start rounded-lg border px-2.5 py-1.5 text-left text-xs font-semibold transition-colors ${
+                            on ? 'border-brand bg-brand text-white' : 'border-dash-line text-dash-ink3 hover:bg-dash-soft'
+                          }`}
+                        >
+                          {p.label}
+                          <span className={`text-[10px] font-medium ${on ? 'text-white/75' : 'text-dash-mute2'}`}>{presetWindow(p.key)}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+              {!dayScoped && (
+                <div>
+                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Pick dates</p>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="date"
+                      value={dayFrom}
+                      onChange={(e) => setDayFrom(e.target.value)}
+                      aria-label="First date"
+                      className="min-w-0 flex-1 rounded-lg border border-dash-line bg-dash-card px-2 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+                    />
+                    <span className="text-dash-mute2">–</span>
+                    <input
+                      type="date"
+                      value={dayTo}
+                      onChange={(e) => setDayTo(e.target.value)}
+                      aria-label="Last date"
+                      className="min-w-0 flex-1 rounded-lg border border-dash-line bg-dash-card px-2 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applyCustomDays();
+                        setSortOpen(false);
+                      }}
+                      disabled={!dayFrom && !dayTo}
+                      className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Area</p>
+                <CountSelect
+                  compact
+                  label="District"
+                  value={districtFilter}
+                  onChange={(v) => {
+                    setDistrictFilter(v);
+                    // An upazila belongs to one district; a new district starts over.
+                    setUpazilaFilter('');
+                  }}
+                  allLabel="All districts"
+                  options={districtOptions}
+                />
+                <CountSelect
+                  compact
+                  label="Upazila / thana"
+                  value={upazilaFilter}
+                  onChange={setUpazilaFilter}
+                  allLabel={districtFilter ? 'All upazilas / thanas' : 'Upazila — pick a district first'}
+                  options={upazilaOptions}
+                  disabled={!districtFilter}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-[10rem] flex-1">
+          <CountSelect
+            compact
+            label="Medical college"
+            value={collegeFilter}
+            onChange={setCollegeFilter}
+            allLabel="All medical colleges"
+            options={collegeOptions}
+          />
+        </div>
+
+        {/* PDF: one small button; what goes in it is chosen inside. */}
+        <div className="relative ml-auto" ref={pdfRef}>
+          <button
+            type="button"
+            onClick={() => setPdfOpen((o) => !o)}
+            disabled={loading || exporting}
+            aria-expanded={pdfOpen}
+            className="flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand/25 transition-colors hover:bg-brand-hover disabled:opacity-50"
+          >
+            {exporting ? <FiLoader className="animate-spin" /> : <FiDownload />} PDF
+            <FiChevronDown size={13} className={pdfOpen ? 'rotate-180' : ''} />
+          </button>
+          {pdfOpen && (
+            <div className="absolute right-0 z-30 mt-2 w-[min(92vw,21rem)] space-y-3 rounded-xl border border-dash-line bg-dash-card p-3 text-sm shadow-xl">
+              <div>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Which orders</p>
+                <label className="flex cursor-pointer items-center gap-2 py-1">
+                  <input type="radio" checked={pdfMode === 'shown'} onChange={() => setPdfMode('shown')} className="accent-brand" />
+                  <span className="text-dash-ink3">
+                    The dates chosen above <span className="text-dash-mute2">({pdfCount})</span>
+                  </span>
+                </label>
+                {/* A manager has seven days; other dates are not theirs to print. */}
+                {!dayScoped && (<>
+                <label className="flex cursor-pointer items-center gap-2 py-1">
+                  <input type="radio" checked={pdfMode === 'all'} onChange={() => setPdfMode('all')} className="accent-brand" />
+                  <span className="text-dash-ink3">Every order, all dates</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 py-1">
+                  <input type="radio" checked={pdfMode === 'dates'} onChange={() => setPdfMode('dates')} className="accent-brand" />
+                  <span className="text-dash-ink3">Particular dates</span>
+                </label>
+                </>)}
+                {pdfMode === 'dates' && (
+                  <div className="mt-1 flex items-center gap-1.5 pl-6">
+                    <input
+                      type="date"
+                      value={pdfDates.from}
+                      onChange={(e) => setPdfDates((d) => ({ ...d, from: e.target.value }))}
+                      aria-label="PDF first date"
+                      className="min-w-0 flex-1 rounded-lg border border-dash-line bg-dash-card px-2 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+                    />
+                    <span className="text-dash-mute2">–</span>
+                    <input
+                      type="date"
+                      value={pdfDates.to}
+                      onChange={(e) => setPdfDates((d) => ({ ...d, to: e.target.value }))}
+                      aria-label="PDF last date"
+                      className="min-w-0 flex-1 rounded-lg border border-dash-line bg-dash-card px-2 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+                    />
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Medical college</p>
+                <select
+                  value={pdfCollege}
+                  onChange={(e) => setPdfCollege(e.target.value)}
+                  aria-label="PDF medical college"
+                  className="w-full rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm text-dash-ink4 outline-none focus:border-brand"
+                >
+                  <option value="">All medical colleges together — one PDF</option>
+                  <option value={EACH_COLLEGE}>A separate PDF for each college</option>
+                  {pdfCollegeNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={runPdf}
+                disabled={exporting || (pdfMode === 'dates' && !pdfDates.from && !pdfDates.to)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
+              >
+                {exporting ? <FiLoader className="animate-spin" /> : <FiDownload />} Download
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* The counts — one small line (18 Oct 2026). For whatever the filters
+          above have narrowed the list to. Money totals are the Super Admin's. */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-dash-line bg-dash-card px-4 py-2 text-sm text-dash-mute">
+        <span>
+          <b className="tabular-nums text-dash-ink2">{stats.total.toLocaleString('en-US')}</b> orders
+        </span>
+        <span title="Every book in orders that were not cancelled">
+          <b className="tabular-nums text-brand-ink">{stats.books.toLocaleString('en-US')}</b> books
+        </span>
+        <span>
+          <b className="tabular-nums text-sky-600">{stats.delivered.toLocaleString('en-US')}</b> delivered
+        </span>
+        {!totalsBlind && (
+          <span>
+            <b className="tabular-nums text-emerald-600">{bdt(deliveryMode === 'without' ? stats.revenueBooks : stats.revenue)}</b> paid
+          </span>
+        )}
+        {!totalsBlind && (
+          <span title={`The couriers collect ${bdt(stats.codOutstanding)}, delivery charge included`}>
+            <b className="tabular-nums text-orange-600">
               {bdt(deliveryMode === 'without' ? stats.codOutstandingBooks : stats.codOutstanding)}
-            </p>
-            <p className="text-xs text-dash-mute2 mt-1">
-              COD to collect · {deliveryMode === 'without' ? 'without delivery' : 'with delivery'}
-            </p>
-          </div>
+            </b>{' '}
+            COD to collect
+          </span>
         )}
-        <div className="bg-dash-card rounded-xl border border-dash-line p-4">
-          <p className="text-xl font-bold text-sky-600">{stats.delivered}</p>
-          <p className="text-xs text-dash-mute2 mt-1">Delivered</p>
-        </div>
+        {loadingMore && (
+          <span className="flex items-center gap-1.5 text-xs text-dash-mute2">
+            <FiLoader className="animate-spin" /> Loading… {orders.length.toLocaleString('en-US')} of{' '}
+            {matchCount.toLocaleString('en-US')}
+          </span>
+        )}
       </div>
 
       {/* Filters */}
