@@ -18,7 +18,7 @@ const TABS = [
   { href: '/dashboard/admin/courier/payouts', label: 'Payouts & accounts', superOnly: true },
 ];
 
-const isSuperAdmin = () => {
+export const isSuperAdmin = () => {
   try {
     return JSON.parse(localStorage.getItem('user') || '{}').role === 'superAdmin';
   } catch {
@@ -60,7 +60,7 @@ export function CourierHeader({ subtitle }) {
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700">
-              <FiCheckCircle /> Connected · Steadfast balance {tk(st.balance)}
+              <FiCheckCircle /> Connected{st.balance != null && <> · Steadfast balance {tk(st.balance)}</>}
             </span>
           )}
         </div>

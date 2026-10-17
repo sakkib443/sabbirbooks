@@ -61,6 +61,8 @@ export const PAYMENT_LABEL = {
 
 /** The money line under it: what to collect, or what was paid. Taka as "Tk". */
 export const paymentAmountOf = (o) => {
+  // No total in the row = an account that is not shown money: no money line.
+  if (o?.total == null) return '';
   const taka = `Tk ${Math.round(Number(o?.total) || 0).toLocaleString('en-US')}`;
   const key = paymentKeyOf(o);
   if (key === 'cod') return `Collect ${taka}`;

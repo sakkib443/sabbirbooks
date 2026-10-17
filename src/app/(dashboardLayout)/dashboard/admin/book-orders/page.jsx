@@ -158,7 +158,7 @@ const DATE_PRESETS = [
 
 // The three a day-scoped manager is offered — the same three the API will
 // answer for. Anything else would be a button that comes back empty.
-const SCOPED_PRESETS = ['yesterday', 'today', 'tomorrow', '3d'];
+const SCOPED_PRESETS = ['yesterday', 'today', 'tomorrow', '3d', '7d'];
 
 /** The window a shortcut covers, ready for the query. Null = every date. */
 /**
@@ -521,7 +521,8 @@ export default function BookOrdersPage() {
    * managerScope.ts), so this is about not drawing empty rows and columns
    * where the amounts used to be.
    */
-  const moneyBlind = dayScoped;
+  // The admin too, from 17 Oct 2026: every order, but no money.
+  const moneyBlind = dayScoped || getStoredUser()?.role === 'admin';
   const cols = moneyBlind ? GRID_COLS_NO_MONEY : GRID_COLS;
   const [datePreset, setDatePreset] = useState(() => (dayScoped ? 'today' : dayFromLink() || 'all'));
   const [dateRange, setDateRange] = useState(() => {

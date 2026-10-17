@@ -68,7 +68,7 @@ export default function AdminDashboard() {
    * date picker that could not change anything.
    */
   const twoDayView = getStoredUser()?.role === 'manager';
-  const scopeWord = twoDayView ? 'yesterday & today' : 'all time';
+  const scopeWord = twoDayView ? 'last 7 days' : 'all time';
   /*
    * And not a taka of it.
    *
@@ -78,7 +78,8 @@ export default function AdminDashboard() {
    * to be. What is left is the work: how many orders, how many books, how
    * many still waiting to be confirmed.
    */
-  const moneyBlind = twoDayView;
+  // The admin too, from 17 Oct 2026: every order, but no money.
+  const moneyBlind = twoDayView || getStoredUser()?.role === 'admin';
 
   const fetchData = useCallback(async () => {
     if (!showOrderDashboard) { setLoading(false); return; }
@@ -302,8 +303,7 @@ export default function AdminDashboard() {
             mode={mode}
             loading={loading}
             hideMoney={moneyBlind}
-            // An Admin's "all time" is the last fifteen days (the server's scope).
-            title={getStoredUser()?.role === 'admin' ? 'Last 15 days' : 'All time'}
+            title="All time"
           />
         )}
       </div>

@@ -526,12 +526,12 @@ export default function UsersManager({ group = 'students' }) {
                 <label className="text-[10px] font-bold text-dash-mute uppercase block mb-1.5">Account Type</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    // Super Admin sees everything; Admin, the last 15 days.
+                    // Super Admin sees everything; Admin every order but no money.
                     { r: 'superAdmin', label: 'Super Admin', only: !isSuperAdmin },
-                    { r: 'admin', label: 'Admin (15 days)', only: !isSuperAdmin },
+                    { r: 'admin', label: 'Admin (no money)', only: !isSuperAdmin },
                     { r: 'trainingManager', label: 'Training Manager' },
                     { r: 'contentManager', label: 'Content Manager' },
-                    { r: 'manager', label: 'Manager' },
+                    { r: 'manager', label: 'Manager (7 days)' },
                     { r: 'mentor', label: 'Mentor' },
                   ].map(o => (
                     <button key={o.r} type="button" disabled={o.only} onClick={() => setStaffRole(o.r)}
@@ -541,7 +541,7 @@ export default function UsersManager({ group = 'students' }) {
                   ))}
                 </div>
                 {!isSuperAdmin && <p className="text-[10px] text-dash-mute2 mt-1">Admin and Super Admin accounts can only be created by a Super Admin.</p>}
-                {staffRole === 'admin' && <p className="text-[10px] text-amber-600 mt-1">An Admin sees orders, money, coupons and the courier for the last 15 days only. A Super Admin sees everything.</p>}
+                {staffRole === 'admin' && <p className="text-[10px] text-amber-600 mt-1">An Admin sees every order, coupon and parcel — but no money anywhere. A Super Admin sees everything.</p>}
               </div>
 
               {staffRole === 'mentor' ? (

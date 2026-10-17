@@ -10,7 +10,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiSettings, FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiBell, FiChevronLeft, FiTag, FiGlobe, FiClipboard, FiLink,
-  FiBook, FiShoppingBag, FiGrid, FiEye, FiShield, FiKey, FiUnlock, FiTruck, FiPackage,
+  FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage,
 } from 'react-icons/fi';
 
 /*
@@ -90,64 +90,61 @@ const AdminSidebar = () => {
       label: 'Overview',
       items: [
         { title: 'Dashboard', href: '/dashboard/admin', icon: FiHome, exact: true },
-        { title: 'Analytics', href: '/dashboard/admin/analytics', icon: FiBarChart2, need: ['analytics.read'] },
+        // Sales and money — the Super Admin's alone (17 Oct 2026).
+        { title: 'Analytics', href: '/dashboard/admin/analytics', icon: FiBarChart2, need: ['analytics.read'], superOnly: true },
       ],
     },
     {
       label: 'Book Store',
       items: [
-        { title: 'All Books', href: '/dashboard/admin/books', icon: FiBook, exact: true, need: ['content.write'] },
-        { title: 'Add Book', href: '/dashboard/admin/books/create', icon: FiPlus, need: ['content.write'] },
-        { title: 'Book Content (QR)', href: '/dashboard/admin/book-content', icon: FiGrid, need: ['content.write'] },
-        { title: 'Book Preview', href: '/dashboard/admin/book-preview', icon: FiEye, need: ['content.write'] },
-        // One code per printed copy — a list of unredeemed ones IS the codes,
-        // so reading it is the same gate as minting them.
-        { title: 'Book Codes', href: '/dashboard/admin/book-codes', icon: FiKey, need: ['content.write'] },
-        // The other half of the codes: who ended up able to read the book.
-        // orders.read, not content — it is the fulfilment question, 'did what
-        // we sold reach who we sold it to'.
-        { title: 'Book Access', href: '/dashboard/admin/book-access', icon: FiUnlock, need: ['orders.read'] },
+        // Order of the menu is the shop's working order (17 Oct 2026): the
+        // orders first, then getting them out, then selling, then the QR side,
+        // and the books themselves last.
+        //
         // Book Orders is the "who is buying" screen — orders.read, not content.
         { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag, need: ['orders.read'] },
-        // The standard charge and each medical college's own rate. A rate is a
-        // price, so settings.write — the same gate as the API behind it.
-        // The courier: hand parcels to Steadfast, follow them, and keep the
-        // books on what it owes. Owner territory — it moves parcels and shows
-        // money — so the same gate as the staff screens.
+        // The courier: hand parcels to Steadfast, follow them, and what it
+        // charges. Delivery Charges (the rates buyers pay) lives here too. The
+        // money side (Payouts & Accounts) is the Super Admin's.
         {
-          title: 'Courier', icon: FiPackage, need: ['staff.manage'],
+          title: 'Courier', icon: FiPackage, need: ['staff.manage', 'settings.write'],
           submenu: [
             { title: 'Send to Courier', href: '/dashboard/admin/courier/send', need: ['staff.manage'] },
             { title: 'Parcels', href: '/dashboard/admin/courier', exact: true, need: ['staff.manage'] },
+            { title: 'Delivery Charges', href: '/dashboard/admin/delivery-charges', need: ['settings.write'] },
             { title: 'Payouts & Accounts', href: '/dashboard/admin/courier/payouts', need: ['staff.manage'], superOnly: true },
           ],
         },
-        { title: 'Delivery Charges', href: '/dashboard/admin/delivery-charges', icon: FiTruck, need: ['settings.write'] },
-        // Two menus, because there are two different things.
-        //
-        // A coupon is a discount with a code on it — a launch offer, a
-        // giveaway, a fair. Nobody is paid for it, so nothing about a person
-        // appears on that screen.
-        //
-        // An affiliate is a person who sells, and their coupon is only the
-        // instrument. Everything about them — who they are, what they sold,
-        // what the shop owes them — belongs on their own screen, next door.
+        // Coupons, and the affiliates who sell with them. What is owed to
+        // coupon owners is money — the Super Admin's.
         {
-          title: 'Coupons', icon: FiTag, need: ['orders.read'],
+          title: 'Coupons', icon: FiTag, need: ['orders.read', 'users.read'],
           submenu: [
             { title: 'All Coupons', href: '/dashboard/admin/book-coupons', exact: true, need: ['orders.read'] },
             { title: 'Add Coupon', href: '/dashboard/admin/book-coupons/create', need: ['orders.write'] },
+            // An affiliate record is about a person — users.read.
+            { title: 'Affiliates', href: '/dashboard/admin/affiliates', exact: true, need: ['users.read'] },
+            { title: 'Affiliate Applications', href: '/dashboard/admin/affiliates/applications', need: ['users.read'] },
+            { title: 'Affiliate Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'], superOnly: true },
           ],
         },
-        // An affiliate record is a record about a person — their college, their
-        // phone, a photo of their ID — so it sits with users.read, the same
-        // capability the student directory uses, rather than with orders.
+        // The printed book's QR side: the content each QR opens, the codes
+        // printed in each copy, and who ended up able to read it.
         {
-          title: 'Affiliates', icon: FiAward, need: ['users.read'],
+          title: 'QR Content', icon: FiGrid, need: ['content.write', 'orders.read'],
           submenu: [
-            { title: 'All Affiliates', href: '/dashboard/admin/affiliates', exact: true, need: ['users.read'] },
-            { title: 'Applications', href: '/dashboard/admin/affiliates/applications', need: ['users.read'] },
-            { title: 'Payouts', href: '/dashboard/admin/book-coupons/payouts', need: ['orders.read'] },
+            { title: 'QR Content', href: '/dashboard/admin/book-content', exact: true, need: ['content.write'] },
+            { title: 'Book Codes', href: '/dashboard/admin/book-codes', need: ['content.write'] },
+            { title: 'Book Access', href: '/dashboard/admin/book-access', need: ['orders.read'] },
+          ],
+        },
+        // The books themselves. (Book Preview is no longer in the menu; the
+        // page still exists.)
+        {
+          title: 'All Books', icon: FiBook, need: ['content.write'],
+          submenu: [
+            { title: 'All Books', href: '/dashboard/admin/books', exact: true, need: ['content.write'] },
+            { title: 'Add Book', href: '/dashboard/admin/books/create', need: ['content.write'] },
           ],
         },
       ],

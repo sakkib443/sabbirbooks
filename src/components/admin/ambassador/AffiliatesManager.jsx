@@ -119,8 +119,9 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
     return {
       people: rows.length,
       orders: rows.reduce((n, r) => n + (r.stats?.orders || 0), 0),
-      sales: rows.reduce((n, r) => n + (r.stats?.sales || 0), 0),
-      commission: rows.reduce((n, r) => n + (r.stats?.commission || 0), 0),
+      // Absent (not 0) when the server sent no money — an account not shown it.
+      sales: rows.some((r) => r.stats?.sales != null) ? rows.reduce((n, r) => n + (r.stats?.sales || 0), 0) : null,
+      commission: rows.some((r) => r.stats?.commission != null) ? rows.reduce((n, r) => n + (r.stats?.commission || 0), 0) : null,
     };
   }, [state.rows]);
 
@@ -142,8 +143,8 @@ export default function AffiliatesManager({ defaultTab = 'approved' }) {
       r.applicationId, r.fullName, r.phone, r.whatsapp, r.email, r.medicalCollegeName,
       r.batch, r.academicYear, r.city, r.couponCode, r.coupon?.isActive ? 'yes' : 'no',
       r.status, r.source === 'manual' ? 'added by admin' : 'applied',
-      formatDate(r.createdAt), r.stats?.orders || 0, r.stats?.sales || 0,
-      r.stats?.commission || 0,
+      formatDate(r.createdAt), r.stats?.orders || 0, r.stats?.sales ?? "",
+      r.stats?.commission ?? "",
     ].map(cell).join(','));
 
     // The BOM is what makes Excel read Bengali names correctly.

@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { FiExternalLink, FiLoader, FiRefreshCw } from 'react-icons/fi';
-import { CourierFilters, CourierHeader, EMPTY_FILTERS, filterQuery } from '@/components/admin/courier/CourierShell';
+import { CourierFilters, CourierHeader, EMPTY_FILTERS, filterQuery, isSuperAdmin } from '@/components/admin/courier/CourierShell';
 import { GROUP_STYLE, listConsignments, spacedPhone, STATUS_LABEL, syncCourier, tk } from '@/components/admin/courier/courierApi';
 
 const GROUPS = [
@@ -26,6 +26,8 @@ const fmt = (d) =>
 
 export default function CourierParcelsPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // Only the Super Admin is shown money (the server blanks it for everyone else).
+  const [showMoney] = useState(isSuperAdmin);
   const [group, setGroup] = useState('all');
   const [data, setData] = useState({ rows: [], total: 0, tabs: {} });
   const [page, setPage] = useState(1);
@@ -137,10 +139,16 @@ export default function CourierParcelsPage() {
                   <th className="px-2 py-2">College / area</th>
                   <th className="px-2 py-2">Consignment</th>
                   <th className="px-2 py-2">Status</th>
-                  <th className="px-2 py-2 text-right">COD asked</th>
-                  <th className="px-2 py-2 text-right">Collected</th>
-                  <th className="px-2 py-2 text-right">Courier charge</th>
-                  <th className="px-4 py-2 text-right">Payout</th>
+                  {showMoney ? (
+                    <>
+                      <th className="px-2 py-2 text-right">COD asked</th>
+                      <th className="px-2 py-2 text-right">Collected</th>
+                      <th className="px-2 py-2 text-right">Courier charge</th>
+                      <th className="px-4 py-2 text-right">Payout</th>
+                    </>
+                  ) : (
+                    <th className="px-4 py-2 text-right">Payment</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -175,6 +183,12 @@ export default function CourierParcelsPage() {
                         {c.lastMessage && <div className="mt-1 max-w-[220px] text-[11px] leading-snug text-dash-mute2">{c.lastMessage}</div>}
                         <div className="mt-0.5 text-[10px] text-dash-mute2">updated {fmt(c.statusUpdatedAt)}</div>
                       </td>
+                      {!showMoney && (
+                        <td className="px-4 py-2.5 text-right text-xs">
+                          {r.payment?.method === 'cod' ? <span className="font-medium text-amber-600">COD</span> : <span className="font-medium text-emerald-600">Prepaid</span>}
+                        </td>
+                      )}
+                      {showMoney && (<>
                       <td className="px-2 py-2.5 text-right tabular-nums text-dash-ink2">{c.codAmount ? tk(c.codAmount) : <span className="text-xs text-emerald-600">Prepaid</span>}</td>
                       <td className="px-2 py-2.5 text-right tabular-nums text-dash-ink2">{r.courierGroup === 'transit' ? '—' : tk(c.collectedAmount)}</td>
                       <td className="px-2 py-2.5 text-right tabular-nums text-dash-ink2">{c.deliveryCharge == null ? <span className="text-xs text-dash-mute2">not yet</span> : tk(c.deliveryCharge)}</td>
@@ -187,6 +201,7 @@ export default function CourierParcelsPage() {
                           <span className="text-dash-mute2">—</span>
                         )}
                       </td>
+                      </>)}
                     </tr>
                   );
                 })}

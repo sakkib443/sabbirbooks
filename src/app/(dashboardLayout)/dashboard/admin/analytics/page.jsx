@@ -24,7 +24,7 @@ import {
   FiTag, FiGift, FiCreditCard, FiAlertCircle, FiArrowRight, FiPieChart, FiBook,
 } from 'react-icons/fi';
 
-import { can, getStoredUser } from '@/lib/permissions';
+import { getStoredUser } from '@/lib/permissions';
 import {
   MoneyCard, RangeBar, RevenueChart, ChartLegend, resolvePreset, tk,
   DeliveryToggle, BooksAndDelivery, useDeliveryMode, moneyIn, rowValue, modeNote, booksLabel,
@@ -87,7 +87,9 @@ export default function BookAnalyticsPage() {
   const [error, setError] = useState('');
   const [mode, setMode] = useDeliveryMode();
 
-  const allowed = can(getStoredUser(), 'analytics.read') || can(getStoredUser(), 'orders.read');
+  // Sales and money: the Super Admin's alone (17 Oct 2026) — the API blanks
+  // every taka for anyone else, so the page would only be a wall of ৳0.
+  const allowed = getStoredUser()?.role === 'superAdmin';
 
   const fetchData = useCallback(async () => {
     if (!allowed) { setLoading(false); return; }
@@ -147,7 +149,7 @@ export default function BookAnalyticsPage() {
     return (
       <div className="p-6">
         <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-700">
-          <FiAlertCircle /> This account cannot see sales reports.
+          <FiAlertCircle /> এই রিপোর্ট শুধু Super Admin দেখতে পারেন।
         </div>
       </div>
     );
