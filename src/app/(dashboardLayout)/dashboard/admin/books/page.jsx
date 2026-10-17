@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
+import { getStoredUser } from '@/lib/permissions';
 
 const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
@@ -45,6 +46,8 @@ export default function AdminBooksPage() {
   const { showToast, toastNode } = useToast();
   const { confirm, confirmNode } = useConfirm();
 
+  // Deleting a book is the Super Admin's alone (18 Oct 2026); the server refuses anyone else.
+  const [canDelete] = useState(() => getStoredUser()?.role === 'superAdmin');
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -129,7 +132,7 @@ export default function AdminBooksPage() {
           <h1 className="text-2xl font-bold text-dash-ink2 flex items-center gap-2.5">
             <FiBook className="text-brand" /> Books
           </h1>
-          <p className="text-dash-mute text-sm">Manage your store catalog — add, edit and remove books.</p>
+          <p className="text-dash-mute text-sm">Manage your store catalog — add and edit books.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -283,6 +286,7 @@ export default function AdminBooksPage() {
                         >
                           <FiEdit2 size={15} />
                         </Link>
+                        {canDelete && (
                         <button
                           onClick={() => handleDelete(b)}
                           disabled={deletingId === b._id}
@@ -291,6 +295,7 @@ export default function AdminBooksPage() {
                         >
                           {deletingId === b._id ? <FiLoader size={15} className="animate-spin" /> : <FiTrash2 size={15} />}
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>
