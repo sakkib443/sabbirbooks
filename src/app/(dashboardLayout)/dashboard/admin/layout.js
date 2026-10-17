@@ -6,6 +6,8 @@ import NotificationBell from '@/components/shared/NotificationBell';
 import ViewAsBanner from '@/components/admin/ViewAsBanner';
 import DashboardShell from '../_components/DashboardShell';
 import { ADMIN_SHELL_ROLES, ROLE_LABELS } from '@/lib/permissions';
+import { loadShopDayCutoff } from '@/lib/shopDay';
+import API_BASE_URL from '@/config/api';
 import { FiUser, FiSettings, FiBell, FiHome, FiShoppingBag, FiBook, FiTag, FiTrendingUp } from 'react-icons/fi';
 
 // The five admin screens that actually get used on a phone. The sidebar is a
@@ -26,6 +28,18 @@ const MENU_ITEMS = [
 
 const AdminLayout = ({ children }) => {
   const [user, setUser] = useState(null);
+
+  // The shop's day cutoff (Settings). If this device had an older one, the
+  // page already drew its lists at the wrong hour — so reload once.
+  useEffect(() => {
+    let alive = true;
+    loadShopDayCutoff(API_BASE_URL).then((changed) => {
+      if (alive && changed) window.location.reload();
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -53,7 +67,11 @@ const AdminLayout = ({ children }) => {
       allowedRoles={ADMIN_SHELL_ROLES}
       sidebar={<AdminSidebar />}
       // Reports are sales and money — the Super Admin's tab alone.
-      bottomTabs={user?.role === 'superAdmin' ? ADMIN_TABS : ADMIN_TABS.filter((t) => t.key !== 'analytics')}
+      bottomTabs={
+        user?.role === 'superAdmin'
+          ? ADMIN_TABS
+          : ADMIN_TABS.filter((t) => t.key !== 'analytics' && !(t.key === 'home' && user?.role === 'manager'))
+      }
       rootSegment="admin"
       subtitle={`${userRole} Dashboard`}
       userName={userName}

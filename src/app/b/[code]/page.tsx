@@ -33,7 +33,6 @@ import AnswerStyles from "@/components/books/AnswerStyles";
 import Lightbox from "@/components/books/Lightbox";
 import { priceBook, type BookOffers } from "@/lib/bookOffers";
 import { isVerticalVideo, toEmbedUrl } from "@/lib/videoEmbed";
-import { DEFAULT_VIDEO_NOTE } from "@/lib/videoNote";
 import {
   attachAnswerImageFallback,
   lightenAnswerHtml,
@@ -823,7 +822,9 @@ export default function BookTopicScanPage() {
                       written one: "শীঘ্রই যোগ করা হবে" is the truth for a
                       recording nobody has made yet, and the default line blames
                       a fault instead. */}
-                  {!hasVideos && !active.hideVideoNote && (
+                  {/* 18 Oct 2026: no fixed default line any more — only a
+                      message the admin put on this question is shown. */}
+                  {!hasVideos && !active.hideVideoNote && !!active.videoNote?.trim() && (
                     <section>
                       <SectionLabel icon={<LuVideo className="w-3.5 h-3.5" />}>
                         ভিডিও
@@ -831,7 +832,7 @@ export default function BookTopicScanPage() {
                       <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
                         <LuTriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                         <p className="whitespace-pre-line text-sm leading-relaxed text-amber-200">
-                          {active.videoNote?.trim() || DEFAULT_VIDEO_NOTE}
+                          {active.videoNote?.trim()}
                         </p>
                       </div>
                     </section>

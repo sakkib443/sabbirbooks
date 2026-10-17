@@ -22,11 +22,11 @@ import {
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { useBrand } from '@/components/shared/Brand';
-import { getStoredUser } from '@/lib/permissions';
+import { can, getStoredUser } from '@/lib/permissions';
 import { sendToCourier } from '@/components/admin/courier/courierApi';
 import { buildOrderListPdf, downloadBlob } from '@/lib/orderListPdf';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
-import { addDays, bdDate, dayOf, dayWindow, pastCutoff } from '@/lib/shopDay';
+import { addDays, bdDate, dayOf, dayWindow, getCutoffHour, hourLabel, pastCutoff, setCutoffHour } from '@/lib/shopDay';
 import {
   areaOf, collegeOf, copiesOf, countOptions, formatBdFull, matchesPlace, printRowOf, safeFileName,
 } from '@/lib/orderList';
@@ -501,8 +501,10 @@ export default function BookOrdersPage() {
   const [savingFull, setSavingFull] = useState(false);
   // Deleting an order is the Super Admin's alone (the API refuses everyone else).
   const canDelete = getStoredUser()?.role === 'superAdmin';
-  // Steadfast is an Admin / Super Admin job — the same gate as the Courier menu.
-  const canCourier = ['admin', 'superAdmin'].includes(getStoredUser()?.role);
+  // Steadfast: courier.manage — the same gate as the Courier menu.
+  const canCourier = can(getStoredUser(), 'courier.manage');
+  // Order-list PDFs: orders.pdf — off for a manager unless the Super Admin gives it.
+  const canPdf = can(getStoredUser(), 'orders.pdf');
   // What the last "Send to courier" did, order by order — the ones that did not
   // go are listed with the reason, so nobody has to guess.
   const [courierResults, setCourierResults] = useState(null);
@@ -566,6 +568,8 @@ export default function BookOrdersPage() {
   const [exporting, setExporting] = useState(false);
   // The "Sort by" and "PDF" menus, and what the PDF menu is set to.
   const [sortOpen, setSortOpen] = useState(false);
+  // The hour a day closes (Settings, shared with the server). See lib/shopDay.
+  const [cutoff, setCutoff] = useState(getCutoffHour);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfMode, setPdfMode] = useState('shown'); // shown | all | dates
   const [pdfDates, setPdfDates] = useState({ from: '', to: '' });
@@ -1561,6 +1565,33 @@ export default function BookOrdersPage() {
   };
 
 
+  /**
+   * When a day runs, set by the shop (18 Oct 2026). Saved to Settings, so the
+   * server cuts the same way; then the list on screen is cut again.
+   */
+  const changeCutoff = async (h) => {
+    const before = getCutoffHour();
+    setCutoff(h);
+    setCutoffHour(h);
+    try {
+      const res = await fetch(`${API}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ shopDayCutoffHour: h }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not save');
+      showToast('success', `A day now runs ${hourLabel(h)} → next day ${hourLabel(h)}`);
+    } catch (e) {
+      setCutoff(before);
+      setCutoffHour(before);
+      showToast('error', e.message || 'Could not save');
+      return;
+    }
+    if (datePreset === 'custom') applyCustomDays();
+    else applyDatePreset(datePreset);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header */}
@@ -1694,6 +1725,26 @@ export default function BookOrdersPage() {
                   </div>
                 </div>
               )}
+              {!dayScoped && (
+                <div>
+                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">A day runs</p>
+                  <div className="flex items-center gap-1.5 text-xs text-dash-mute">
+                    <select
+                      value={cutoff}
+                      onChange={(e) => changeCutoff(Number(e.target.value))}
+                      aria-label="The hour a day starts and ends"
+                      className="rounded-lg border border-dash-line bg-dash-card px-2 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand"
+                    >
+                      {Array.from({ length: 24 }, (_, h) => (
+                        <option key={h} value={h}>
+                          {hourLabel(h)}
+                        </option>
+                      ))}
+                    </select>
+                    <span>→ next day, same time</span>
+                  </div>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-dash-mute2">Area</p>
                 <CountSelect
@@ -1733,7 +1784,9 @@ export default function BookOrdersPage() {
           />
         </div>
 
-        {/* PDF: one small button; what goes in it is chosen inside. */}
+        {/* PDF: one small button; what goes in it is chosen inside. Never
+            for a manager (18 Oct 2026). */}
+        {canPdf && (
         <div className="relative ml-auto" ref={pdfRef}>
           <button
             type="button"
@@ -1814,6 +1867,7 @@ export default function BookOrdersPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* The counts — one small line (18 Oct 2026). For whatever the filters
@@ -2001,6 +2055,7 @@ export default function BookOrdersPage() {
               >
                 <FiCalendar size={13} /> Delivery date
               </button>
+              {canPdf && (
               <button
                 onClick={() => exportPdf(true)}
                 disabled={exporting}
@@ -2008,6 +2063,7 @@ export default function BookOrdersPage() {
               >
                 <FiDownload size={13} /> PDF
               </button>
+              )}
               {canCourier && (
                 <button
                   onClick={sendSelectedToCourier}

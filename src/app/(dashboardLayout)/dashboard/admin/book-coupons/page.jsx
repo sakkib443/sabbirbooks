@@ -17,7 +17,7 @@ import {
   FiDollarSign, FiCheckCircle, FiXCircle, FiUsers, FiExternalLink,
 } from 'react-icons/fi';
 import { listCoupons, removeCoupon, saveCoupon, formatTk } from '@/components/admin/bookCoupon/couponApi';
-import { getStoredUser } from '@/lib/permissions';
+import { currentCan } from '@/lib/permissions';
 
 const discountText = (c) => {
   const parts = [];
@@ -64,9 +64,10 @@ const FILTERS = [
 ];
 
 export default function BookCouponsPage() {
-  // A manager looks at the coupons; creating, editing, switching on or off
-  // and deleting are the admin's (18 Oct 2026). The server refuses it too.
-  const [canEdit] = useState(() => getStoredUser()?.role !== 'manager');
+  // Creating, editing, switching on or off and deleting need coupons.write —
+  // an admin by default, a manager only if the Super Admin gives it
+  // (18 Oct 2026). The server refuses it too.
+  const [canEdit] = useState(() => currentCan('coupons.write'));
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
   const [busyId, setBusyId] = useState('');
   const [kind, setKind] = useState('all');

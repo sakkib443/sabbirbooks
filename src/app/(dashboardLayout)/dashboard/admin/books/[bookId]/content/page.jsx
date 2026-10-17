@@ -48,7 +48,6 @@ import { MotionConfig, Reorder, useDragControls } from 'framer-motion';
 import FileDropZone from '@/components/shared/FileDropZone';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { currentCan } from '@/lib/permissions';
-import { DEFAULT_VIDEO_NOTE } from '@/lib/videoNote';
 import VideoNotePanel from '@/components/admin/book/VideoNotePanel';
 
 // The editor touches window/document on mount, so it must not be part of the
@@ -597,6 +596,25 @@ export default function BookContentEditorPage() {
       setVideoNotes([]);
     }
   }, [bookId]);
+
+  // Keep a message for reuse (the shared saved list — videoNotePreset).
+  const saveVideoNotePreset = async (text) => {
+    const clean = String(text || '').trim();
+    if (!clean) return;
+    try {
+      const res = await fetch(`${API}/book-content/video-note-presets`, {
+        method: 'POST',
+        headers: hdrs(),
+        body: JSON.stringify({ text: clean }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.success === false) throw new Error(body.message || 'Could not save');
+      notify('লেখাটা সেভ হয়েছে');
+      loadVideoNotes();
+    } catch (e) {
+      notify(e.message || 'Could not save', 'error');
+    }
+  };
 
   // ─── Load tree ────────────────────────────────────────────
   const loadTree = useCallback(async () => {
@@ -1765,7 +1783,7 @@ export default function BookContentEditorPage() {
                           }}
                           className="mt-2 w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
                         >
-                          <option value="">ডিফল্ট বার্তা</option>
+                          <option value="">— কোনো লেখা নয় —</option>
                           {videoNotes.map(note => (
                             <option key={note} value={note}>
                               {note.length > 60 ? `${note.slice(0, 60)}…` : note}
@@ -1775,23 +1793,35 @@ export default function BookContentEditorPage() {
                         </select>
 
                         {writingNote ? (
-                          <textarea
-                            value={draft.videoNote || ''}
-                            onChange={e => setDraft(d => ({ ...d, videoNote: e.target.value }))}
-                            rows={2}
-                            maxLength={500}
-                            placeholder="যেমন: এই প্রশ্নের ভিডিও শীঘ্রই যোগ করা হবে।"
-                            className="mt-2 w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
-                          />
+                          <>
+                            <textarea
+                              value={draft.videoNote || ''}
+                              onChange={e => setDraft(d => ({ ...d, videoNote: e.target.value }))}
+                              rows={2}
+                              maxLength={500}
+                              placeholder="যেমন: এই প্রশ্নের ভিডিও শীঘ্রই যোগ করা হবে।"
+                              className="mt-2 w-full rounded-lg border border-dash-line-strong px-3 py-2 text-sm"
+                            />
+                            {/* Keep it for later: a saved message is offered in
+                                every book's list and in the many-at-once panel. */}
+                            <button
+                              type="button"
+                              onClick={() => saveVideoNotePreset(draft.videoNote)}
+                              disabled={!(draft.videoNote || '').trim()}
+                              className="mt-1.5 rounded-lg border border-brand/40 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand-soft disabled:opacity-50"
+                            >
+                              এই লেখাটা সেভ করে রাখুন
+                            </button>
+                          </>
                         ) : (
                           <p className="mt-2 rounded-lg bg-dash-soft px-3 py-2 text-xs leading-relaxed text-dash-ink4 whitespace-pre-line">
-                            {draft.videoNote || DEFAULT_VIDEO_NOTE}
+                            {draft.videoNote || 'কোনো লেখা বাছা হয়নি — পাঠক এখানে কিছুই দেখবে না।'}
                           </p>
                         )}
 
                         <p className="mt-1.5 text-[11px] text-dash-mute2">
-                          নিজে লেখা বার্তা সংরক্ষণের পর এই বইয়ের অন্য প্রশ্নেও উপরের তালিকা থেকে
-                          বেছে নেওয়া যাবে। ভিডিও যোগ করলে বার্তাটি আর দেখাবে না।
+                          সেভ করা লেখা যেকোনো বইয়ের যেকোনো প্রশ্নে উপরের তালিকা থেকে বেছে নেওয়া যাবে।
+                          ভিডিও যোগ করলে লেখাটি আর দেখাবে না।
                         </p>
                         </>
                         )}

@@ -13,8 +13,53 @@
  * whatever the admin's own device clock or timezone says.
  */
 
-export const CUTOFF_HOUR = 12;
 const BD_OFFSET_MS = 6 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const CUTOFF_KEY = 'sb_day_cutoff';
+
+/*
+ * The cutoff hour is the shop's to set (18 Oct 2026) — Settings
+ * shopDayCutoffHour, 0–23 (0 = midnight, i.e. calendar days), the same value
+ * the server splits days at (sabbirbooks_server utils/shopDay). Kept here as
+ * 1–24 (24 = midnight closing the date). The last known value is remembered
+ * in localStorage so the very first list on a page load is already cut right;
+ * loadShopDayCutoff() refreshes it from the server.
+ */
+const toInternal = (h) => {
+  const n = Number(h);
+  if (!Number.isInteger(n) || n < 0 || n > 23) return null;
+  return n === 0 ? 24 : n;
+};
+let cutoffHour = (() => {
+  try {
+    return (typeof window !== 'undefined' && toInternal(localStorage.getItem(CUTOFF_KEY) ?? 'x')) || 12;
+  } catch {
+    return 12;
+  }
+})();
+
+/** The cutoff as Settings stores it (0–23). */
+export const getCutoffHour = () => (cutoffHour === 24 ? 0 : cutoffHour);
+
+/** Use a new cutoff (0–23) from now on, and remember it. */
+export function setCutoffHour(h) {
+  const v = toInternal(h);
+  if (!v) return;
+  cutoffHour = v;
+  try {
+    localStorage.setItem(CUTOFF_KEY, String(getCutoffHour()));
+  } catch {
+    // private mode — this page load still uses it
+  }
+}
+
+/** "12 PM", "9 AM", "12 AM (midnight)" for an hour 0–23. */
+export function hourLabel(h) {
+  const n = Number(h);
+  if (n === 0) return '12 AM (midnight)';
+  if (n === 12) return '12 PM (noon)';
+  return n < 12 ? `${n} AM` : `${n - 12} PM`;
+}
 
 /** YYYY-MM-DD in Bangladesh for an instant. */
 export function bdDate(instant = new Date()) {
@@ -30,7 +75,7 @@ export function addDays(day, n) {
 
 /** The instant a day closes: that date, 12:00 noon in Bangladesh. */
 export function cutoffOf(day) {
-  return new Date(`${day}T${String(CUTOFF_HOUR).padStart(2, '0')}:00:00+06:00`);
+  return new Date(new Date(`${day}T00:00:00+06:00`).getTime() + cutoffHour * HOUR_MS);
 }
 
 /** Orders placed in [from, to) for the days fromDay…toDay, both included. */
@@ -65,4 +110,22 @@ export function formatBd(instant) {
     minute: '2-digit',
     hour12: true,
   });
+}
+
+/**
+ * Refresh the cutoff from the server's Settings. Resolves true when it
+ * changed, so a screen already cut at the old hour can reload.
+ */
+export async function loadShopDayCutoff(apiBase) {
+  try {
+    const res = await fetch(`${apiBase}/settings`, { cache: 'no-store' });
+    const json = await res.json();
+    const h = json?.data?.shopDayCutoffHour;
+    if (h === undefined || h === null) return false;
+    const before = getCutoffHour();
+    setCutoffHour(h);
+    return before !== getCutoffHour();
+  } catch {
+    return false;
+  }
 }
