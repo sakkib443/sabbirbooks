@@ -80,6 +80,25 @@ export const CAPABILITIES = [
     group: 'People',
     description: 'Create student accounts, edit user details, reset passwords, delete accounts.',
   },
+  // Finer switches (18 Oct 2026) — mirror of the API's permissions.ts.
+  {
+    key: 'courier.manage',
+    label: 'Courier — send & follow parcels',
+    group: 'Business data',
+    description: 'Send orders to Steadfast and follow the parcels.',
+  },
+  {
+    key: 'coupons.write',
+    label: 'Coupons — create & edit',
+    group: 'Business data',
+    description: 'Create, edit, switch on or off and (with Delete) remove coupons.',
+  },
+  {
+    key: 'orders.pdf',
+    label: 'Orders — download PDF',
+    group: 'Business data',
+    description: 'Download order lists as PDF.',
+  },
   {
     key: 'settings.write',
     label: 'Site settings',
@@ -152,7 +171,13 @@ export const resolveCapabilities = (user) => {
   if (Array.isArray(user.capabilities)) return user.capabilities;
 
   const role = user.role === 'user' ? 'student' : user.role;
-  if (role === 'superAdmin' || role === 'admin') return [...CAPABILITY_KEYS];
+  if (role === 'superAdmin') return [...CAPABILITY_KEYS];
+  // An admin is full access until the Super Admin narrows them (18 Oct 2026).
+  if (role === 'admin') {
+    return Array.isArray(user.permissions)
+      ? user.permissions.filter((p) => CAPABILITY_KEYS.includes(p))
+      : [...CAPABILITY_KEYS];
+  }
   if (Array.isArray(user.permissions)) {
     return user.permissions.filter((p) => CAPABILITY_KEYS.includes(p) && p !== 'staff.manage');
   }
@@ -226,8 +251,10 @@ export const homeRouteFor = (role) => {
     case 'admin':
     case 'trainingManager':
     case 'contentManager':
-    case 'manager':
       return '/dashboard/admin';
+    // No dashboard for the manager (18 Oct 2026) — straight to the orders.
+    case 'manager':
+      return '/dashboard/admin/book-orders';
     case 'mentor':
       return '/dashboard/mentor';
     // A coupon owner has exactly one screen: their own sales and earnings.

@@ -1,7 +1,10 @@
 'use client';
 
 /**
- * Manager permission matrix.
+ * Admin & manager permission matrix — the Super Admin's (18 Oct 2026).
+ *
+ * Each admin and manager: switch their whole access off or on, tick exactly
+ * what they may do, and read in plain words what that adds up to.
  *
  * Rows = the manager accounts, columns = capabilities. Ticking a box PATCHes
  * /api/user/:id/permissions, which is the only endpoint that can write the
@@ -20,7 +23,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
   FiLoader, FiShield, FiUsers, FiSave, FiCheck, FiRotateCcw,
-  FiAlertCircle, FiInfo, FiUserPlus,
+  FiAlertCircle, FiInfo, FiUserPlus, FiPower, FiList,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { ROLE_LABELS, getStoredUser } from '@/lib/permissions';
@@ -29,13 +32,36 @@ const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replac
 const hdr = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 const jhdr = () => ({ 'Content-Type': 'application/json', ...hdr() });
 
+/*
+ * What a set of capabilities means in the shop's words — the same rows as the
+ * "কার কী অ্যাক্সেস" PDF. `need` is the capability; `fixed` is a rule no
+ * tick box changes (money and staff are role rules).
+ */
+const FEATURES = [
+  { label: 'অর্ডার দেখা', need: 'orders.read', note: (r) => (r === 'manager' ? 'শেষ ৭ দিন' : 'সব দিনের') },
+  { label: 'অর্ডার কনফার্ম / Shipped / Delivered / নোট', need: 'orders.write' },
+  { label: 'অর্ডারের PDF নামানো', need: 'orders.pdf' },
+  { label: 'কুরিয়ারে পাঠানো ও পার্সেল দেখা', need: 'courier.manage' },
+  { label: 'কুপন দেখা', need: 'orders.read' },
+  { label: 'কুপন বানানো / এডিট', need: 'coupons.write' },
+  { label: 'বই ও QR কনটেন্ট যোগ / এডিট', need: 'content.write' },
+  { label: 'কিছু ডিলিট করা', need: 'records.delete' },
+  { label: 'স্টুডেন্ট ও অ্যাফিলিয়েট দেখা', need: 'users.read' },
+  { label: 'ইউজার এডিট', need: 'users.write' },
+  { label: 'সাইট সেটিংস ও ডেলিভারি চার্জ', need: 'settings.write' },
+  { label: 'SMS পাতা', need: 'staff.manage' },
+  { label: 'প্রতিটা অর্ডারের টাকা দেখা', fixed: (r) => r === 'admin' },
+  { label: 'টাকার যোগফল, Analytics, পেআউটের মোট', fixed: () => false, note: () => 'শুধু Super Admin' },
+  { label: 'স্টাফ বানানো ও পারমিশন বদলানো', fixed: () => false, note: () => 'শুধু Super Admin' },
+];
+
 const ROLE_BLURB = {
   trainingManager:
     'Runs batches, enrollments, certificates and student accounts. Sees the operational dashboards.',
   contentManager:
     'Adds, edits and deletes content only. No orders, no sales figures, no personal data, no settings.',
   manager:
-    'Adds and edits content and training operations — but cannot delete anything, and cannot see orders, sales figures or personal details.',
+    'শেষ ৭ দিনের অর্ডার দেখে ও কনফার্ম/শিপ করে, বই আর QR কনটেন্ট যোগ/এডিট করে। কোনো টাকা দেখে না, কিছু ডিলিট করে না। কুপন লেখা, কুরিয়ার বা PDF শুধু আপনি টিক দিলে।',
 };
 
 export default function PermissionsMatrixPage() {
@@ -47,6 +73,8 @@ export default function PermissionsMatrixPage() {
   const [saving, setSaving] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [switching, setSwitching] = useState(null);
+  const [details, setDetails] = useState(null);
 
   const me = useMemo(() => getStoredUser(), []);
 
@@ -74,8 +102,8 @@ export default function PermissionsMatrixPage() {
 
       setError('');
       setCatalog(cat.data);
-      const managerRoles = cat.data.managerRoles || [];
-      const rows = (users.data || []).filter((u) => !u.isDeleted && managerRoles.includes(u.role));
+      const editable = cat.data.editableRoles || cat.data.managerRoles || [];
+      const rows = (users.data || []).filter((u) => !u.isDeleted && editable.includes(u.role));
       setManagers(rows);
       setDraft(
         Object.fromEntries(rows.map((u) => [u._id, new Set(u.capabilities || [])])),
@@ -103,7 +131,7 @@ export default function PermissionsMatrixPage() {
 
   const applyPreset = (userId, role) => {
     const defaults = catalog?.roleDefaults?.[role] || [];
-    const grantable = catalog?.grantable || [];
+    const grantable = role === 'admin' ? (catalog?.capabilities || []).map((c) => c.key) : catalog?.grantable || [];
     setDraft((prev) => ({
       ...prev,
       [userId]: new Set(defaults.filter((c) => grantable.includes(c))),
@@ -145,12 +173,36 @@ export default function PermissionsMatrixPage() {
     }
   };
 
-  const grantable = catalog?.grantable || [];
-  const columns = (catalog?.capabilities || []).filter((c) => grantable.includes(c.key));
-  const groups = columns.reduce((acc, c) => {
-    (acc[c.group] = acc[c.group] || []).push(c);
-    return acc;
-  }, {});
+  // An admin's list may carry Staff & permissions; a manager's never.
+  const groupsFor = (role) => {
+    const grantable = role === 'admin' ? (catalog?.capabilities || []).map((c) => c.key) : catalog?.grantable || [];
+    return (catalog?.capabilities || [])
+      .filter((c) => grantable.includes(c.key))
+      .reduce((acc, c) => {
+        (acc[c.group] = acc[c.group] || []).push(c);
+        return acc;
+      }, {});
+  };
+
+  // Whole access off (blocked, signed out everywhere) or back on.
+  const setAccess = async (u, enabled) => {
+    setSwitching(u._id);
+    try {
+      const res = await fetch(`${API}/security/users/${u._id}/access`, {
+        method: 'POST',
+        headers: jhdr(),
+        body: JSON.stringify({ enabled }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) throw new Error(data.message || 'Could not change access');
+      setManagers((prev) => prev.map((m) => (m._id === u._id ? { ...m, status: data.data?.status } : m)));
+      showToast('success', enabled ? 'অ্যাক্সেস চালু হয়েছে' : 'অ্যাক্সেস বন্ধ — সব ডিভাইস থেকে লগআউট হয়েছে');
+    } catch (e) {
+      showToast('error', e.message);
+    } finally {
+      setSwitching(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -175,17 +227,21 @@ export default function PermissionsMatrixPage() {
     <div className="p-6 lg:p-8 min-h-screen bg-dash-soft">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-dash-ink outfit flex items-center gap-2">
-          <FiShield className="text-brand" /> Manager Permissions
+          <FiShield className="text-brand" /> Admin &amp; Manager Permissions
         </h1>
         <p className="text-dash-mute text-sm mt-1">
-          ম্যানেজার কী কী করতে পারবে তা এখান থেকে চালু/বন্ধ করুন। Only a Super Admin or Admin can
-          change these, and nobody can change their own.
+          প্রতিটা Admin আর Manager কী কী করতে পারবে তা এখান থেকে চালু/বন্ধ করুন, দরকার হলে পুরো
+          অ্যাক্সেসই বন্ধ করে দিন। শুধু Super Admin এটা বদলাতে পারেন।
         </p>
       </div>
 
       <div className="mb-6 rounded-xl border border-sky-200 bg-sky-50 p-4 flex gap-3">
         <FiInfo className="text-sky-500 shrink-0 mt-0.5" size={16} />
         <div className="text-[13px] text-sky-900 space-y-1">
+          <p>
+            <b>Admin</b> — প্রথমে সব কিছু চালু থাকে; যেটা দরকার নেই সেটার টিক তুলে Save করুন।
+            প্রতিটা অর্ডারের টাকা দেখে, কিন্তু টাকার যোগফল দেখে না।
+          </p>
           <p>
             <b>Training Manager</b> — {ROLE_BLURB.trainingManager}
           </p>
@@ -224,6 +280,8 @@ export default function PermissionsMatrixPage() {
             const dirty = isDirty(u);
             const isSelf = String(u._id) === String(me?._id || me?.id || '');
             const set = draft[u._id] || new Set();
+            const groups = groupsFor(u.role);
+            const blocked = Boolean(u.status) && u.status !== 'active';
             return (
               <div key={u._id} className="bg-dash-card rounded-xl border border-dash-line shadow-sm overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-dash-line-soft bg-dash-soft/60">
@@ -240,7 +298,24 @@ export default function PermissionsMatrixPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setAccess(u, blocked)}
+                      disabled={switching === u._id || isSelf}
+                      title={blocked ? 'অ্যাক্সেস আবার চালু করুন' : 'পুরো অ্যাক্সেস বন্ধ করুন (সব ডিভাইস থেকে লগআউট)'}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-40 ${
+                        blocked ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                      }`}
+                    >
+                      {switching === u._id ? <FiLoader className="animate-spin" size={13} /> : <FiPower size={13} />}
+                      {blocked ? 'অ্যাক্সেস বন্ধ' : 'অ্যাক্সেস চালু'}
+                    </button>
+                    <button
+                      onClick={() => setDetails(details === u._id ? null : u._id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dash-line text-dash-mute text-xs font-semibold hover:bg-dash-soft"
+                    >
+                      <FiList size={13} /> বিস্তারিত
+                    </button>
                     <button
                       onClick={() => applyPreset(u._id, u.role)}
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dash-line text-dash-mute text-xs font-semibold hover:bg-dash-soft"
@@ -259,6 +334,27 @@ export default function PermissionsMatrixPage() {
                     </button>
                   </div>
                 </div>
+
+                {details === u._id && (
+                  <div className="border-b border-dash-line-soft px-5 py-4">
+                    <p className="mb-2 text-xs font-semibold text-dash-ink3">
+                      {u.firstName} কী কী পারবে (এখনকার টিক অনুযায়ী{dirty ? ', এখনো Save করা হয়নি' : ''}):
+                    </p>
+                    <ul className="grid gap-1 text-[13px] sm:grid-cols-2">
+                      {FEATURES.map((ft) => {
+                        const ok = ft.fixed ? ft.fixed(u.role) : set.has(ft.need);
+                        const note = ft.note?.(u.role);
+                        return (
+                          <li key={ft.label} className={`flex items-center gap-2 ${ok ? 'text-emerald-700' : 'text-rose-600'}`}>
+                            <span className="w-4 text-center font-bold">{ok ? '✔' : '✘'}</span>
+                            <span className="text-dash-ink3">{ft.label}</span>
+                            {note && <span className="text-[11px] text-dash-mute2">({note})</span>}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
 
                 <div className="p-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {Object.entries(groups).map(([groupName, caps]) => (

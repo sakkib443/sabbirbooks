@@ -46,6 +46,10 @@ const CONTENT_SHORTCUTS = [
 ];
 
 export default function AdminDashboard() {
+  // A manager has no dashboard (18 Oct 2026): their panel opens on the orders.
+  useEffect(() => {
+    if (getStoredUser()?.role === 'manager') window.location.replace('/dashboard/admin/book-orders');
+  }, []);
   const [preset, setPreset] = useState('30d');
   const [range, setRange] = useState(() => resolvePreset('30d'));
   const [draft, setDraft] = useState(() => resolvePreset('30d'));

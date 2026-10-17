@@ -92,7 +92,8 @@ const AdminSidebar = () => {
     {
       label: 'Overview',
       items: [
-        { title: 'Dashboard', href: '/dashboard/admin', icon: FiHome, exact: true },
+        // Not for the manager: their panel opens on the orders (18 Oct 2026).
+        { title: 'Dashboard', href: '/dashboard/admin', icon: FiHome, exact: true, roles: ['admin', 'trainingManager', 'contentManager', 'mentor'] },
         // Sales and money — the Super Admin's alone (17 Oct 2026).
         { title: 'Analytics', href: '/dashboard/admin/analytics', icon: FiBarChart2, need: ['analytics.read'], superOnly: true },
       ],
@@ -110,10 +111,10 @@ const AdminSidebar = () => {
         // charges. Delivery Charges (the rates buyers pay) lives here too. The
         // money side (Payouts & Accounts) is the Super Admin's.
         {
-          title: 'Courier', icon: FiPackage, need: ['staff.manage', 'settings.write'],
+          title: 'Courier', icon: FiPackage, need: ['courier.manage', 'settings.write'],
           submenu: [
-            { title: 'Send to Courier', href: '/dashboard/admin/courier/send', need: ['staff.manage'] },
-            { title: 'Parcels', href: '/dashboard/admin/courier', exact: true, need: ['staff.manage'] },
+            { title: 'Send to Courier', href: '/dashboard/admin/courier/send', need: ['courier.manage'] },
+            { title: 'Parcels', href: '/dashboard/admin/courier', exact: true, need: ['courier.manage'] },
             { title: 'Delivery Charges', href: '/dashboard/admin/delivery-charges', need: ['settings.write'] },
             { title: 'Payouts & Accounts', href: '/dashboard/admin/courier/payouts', need: ['staff.manage'], superOnly: true },
           ],
@@ -124,7 +125,7 @@ const AdminSidebar = () => {
           title: 'Coupons', icon: FiTag, need: ['orders.read', 'users.read'],
           submenu: [
             { title: 'All Coupons', href: '/dashboard/admin/book-coupons', exact: true, need: ['orders.read'] },
-            { title: 'Add Coupon', href: '/dashboard/admin/book-coupons/create', need: ['orders.write'], roles: ['admin'] },
+            { title: 'Add Coupon', href: '/dashboard/admin/book-coupons/create', need: ['coupons.write'] },
             // An affiliate record is about a person — users.read.
             { title: 'Affiliates', href: '/dashboard/admin/affiliates', exact: true, need: ['users.read'] },
             { title: 'Affiliate Applications', href: '/dashboard/admin/affiliates/applications', need: ['users.read'] },
