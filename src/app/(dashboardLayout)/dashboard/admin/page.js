@@ -177,6 +177,68 @@ export default function AdminDashboard() {
   const tm = moneyIn(t, mode);
   const todayM = moneyIn(stats?.today, mode);
 
+  /*
+   * Totals of any kind — orders this month, all time, books sold, the chart,
+   * 7 / 30 / 90 days, the year — are the Super Admin's (18 Oct 2026). Anyone
+   * else gets the work waiting and the way to it; the server sends them
+   * nothing more than the new-order count.
+   */
+  if (getStoredUser()?.role !== 'superAdmin') {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-dash-line/60 bg-dash-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-hover text-white shadow-md shadow-brand/20">
+              <FiShoppingCart size={18} />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-dash-ink outfit">Dashboard</h1>
+              <p className="text-xs text-dash-mute2">What is waiting for you.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={fetchData} className="flex items-center gap-1.5 rounded-lg border border-dash-line bg-dash-soft px-3 py-1.5 text-xs font-medium text-dash-ink4 transition hover:bg-dash-soft2">
+              <FiRefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Reload
+            </button>
+            <Link href="/dashboard/admin/book-orders" className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-brand to-brand-hover px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:shadow-md hover:shadow-brand/30">
+              <FiShoppingCart size={12} /> All Orders
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Link href="/dashboard/admin/book-orders"
+            className="group flex items-center justify-between gap-3 rounded-xl border border-dash-line/60 bg-dash-card p-4 shadow-sm transition hover:border-brand/40 hover:shadow-md">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md">
+                <FiClock size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-dash-ink2">Confirm new orders</p>
+                <p className="text-[11px] text-dash-mute2">{loading ? '…' : `${stats?.newOrders ?? 0} waiting for you`}</p>
+              </div>
+            </div>
+            <FiArrowRight className="text-dash-mute transition group-hover:translate-x-0.5 group-hover:text-brand" />
+          </Link>
+
+          <Link href="/dashboard/admin/books"
+            className="group flex items-center justify-between gap-3 rounded-xl border border-dash-line/60 bg-dash-card p-4 shadow-sm transition hover:border-brand/40 hover:shadow-md">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow-md">
+                <FiLayers size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-dash-ink2">Manage books</p>
+                <p className="text-[11px] text-dash-mute2">Catalogue, content &amp; QR</p>
+              </div>
+            </div>
+            <FiArrowRight className="text-dash-mute transition group-hover:translate-x-0.5 group-hover:text-brand" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
