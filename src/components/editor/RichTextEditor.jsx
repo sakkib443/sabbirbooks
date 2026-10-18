@@ -247,7 +247,9 @@ export default function RichTextEditor({ value, onChange, placeholder = 'উত�
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm max-w-none min-h-[280px] px-4 py-3 focus:outline-none prose-headings:font-semibold prose-p:my-2 sb-answer-editor',
+          // break-words + a scrolling table: a long link or a wide pasted table
+          // stays inside the editor instead of widening the page past the screen.
+          'prose prose-sm max-w-none min-h-[280px] px-4 py-3 focus:outline-none prose-headings:font-semibold prose-p:my-2 break-words [&_table]:block [&_table]:overflow-x-auto sb-answer-editor',
       },
       // Word's pictures are not in the HTML flavour of the clipboard at all —
       // that flavour only points at files on the author's own disk. The bytes

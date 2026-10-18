@@ -500,6 +500,13 @@
 }
 
 @layer base {
+  /* In the panels, a grid column never grows past the screen to fit one long
+     word, link or file name (18 Oct 2026 — the editor was being pushed off the
+     right edge, where body's overflow-x: clip cut it). In the base layer, so
+     an explicit min-w-* utility on a cell still wins. */
+  .dash-scope .grid > * {
+    min-width: 0;
+  }
   * {
     border-color: var(--border);
   }
