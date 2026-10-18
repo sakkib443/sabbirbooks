@@ -14,6 +14,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { FiChevronDown, FiLoader, FiRefreshCw } from 'react-icons/fi';
 import { CourierFilters, CourierHeader, EMPTY_FILTERS, filterQuery } from '@/components/admin/courier/CourierShell';
 import { courierSummary, listCourierPayments, syncCourierPayments, tk } from '@/components/admin/courier/courierApi';
+import CourierDashboard from '@/components/admin/courier/CourierDashboard';
 
 const fmtDay = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
@@ -75,6 +76,11 @@ export default function CourierPayoutsPage() {
   return (
     <div className="space-y-4">
       <CourierHeader subtitle="What the courier collected, charged, paid and still owes." />
+
+      {/* The dashboard (Steadfast's layout), then the accounts by date below it. */}
+      <CourierDashboard onSyncPayouts={sync} syncing={syncing} />
+
+      <h2 className="pt-2 text-base font-bold text-dash-ink2 outfit">Accounts by date</h2>
 
       <CourierFilters
         value={filters}
