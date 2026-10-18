@@ -159,13 +159,13 @@ export default function TrackParcelPage() {
 
             {(data.timeline || []).length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="mb-3 text-sm font-semibold text-foreground">কুরিয়ারের আপডেট</h2>
+                <h2 className="mb-3 text-sm font-semibold text-foreground">পার্সেলের আপডেট</h2>
                 <ul className="space-y-3">
                   {data.timeline.map((t, i) => (
                     <li key={i} className="flex gap-3 text-sm">
                       <LuClock className="mt-0.5 shrink-0 text-muted-foreground" />
                       <div>
-                        <p className="text-foreground">{t.text}</p>
+                        <p className="text-foreground">{t.text || STATUS_BN[t.status] || t.status}</p>
                         {t.at && <p className="text-xs text-muted-foreground">{when(t.at)}</p>}
                       </div>
                     </li>

@@ -23,6 +23,7 @@ export const courierFilters = () => get('/filters');
 export const listReady = (params) => get('/ready', params);
 export const listConsignments = (params) => get('/consignments', params);
 export const courierSummary = (params) => get('/summary', params);
+export const courierDashboard = () => get('/dashboard');
 export const listCourierPayments = (params) => get('/payments', params);
 export const sendToCourier = (orderIds) => post('/send', { orderIds });
 export const syncCourier = (orderIds) => post('/sync', orderIds ? { orderIds } : {});
@@ -85,10 +86,11 @@ export const STATUS_LABEL = {
   cancelled: 'Returned',
 };
 
+// Steadfast's own colours: in progress amber, partly delivered blue.
 export const GROUP_STYLE = {
-  transit: 'bg-sky-100 text-sky-700',
+  transit: 'bg-amber-100 text-amber-700',
   delivered: 'bg-emerald-100 text-emerald-700',
-  partial: 'bg-amber-100 text-amber-700',
+  partial: 'bg-sky-100 text-sky-700',
   returned: 'bg-red-100 text-red-600',
 };
 
