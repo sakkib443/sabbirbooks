@@ -1173,7 +1173,10 @@ export default function BookContentEditorPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5">
+      {/* minmax(0,1fr), not 1fr: a plain 1fr column grows to fit its widest
+          unbreakable content (a long link or file name), pushing the editor off
+          the right edge of the screen, where the panel clips it. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-5">
         {/* ─── Tree ──────────────────────────────────────── */}
         <aside className="rounded-xl border border-dash-line bg-dash-card overflow-hidden self-start">
           <div className="px-4 py-3 border-b border-dash-line bg-dash-soft flex items-center justify-between">
