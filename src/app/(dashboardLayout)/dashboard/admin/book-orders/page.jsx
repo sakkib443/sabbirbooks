@@ -23,7 +23,7 @@ import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { useBrand } from '@/components/shared/Brand';
 import { can, getStoredUser } from '@/lib/permissions';
-import { sendToCourier } from '@/components/admin/courier/courierApi';
+import { sendToCourier, STATUS_LABEL as COURIER_STATUS } from '@/components/admin/courier/courierApi';
 import { buildOrderListPdf, downloadBlob } from '@/lib/orderListPdf';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
 import { addDays, bdDate, dayOf, dayWindow, getCutoffHour, hourLabel, pastCutoff, setCutoffHour } from '@/lib/shopDay';
@@ -2536,6 +2536,14 @@ export default function BookOrdersPage() {
                         {o.shippedAt && <DetailRow icon={FiTruck} label="Shipped" value={fmtDate(o.shippedAt)} />}
                         {o.deliveredAt && <DetailRow icon={FiPackage} label="Delivered" value={fmtDate(o.deliveredAt)} />}
                         {o.courierName && <DetailRow icon={FiTruck} label="Courier" value={o.courierName} />}
+                        {/* The parcel's own state, so the order and the courier can be read side by side. */}
+                        {o.courier?.consignmentId && (
+                          <DetailRow
+                            icon={FiPackage}
+                            label="Parcel"
+                            value={`${COURIER_STATUS[o.courier.status] || o.courier.status || '—'} · #${o.courier.consignmentId}${o.courier.statusUpdatedAt ? ` · ${fmtDate(o.courier.statusUpdatedAt)}` : ''}`}
+                          />
+                        )}
                         {o.trackingCode && <DetailRow icon={FiHash} label="Tracking" value={o.trackingCode} mono />}
                         {o.trackingUrl && (
                           <DetailRow
