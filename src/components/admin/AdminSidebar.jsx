@@ -10,7 +10,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiChevronLeft, FiTag,
-  FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage,
+  FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage, FiUsers,
 } from 'react-icons/fi';
 
 /*
@@ -96,6 +96,8 @@ const AdminSidebar = () => {
         { title: 'Dashboard', href: '/dashboard/admin', icon: FiHome, exact: true, roles: ['admin', 'trainingManager', 'contentManager', 'mentor'] },
         // Sales and money — the Super Admin's alone (17 Oct 2026).
         { title: 'Analytics', href: '/dashboard/admin/analytics', icon: FiBarChart2, need: ['analytics.read'], superOnly: true },
+        // Income and expense, day by day — the Super Admin's (20 Oct 2026).
+        { title: 'আয়-ব্যয় (Accounts)', href: '/dashboard/admin/accounts', icon: FiDollarSign, superOnly: true },
       ],
     },
     {
@@ -107,6 +109,9 @@ const AdminSidebar = () => {
         //
         // Book Orders is the "who is buying" screen — orders.read, not content.
         { title: 'Book Orders', href: '/dashboard/admin/book-orders', icon: FiShoppingBag, need: ['orders.read'] },
+        // Orders through a batch's senior: discounts, free copies, dates and
+        // the courier (20 Oct 2026). Prices — the admin's, not a manager's.
+        { title: 'Campus Orders', href: '/dashboard/admin/campus-orders', icon: FiUsers, need: ['orders.read'], roles: ['admin'] },
         // The courier: hand parcels to Steadfast, follow them, and what it
         // charges. Delivery Charges (the rates buyers pay) lives here too. The
         // money side (Payouts & Accounts) is the Super Admin's.

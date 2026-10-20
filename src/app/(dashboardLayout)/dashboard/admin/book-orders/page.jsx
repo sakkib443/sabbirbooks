@@ -17,10 +17,11 @@ import {
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
   FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
   FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
-  FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight, FiFileText, FiSliders,
+  FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight, FiFileText, FiSliders, FiPlus,
 } from 'react-icons/fi';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
+import AddOrderModal from '@/components/admin/orders/AddOrderModal';
 import { useBrand } from '@/components/shared/Brand';
 import { can, getStoredUser } from '@/lib/permissions';
 import { sendToCourier, STATUS_LABEL as COURIER_STATUS } from '@/components/admin/courier/courierApi';
@@ -37,6 +38,26 @@ const COLLEGE_TYPE_LABEL = { government: 'Government', private: 'Private', army:
 const API =
   ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => (typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '');
+
+/**
+ * Which status changes text the buyer (19 Oct 2026 — the admin's choice, one
+ * tick per status). Kept on this computer. The defaults are the shop's old
+ * rule: shipped texts, confirmed and delivered do not.
+ */
+const SMS_PREF_KEY = 'sb_status_sms';
+const SMS_DEFAULT = { processing: false, shipped: true, delivered: false };
+const SMS_CHOICES = [
+  ['processing', 'Confirm'],
+  ['shipped', 'Shipped'],
+  ['delivered', 'Delivered'],
+];
+const readSmsPref = () => {
+  try {
+    return { ...SMS_DEFAULT, ...JSON.parse(localStorage.getItem(SMS_PREF_KEY) || '{}') };
+  } catch {
+    return SMS_DEFAULT;
+  }
+};
 const bdt = (v) => (typeof v === 'number' ? '৳' + v.toLocaleString('en-US') : '—');
 
 // "01707387130" → "01707 387 130". The admin reads these aloud down a phone
@@ -503,6 +524,8 @@ export default function BookOrdersPage() {
   const canDelete = getStoredUser()?.role === 'superAdmin';
   // Steadfast: courier.manage — the same gate as the Courier menu.
   const canCourier = can(getStoredUser(), 'courier.manage');
+  // Orders from outside the website — the Admin and the Super Admin (19 Oct 2026).
+  const canAddOrders = ['admin', 'superAdmin'].includes(getStoredUser()?.role);
   // Order-list PDFs: orders.pdf — off for a manager unless the Super Admin gives it.
   const canPdf = can(getStoredUser(), 'orders.pdf');
   // What the last "Send to courier" did, order by order — the ones that did not
@@ -568,6 +591,16 @@ export default function BookOrdersPage() {
   const [exporting, setExporting] = useState(false);
   // The "Sort by" and "PDF" menus, and what the PDF menu is set to.
   const [sortOpen, setSortOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [smsPref, setSmsPref] = useState(readSmsPref);
+  const toggleSms = (key) =>
+    setSmsPref((p) => {
+      const next = { ...p, [key]: !p[key] };
+      try { localStorage.setItem(SMS_PREF_KEY, JSON.stringify(next)); } catch { /* private window */ }
+      return next;
+    });
+  // true / false for the three statuses that have a text; nothing for the rest.
+  const smsFor = (status) => (status in SMS_DEFAULT ? { sms: !!smsPref[status] } : {});
   // The hour a day closes (Settings, shared with the server). See lib/shopDay.
   const [cutoff, setCutoff] = useState(getCutoffHour);
   const [pdfOpen, setPdfOpen] = useState(false);
@@ -836,7 +869,7 @@ export default function BookOrdersPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         // The courier details ride along with the status, because the server
         // writes them before it sends the shipping text that links to them.
-        body: JSON.stringify({ status, ...(extra || {}) }),
+        body: JSON.stringify({ status, ...(extra || {}), ...smsFor(status) }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) throw new Error(json.message || 'Update failed');
@@ -1112,7 +1145,7 @@ export default function BookOrdersPage() {
       const res = await fetch(`${API}/orders/bulk-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ ids, status, ...(extra || {}) }),
+        body: JSON.stringify({ ids, status, ...(extra || {}), ...smsFor(status) }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) throw new Error(json.message || 'Could not update');
@@ -1601,12 +1634,32 @@ export default function BookOrdersPage() {
         </h1>
         <div className="flex flex-wrap items-center gap-2">
           {!totalsBlind && <DeliveryToggle mode={deliveryMode} onChange={setDeliveryMode} />}
+          <div
+            className="flex items-center gap-2.5 rounded-lg border border-dash-line px-3 py-2 text-xs text-dash-ink3"
+            title="স্ট্যাটাস বদলালে ক্রেতাকে SMS যাবে কিনা"
+          >
+            <span className="font-semibold text-dash-ink4">SMS:</span>
+            {SMS_CHOICES.map(([key, text]) => (
+              <label key={key} className="flex cursor-pointer items-center gap-1">
+                <input type="checkbox" className="h-3.5 w-3.5 accent-brand" checked={!!smsPref[key]} onChange={() => toggleSms(key)} />
+                {text}
+              </label>
+            ))}
+          </div>
           <button
             onClick={() => fetchOrders()}
             className="flex items-center gap-2 px-3 py-2 text-sm border border-dash-line rounded-lg text-dash-ink4 hover:bg-dash-soft transition-colors"
           >
             <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
+          {canAddOrders && (
+            <button
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-brand/25 transition-colors hover:bg-brand-hover"
+            >
+              <FiPlus /> Add order
+            </button>
+          )}
         </div>
       </div>
 
@@ -3248,6 +3301,15 @@ export default function BookOrdersPage() {
 
       {toastNode}
       {confirmNode}
+      {addOpen && (
+        <AddOrderModal
+          api={API}
+          headers={() => ({ Authorization: `Bearer ${getToken()}` })}
+          colleges={directory}
+          onClose={() => setAddOpen(false)}
+          onAdded={() => fetchOrders()}
+        />
+      )}
     </div>
   );
 }
