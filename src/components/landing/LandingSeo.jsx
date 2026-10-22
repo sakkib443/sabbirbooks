@@ -14,11 +14,9 @@
  * opens with a keyboard, and it needs no script.
  */
 
-import { LuChevronDown, LuLayers, LuMessageCircleQuestion, LuNotebookPen, LuStethoscope } from 'react-icons/lu';
+import { LuChevronDown } from 'react-icons/lu';
 import { useLanguage } from '@/context/LanguageContext';
 import { landingSeoFor } from '@/lib/landingSeo';
-
-const ICONS = [LuLayers, LuStethoscope, LuMessageCircleQuestion, LuNotebookPen];
 
 export default function LandingSeo({ book }) {
   const { isBengali } = useLanguage();
@@ -30,32 +28,9 @@ export default function LandingSeo({ book }) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-      <div className="mx-auto max-w-3xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{L.eyebrow}</p>
-        <h2 className={`mt-2 font-heading text-2xl font-bold tracking-tight text-foreground text-balance sm:text-3xl ${bn}`}>
-          {L.heading}
-        </h2>
-        <p className={`mt-3 leading-relaxed text-muted-foreground ${bn}`}>{L.intro}</p>
-      </div>
-
-      <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {L.points.map((point, i) => {
-          const Icon = ICONS[i % ICONS.length];
-          return (
-            <li key={point.title} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
-              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                <Icon className="text-xl" />
-              </span>
-              <h3 className={`font-heading font-bold text-foreground ${bn}`}>{point.title}</h3>
-              <p className={`mt-1.5 text-sm leading-relaxed text-muted-foreground ${bn}`}>{point.body}</p>
-            </li>
-          );
-        })}
-      </ul>
-
-      <p className={`mx-auto mt-6 max-w-3xl text-center text-sm text-muted-foreground ${bn}`}>{L.closing}</p>
-
-      <div id="faq" className="mx-auto mt-14 max-w-3xl scroll-mt-20">
+      {/* The "Anatomy Viva Book for MBBS" block that stood here was taken
+          off the page on 22 Oct 2026 at the shop's request; the FAQ stays. */}
+      <div id="faq" className="mx-auto max-w-3xl scroll-mt-20">
         <h2 className={`text-center font-heading text-xl font-bold tracking-tight text-foreground sm:text-2xl ${bn}`}>
           {L.faqHeading}
         </h2>

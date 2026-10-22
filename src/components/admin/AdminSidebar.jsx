@@ -10,7 +10,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiChevronLeft, FiTag,
-  FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage, FiUsers,
+  FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage, FiUsers, FiUserX,
 } from 'react-icons/fi';
 
 /*
@@ -112,6 +112,9 @@ const AdminSidebar = () => {
         // Orders through a batch's senior: discounts, free copies, dates and
         // the courier (20 Oct 2026). Prices — the admin's, not a manager's.
         { title: 'Campus Orders', href: '/dashboard/admin/campus-orders', icon: FiUsers, need: ['orders.read'], roles: ['admin'] },
+        // People who typed on the checkout and did not order (22 Oct 2026) —
+        // manager, admin and Super Admin.
+        { title: 'Incomplete Orders', href: '/dashboard/admin/incomplete-orders', icon: FiUserX, need: ['orders.read'] },
         // The courier: hand parcels to Steadfast, follow them, and what it
         // charges. Delivery Charges (the rates buyers pay) lives here too. The
         // money side (Payouts & Accounts) is the Super Admin's.

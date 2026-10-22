@@ -46,6 +46,7 @@ import {
   validateBookCoupon,
   type AppliedCoupon,
   type OrderCollegeInput,
+  saveIncompleteOrder,
 } from "./checkoutApi";
 import { quoteDelivery } from "./deliveryCharge";
 import ManualPaymentDetails from "./ManualPaymentDetails";
@@ -420,6 +421,21 @@ export default function CheckoutView() {
 
   const upazilaValue = (useWatch({ control, name: "upazila" }) ?? "").trim();
 
+  // ── Incomplete-order autosave (22 Oct 2026) ───────────────────────────────
+  // Whatever the buyer types is kept a moment later, so the shop can call
+  // someone who did not finish (admin → Incomplete Orders). Only after the
+  // buyer has typed or picked something themselves — a form we prefilled from
+  // their account is not them starting an order. One id per visit; the server
+  // counts the visits of one phone number as attempts.
+  const [touched, setTouched] = useState(false);
+  const [visitId] = useState(
+    () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `v${Date.now()}${Math.random().toString(36).slice(2, 10)}`)
+  );
+  const nameTyped = useWatch({ control, name: "name" }) ?? "";
+  const phoneTyped = useWatch({ control, name: "phone" }) ?? "";
+  const addressTyped = useWatch({ control, name: "address" }) ?? "";
+  const emailTyped = useWatch({ control, name: "email" }) ?? "";
+
   // Delivery, priced exactly as the server prices it (deliveryCharge.ts mirrors
   // order.service), so the total never changes after Pay. The server recomputes
   // it regardless — this is display, not the source of truth.
@@ -671,6 +687,7 @@ export default function CheckoutView() {
    * the college's own delivery rate simply stops applying if they do.
    */
   const pickCollege = (picked: CollegeOption | null, typed = "", fill = toCollege) => {
+    setTouched(true);
     setCollege(picked);
     setCollegeName(picked ? "" : typed);
     setCollegeError("");
@@ -729,6 +746,29 @@ export default function CheckoutView() {
     if (match && !college && !collegeName.trim()) pickCollege(match);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileCollege, colleges]);
+
+  // Saved 1.2 s after the last change, and only while the form is open: the
+  // moment the order is being placed the pending save is dropped (the server
+  // marks the contact ordered itself).
+  useEffect(() => {
+    if (!touched || !isPrinted || phase !== "ready") return;
+    const t = setTimeout(() => {
+      saveIncompleteOrder({
+        sessionId: visitId,
+        name: nameTyped,
+        phone: phoneTyped,
+        email: emailTyped,
+        address: addressTyped,
+        collegeName: college?.name || collegeName,
+        college: college?._id,
+        bookSlug: slug,
+        quantity,
+        payMode: effectivePayMode,
+        couponCode: appliedCoupon?.code,
+      });
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [touched, isPrinted, phase, visitId, nameTyped, phoneTyped, emailTyped, addressTyped, college, collegeName, slug, quantity, effectivePayMode, appliedCoupon]);
 
   // ── Run the end-to-end flow (A: course, B: book) ──────────────────────────
   const validateManual = (): boolean => {
@@ -1103,7 +1143,7 @@ export default function CheckoutView() {
   // explained things — "secure checkout", "how cash on delivery works", the
   // stock count, a back link — is gone.
   return (
-    <main className="py-5 sm:py-10">
+    <main className="py-5 sm:py-10" onInputCapture={() => setTouched(true)}>
       <Container>
         {/* Title, and how many books on the same line */}
         <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">

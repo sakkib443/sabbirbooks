@@ -21,7 +21,6 @@ import LandingHero from './LandingHero';
 import { handoverPhotosFrom } from '@/lib/handoverPhotos';
 import TrackOrder from './TrackOrder';
 import LandingSample from './LandingSample';
-import LandingQr from './LandingQr';
 import LandingSeo from './LandingSeo';
 import LandingCta from './LandingCta';
 import CouponPopup from './CouponPopup';
@@ -81,10 +80,9 @@ export default function LandingPage({ book, settings }) {
       {/* For the person who has already bought — a number, not a login. */}
       <TrackOrder />
 
-      <LandingQr />
-
-      {/* What the book is in the words students search with, and the FAQ —
-          before the last ask, so the answers come first. */}
+      {/* The FAQ, before the last ask. (The QR section and the "Anatomy Viva
+          Book for MBBS" block above the FAQ were taken off the page on
+          22 Oct 2026 at the shop's request.) */}
       <LandingSeo book={book} />
 
       <LandingCta

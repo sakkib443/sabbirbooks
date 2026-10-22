@@ -61,7 +61,7 @@ const STRIP_MS = 2000;
 
 const T = {
   bn: {
-    eyebrow: '1st Prof · Anatomy Viva',
+    eyebrow: 'Anatomy Viva Book for 1st Prof',
     preOrderOn: 'প্রি-অর্ডার চলছে',
     saved: 'সাশ্রয়',
     preOrder: 'প্রি-অর্ডার করুন',
@@ -77,7 +77,7 @@ const T = {
     onlineExtra: (v) => `অনলাইনে পেমেন্ট করলে আরও ${v} ছাড়`,
   },
   en: {
-    eyebrow: '1st Prof · Anatomy Viva',
+    eyebrow: 'Anatomy Viva Book for 1st Prof',
     preOrderOn: 'Pre-order open',
     saved: 'saved',
     preOrder: 'Pre-order now',
@@ -206,17 +206,9 @@ export default function LandingHero({
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
               </span>
+              {/* Just the line (22 Oct 2026, the shop): the offer name used to
+                  follow it here; the price block below shows the saving. */}
               {L.eyebrow}
-              {(() => {
-                // The active offer, shown after the eyebrow — the pre-order
-                // badge, a named campaign, or a plain "N% off now"; nothing
-                // when there is no offer.
-                const chip = price?.isPreOrder
-                  ? L.preOrderOn
-                  : price?.label ||
-                    (price?.saved > 0 ? L.offerOn(discText(price.kind, price.percent, price.amount)) : '');
-                return chip ? ` · ${chip}` : '';
-              })()}
             </span>
 
             {/* The same gradient the logo's "Viva" is painted in — reached
