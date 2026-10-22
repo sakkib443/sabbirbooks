@@ -852,6 +852,10 @@ export default function CheckoutView() {
       ? { medicalCollegeName: collegeName.trim() }
       : undefined;
 
+  // This visit ordered: whatever the autosave kept is not an incomplete order.
+  const markVisitOrdered = (orderNumber?: string) =>
+    saveIncompleteOrder({ sessionId: visitId, done: true, orderNumber });
+
   const runCheckout = async (shipping?: ShippingAddress) => {
     // A course or a digital book needs an account, and the session may have
     // expired between opening the page and pressing the button — same return
@@ -928,7 +932,11 @@ export default function CheckoutView() {
             shippingAddress: shipping,
             couponCode: appliedCoupon?.code,
             college: collegeInput,
-            onProgress: setStep,
+            onProgress: (s: CheckoutStep) => {
+              setStep(s);
+              // "paying" comes once the order exists, before the gateway page.
+              if (s === "paying") markVisitOrdered();
+            },
             genericErr: S.genericErr,
           });
 
@@ -950,6 +958,7 @@ export default function CheckoutView() {
           // Placed is the purchase for cash on delivery: nothing more happens on
           // this site before the courier collects.
           trackPurchase(order);
+          markVisitOrdered(order.orderNumber);
           setResult({
             kind: "cod",
             title: book.title,
@@ -973,6 +982,7 @@ export default function CheckoutView() {
             genericErr: S.genericErr,
           });
           trackPurchase(order);
+          markVisitOrdered(order.orderNumber);
           setResult({
             kind: "manual",
             itemKind: "book",
