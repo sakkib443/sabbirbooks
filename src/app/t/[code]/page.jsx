@@ -133,8 +133,12 @@ export default function TrackParcelPage() {
 
             <div className="rounded-2xl border border-border bg-card p-4 text-sm">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">অর্ডার</span>
-                <span className="font-semibold text-foreground">#{data.orderSeq ?? '—'}</span>
+                <span className="shrink-0 text-muted-foreground">অর্ডার নম্বর</span>
+                {/* The buyer's own order number — the one on their SMS and
+                    confirmation — not the shop's internal #seq (22 Oct 2026). */}
+                <span className="break-all text-right font-mono text-xs font-semibold text-foreground">
+                  {data.orderNumber || (data.orderSeq ? `#${data.orderSeq}` : '—')}
+                </span>
               </div>
               {c.sentAt && (
                 <div className="mt-1.5 flex items-center justify-between gap-2">
