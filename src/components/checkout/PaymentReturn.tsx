@@ -21,6 +21,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { trackPurchase } from "@/lib/metaPixel";
 import { paymentReturnLabels } from "./CheckoutView";
 import { fetchOrderAsBuyer, getToken } from "./checkoutApi";
+import Celebration from "./Celebration";
 
 type Outcome = "success" | "failed" | "cancelled";
 
@@ -81,7 +82,9 @@ export default function PaymentReturn() {
   return (
     <main className="py-16 sm:py-24">
       <Container>
-        <div className="mx-auto max-w-md rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-soft">
+        <div className="relative mx-auto max-w-md overflow-hidden rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-soft">
+          {/* Confetti on a paid order (22 Oct 2026). */}
+          {outcome === "success" && <Celebration count={26} />}
           <div
             className={cn(
               "mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl",

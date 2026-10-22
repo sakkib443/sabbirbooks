@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { LuHouse, LuBookOpen, LuShoppingBag, LuUser } from "react-icons/lu";
+import { LuHouse, LuBookOpen, LuShoppingCart, LuUser } from "react-icons/lu";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import BottomNav, { BottomNavSpacer } from "./BottomNav";
@@ -29,7 +29,9 @@ type Tab = { key: string; href: string; label: string; en: string; icon: IconTyp
 const PUBLIC_TABS: Tab[] = [
   { key: "home", href: "/", label: "হোম", en: "Home", icon: LuHouse, exact: true },
   { key: "sample", href: "/#sample", label: "নমুনা", en: "Sample", icon: LuBookOpen },
-  { key: "orders", href: "/dashboard/user/orders", label: "অর্ডার", en: "Orders", icon: LuShoppingBag },
+  // The checkout itself (22 Oct 2026, the shop could not find it on a phone).
+  // A buyer's past orders are under Account.
+  { key: "order", href: "/order", label: "অর্ডার করুন", en: "Order", icon: LuShoppingCart },
   { key: "account", href: "/dashboard/user", label: "অ্যাকাউন্ট", en: "Account", icon: LuUser },
 ];
 

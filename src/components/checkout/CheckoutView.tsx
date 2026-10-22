@@ -8,21 +8,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   LuShieldCheck,
-  LuLock,
   LuLoaderCircle,
   LuTriangleAlert,
   LuMinus,
   LuPlus,
-  LuArrowLeft,
+  LuPartyPopper,
+  LuNotebookPen,
   LuStethoscope,
   LuChevronRight,
   LuPackageX,
   LuCalendarClock,
-  LuTruck,
   LuTicket,
 } from "react-icons/lu";
 import { useLanguage } from "@/context/LanguageContext";
-import { Container, Button, buttonVariants, cn } from "@/components/ui";
+import { Container, Button, Input, buttonVariants, cn } from "@/components/ui";
 import OrderSummary from "./OrderSummary";
 import ShippingForm, { type ShippingFormValues } from "./ShippingForm";
 import PaymentMethod from "./PaymentMethod";
@@ -50,7 +49,7 @@ import {
 } from "./checkoutApi";
 import { quoteDelivery } from "./deliveryCharge";
 import ManualPaymentDetails from "./ManualPaymentDetails";
-import GatewayChoice from "./GatewayChoice";
+import Celebration from "./Celebration";
 import { LEGAL_PAGES } from "@/config/business";
 import {
   getAvailability,
@@ -157,6 +156,9 @@ export default function CheckoutView() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponErr, setCouponErr] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
+  // The coupon box and the delivery note stay closed links until wanted.
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
 
   // Which hosted checkouts the server holds credentials for. Stays null until the
   // answer arrives (and if it never does), which reads as "no gateway" everywhere
@@ -257,7 +259,6 @@ export default function CheckoutView() {
   }).toString()}`;
 
   const codAllowed = availability.cod;
-  const onlineAllowed = options?.onlinePaymentEnabled !== false;
 
   /* This page used to scroll itself to the address form on arrival, because it
      opened wherever the homepage had been left. That turned out to be a
@@ -380,9 +381,11 @@ export default function CheckoutView() {
         // its districts, then that district's upazilas — and the list covers
         // all of Bangladesh, so requiring all three is the whole point rather
         // than a burden. `city` is derived from the upazila at submit.
-        division: z.string().min(1, S.shipErrDivision),
-        district: z.string().min(1, S.shipErrDistrict),
-        upazila: z.string().min(1, S.shipErrUpazila),
+        // Not asked any more (22 Oct 2026) — filled from the college when the
+        // buyer ticks "deliver to my college", otherwise empty.
+        division: z.string().optional(),
+        district: z.string().optional(),
+        upazila: z.string().optional(),
         note: z.string().optional(),
       }),
     [S]
@@ -414,11 +417,6 @@ export default function CheckoutView() {
   // Compiler refuses to memoize, and it would opt this whole 1400-line
   // component out of compilation to read two fields.
   const districtValue = (useWatch({ control, name: "district" }) ?? "").trim();
-  const divisionValue = (useWatch({ control, name: "division" }) ?? "").trim();
-  const prefillIntact =
-    !!prefilled &&
-    districtValue === prefilled.district &&
-    divisionValue === prefilled.division;
 
   const upazilaValue = (useWatch({ control, name: "upazila" }) ?? "").trim();
 
@@ -642,28 +640,9 @@ export default function CheckoutView() {
       const contact = (me.whatsappNumber || me.phoneNumber || "").trim();
       if (contact) setValue("phone", contact);
 
-      // A staff account, or a student who signed up before colleges existed,
-      // has no college geography — nothing more to prefill, no notice to show.
-      const district = (me.district ?? "").trim();
-      const division = (me.division ?? "").trim();
-      const upazila = (me.upazila ?? "").trim();
-      if (!district && !division) return;
-
-      // Division BEFORE district BEFORE upazila: each select only lists the
-      // options scoped to the one above it, so the parent has to be in place
-      // for the child value to land on a real option.
-      if (division && !(current.division ?? "").trim()) setValue("division", division);
-      if (district && !(current.district ?? "").trim()) setValue("district", district);
-      // Only set the upazila if it is a real option under this district — the
-      // directory's area field is free text and may not match, or be blank.
-      if (
-        upazila &&
-        !(current.upazila ?? "").trim() &&
-        upazilasOf(division, district).includes(upazila)
-      ) {
-        setValue("upazila", upazila);
-      }
-      setPrefilled({ district, division, college: (me.medicalCollegeName ?? "").trim() });
+      // The profile's district is NOT copied in any more (22 Oct 2026): the
+      // geography fields are hidden, and a guessed district would price the
+      // college's own delivery rate for a parcel going somewhere else.
     });
     return () => {
       active = false;
@@ -696,6 +675,12 @@ export default function CheckoutView() {
     setCollegeName(picked ? "" : typed);
     setCollegeError("");
     if (picked && fill) fillFromCollege(picked);
+    else if (!picked && prefilled?.college) {
+      setValue("division", "");
+      setValue("district", "");
+      setValue("upazila", "");
+      setPrefilled(null);
+    }
   };
 
   /** The college's campus as the delivery address: geography + its name. */
@@ -1052,7 +1037,7 @@ export default function CheckoutView() {
           // city carries the upazila: the server still requires a city and the
           // order alert prints it, and the upazila is the most local unit we
           // have. See order.interface.ts.
-          city: vals.upazila?.trim() || vals.district?.trim() || "",
+          city: vals.upazila?.trim() || vals.district?.trim() || vals.address.trim(),
         })
       )();
     } else {
@@ -1111,177 +1096,64 @@ export default function CheckoutView() {
 
   // ── Render: checkout form ─────────────────────────────────────────────────
   const processing = phase === "processing";
-  const backHref = isCourse ? "/courses" : "/books";
 
+  // The short checkout (22 Oct 2026, the shop's list): the title with the
+  // number of books beside it, two pay tabs, four address fields, then the
+  // coupon link, the button, and the summary under it. Everything that only
+  // explained things — "secure checkout", "how cash on delivery works", the
+  // stock count, a back link — is gone.
   return (
-    <main className="py-8 sm:py-12">
+    <main className="py-5 sm:py-10">
       <Container>
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className={cn("mb-1 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-primary", bn)}>
-              <LuLock className="text-sm" /> {S.eyebrow}
-            </p>
-            <h1 className={cn("font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl", bn)}>
-              {S.title}
-            </h1>
-          </div>
-          <Link
-            href={backHref}
-            className={cn("inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary", bn)}
-          >
-            <LuArrowLeft /> {S.back}
-          </Link>
+        {/* Title, and how many books on the same line */}
+        <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
+          <h1 className={cn("font-heading text-xl font-bold tracking-tight text-foreground sm:text-3xl", bn)}>
+            {isBook ? S.title : S.titleCourse}
+          </h1>
+          {isPrinted && !outOfStock && (
+            <div className="flex shrink-0 items-center gap-2">
+              <span className={cn("text-xs font-semibold text-muted-foreground sm:text-sm", bn)}>{S.qtyHeading}</span>
+              <QuantityStepper
+                value={quantity}
+                min={1}
+                max={maxQty}
+                onChange={setQuantity}
+                disabled={processing}
+                label={S.qtyHeading}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Source order is the mobile order: fill the form, then review and pay.
-            The columns used to carry order-2 / order-1, which only reversed on
-            phones — the grid is one column below lg, so the summary and its
-            Submit Payment button were painted ABOVE every input. Buyers had to
-            fill the address, scroll back up, and hunt for the button. On lg the
-            grid columns place these left and right regardless of order, so
-            dropping the utilities changes nothing on desktop.
-
-            grid-cols-1 / minmax(0,1fr), not a bare `grid`: an implicit column is
-            as wide as its widest content, which on a 320px phone was 329px — the
-            whole form sat 25px past the screen edge and dragged the bottom tab
-            bar with it. */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:gap-8">
-          {/* Left: form column. data-checkout-form marks where a tap on the
-              confirm button looks for fields still marked invalid. */}
-          <div className="space-y-6" data-checkout-form>
-            {/* Pre-order — said plainly and first, because "this book does not
-                exist yet" changes what the buyer is agreeing to. */}
+        {/* One column on a phone (fill, then confirm); two on a desktop with
+            the coupon, button and summary held beside the form. minmax(0,1fr),
+            not a bare grid: an implicit column grows to its widest content and
+            pushed the form past a 320px screen. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,370px)] lg:gap-8">
+          {/* data-checkout-form marks where a tap on the confirm button looks
+              for fields still marked invalid. */}
+          <div className="space-y-4" data-checkout-form>
+            {/* Pre-order — said first, because "this book does not exist yet"
+                changes what the buyer is agreeing to. */}
             {isPreOrder && (
-              <div className="rounded-2xl border border-coral/30 bg-coral/10 p-5 shadow-soft sm:p-6">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-coral/15 text-coral">
-                    <LuCalendarClock className="text-lg" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className={cn("font-heading text-base font-bold text-coral", bn)}>
-                      {S.preOrderBadge(preOrderDisc)}
-                    </p>
-                    <p className={cn("mt-1 text-sm text-foreground", bn)}>
-                      {book?.preOrderNote?.trim() || S.preOrderFallback}
-                    </p>
-                    {preOrderReleaseDate && (
-                      <p
-                        className={cn(
-                          "mt-1.5 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground",
-                          bn
-                        )}
-                      >
-                        <LuTruck className="text-coral" /> {S.preOrderShipOn(preOrderReleaseDate)}
-                      </p>
-                    )}
-                  </div>
+              <div className="flex items-start gap-2.5 rounded-2xl border border-coral/30 bg-coral/10 px-4 py-3">
+                <LuCalendarClock className="mt-0.5 shrink-0 text-lg text-coral" />
+                <div className="min-w-0">
+                  <p className={cn("text-sm font-bold text-coral", bn)}>{S.preOrderBadge(preOrderDisc)}</p>
+                  <p className={cn("text-xs text-foreground", bn)}>
+                    {book?.preOrderNote?.trim() || S.preOrderFallback}
+                    {preOrderReleaseDate && <> · <b>{S.preOrderShipOn(preOrderReleaseDate)}</b></>}
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* Quantity (printed books only) */}
-            {isPrinted && !outOfStock && (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className={cn("font-heading text-lg font-bold text-foreground", bn)}>
-                      {S.qtyHeading}
-                    </h2>
-                    {/* An unprinted book has no stock count worth quoting — a
-                        "0 in stock" line under a book you can buy is nonsense. */}
-                    <p className={cn("text-sm text-muted-foreground", bn)}>
-                      {isPreOrder ? S.preOrderQtyNote : S.inStock(stock)}
-                    </p>
-                  </div>
-                  <QuantityStepper
-                    value={quantity}
-                    min={1}
-                    max={maxQty}
-                    onChange={setQuantity}
-                    disabled={processing}
-                    label={S.qtyHeading}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Shipping (printed books only) */}
-            {isPrinted && !outOfStock && (
-              <div>
-              <ShippingForm
-                register={register}
-                errors={errors}
-                control={control}
-                setValue={setValue}
-                bn={bn}
-                S={shippingLabels(S)}
-                collegeSlot={
-                  <div data-checkout-missing={collegeMissing ? "true" : undefined}>
-                    <CollegePicker
-                      value={college}
-                      customName={collegeName}
-                      onChange={(picked: CollegeOption | null, typed: string) => pickCollege(picked, typed)}
-                      bengali={isBengali}
-                      error={collegeError || undefined}
-                      label={S.shipCollege}
-                      placeholder={S.shipCollegePh}
-                    />
-                    <label className={cn("mt-2.5 flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-colors", toCollege ? "border-primary/50 bg-primary-soft/60" : "border-border bg-card hover:border-primary/30", bn)}>
-                      <input
-                        type="checkbox"
-                        checked={toCollege}
-                        onChange={(e) => chooseCollegeAddress(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
-                      />
-                      <span>
-                        <span className="font-semibold text-foreground">{S.shipToCollege}</span>
-                        <span className="block text-xs text-muted-foreground">{S.shipToCollegeHint}</span>
-                      </span>
-                    </label>
-                  </div>
-                }
-                deliveryHint={deliveryHint}
-                prefill={
-                  prefillIntact && prefilled
-                    ? {
-                        text: prefilled.college
-                          ? S.shipPrefilledFrom(prefilled.college)
-                          : S.shipPrefilled,
-                        clearLabel: S.shipPrefillClear,
-                        onClear: () => {
-                          setValue("division", "");
-                          setValue("district", "");
-                          setValue("upazila", "");
-                          setPrefilled(null);
-                        },
-                      }
-                    : null
-                }
-              />
-              </div>
-            )}
-
-            {/* Out of stock notice */}
-            {outOfStock && (
-              <div className={cn("flex items-start gap-3 rounded-2xl border border-coral/30 bg-coral/10 p-5", bn)}>
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-coral/15 text-coral">
-                  <LuPackageX className="text-lg" />
-                </span>
-                <div>
-                  <p className="font-semibold text-coral">{S.outOfStockTitle}</p>
-                  <p className="mt-0.5 text-sm text-coral/90">{S.outOfStockText}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Pay now, or pay the courier */}
+            {/* Pay the courier, or pay now */}
             {needsPayment && (
               <PayModeSelector
                 value={effectivePayMode}
                 onChange={setPayMode}
                 codAllowed={codAllowed}
-                onlineAllowed={onlineAllowed}
                 gatewayAllowed={availability.gateway}
                 onlineOfferLine={onlineOfferLine}
                 codReason={isBook && !isPrinted ? S.codDigitalOnly : undefined}
@@ -1291,53 +1163,53 @@ export default function CheckoutView() {
               />
             )}
 
-            {/* Hosted checkout — how it works, and which one, if there's a choice */}
-            {isGateway && (
+            {/* Where the parcel goes (printed books only) */}
+            {isPrinted && !outOfStock && (
               <>
-                <GatewayChoice
-                  value={gatewayId}
-                  onChange={setGatewayId}
-                  options={availability.gatewayOptions}
-                  sandbox={
-                    availability.gatewayOptions.length > 0 &&
-                    availability.gatewayOptions.every((g) => gateways?.[g]?.live === false)
-                  }
-                  disabled={processing}
+                <ShippingForm
+                  register={register}
+                  errors={errors}
                   bn={bn}
-                  S={gatewayLabels(S)}
-                />
-                <div className={cn("rounded-2xl border border-accent/30 bg-accent-soft/40 p-5", bn)}>
-                  <div className="flex items-start gap-3">
-                    <LuShieldCheck className="mt-0.5 shrink-0 text-accent" />
-                    <div className="text-sm text-foreground">
-                      <p className="font-semibold">{S.gatewayHowTitle}</p>
-                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
-                        <li>{S.gatewayStep1}</li>
-                        <li>{S.gatewayStep2}</li>
-                        <li>{S.gatewayStep3}</li>
-                      </ol>
+                  S={shippingLabels(S)}
+                  collegeSlot={
+                    <div data-checkout-missing={collegeMissing ? "true" : undefined}>
+                      <CollegePicker
+                        value={college}
+                        customName={collegeName}
+                        onChange={(picked: CollegeOption | null, typed: string) => pickCollege(picked, typed)}
+                        bengali={isBengali}
+                        error={collegeError || undefined}
+                        label={S.shipCollege}
+                        placeholder={S.shipCollegePh}
+                      />
+                      <label className={cn("mt-2 flex cursor-pointer items-center gap-2 text-sm text-foreground", bn)}>
+                        <input
+                          type="checkbox"
+                          checked={toCollege}
+                          onChange={(e) => chooseCollegeAddress(e.target.checked)}
+                          className="h-4 w-4 shrink-0 accent-primary"
+                        />
+                        {S.shipToCollege}
+                      </label>
                     </div>
-                  </div>
-                </div>
+                  }
+                  deliveryHint={deliveryHint}
+                />
+                {/* Filled from the college when "deliver to my college" is
+                    ticked; they price the college's own delivery rate. */}
+                <input type="hidden" {...register("division")} />
+                <input type="hidden" {...register("district")} />
+                <input type="hidden" {...register("upazila")} />
               </>
             )}
 
-            {/* Cash on delivery — what actually happens next */}
-            {isCod && (
-              <div className={cn("rounded-2xl border border-accent/30 bg-accent-soft/40 p-5", bn)}>
-                <div className="flex items-start gap-3">
-                  <LuShieldCheck className="mt-0.5 shrink-0 text-accent" />
-                  <div className="text-sm text-foreground">
-                    <p className="font-semibold">{S.codHowTitle}</p>
-                    <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
-                      <li>{S.codStep1}</li>
-                      <li>{S.codStep2}</li>
-                      <li>{S.codStep3}</li>
-                    </ol>
-                    {deliveryNote && (
-                      <p className="mt-3 text-xs text-muted-foreground">{deliveryNote}</p>
-                    )}
-                  </div>
+            {/* Out of stock notice */}
+            {outOfStock && (
+              <div className={cn("flex items-start gap-3 rounded-2xl border border-coral/30 bg-coral/10 p-4", bn)}>
+                <LuPackageX className="mt-0.5 shrink-0 text-lg text-coral" />
+                <div>
+                  <p className="font-semibold text-coral">{S.outOfStockTitle}</p>
+                  <p className="mt-0.5 text-sm text-coral/90">{S.outOfStockText}</p>
                 </div>
               </div>
             )}
@@ -1369,7 +1241,7 @@ export default function CheckoutView() {
 
             {/* Manual payment not configured by admin yet */}
             {isManual && settings && availableChannels.length === 0 && (
-              <div className={cn("flex items-start gap-3 rounded-2xl border border-coral/30 bg-coral/10 p-5", bn)}>
+              <div className={cn("flex items-start gap-3 rounded-2xl border border-coral/30 bg-coral/10 p-4", bn)}>
                 <LuTriangleAlert className="mt-0.5 shrink-0 text-coral" />
                 <p className="text-sm text-coral">
                   {availability.gateway
@@ -1383,73 +1255,229 @@ export default function CheckoutView() {
 
             {/* Free course — no payment needed */}
             {isFreeCourse && (
-              <div className={cn("flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent-soft/50 p-5", bn)}>
+              <div className={cn("flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent-soft/50 p-4", bn)}>
                 <LuShieldCheck className="mt-0.5 shrink-0 text-accent" />
                 <p className="text-sm text-foreground">{S.freeCourseNote}</p>
               </div>
             )}
           </div>
 
-          {/* Right: order summary + pay (sticky on desktop, last on mobile) */}
+          {/* Coupon, confirm, then the summary (sticky beside the form on a desktop) */}
           <div>
-            <div className="lg:sticky lg:top-24 space-y-4">
-              {/* Coupon — books only; stacks on top of the book's own offers */}
+            <div className="space-y-3 lg:sticky lg:top-24">
+              {/* Coupon — a link until it is wanted; once applied, a box that
+                  keeps celebrating so a coupon brought from the landing page is
+                  seen to be on. */}
               {isBook && needsPayment && (
-                <div className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
-                  <p className={cn("mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground", bn)}>
-                    <LuTicket className="text-primary" /> {S.couponHeading}
-                  </p>
-                  {appliedCoupon ? (
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent-soft/40 px-3 py-2.5">
+                appliedCoupon ? (
+                  <div className="relative overflow-hidden rounded-2xl border border-accent/40 bg-accent-soft/50 px-4 py-3">
+                    <Celebration />
+                    <div className="relative flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate font-semibold text-foreground">{appliedCoupon.code}</p>
+                        <p className={cn("flex items-center gap-1.5 font-bold text-foreground", bn)}>
+                          <LuPartyPopper className="text-accent" /> {appliedCoupon.code}
+                        </p>
                         {couponDiscount > 0 && (
-                          <p className={cn("text-xs font-medium text-accent", bn)}>
+                          <p className={cn("text-xs font-semibold text-accent", bn)}>
                             {S.couponApplied(formatTk(couponDiscount))}
                           </p>
+                        )}
+                        {couponDiscount <= 0 && appliedCoupon.freeDelivery && (
+                          <p className={cn("text-xs font-semibold text-accent", bn)}>{S.couponFreeDelivery}</p>
                         )}
                       </div>
                       <button
                         type="button"
                         onClick={removeCoupon}
                         disabled={processing}
-                        className={cn("shrink-0 text-sm font-medium text-muted-foreground transition-colors hover:text-coral", bn)}
+                        className={cn("shrink-0 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-coral hover:underline", bn)}
                       >
                         {S.couponRemove}
                       </button>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex gap-2">
-                        <input
-                          value={couponInput}
-                          onChange={(e) => {
-                            setCouponInput(e.target.value);
-                            if (couponErr) setCouponErr("");
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              void applyCoupon();
-                            }
-                          }}
-                          placeholder={S.couponPlaceholder}
-                          disabled={couponBusy || processing}
-                          className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm uppercase tracking-wide outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void applyCoupon()}
-                          disabled={couponBusy || processing || !couponInput.trim()}
-                          className={cn(buttonVariants({ variant: "outline" }), "shrink-0", bn)}
-                        >
-                          {couponBusy ? <LuLoaderCircle className="animate-spin" /> : S.couponApply}
-                        </button>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setCouponOpen((o) => !o)}
+                      aria-expanded={couponOpen || !!couponErr}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 text-[18px] font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-700 dark:text-blue-400",
+                        bn
+                      )}
+                    >
+                      <LuTicket /> {S.couponHeading}
+                    </button>
+                    {(couponOpen || !!couponErr) && (
+                      <div className="mt-2">
+                        <div className="flex gap-2">
+                          <input
+                            value={couponInput}
+                            onChange={(e) => {
+                              setCouponInput(e.target.value);
+                              if (couponErr) setCouponErr("");
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void applyCoupon();
+                              }
+                            }}
+                            placeholder={S.couponPlaceholder}
+                            disabled={couponBusy || processing}
+                            autoFocus
+                            className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm uppercase tracking-wide outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void applyCoupon()}
+                            disabled={couponBusy || processing || !couponInput.trim()}
+                            className={cn(buttonVariants({ variant: "outline" }), "shrink-0", bn)}
+                          >
+                            {couponBusy ? <LuLoaderCircle className="animate-spin" /> : S.couponApply}
+                          </button>
+                        </div>
+                        {couponErr && <p className={cn("mt-1.5 text-xs text-coral", bn)}>{couponErr}</p>}
                       </div>
-                      {couponErr && <p className={cn("mt-1.5 text-xs text-coral", bn)}>{couponErr}</p>}
-                    </>
+                    )}
+                  </div>
+                )
+              )}
+
+              {!outOfStock && (
+                <>
+                  {submitError && (
+                    <div
+                      role="alert"
+                      className={cn("flex items-start gap-2 rounded-xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral", bn)}
+                    >
+                      <LuTriangleAlert className="mt-0.5 shrink-0" />
+                      <span>{submitError}</span>
+                    </div>
                   )}
-                </div>
+
+                  {/* What is still missing, beside the button that was tapped. */}
+                  {stillMissing.length > 0 && (
+                    <div
+                      role="alert"
+                      className={cn("rounded-xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral", bn)}
+                    >
+                      <p className="flex items-center gap-2 font-semibold">
+                        <LuTriangleAlert className="shrink-0" /> {S.missingIntro}
+                      </p>
+                      <ul className="mt-1.5 list-disc space-y-0.5 pl-9">
+                        {stillMissing.map((s) => (
+                          <li key={s}>{S.missingStep[s]}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Consent, right above the button it gates (the payment
+                      gateway's rules need it on the page). */}
+                  <label
+                    data-checkout-missing={consentMissing ? "true" : undefined}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
+                      agreed
+                        ? "border-accent/40 bg-accent-soft"
+                        : consentMissing
+                          ? "border-coral bg-coral/5 ring-2 ring-coral/25"
+                          : "border-border bg-muted/40 hover:border-primary/40"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => {
+                        setAgreed(e.target.checked);
+                        if (e.target.checked && submitError === S.consentRequired) setSubmitError("");
+                      }}
+                      disabled={processing}
+                      // 20px: tapped with a thumb.
+                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-accent"
+                    />
+                    <span className={cn("text-xs leading-relaxed text-muted-foreground", bn)}>
+                      {S.consentPrefix}{" "}
+                      {CONSENT_POLICIES.map((slug, i) => {
+                        const page = LEGAL_PAGES.find((p) => p.slug === slug)!;
+                        return (
+                          <span key={slug}>
+                            {i > 0 && (i === CONSENT_POLICIES.length - 1 ? ` ${S.consentAnd} ` : ", ")}
+                            <Link
+                              href={`/${page.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              // Its own tab: reading the refund policy must not
+                              // lose the order behind it.
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover"
+                            >
+                              {isBengali ? page.bn : page.en}
+                            </Link>
+                          </span>
+                        );
+                      })}
+                      {S.consentSuffix}
+                    </span>
+                  </label>
+
+                  {/* Delivery note — a link until it is wanted, next to the
+                      button so it goes with this order. */}
+                  {isPrinted && (
+                    noteOpen ? (
+                      <Input placeholder={S.shipNotePh} autoFocus {...register("note")} className="text-sm" />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setNoteOpen(true)}
+                        className={cn("inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline", bn)}
+                      >
+                        <LuNotebookPen /> {S.noteAdd}
+                      </button>
+                    )
+                  )}
+
+                  <Button
+                    size="lg"
+                    variant="accent"
+                    className={cn("w-full", bn)}
+                    // Never disabled for a missing tick or field: the tap is
+                    // what shows the buyer what is left (see onConfirm).
+                    disabled={processing || (isManual && availableChannels.length === 0)}
+                    onClick={() => void onConfirm()}
+                  >
+                    {processing ? (
+                      <>
+                        <LuLoaderCircle className="animate-spin text-lg" /> {stepLabel(step, S)}
+                      </>
+                    ) : isFreeCourse ? (
+                      S.enrollFree
+                    ) : isCod ? (
+                      S.placeCodOrder
+                    ) : isGateway ? (
+                      S.payNow
+                    ) : (
+                      S.submitPay
+                    )}
+                  </Button>
+
+                  {(isCod || isGateway) && (
+                    <p className={cn("text-center text-xs text-muted-foreground", bn)}>
+                      {isCod ? S.codConfirmNote : S.gatewaySecureNote}
+                    </p>
+                  )}
+                </>
+              )}
+
+              {outOfStock && (
+                <Link
+                  href="/books"
+                  className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full", bn)}
+                >
+                  {S.browseBooks} <LuChevronRight />
+                </Link>
               )}
 
               <OrderSummary
@@ -1466,140 +1494,6 @@ export default function CheckoutView() {
                 discountLines={discountLines}
                 isPreOrder={isPreOrder}
               />
-
-              {!outOfStock && (
-                <>
-                  {submitError && (
-                    <div
-                      role="alert"
-                      className={cn("flex items-start gap-2 rounded-xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral", bn)}
-                    >
-                      <LuTriangleAlert className="mt-0.5 shrink-0" />
-                      <span>{submitError}</span>
-                    </div>
-                  )}
-
-                  {/* What is still missing, beside the button that was tapped —
-                      the fields themselves can be a long scroll above it. */}
-                  {stillMissing.length > 0 && (
-                    <div
-                      role="alert"
-                      className={cn("rounded-xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral", bn)}
-                    >
-                      <p className="flex items-center gap-2 font-semibold">
-                        <LuTriangleAlert className="shrink-0" /> {S.missingIntro}
-                      </p>
-                      <ul className="mt-1.5 list-disc space-y-0.5 pl-9">
-                        {stillMissing.map((step) => (
-                          <li key={step}>{S.missingStep[step]}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Consent, immediately above the button it gates — not at
-                      the top of the page where it would be scrolled past and
-                      not remembered as having been given. */}
-                  <label
-                    data-checkout-missing={consentMissing ? "true" : undefined}
-                    className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors",
-                      agreed
-                        ? "border-accent/40 bg-accent-soft"
-                        : consentMissing
-                          ? "border-coral bg-coral/5 ring-2 ring-coral/25"
-                          : "border-border bg-muted/40 hover:border-primary/40"
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={agreed}
-                      onChange={(e) => {
-                        setAgreed(e.target.checked);
-                        // Clear the nag as soon as they comply, rather than
-                        // leaving a red line under a box they just ticked.
-                        if (e.target.checked && submitError === S.consentRequired) setSubmitError("");
-                      }}
-                      disabled={processing}
-                      // 20px, not 16: this box stands between a buyer and the
-                      // order, and it is tapped with a thumb.
-                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-accent"
-                    />
-                    <span className={cn("text-[13px] leading-relaxed text-muted-foreground", bn)}>
-                      {S.consentPrefix}{" "}
-                      {CONSENT_POLICIES.map((slug, i) => {
-                        const page = LEGAL_PAGES.find((p) => p.slug === slug)!;
-                        return (
-                          <span key={slug}>
-                            {/* Last separator is the language's "and"; the ones
-                                before it are commas. */}
-                            {i > 0 && (i === CONSENT_POLICIES.length - 1 ? ` ${S.consentAnd} ` : ", ")}
-                            <Link
-                              href={`/${page.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              // Opens in a tab of its own: a buyer who reads the
-                              // refund policy must not lose the cart behind it.
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover"
-                            >
-                              {isBengali ? page.bn : page.en}
-                            </Link>
-                          </span>
-                        );
-                      })}
-                      {S.consentSuffix}
-                    </span>
-                  </label>
-
-                  <Button
-                    size="lg"
-                    variant="accent"
-                    className={cn("w-full", bn)}
-                    // Never disabled for a missing tick or field: the tap is
-                    // what shows the buyer what is left (see onConfirm).
-                    disabled={processing || (isManual && availableChannels.length === 0)}
-                    onClick={() => void onConfirm()}
-                  >
-                    {processing ? (
-                      <>
-                        <LuLoaderCircle className="animate-spin text-lg" /> {stepLabel(step, S)}
-                      </>
-                    ) : (
-                      <>
-                        <LuLock className="text-base" />{" "}
-                        {isFreeCourse
-                          ? S.enrollFree
-                          : isCod
-                            ? S.placeCodOrder
-                            : isGateway
-                              ? S.payNow
-                              : S.submitPay}
-                      </>
-                    )}
-                  </Button>
-
-                  <p className={cn("flex items-center justify-center gap-1.5 text-xs text-muted-foreground", bn)}>
-                    <LuShieldCheck className="text-accent" />{" "}
-                    {isFreeCourse
-                      ? S.secureNote
-                      : isCod
-                        ? S.codConfirmNote
-                        : isGateway
-                          ? S.gatewaySecureNote
-                          : S.verifyNote}
-                  </p>
-                </>
-              )}
-
-              {outOfStock && (
-                <Link
-                  href="/books"
-                  className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full", bn)}
-                >
-                  {S.browseBooks} <LuChevronRight />
-                </Link>
-              )}
             </div>
           </div>
         </div>
@@ -1697,7 +1591,8 @@ type Copy = typeof EN;
 const EN = {
   loading: "Loading checkout…",
   eyebrow: "Secure checkout",
-  title: "Complete your purchase",
+  title: "Order this book",
+  titleCourse: "Enroll in the course",
   back: "Back",
   confirmPay: "Confirm & Pay",
   submitPay: "Submit Payment",
@@ -1812,7 +1707,7 @@ const EN = {
   browseCourses: "Browse courses",
   browseBooks: "Browse books",
   // quantity / stock
-  qtyHeading: "Quantity",
+  qtyHeading: "Books",
   inStock: (n: number) => `${n} in stock`,
   outOfStockTitle: "Out of stock",
   outOfStockText: "This printed book is currently unavailable. Please check back later.",
@@ -1832,9 +1727,10 @@ const EN = {
   sumDigital: "Digital",
   sumBy: "by",
   sumUnitPrice: "Price",
-  sumQuantity: "Quantity",
+  sumQuantity: "Books",
   sumSubtotal: "Subtotal",
   sumTotal: "Total",
+  sumPayable: "Payable",
   sumFree: "Free",
   sumSave: "You save",
   sumPreOrder: "Pre-order",
@@ -1843,6 +1739,8 @@ const EN = {
   sumOfferNames: { preorder: "Pre-order offer", normal: "Discount", online: "Online payment discount" },
   // Coupon
   couponHeading: "Have a coupon?",
+  couponFreeDelivery: "Free delivery with this coupon",
+  noteAdd: "Add a delivery note",
   couponPlaceholder: "Coupon code",
   couponApply: "Apply",
   couponRemove: "Remove",
@@ -1876,8 +1774,8 @@ const EN = {
     `Sent to ${upazila}, ${district}, this order gets the college's own delivery rate — ${
       tk === 0 ? "free" : formatTk(tk)
     }.`,
-  shipAddress: "Address (house / road / village)",
-  shipAddressPh: "House, road, village",
+  shipAddress: "Address",
+  shipAddressPh: "Hall/house, road, area, district",
   shipDivision: "Division",
   shipDistrict: "District",
   shipUpazila: "Upazila / Thana",
@@ -1971,7 +1869,8 @@ const EN = {
 const BN: Copy = {
   loading: "চেকআউট লোড হচ্ছে…",
   eyebrow: "নিরাপদ চেকআউট",
-  title: "আপনার ক্রয় সম্পন্ন করুন",
+  title: "বইটি অর্ডার করুন",
+  titleCourse: "কোর্সে ভর্তি হন",
   back: "ফিরে যান",
   confirmPay: "নিশ্চিত করুন ও পেমেন্ট দিন",
   submitPay: "পেমেন্ট সাবমিট করুন",
@@ -2016,7 +1915,7 @@ const BN: Copy = {
   payNow: "এখনই পেমেন্ট করুন",
   onlineOffPct: (v: number) => `${v}% ছাড়ে`,
   onlineOffTk: (v: number) => `৳${v} ছাড়ে`,
-  gatewayTitle: "এখনই পেমেন্ট করুন",
+  gatewayTitle: "এখনই পেমেন্ট",
   gatewayText: "বিকাশ বা কার্ড দিয়ে নিরাপদ পেজে পেমেন্ট করুন। অর্ডার সাথে সাথেই কনফার্ম হবে।",
   gatewayBadge: "ইনস্ট্যান্ট",
   gatewaySecureNote: "পেমেন্টটি প্রোভাইডারের নিজস্ব নিরাপদ পেজে সম্পন্ন হবে।",
@@ -2076,7 +1975,7 @@ const BN: Copy = {
     "চেকআউট লিংকটি সঠিক নয় অথবা কোর্স/বইটি আর নেই। এগিয়ে যেতে একটি আইটেম নির্বাচন করুন।",
   browseCourses: "কোর্স দেখুন",
   browseBooks: "বই দেখুন",
-  qtyHeading: "পরিমাণ",
+  qtyHeading: "বই সংখ্যা",
   inStock: (n: number) => `স্টকে ${n} টি আছে`,
   outOfStockTitle: "স্টকে নেই",
   outOfStockText: "এই প্রিন্টেড বইটি এই মুহূর্তে অনুপলব্ধ। পরে আবার দেখুন।",
@@ -2093,10 +1992,11 @@ const BN: Copy = {
   sumPrinted: "প্রিন্টেড",
   sumDigital: "ডিজিটাল",
   sumBy: "লেখক:",
-  sumUnitPrice: "মূল্য",
-  sumQuantity: "পরিমাণ",
+  sumUnitPrice: "বইয়ের মূল্য",
+  sumQuantity: "বই সংখ্যা",
   sumSubtotal: "সাবটোটাল",
-  sumTotal: "সর্বমোট",
+  sumTotal: "মোট",
+  sumPayable: "মোট দিতে হবে",
   sumFree: "ফ্রি",
   sumSave: "সাশ্রয়",
   sumPreOrder: "প্রি-অর্ডার",
@@ -2104,6 +2004,8 @@ const BN: Copy = {
   sumOfferNames: { preorder: "প্রি-অর্ডার অফার", normal: "ছাড়", online: "অনলাইন পেমেন্টে ছাড়" },
   // Coupon
   couponHeading: "কুপন আছে?",
+  couponFreeDelivery: "এই কুপনে ডেলিভারি ফ্রি",
+  noteAdd: "ডেলিভারি নোট যোগ করুন",
   couponPlaceholder: "কুপন কোড",
   couponApply: "প্রয়োগ",
   couponRemove: "সরান",
@@ -2136,8 +2038,8 @@ const BN: Copy = {
     `${district} জেলার ${upazila}-তে পাঠালে এই কলেজের বিশেষ ডেলিভারি চার্জ পাবেন — ${
       tk === 0 ? "ফ্রি" : formatTk(tk)
     }।`,
-  shipAddress: "ঠিকানা (বাসা / রোড / গ্রাম)",
-  shipAddressPh: "বাসা, রোড, গ্রাম",
+  shipAddress: "ঠিকানা",
+  shipAddressPh: "হল/বাসা, রোড, এলাকা, জেলা",
   shipDivision: "বিভাগ",
   shipDistrict: "জেলা",
   shipUpazila: "উপজেলা / থানা",
@@ -2238,6 +2140,7 @@ function summaryLabels(S: Copy) {
     quantity: S.sumQuantity,
     subtotal: S.sumSubtotal,
     total: S.sumTotal,
+    payable: S.sumPayable,
     free: S.sumFree,
     save: S.sumSave,
     delivery: S.deliveryCharge,
@@ -2285,18 +2188,6 @@ function payModeLabels(S: Copy) {
     gatewayTitle: S.gatewayTitle,
     gatewayText: S.gatewayText,
     gatewayBadge: S.gatewayBadge,
-  };
-}
-
-function gatewayLabels(S: Copy) {
-  return {
-    heading: S.gatewayPickHeading,
-    subtitle: S.gatewayPickSubtitle,
-    bkash: S.gatewayBkash,
-    bkashText: S.gatewayBkashText,
-    sslcommerz: S.gatewaySsl,
-    sslcommerzText: S.gatewaySslText,
-    sandboxNote: S.gatewaySandboxNote,
   };
 }
 
