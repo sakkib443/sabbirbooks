@@ -15,13 +15,13 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FiUserX, FiRefreshCw, FiLoader, FiSearch, FiPhone, FiTrash2, FiEdit2, FiDownload, FiCheck } from 'react-icons/fi';
+import { FiUserX, FiRefreshCw, FiLoader, FiSearch, FiPhone, FiTrash2, FiEdit2, FiDownload, FiCheck, FiSliders, FiChevronDown, FiCheckCircle } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import API_BASE_URL from '@/config/api';
 import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { getStoredUser } from '@/lib/permissions';
-import { addDays, bdDate, dayWindow, pastCutoff } from '@/lib/shopDay';
+import { addDays, bdDate, dayWindow, getCutoffHour, hourLabel, pastCutoff, setCutoffHour } from '@/lib/shopDay';
 
 const token = () => (typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '');
 const call = async (path, method = 'GET', body) => {
@@ -63,10 +63,14 @@ const fmtWindow = (w) => {
   const d = (x) => x.toLocaleString('en-GB', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'short', hour: 'numeric', hour12: true });
   return `${d(w.from)} → ${d(w.to)}`;
 };
+// The two on the bar (23 Oct 2026); everything else lives under "Sort by".
+const QUICK_DATES = ['today', 'tomorrow'];
 const STATUSES = [
   { key: 'all', label: 'সব', count: (c) => c.total },
+  { key: 'open', label: 'অর্ডার হয়নি', count: (c) => c.open },
   { key: 'todo', label: 'কল বাকি', count: (c) => c.todo },
   { key: 'contacted', label: 'কল করেছি', count: (c) => c.contacted },
+  { key: 'ordered', label: 'পরে অর্ডার করেছে', count: (c) => c.ordered },
 ];
 
 const input = 'w-full rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm text-dash-ink3 focus:border-brand focus:outline-none';
@@ -90,6 +94,33 @@ export default function IncompleteOrdersPage() {
   const [error, setError] = useState('');
   const [noteFor, setNoteFor] = useState(null); // { id, text }
   const [busyId, setBusyId] = useState(null);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [cutoff, setCutoff] = useState(getCutoffHour);
+
+  /**
+   * When a day starts and ends — the same setting Book Orders uses (Settings →
+   * shopDayCutoffHour), so the two pages keep counting the same days.
+   */
+  const changeCutoff = async (h) => {
+    const before = getCutoffHour();
+    setCutoff(h);
+    setCutoffHour(h);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ shopDayCutoffHour: h }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) throw new Error(json.message || 'Could not save');
+      showToast('success', `দিন এখন ${hourLabel(h)} থেকে পরের দিন ${hourLabel(h)}`);
+    } catch (e) {
+      setCutoff(before);
+      setCutoffHour(before);
+      showToast('error', e.message);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(q.trim()), 350);
@@ -118,7 +149,9 @@ export default function IncompleteOrdersPage() {
     if (college) p.set('college', college);
     if (query) p.set('q', query);
     return { params: p.toString(), window: w };
-  }, [datePreset, custom, today, status, contact, college, query]);
+    // cutoff: a new day-start hour moves every window.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datePreset, custom, today, status, contact, college, query, cutoff]);
   const live = liveDay();
 
   const load = useCallback(async () => {
@@ -206,12 +239,9 @@ export default function IncompleteOrdersPage() {
 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold text-dash-ink2">
-            <FiUserX className="text-brand" /> Incomplete Orders
-          </h1>
-          <p className="mt-0.5 text-sm text-dash-mute">চেকআউটে তথ্য দিয়েছে কিন্তু অর্ডার করেনি। যারা অর্ডার বা পেমেন্ট করেছে, তারা এখানে আসে না।</p>
-        </div>
+        <h1 className="flex items-center gap-2.5 text-2xl font-bold text-dash-ink2">
+          <FiUserX className="text-brand" /> Incomplete Orders
+        </h1>
         <div className="flex gap-2">
           <button onClick={downloadCsv} disabled={!rows.length} className="flex items-center gap-2 rounded-lg border border-dash-line px-3 py-2 text-sm text-dash-ink4 hover:bg-dash-soft disabled:opacity-50">
             <FiDownload /> CSV
@@ -222,63 +252,102 @@ export default function IncompleteOrdersPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="space-y-3 rounded-xl border border-dash-line bg-dash-card p-3 sm:p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="w-14 shrink-0 text-xs font-semibold text-dash-mute">তারিখ</span>
-          <Segmented>
-            {DATES.map((d) => {
-              const r = d.range(today);
-              const isLive = !!r && r[0] === r[1] && r[1] === live;
-              return (
-                <SegBtn key={d.key} on={datePreset === d.key} onClick={() => pickDate(d.key)}>
-                  {d.label}
-                  {isLive && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle motion-safe:animate-pulse" title="নতুন যারা আসছে তারা এখানে" />}
-                </SegBtn>
-              );
-            })}
-          </Segmented>
-          <span className="flex items-center gap-1.5 text-xs text-dash-mute">
-            <input type="date" className={`rounded-lg border bg-dash-card px-2 py-1 text-xs ${datePreset === 'custom' ? 'border-brand' : 'border-dash-line'}`} value={custom.from}
-              onChange={(e) => { setLoading(true); setCustom((c) => ({ ...c, from: e.target.value })); setDatePreset('custom'); }} />
-            থেকে
-            <input type="date" className={`rounded-lg border bg-dash-card px-2 py-1 text-xs ${datePreset === 'custom' ? 'border-brand' : 'border-dash-line'}`} value={custom.to}
-              onChange={(e) => { setLoading(true); setCustom((c) => ({ ...c, to: e.target.value })); setDatePreset('custom'); }} />
-          </span>
-        </div>
-        <p className="pl-16 text-[11px] text-dash-mute">
-          {shownWindow ? <>দেখাচ্ছে <b className="text-dash-ink3">{fmtWindow(shownWindow)}</b> — Book Orders-এর মতো দিন দুপুর ১২টা থেকে পরের দিন দুপুর ১২টা</> : 'সব তারিখ'}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="w-14 shrink-0 text-xs font-semibold text-dash-mute">অবস্থা</span>
-          <Segmented>
-            {STATUSES.map((s) => (
-              <SegBtn key={s.key} on={status === s.key} onClick={() => { setLoading(true); setStatus(s.key); }}>
-                {s.label} <span className="ml-0.5 tabular-nums opacity-70">{s.count(counts)}</span>
+      {/* One bar (23 Oct 2026, the shop): Today and Tomorrow on it, every other
+          choice under "Sort by", and the search. */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dash-line bg-dash-card px-3 py-2.5">
+        <Segmented>
+          {DATES.filter((d) => QUICK_DATES.includes(d.key)).map((d) => {
+            const r = d.range(today);
+            const isLive = !!r && r[1] === live;
+            return (
+              <SegBtn key={d.key} on={datePreset === d.key} onClick={() => pickDate(d.key)}>
+                {d.label}
+                {isLive && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle motion-safe:animate-pulse" title="নতুন যারা আসছে তারা এখানে" />}
               </SegBtn>
-            ))}
-          </Segmented>
+            );
+          })}
+        </Segmented>
+
+        <div className="relative">
+          <button
+            onClick={() => setSortOpen((o) => !o)}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+              sortOpen || !QUICK_DATES.includes(datePreset) || status !== 'all' || college || contact
+                ? 'border-brand text-brand'
+                : 'border-dash-line text-dash-ink3 hover:bg-dash-soft'
+            }`}
+          >
+            <FiSliders /> Sort by <FiChevronDown className={sortOpen ? 'rotate-180' : ''} />
+          </button>
+          {sortOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setSortOpen(false)} />
+              <div className="absolute left-0 z-40 mt-2 w-[320px] max-w-[calc(100vw-2rem)] space-y-3 rounded-xl border border-dash-line bg-dash-card p-3 shadow-xl">
+                <div>
+                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">তারিখ</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DATES.filter((d) => !QUICK_DATES.includes(d.key)).map((d) => (
+                      <Chip key={d.key} on={datePreset === d.key} onClick={() => pickDate(d.key)}>{d.label}</Chip>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-dash-mute">
+                    <input type="date" className={`min-w-0 flex-1 rounded-lg border bg-dash-card px-2 py-1 text-xs ${datePreset === 'custom' ? 'border-brand' : 'border-dash-line'}`} value={custom.from}
+                      onChange={(e) => { setLoading(true); setCustom((c) => ({ ...c, from: e.target.value })); setDatePreset('custom'); }} />
+                    থেকে
+                    <input type="date" className={`min-w-0 flex-1 rounded-lg border bg-dash-card px-2 py-1 text-xs ${datePreset === 'custom' ? 'border-brand' : 'border-dash-line'}`} value={custom.to}
+                      onChange={(e) => { setLoading(true); setCustom((c) => ({ ...c, to: e.target.value })); setDatePreset('custom'); }} />
+                  </div>
+                </div>
+                {role !== 'manager' && (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">দিন শুরু হয়</p>
+                    <div className="flex items-center gap-1.5 text-xs text-dash-mute">
+                      <select value={cutoff} onChange={(e) => changeCutoff(Number(e.target.value))}
+                        className="rounded-lg border border-dash-line bg-dash-card px-2 py-1.5 text-xs text-dash-ink3 outline-none focus:border-brand">
+                        {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
+                      </select>
+                      <span>→ পরের দিন একই সময় (Book Orders-ও)</span>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-mute2">অবস্থা</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {STATUSES.map((s) => (
+                      <Chip key={s.key} on={status === s.key} onClick={() => { setLoading(true); setStatus(s.key); }}>
+                        {s.label} <span className="tabular-nums opacity-70">{Math.max(0, s.count(counts) || 0)}</span>
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <select className={input} value={college} onChange={(e) => { setLoading(true); setCollege(e.target.value); }}>
+                    <option value="">সব মেডিকেল কলেজ</option>
+                    {(data?.colleges || []).map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select className={input} value={contact} onChange={(e) => { setLoading(true); setContact(e.target.value); }}>
+                    <option value="">নম্বর থাকুক বা না থাকুক</option>
+                    <option value="yes">যাদের নম্বর আছে</option>
+                    <option value="no">যাদের নম্বর নেই</option>
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_220px_200px]">
-          <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-mute2" />
-            <input className={`${input} pl-9`} placeholder="নাম, নম্বর, ইমেইল, কলেজ বা ঠিকানা দিয়ে খুঁজুন" value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
-          <select className={input} value={college} onChange={(e) => { setLoading(true); setCollege(e.target.value); }}>
-            <option value="">সব মেডিকেল কলেজ</option>
-            {(data?.colleges || []).map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select className={input} value={contact} onChange={(e) => { setLoading(true); setContact(e.target.value); }}>
-            <option value="">নম্বর থাকুক বা না থাকুক</option>
-            <option value="yes">যাদের নম্বর আছে</option>
-            <option value="no">যাদের নম্বর নেই</option>
-          </select>
+
+        {shownWindow && <span className="text-xs text-dash-mute">{fmtWindow(shownWindow)}</span>}
+
+        <div className="relative ml-auto w-full sm:w-72">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-mute2" />
+          <input className={`${input} pl-9`} placeholder="নাম, নম্বর, কলেজ বা ঠিকানা" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <p className="text-xs text-dash-mute">
-          এই ফিল্টারে <b className="text-dash-ink2">{counts.total}</b> জন · কল বাকি <b className="text-red-600">{counts.todo}</b> · নম্বর আছে <b className="text-dash-ink2">{counts.withPhone}</b>
-          {role === 'manager' && ' · আপনি শুধু সাম্প্রতিক দিনগুলো দেখতে পাবেন'}
-        </p>
       </div>
+
+      <p className="text-xs text-dash-mute">
+        <b className="text-dash-ink2">{counts.total}</b> জন · অর্ডার হয়নি <b className="text-amber-600">{counts.open ?? 0}</b> · কল বাকি <b className="text-red-600">{Math.max(0, counts.todo || 0)}</b> · পরে অর্ডার করেছে <b className="text-emerald-600">{counts.ordered ?? 0}</b>
+        {role === 'manager' && ' · আপনি শুধু সাম্প্রতিক দিনগুলো দেখতে পাবেন'}
+      </p>
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -309,7 +378,7 @@ export default function IncompleteOrdersPage() {
                 <tr><td colSpan={12} className="py-14 text-center text-sm text-dash-mute">এই ফিল্টারে কেউ নেই।</td></tr>
               ) : (
                 rows.map((r, i) => (
-                  <tr key={r._id} className={`align-top transition-colors hover:bg-dash-soft/60 ${r.contacted ? 'bg-dash-soft/30' : ''}`}>
+                  <tr key={r._id} className={`align-top transition-colors hover:bg-dash-soft/60 ${r.status === 'ordered' ? 'bg-emerald-50/50' : r.contacted ? 'bg-dash-soft/30' : ''}`}>
                     <td className="px-3 py-3 text-xs tabular-nums text-dash-mute2">{i + 1}</td>
                     <td className="whitespace-nowrap px-3 py-3">
                       <p className="text-dash-ink3">{fmtDate(r.lastSeenAt)}, {fmtTime(r.lastSeenAt)}</p>
@@ -348,14 +417,22 @@ export default function IncompleteOrdersPage() {
                         <span className="text-xs text-dash-mute2">১ বার</span>
                       )}
                     </td>
-                    <td className="min-w-[200px] px-3 py-3">
+                    <td className="min-w-[260px] px-3 py-3">
+                      {/* Ordered later: a badge instead of the call button. */}
+                      <div className="flex items-center gap-2">
+                      {r.status === 'ordered' ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700" title={r.orderNumber || ''}>
+                          <FiCheckCircle /> অর্ডার কনফার্ম করেছে{r.order?.orderSeq ? ` #${r.order.orderSeq}` : ''}
+                        </span>
+                      ) : (
                       <button onClick={() => patch(r, { contacted: !r.contacted })} disabled={busyId === r._id}
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${r.contacted ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-dash-line text-dash-ink3 hover:border-brand hover:text-brand'}`}>
+                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${r.contacted ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-dash-line text-dash-ink3 hover:border-brand hover:text-brand'}`}>
                         {busyId === r._id ? <FiLoader className="animate-spin" /> : r.contacted ? <FiCheck /> : <FiPhone />}
                         {r.contacted ? 'কল করেছি' : 'কল বাকি'}
                       </button>
+                      )}
                       {noteFor?.id === r._id ? (
-                        <div className="mt-1.5 flex gap-1.5">
+                        <div className="flex min-w-0 flex-1 gap-1.5">
                           <input className="w-full rounded-md border border-dash-line bg-dash-card px-2 py-1 text-xs" value={noteFor.text} autoFocus
                             placeholder="যেমন: ধরেনি, কাল আবার"
                             onChange={(e) => setNoteFor({ ...noteFor, text: e.target.value })}
@@ -363,10 +440,11 @@ export default function IncompleteOrdersPage() {
                           <button onClick={async () => { if (await patch(r, { note: noteFor.text })) setNoteFor(null); }} className="rounded-md bg-brand px-2 text-xs font-semibold text-white">সেভ</button>
                         </div>
                       ) : (
-                        <button onClick={() => setNoteFor({ id: r._id, text: r.note || '' })} className="mt-1.5 flex max-w-[220px] items-start gap-1 text-left text-xs text-dash-mute hover:text-brand">
+                        <button onClick={() => setNoteFor({ id: r._id, text: r.note || '' })} className="flex min-w-0 max-w-[220px] items-start gap-1 text-left text-xs text-dash-mute hover:text-brand">
                           <FiEdit2 className="mt-0.5 shrink-0" /> <span className="line-clamp-2">{r.note || 'নোট লিখুন'}</span>
                         </button>
                       )}
+                      </div>
                     </td>
                     <td className="px-2 py-3">
                       {role === 'superAdmin' && (
@@ -387,6 +465,15 @@ export default function IncompleteOrdersPage() {
 
 function Segmented({ children }) {
   return <div className="inline-flex flex-wrap rounded-lg border border-dash-line bg-dash-soft p-0.5">{children}</div>;
+}
+
+function Chip({ on, onClick, children }) {
+  return (
+    <button onClick={onClick}
+      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${on ? 'border-brand bg-brand text-white' : 'border-dash-line text-dash-ink3 hover:bg-dash-soft'}`}>
+      {children}
+    </button>
+  );
 }
 
 function SegBtn({ on, onClick, children }) {

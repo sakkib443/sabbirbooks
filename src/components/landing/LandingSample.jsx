@@ -33,26 +33,20 @@ const PdfViewer = dynamic(() => import('@/components/shared/PdfViewer'), {
 
 const T = {
   bn: {
-    tag: 'নমুনা',
-    heading: 'কেনার আগে বইটি পড়ে দেখুন',
-    sub: 'বইয়ের নমুনা অংশটি এখানেই পড়তে পারবেন — কভার থেকে শুরু করে, ওয়েবসাইট ছেড়ে কোথাও যেতে হবে না। পছন্দ হলে ডাউনলোড করে পরেও পড়তে পারবেন।',
-    sampleChapter: 'নমুনা অধ্যায়',
+    heading: 'বইটি পড়ে দেখুন',
     zoom: 'বড় করে দেখুন',
     download: 'ডাউনলোড',
     close: 'বন্ধ করুন',
-    failedTitle: 'নমুনাটি এখানে দেখানো যাচ্ছে না',
+    failedTitle: 'এখানে দেখানো যাচ্ছে না',
     failedBody: 'ফাইলটি নতুন ট্যাবে খুলে নিন, অথবা ডাউনলোড করে পড়ুন।',
     openTab: 'নতুন ট্যাবে খুলুন',
   },
   en: {
-    tag: 'Sample',
-    heading: 'Read the book before you buy',
-    sub: 'Read the sample right here — from the cover on, with no need to leave the site. Like it? Download a copy to read later too.',
-    sampleChapter: 'Sample chapter',
+    heading: 'Read the book',
     zoom: 'View larger',
     download: 'Download',
     close: 'Close',
-    failedTitle: "The sample can't be shown here",
+    failedTitle: "It can't be shown here",
     failedBody: 'Open it in a new tab, or download a copy to read.',
     openTab: 'Open in a new tab',
   },
@@ -124,15 +118,11 @@ export default function LandingSample({ book }) {
     <section ref={sectionRef} id="sample" className="scroll-mt-20 border-y border-border bg-surface-soft">
       <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <span className={`mb-3 inline-flex items-center gap-2 rounded-full bg-primary-soft px-4 py-1.5 text-sm font-semibold text-primary ${bn}`}>
-            <LuBookOpen /> {L.tag}
-          </span>
+          {/* Just the heading (23 Oct 2026, the shop): the "নমুনা" tag and the
+              line under it are gone. */}
           <h2 className={`font-heading text-2xl font-bold tracking-tight text-foreground text-balance sm:text-3xl ${bn}`}>
             {L.heading}
           </h2>
-          <p className={`mt-3 text-muted-foreground ${bn}`}>
-            {L.sub}
-          </p>
         </div>
 
         {/* The viewer — the main event. */}
@@ -142,7 +132,7 @@ export default function LandingSample({ book }) {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent">
                 <LuBookOpen className="text-base" />
               </span>
-              {L.sampleChapter}
+              {book?.title || L.heading}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -187,7 +177,7 @@ export default function LandingSample({ book }) {
       {full && (
         <div className="fixed inset-0 z-[100] flex flex-col bg-foreground/90 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <span className="text-sm font-semibold text-white hind-siliguri">{L.sampleChapter}</span>
+            <span className="text-sm font-semibold text-white hind-siliguri">{book?.title || L.heading}</span>
             <div className="flex items-center gap-2">
               <a
                 href={pdfUrl}

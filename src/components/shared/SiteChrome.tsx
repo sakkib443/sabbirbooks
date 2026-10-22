@@ -28,7 +28,7 @@ type Tab = { key: string; href: string; label: string; en: string; icon: IconTyp
 
 const PUBLIC_TABS: Tab[] = [
   { key: "home", href: "/", label: "হোম", en: "Home", icon: LuHouse, exact: true },
-  { key: "sample", href: "/#sample", label: "নমুনা", en: "Sample", icon: LuBookOpen },
+  { key: "sample", href: "/#sample", label: "পড়ে দেখুন", en: "Read", icon: LuBookOpen },
   // The checkout itself (22 Oct 2026, the shop could not find it on a phone).
   // A buyer's past orders are under Account.
   { key: "order", href: "/order", label: "অর্ডার করুন", en: "Order", icon: LuShoppingCart },

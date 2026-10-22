@@ -52,6 +52,7 @@ const STATUS = {
   delivered: { label: 'ডেলিভারি হয়েছে', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: FiHome },
   'access-granted': { label: 'অ্যাক্সেস চালু', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: FiUnlock },
   cancelled: { label: 'বাতিল', cls: 'bg-rose-50 text-rose-700 border-rose-200', icon: FiXCircle },
+  returned: { label: 'ফেরত এসেছে', cls: 'bg-orange-50 text-orange-700 border-orange-200', icon: FiXCircle },
 };
 
 export const statusMeta = (s) =>
@@ -142,7 +143,7 @@ const digitalIndex = (order) =>
  * all: it is a terminal state off the ladder, not a rung on it.
  */
 export const buildTimeline = (order) => {
-  const cancelled = order?.status === 'cancelled';
+  const cancelled = order?.status === 'cancelled' || order?.status === 'returned';
   if (cancelled) {
     return { cancelled: true, cancelledAt: order?.cancelledAt || null, steps: [] };
   }

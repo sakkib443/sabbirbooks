@@ -46,6 +46,7 @@ const T = {
     orderedOn: 'অর্ডারের তারিখ',
     steps: { placed: 'অর্ডার হয়েছে', confirmed: 'কনফার্ম হয়েছে', shipped: 'পাঠানো হয়েছে', delivered: 'পৌঁছে গেছে' },
     cancelled: 'বাতিল হয়েছে',
+    returned: 'পার্সেল ফেরত এসেছে',
     courier: 'কুরিয়ার',
     found: (n) => `${n} টি অর্ডার পাওয়া গেছে`,
   },
@@ -61,6 +62,7 @@ const T = {
     orderedOn: 'Ordered on',
     steps: { placed: 'Placed', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered' },
     cancelled: 'Cancelled',
+    returned: 'Parcel returned',
     courier: 'Courier',
     found: (n) => `${n} order${n === 1 ? '' : 's'} found`,
   },
@@ -247,7 +249,7 @@ function OrderCard({ order, S, bn, bengali }) {
 
       {cancelled ? (
         <p className={cn('mt-3 inline-flex items-center gap-2 rounded-lg bg-coral/10 px-3 py-2 text-sm font-semibold text-coral', bn)}>
-          <LuCircleX /> {S.cancelled}
+          <LuCircleX /> {order.status === 'returned' ? S.returned : S.cancelled}
         </p>
       ) : (
         <ol className="mt-4 flex items-start">

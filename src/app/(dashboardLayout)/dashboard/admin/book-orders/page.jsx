@@ -15,7 +15,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FiShoppingBag, FiSearch, FiLoader, FiRefreshCw, FiAlertCircle,
   FiChevronDown, FiUser, FiMail, FiPhone, FiMapPin, FiHash,
-  FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock,
+  FiCreditCard, FiPackage, FiTruck, FiCheckCircle, FiXCircle, FiClock, FiRotateCcw,
   FiCheck, FiX, FiEdit2, FiSave, FiSmartphone, FiSend, FiTrash2, FiBookOpen, FiTag, FiGift, FiDollarSign, FiBook,
   FiCalendar, FiDownload, FiLayers, FiLink, FiArrowRight, FiFileText, FiSliders, FiPlus,
 } from 'react-icons/fi';
@@ -90,7 +90,7 @@ const fmtWhen = (d) =>
 // 'pending' / 'paid' / 'access-granted' are set by the payment flow, not here).
 // Pending first: orders confirm themselves now, and this is how the admin
 // puts one back on hold.
-const FULFILLMENT_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+const FULFILLMENT_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'returned', 'cancelled'];
 
 // The desktop table's column widths. Declared once and used by BOTH the header
 // strip and every row, because a table whose header does not line up with its
@@ -109,8 +109,17 @@ const GRID_COLS_NO_MONEY =
 const titlesOf = (o) =>
   (o?.items || []).map((it) => `${it.title} ×${Number(it.quantity) || 1}`).join(' · ');
 
+// The delivery part of an order, as the shop counts it (22 Oct 2026): at
+// least the courier's ৳120 on every printed parcel, even when the buyer got
+// delivery free — the shop pays the courier either way. The server uses the
+// same rule (utils/courierCost).
+const COURIER_COST = 120;
+const deliveryShownOf = (o) =>
+  o?.deliveryType === 'digital'
+    ? o?.deliveryCharge || 0
+    : Math.min(o?.total || 0, Math.max(o?.deliveryCharge || 0, COURIER_COST));
 // An order's money without the delivery charge — what its books sold for.
-const bookMoneyOf = (o) => (o?.total || 0) - (o?.deliveryCharge || 0);
+const bookMoneyOf = (o) => (o?.total || 0) - deliveryShownOf(o);
 
 // What opening the screen brings: the most recent orders, and only those.
 // Nearly every visit is about today's and yesterday's work, and waiting on
@@ -147,6 +156,7 @@ const STATUS_TEXT = {
   delivered: 'Delivered',
   'access-granted': 'Access granted',
   cancelled: 'Cancelled',
+  returned: 'Returned',
 };
 
 /** The query GET /api/orders takes: status, a date window, how many, which page. */
@@ -259,6 +269,7 @@ const FULFILLMENT_LABEL = {
   processing: 'Confirmed',
   shipped: 'Shipped',
   delivered: 'Delivered',
+  returned: 'Returned',
   cancelled: 'Cancelled',
 };
 const FULFILLMENT_HELP = {
@@ -266,6 +277,7 @@ const FULFILLMENT_HELP = {
   processing: 'Order confirmed — stock reserved and the buyer can open this book’s QR content',
   shipped: 'Handed to the courier',
   delivered: 'Book received by the buyer — cash-on-delivery orders are marked paid here',
+  returned: 'The courier brought the parcel back — its books go back in stock (set by itself when Steadfast reports a return)',
   cancelled: 'Order cancelled — reserved stock goes back on the shelf',
 };
 
@@ -277,6 +289,7 @@ const STATUS_META = {
   delivered: { cls: 'bg-emerald-50 text-emerald-600 border-emerald-200', icon: FiCheckCircle },
   'access-granted': { cls: 'bg-violet-50 text-violet-600 border-violet-200', icon: FiCheckCircle },
   cancelled: { cls: 'bg-red-50 text-red-500 border-red-200', icon: FiXCircle },
+  returned: { cls: 'bg-orange-50 text-orange-600 border-orange-200', icon: FiRotateCcw },
 };
 const PAY_STYLES = {
   paid: 'bg-emerald-50 text-emerald-600 border-emerald-200',
@@ -380,7 +393,8 @@ const trackingHref = (url) => {
 const startedOnline = (o) =>
   HOSTED_GATEWAYS.includes(String(o?.payment?.method || '').toLowerCase()) &&
   o?.payment?.status !== 'paid' &&
-  o?.status !== 'cancelled';
+  o?.status !== 'cancelled' &&
+  o?.status !== 'returned';
 
 function StatusBadge({ status }) {
   const meta = STATUS_META[status] || STATUS_META.pending;
@@ -780,7 +794,10 @@ export default function BookOrdersPage() {
 
   // A PDF of the filtered list leaves cancelled orders out — nobody delivers
   // them or collects for them — unless cancelled orders are what was asked for.
-  const keepForPdf = (list) => (statusFilter === 'cancelled' ? list : list.filter((o) => o.status !== 'cancelled'));
+  const keepForPdf = (list) =>
+    statusFilter === 'cancelled' || statusFilter === 'returned'
+      ? list
+      : list.filter((o) => o.status !== 'cancelled' && o.status !== 'returned');
   const allLoaded = matchCount <= orders.length;
 
   /**
@@ -807,7 +824,8 @@ export default function BookOrdersPage() {
   // all), so these are the real figures and not the latest page's.
   const stats = useMemo(() => {
     const paid = filtered.filter((o) => o.payment?.status === 'paid');
-    const live = filtered.filter((o) => o.status !== 'cancelled');
+    // A cancelled order, or a parcel that came back, sold nothing.
+    const live = filtered.filter((o) => o.status !== 'cancelled' && o.status !== 'returned');
     const codUnpaid = live.filter((o) => isCod(o) && o.payment?.status !== 'paid');
     return {
       total: filtered.length,
@@ -1987,6 +2005,7 @@ export default function BookOrdersPage() {
           <option value="shipped">Shipped</option>
           <option value="delivered">Delivered</option>
           <option value="access-granted">Access granted</option>
+          <option value="returned">Returned</option>
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
@@ -2082,7 +2101,7 @@ export default function BookOrdersPage() {
                     }}
                     disabled={bulkBusy}
                     className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                      st === 'cancelled'
+                      st === 'cancelled' || st === 'returned'
                         ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
                         : 'border-dash-line bg-dash-card text-dash-ink3 hover:border-brand/40 hover:text-brand'
                     }`}
@@ -2655,8 +2674,11 @@ export default function BookOrdersPage() {
                               <p className="flex justify-between text-dash-mute2">Discount <span className="text-emerald-600">−{bdt(o.discount)}</span></p>
                             )}
                             <p className="flex justify-between text-dash-mute2">Books <span className="text-dash-ink4">{bdt(bookMoneyOf(o))}</span></p>
-                            {o.deliveryCharge > 0 && (
-                              <p className="flex justify-between text-dash-mute2">Delivery <span className="text-dash-ink4">{bdt(o.deliveryCharge)}</span></p>
+                            {deliveryShownOf(o) > 0 && (
+                              <p className="flex justify-between text-dash-mute2">
+                                <span>Delivery{!(o.deliveryCharge > 0) && <span className="ml-1 text-[10px] text-amber-600">(free to buyer)</span>}</span>
+                                <span className="text-dash-ink4">{bdt(deliveryShownOf(o))}</span>
+                              </p>
                             )}
                             <p className="flex justify-between border-t border-dash-line-soft pt-1 text-sm font-semibold text-dash-ink3">Total <span>{bdt(o.total)}</span></p>
                           </div>
@@ -3062,6 +3084,7 @@ export default function BookOrdersPage() {
                         {o.shippedAt && <span>Shipped: {fmtDate(o.shippedAt)}</span>}
                         {o.deliveredAt && <span>Delivered: {fmtDate(o.deliveredAt)}</span>}
                         {o.cancelledAt && <span>Cancelled: {fmtDate(o.cancelledAt)}</span>}
+                        {o.returnedAt && <span>Returned: {fmtDate(o.returnedAt)}</span>}
                       </div>
                     )}
                   </div>
