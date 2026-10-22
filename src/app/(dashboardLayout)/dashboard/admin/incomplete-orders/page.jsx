@@ -354,7 +354,7 @@ export default function IncompleteOrdersPage() {
       {/* The list */}
       <div className="overflow-hidden rounded-xl border border-dash-line bg-dash-card shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-sm">
+          <table className="w-full min-w-[1200px] text-sm">
             <thead className="bg-dash-soft text-left text-[11px] font-semibold uppercase tracking-wide text-dash-mute">
               <tr>
                 <th className="w-10 px-3 py-2.5">#</th>
@@ -386,21 +386,27 @@ export default function IncompleteOrdersPage() {
                     </td>
                     <td className="px-3 py-3 font-semibold text-dash-ink2">{r.name || <Dash />}</td>
                     <td className="whitespace-nowrap px-3 py-3">
+                      {/* The number is the point of this page: in full, a size
+                          up, never cut (23 Oct 2026). A half-typed one shows
+                          every digit typed, with a small note under it. */}
                       {r.phone ? (
-                        <div className="flex items-center gap-2">
-                          <a href={`tel:${r.phone}`} className="font-mono text-dash-ink2 hover:text-brand">{r.phone}</a>
+                        <div className="flex items-center gap-1.5">
+                          <a href={`tel:${r.phone}`} className="font-mono text-[15px] font-semibold tracking-wide text-dash-ink2 hover:text-brand">{r.phone}</a>
                           <a href={`tel:${r.phone}`} className="rounded-md p-1 text-brand hover:bg-brand-soft" aria-label="Call"><FiPhone /></a>
                           <a href={`https://wa.me/88${r.phone}`} target="_blank" rel="noreferrer" className="rounded-md p-1 text-emerald-600 hover:bg-emerald-50" aria-label="WhatsApp"><FaWhatsapp /></a>
                         </div>
                       ) : r.typedPhone ? (
-                        <span className="font-mono text-amber-600" title="পুরো নম্বর লেখেনি">{r.typedPhone}… <span className="font-sans text-[10px]">অসম্পূর্ণ</span></span>
+                        <div title="পুরো নম্বর লেখেনি">
+                          <p className="font-mono text-[15px] font-semibold tracking-wide text-amber-600">{r.typedPhone}</p>
+                          <p className="text-[10px] text-amber-600/80">অসম্পূর্ণ নম্বর · {r.typedPhone.replace(/\D/g, '').length} সংখ্যা</p>
+                        </div>
                       ) : (
                         <Dash />
                       )}
                     </td>
-                    <td className="max-w-[180px] truncate px-3 py-3 text-dash-ink3" title={r.email || ''}>{r.email || <Dash />}</td>
+                    <td className="min-w-[170px] max-w-[220px] px-3 py-3 text-dash-ink3 [overflow-wrap:anywhere]">{r.email || <Dash />}</td>
                     <td className="max-w-[200px] px-3 py-3 text-dash-ink3">{r.collegeName || <Dash />}</td>
-                    <td className="max-w-[220px] px-3 py-3 text-dash-ink3"><span className="line-clamp-2" title={r.address || ''}>{r.address || <Dash />}</span></td>
+                    <td className="max-w-[220px] px-3 py-3 text-dash-ink3">{r.address || <Dash />}</td>
                     <td className="px-3 py-3 text-center tabular-nums text-dash-ink3">{r.quantity || 1}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-xs">
                       {r.payMode ? (
