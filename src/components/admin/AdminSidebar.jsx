@@ -96,8 +96,9 @@ const AdminSidebar = () => {
         { title: 'Dashboard', href: '/dashboard/admin', icon: FiHome, exact: true, roles: ['admin', 'trainingManager', 'contentManager', 'mentor'] },
         // Sales and money — the Super Admin's alone (17 Oct 2026).
         { title: 'Analytics', href: '/dashboard/admin/analytics', icon: FiBarChart2, need: ['analytics.read'], superOnly: true },
-        // Income and expense, day by day — the Super Admin's (20 Oct 2026).
-        { title: 'আয়-ব্যয় (Accounts)', href: '/dashboard/admin/accounts', icon: FiDollarSign, superOnly: true },
+        // Income and expense, day by day. The Super Admin sees the shop's and
+        // their own; an admin only what they wrote (23 Oct 2026).
+        { title: 'আয়-ব্যয় (Accounts)', href: '/dashboard/admin/accounts', icon: FiDollarSign, roles: ['admin'] },
       ],
     },
     {

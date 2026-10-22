@@ -157,8 +157,7 @@ export default function CheckoutView() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponErr, setCouponErr] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
-  // The coupon box and the delivery note stay closed links until wanted.
-  const [couponOpen, setCouponOpen] = useState(false);
+  // The delivery note stays a closed link until wanted.
   const [noteOpen, setNoteOpen] = useState(false);
 
   // Which hosted checkouts the server holds credentials for. Stays null until the
@@ -1347,50 +1346,45 @@ export default function CheckoutView() {
                     </div>
                   </div>
                 ) : (
+                  // The box sits right beside "কুপন আছে?" (23 Oct 2026, the
+                  // shop: the space next to it was empty).
                   <div>
-                    <button
-                      type="button"
-                      onClick={() => setCouponOpen((o) => !o)}
-                      aria-expanded={couponOpen || !!couponErr}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 text-[18px] font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-700 dark:text-blue-400",
-                        bn
-                      )}
-                    >
-                      <LuTicket /> {S.couponHeading}
-                    </button>
-                    {(couponOpen || !!couponErr) && (
-                      <div className="mt-2">
-                        <div className="flex gap-2">
-                          <input
-                            value={couponInput}
-                            onChange={(e) => {
-                              setCouponInput(e.target.value);
-                              if (couponErr) setCouponErr("");
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                void applyCoupon();
-                              }
-                            }}
-                            placeholder={S.couponPlaceholder}
-                            disabled={couponBusy || processing}
-                            autoFocus
-                            className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm uppercase tracking-wide outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void applyCoupon()}
-                            disabled={couponBusy || processing || !couponInput.trim()}
-                            className={cn(buttonVariants({ variant: "outline" }), "shrink-0", bn)}
-                          >
-                            {couponBusy ? <LuLoaderCircle className="animate-spin" /> : S.couponApply}
-                          </button>
-                        </div>
-                        {couponErr && <p className={cn("mt-1.5 text-xs text-coral", bn)}>{couponErr}</p>}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "inline-flex shrink-0 items-center gap-1 text-[16px] font-semibold text-blue-600 underline underline-offset-4 dark:text-blue-400 sm:text-[18px]",
+                          bn
+                        )}
+                      >
+                        <LuTicket /> {S.couponHeading}
+                      </span>
+                      <input
+                        value={couponInput}
+                        onChange={(e) => {
+                          setCouponInput(e.target.value);
+                          if (couponErr) setCouponErr("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void applyCoupon();
+                          }
+                        }}
+                        placeholder={S.couponPlaceholder}
+                        disabled={couponBusy || processing}
+                        aria-label={S.couponHeading}
+                        className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm uppercase tracking-wide outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void applyCoupon()}
+                        disabled={couponBusy || processing || !couponInput.trim()}
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0", bn)}
+                      >
+                        {couponBusy ? <LuLoaderCircle className="animate-spin" /> : S.couponApply}
+                      </button>
+                    </div>
+                    {couponErr && <p className={cn("mt-1.5 text-xs text-coral", bn)}>{couponErr}</p>}
                   </div>
                 )
               )}

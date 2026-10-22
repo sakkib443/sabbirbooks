@@ -66,13 +66,13 @@ const T = {
     saved: 'সাশ্রয়',
     preOrder: 'প্রি-অর্ডার করুন',
     order: 'অর্ডার করুন',
-    viewSample: 'নমুনা দেখুন',
+    viewSample: 'বইটি পড়ে দেখুন',
     viewBook: 'পড়ে দেখুন',
     cod: 'ক্যাশ অন ডেলিভারি',
     delivery: 'সারা দেশে ডেলিভারি',
     why: 'কেন এই বইটি',
     insidePages: 'বইয়ের ভেতরের পাতা',
-    samplePage: 'নমুনা পাতা',
+    samplePage: 'পাতা',
     offerOn: (v) => `${v} ছাড় চলছে`,
     onlineExtra: (v) => `অনলাইনে পেমেন্ট করলে আরও ${v} ছাড়`,
   },
@@ -82,13 +82,13 @@ const T = {
     saved: 'saved',
     preOrder: 'Pre-order now',
     order: 'Order now',
-    viewSample: 'View sample',
+    viewSample: 'Read the book',
     viewBook: 'Read a sample',
     cod: 'Cash on delivery',
     delivery: 'Delivered nationwide',
     why: 'Why this book',
     insidePages: 'Inside the book',
-    samplePage: 'Sample page',
+    samplePage: 'Page',
     offerOn: (v) => `${v} off now`,
     onlineExtra: (v) => `${v} more off when you pay online`,
   },
@@ -201,15 +201,8 @@ export default function LandingHero({
 
           {/* ── The words ───────────────────────────────────────────── */}
           <div className="mx-auto max-w-2xl text-center lg:col-span-2 lg:row-start-1 lg:mb-1">
-            <span className="inline-flex items-center gap-2.5 rounded-full border border-primary/25 bg-primary-soft px-5 py-2.5 text-base font-bold tracking-wide text-primary font-display shadow-sm motion-safe:animate-float-soft sm:text-lg">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-              </span>
-              {/* Just the line (22 Oct 2026, the shop): the offer name used to
-                  follow it here; the price block below shows the saving. */}
-              {L.eyebrow}
-            </span>
+            {/* The "Anatomy Viva Book for 1st Prof" box that stood above the
+                headline was taken off on 23 Oct 2026 at the shop's request. */}
 
             {/* The same gradient the logo's "Viva" is painted in — reached
                 through the shared class, not by writing the colour again, so
@@ -749,47 +742,19 @@ function HandoverPhoto({ checkoutHref, isPreOrder, photos }) {
   const { isBengali } = useLanguage();
   const L = isBengali ? T.bn : T.en;
 
-  const points = isBengali
-    ? ['সারা দেশে কুরিয়ারে পৌঁছে দেওয়া হচ্ছে', 'হাতে পেয়ে টাকা — ক্যাশ অন ডেলিভারি', 'প্রতিটি বইয়ে QR, ভেতরে ভিডিও ও ছবি']
-    : ['Couriered anywhere in the country', 'Pay the courier when it arrives', 'A QR on every topic — video and figures inside'];
-
+  // The words that stood beside the photos ("বইটি এখন শিক্ষার্থীদের হাতে…",
+  // the three points) were taken off on 23 Oct 2026 at the shop's request:
+  // the photos and the order button stay. Desktop only — a phone already sees
+  // these photos at the top of the hero.
   return (
-    <div className="mt-2 grid items-center gap-5 rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5 lg:mt-3 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-9 lg:p-6 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      {/* Desktop only: a phone has already seen these at the top of the
-          hero, and showing them twice on one screen is once too many. */}
-      <div className="hidden lg:block">
+    <div className="mt-3 hidden rounded-3xl border border-border bg-card p-6 shadow-card lg:block">
+      <div className="mx-auto max-w-md">
         <HandoverSlides photos={photos} />
       </div>
-
-      <div className="text-center lg:text-left">
-        <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1.5 text-sm font-bold text-accent hind-siliguri">
-          <LuBookOpen className="shrink-0" />
-          {isBengali ? 'বইটি এখন শিক্ষার্থীদের হাতে' : 'Already in students’ hands'}
-        </span>
-
-        <h2 className="mt-3 font-display text-2xl font-extrabold leading-snug text-foreground text-balance sm:text-3xl hind-siliguri">
-          {isBengali
-            ? 'ছাপা হয়ে গেছে — অর্ডার করলেই বাসায় পৌঁছে যাবে'
-            : 'Printed and shipping — order and it arrives at your door'}
-        </h2>
-
-        {/* Two columns from `sm` up and never one again: on a wide screen this
-            sits in the roomy half of the band, and a single stack left the
-            right third of the row empty. */}
-        <ul className="mx-auto mt-4 grid max-w-md gap-x-6 gap-y-2 text-left sm:max-w-none sm:grid-cols-2 lg:mx-0">
-          {points.map((p) => (
-            <li key={p} className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                <LuCheck className="text-[11px]" />
-              </span>
-              <span className="text-sm leading-relaxed text-muted-foreground hind-siliguri">{p}</span>
-            </li>
-          ))}
-        </ul>
-
+      <div className="mt-5 text-center">
         <Link
           href={checkoutHref}
-          className="group mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-base font-bold text-primary-foreground shadow-glow transition-all hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 hind-siliguri"
+          className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-base font-bold text-primary-foreground shadow-glow transition-all hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 hind-siliguri"
         >
           {isPreOrder ? L.preOrder : L.order}
           <LuArrowRight className="transition-transform group-hover:translate-x-1" />
@@ -876,7 +841,7 @@ function CoverCard({ book, price, sampleHref }) {
   return (
     <a
       href={sampleHref}
-      title="নমুনা পাতাগুলো দেখুন"
+      title="বইটি পড়ে দেখুন"
       className="group relative block rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
     >
       {inner}
