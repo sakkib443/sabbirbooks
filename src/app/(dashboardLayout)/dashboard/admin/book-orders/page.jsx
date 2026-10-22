@@ -823,6 +823,8 @@ export default function BookOrdersPage() {
       codOutstanding: codUnpaid.reduce((s, o) => s + (o.total || 0), 0),
       codOutstandingBooks: codUnpaid.reduce((s, o) => s + bookMoneyOf(o), 0),
       delivered: filtered.filter((o) => o.status === 'delivered').length,
+      // And how many books those were (the shop asked, 22 Oct 2026).
+      deliveredBooks: filtered.filter((o) => o.status === 'delivered').reduce((s, o) => s + copiesOf(o), 0),
     };
   }, [filtered]);
 
@@ -1933,7 +1935,8 @@ export default function BookOrdersPage() {
           <b className="tabular-nums text-brand-ink">{stats.books.toLocaleString('en-US')}</b> books
         </span>
         <span>
-          <b className="tabular-nums text-sky-600">{stats.delivered.toLocaleString('en-US')}</b> delivered
+          <b className="tabular-nums text-sky-600">{stats.delivered.toLocaleString('en-US')}</b> delivered{' '}
+          <span className="tabular-nums">({stats.deliveredBooks.toLocaleString('en-US')} books)</span>
         </span>
         {!totalsBlind && (
           <span>

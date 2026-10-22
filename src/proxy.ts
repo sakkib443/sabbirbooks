@@ -95,5 +95,6 @@ export const config = {
     '/:api([aA][pP][iI])/orders',
     '/:api([aA][pP][iI])/book-coupons/validate',
     '/:api([aA][pP][iI])/user/google-signin',
+    '/:api([aA][pP][iI])/incomplete-orders',
   ],
 };

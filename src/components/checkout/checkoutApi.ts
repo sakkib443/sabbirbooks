@@ -39,6 +39,24 @@ interface GatewaySession {
 }
 
 // ── Auth helpers ───────────────────────────────────────────────────────────
+/**
+ * The checkout's autosave (22 Oct 2026): what the buyer has typed so far, so
+ * the shop can call someone who did not finish ordering. Fire and forget —
+ * never in the way of the order itself.
+ */
+export function saveIncompleteOrder(payload: Record<string, unknown>): void {
+  try {
+    void fetch(`${API_BASE_URL}/incomplete-orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // Nothing to do: the order does not depend on this.
+  }
+}
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(STORAGE_KEYS.token);
