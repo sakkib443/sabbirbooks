@@ -78,8 +78,11 @@ const Navbar = () => {
   // the link to people it wants, so the page is reachable by anyone who has it
   // and advertised to nobody who does not. It is left out of the menu, not
   // closed off — see src/config/site.js, which keeps the route live.
+  // "Order the book" (22 Oct 2026): /order sends the buyer to the landing
+  // book's checkout — the shop wanted the order page in the menu itself.
   const menu = [
     { href: "/", label: t("navbar.home") },
+    { href: "/order", label: language === "bn" ? "বই অর্ডার করুন" : "Order the book" },
     ...(PUBLIC_PAGES_ENABLED
       ? [
           { href: "/courses", label: t("navbar.courses") },

@@ -18,6 +18,7 @@ import {
 import { Button, buttonVariants, cn } from "@/components/ui";
 import { fetchDownloadUrl } from "./checkoutApi";
 import { ManualChannel, OrderResult, PreOrderInfo, SuccessResult, formatTk, formatReleaseDate } from "./types";
+import Celebration from "./Celebration";
 
 interface Labels {
   bn: string;
@@ -157,8 +158,10 @@ export function CheckoutSuccess({
 
   return (
     <div className="mx-auto max-w-xl">
-      <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-card sm:p-8">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+      {/* Confetti keeps falling on a confirmed order (22 Oct 2026). */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-center shadow-card sm:p-8">
+        <Celebration count={26} />
+        <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent">
           <LuCircleCheckBig className="text-3xl" />
         </div>
         <h1 className={cn("font-heading text-2xl font-bold text-foreground sm:text-3xl", bn)}>
@@ -199,8 +202,10 @@ function CodBody({
 
   return (
     <div className="mx-auto max-w-xl">
-      <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-card sm:p-8">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+      {/* Confetti keeps falling on a confirmed order (22 Oct 2026). */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-center shadow-card sm:p-8">
+        <Celebration count={26} />
+        <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent">
           <LuTruck className="text-3xl" />
         </div>
         <h1 className={cn("font-heading text-2xl font-bold text-foreground sm:text-3xl", bn)}>
