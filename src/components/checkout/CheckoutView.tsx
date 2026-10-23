@@ -101,7 +101,16 @@ const CONSENT_POLICIES = ["terms-and-conditions", "refund-policy", "privacy-poli
 type Phase = "loading" | "notfound" | "ready" | "processing" | "success";
 
 /** What a tap on the confirm button found still missing, in the order asked. */
-type MissingStep = "address" | "college" | "payment" | "consent";
+type MissingStep = "address" | "college" | "session" | "payment" | "consent";
+
+/**
+ * The academic sessions a buyer picks from (24 Oct 2026). Newest last; the
+ * value is what every order screen shows.
+ */
+const SESSIONS = [
+  { value: "24-25", bn: "24-25 (1st year)", en: "24-25 (1st year)" },
+  { value: "25-26", bn: "25-26 (2nd year)", en: "25-26 (2nd year)" },
+];
 
 // A Bangladeshi mobile, however it is typed — the same test the server applies
 // (order.service normalizeBdMobile) after stripping spaces and dashes.
@@ -157,6 +166,8 @@ export default function CheckoutView() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponErr, setCouponErr] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
+  // The academic session (24 Oct 2026) — required for a printed book.
+  const [session, setSession] = useState("");
   // The delivery note stays a closed link until wanted.
   const [noteOpen, setNoteOpen] = useState(false);
 
@@ -839,17 +850,22 @@ export default function CheckoutView() {
     (step) =>
       !(step === "address" && Object.keys(errors).length === 0) &&
       !(step === "consent" && agreed) &&
-      !(step === "college" && (college || collegeName.trim()))
+      !(step === "college" && (college || collegeName.trim())) &&
+      !(step === "session" && session)
   );
   const collegeMissing = stillMissing.includes("college");
+  const sessionMissing = stillMissing.includes("session");
   const consentMissing = stillMissing.includes("consent");
 
   // The college as the order API takes it: a listed one by id, else the typed name.
+  // The session rides along with it into the order body.
   const collegeInput: OrderCollegeInput | undefined = college
-    ? { medicalCollege: college._id }
+    ? { medicalCollege: college._id, ...(session ? { session } : {}) }
     : collegeName.trim()
-      ? { medicalCollegeName: collegeName.trim() }
-      : undefined;
+      ? { medicalCollegeName: collegeName.trim(), ...(session ? { session } : {}) }
+      : session
+        ? { session }
+        : undefined;
 
   // This visit ordered: whatever the autosave kept is not an incomplete order.
   const markVisitOrdered = (orderNumber?: string) =>
@@ -1058,6 +1074,7 @@ export default function CheckoutView() {
         setCollegeError(S.shipErrCollege);
         missing.push("college");
       }
+      if (!session) missing.push("session");
     }
     // Wallet details are only required on the MANUAL path — a cash-on-delivery
     // buyer has no transaction id to give (demanding one was what made COD
@@ -1156,7 +1173,7 @@ export default function CheckoutView() {
       <Container>
         {/* Title, and how many books on the same line */}
         <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
-          <h1 className={cn("font-heading text-xl font-bold tracking-tight text-foreground sm:text-3xl", bn)}>
+          <h1 className={cn("whitespace-nowrap font-heading text-lg font-bold tracking-tight text-foreground sm:text-3xl", bn)}>
             {isBook ? S.title : S.titleCourse}
           </h1>
           {isPrinted && !outOfStock && (
@@ -1220,6 +1237,33 @@ export default function CheckoutView() {
                   errors={errors}
                   bn={bn}
                   S={shippingLabels(S)}
+                  sessionSlot={
+                    <div
+                      data-checkout-missing={sessionMissing ? "true" : undefined}
+                      className={cn("flex flex-wrap items-center gap-2 rounded-xl", sessionMissing && "ring-2 ring-coral/40")}
+                    >
+                      <span className={cn("text-sm font-medium text-foreground", bn)}>Session</span>
+                      <div className="grid flex-1 grid-cols-2 gap-2" role="radiogroup" aria-label="Session">
+                        {SESSIONS.map((o) => (
+                          <button
+                            key={o.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={session === o.value}
+                            onClick={() => { setSession(o.value); setTouched(true); }}
+                            className={cn(
+                              "whitespace-nowrap rounded-lg border px-1.5 py-1.5 text-[11px] font-semibold transition-colors sm:text-sm",
+                              session === o.value
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background text-foreground hover:border-primary/50"
+                            )}
+                          >
+                            {isBengali ? o.bn : o.en}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  }
                   collegeSlot={
                     <div data-checkout-missing={collegeMissing ? "true" : undefined}>
                       <CollegePicker
@@ -1657,6 +1701,7 @@ const EN = {
   missingStep: {
     address: "Fill in the fields marked in red above",
     college: "Choose your medical college",
+    session: "Choose your session (1st or 2nd year)",
     payment: "Add your payment details",
     consent: "Tick the box below to accept the terms",
   } as Record<MissingStep, string>,
@@ -1933,6 +1978,7 @@ const BN: Copy = {
   missingStep: {
     address: "উপরে লাল দাগ দেওয়া ঘরগুলো পূরণ করুন",
     college: "আপনার মেডিকেল কলেজ বেছে নিন",
+    session: "আপনার Session বেছে নিন (1st বা 2nd year)",
     payment: "পেমেন্টের তথ্য দিন",
     consent: "নিচের ঘরে টিক দিয়ে শর্তাবলি মেনে নিন",
   },

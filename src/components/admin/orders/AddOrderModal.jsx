@@ -20,12 +20,12 @@ import { FiAlertCircle, FiCheckCircle, FiDownload, FiFileText, FiLoader, FiPlus,
 // The sample sheet: the columns, in the order the shop's sheet should have them.
 const TEMPLATE_HEADERS = [
   'order_ref', 'date', 'name', 'phone', 'alt_phone', 'medical_college', 'district', 'upazila',
-  'address', 'book', 'quantity', 'amount', 'delivery_charge', 'payment', 'status', 'note',
+  'address', 'book', 'quantity', 'amount', 'delivery_charge', 'payment', 'status', 'note', 'session',
 ];
 const TEMPLATE_ROWS = [
-  ['KMC-001', '2026-10-19', 'Abdullah Al Mamun', '01711000001', '', 'Khulna Medical College', '', '', '', '', '1', '690', '90', 'cod', 'confirmed', 'Hall 3'],
-  ['KMC-002', '2026-10-19', 'Nusrat Jahan', '01711000002', '01811000002', 'Khulna Medical College', '', '', 'Girls hostel, room 12', '', '2', '1280', '0', 'paid', 'shipped', ''],
-  ['PH-003', '2026-10-18', 'রাকিব হাসান', '01711000003', '', '', 'ঢাকা', 'মিরপুর', 'বাসা ১০, রোড ৫, মিরপুর ২', '', '1', '', '', 'cod', 'pending', 'ফোনে অর্ডার'],
+  ['KMC-001', '2026-10-19', 'Abdullah Al Mamun', '01711000001', '', 'Khulna Medical College', '', '', '', '', '1', '690', '90', 'cod', 'confirmed', 'Hall 3', '24-25'],
+  ['KMC-002', '2026-10-19', 'Nusrat Jahan', '01711000002', '01811000002', 'Khulna Medical College', '', '', 'Girls hostel, room 12', '', '2', '1280', '0', 'paid', 'shipped', '', '25-26'],
+  ['PH-003', '2026-10-18', 'রাকিব হাসান', '01711000003', '', '', 'ঢাকা', 'মিরপুর', 'বাসা ১০, রোড ৫, মিরপুর ২', '', '1', '', '', 'cod', 'pending', 'ফোনে অর্ডার', ''],
 ];
 
 // Header → field. Case, spaces, _ and - are ignored, and Bengali names work too.
@@ -46,6 +46,8 @@ const ALIASES = {
   payment: ['payment', 'paymentmethod', 'পেমেন্ট'],
   status: ['status', 'স্ট্যাটাস', 'অবস্থা'],
   note: ['note', 'notes', 'remark', 'নোট'],
+  // 24-25 (1st year) / 25-26 (2nd year)
+  session: ['session', 'year', 'সেশন'],
 };
 const normKey = (h) => String(h || '').toLowerCase().replace(/[\s_\-().:]/g, '');
 const FIELD_OF = Object.fromEntries(Object.entries(ALIASES).flatMap(([f, keys]) => keys.map((k) => [k, f])));
@@ -107,7 +109,7 @@ const label = 'mb-1 block text-[11px] font-semibold text-dash-mute';
 
 const EMPTY = {
   name: '', phone: '', altPhone: '', college: '', district: '', upazila: '', address: '', book: '',
-  quantity: '1', amount: '', deliveryCharge: '', payment: 'cod', status: 'confirmed', date: '', ref: '', note: '',
+  quantity: '1', amount: '', deliveryCharge: '', payment: 'cod', status: 'confirmed', date: '', ref: '', note: '', session: '',
 };
 
 export default function AddOrderModal({ api, headers, colleges = [], onClose, onAdded }) {
@@ -295,7 +297,15 @@ export default function AddOrderModal({ api, headers, colleges = [], onClose, on
                 </div>
                 <div><label className={label}>অর্ডারের তারিখ</label><input className={input} type="date" value={form.date} onChange={set('date')} /></div>
                 <div><label className={label}>রেফারেন্স / অর্ডার নম্বর</label><input className={input} value={form.ref} onChange={set('ref')} /></div>
-                <div className="sm:col-span-2"><label className={label}>নোট</label><input className={input} value={form.note} onChange={set('note')} /></div>
+                <div>
+                  <label className={label}>Session</label>
+                  <select className={input} value={form.session} onChange={set('session')}>
+                    <option value="">—</option>
+                    <option value="24-25">24-25 (1st year)</option>
+                    <option value="25-26">25-26 (2nd year)</option>
+                  </select>
+                </div>
+                <div><label className={label}>নোট</label><input className={input} value={form.note} onChange={set('note')} /></div>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {smsBox}

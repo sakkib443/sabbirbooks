@@ -123,7 +123,7 @@ async function uploadFile(file) {
 const FONT_SIZES = ['12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px'];
 const FONT_FAMILIES = [
   { label: 'ডিফল্ট', value: '' },
-  { label: 'Hind Siliguri (বাংলা)', value: 'Hind Siliguri' },
+  { label: 'Anek Bangla (বাংলা)', value: 'Anek Bangla' },
   { label: 'SolaimanLipi (বাংলা)', value: 'SolaimanLipi' },
   { label: 'Times New Roman', value: 'Times New Roman' },
   { label: 'Arial', value: 'Arial' },

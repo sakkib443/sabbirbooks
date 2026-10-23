@@ -93,6 +93,7 @@ export default function IncompleteOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [noteFor, setNoteFor] = useState(null); // { id, text }
+  const [openId, setOpenId] = useState(null); // the row whose Details are open
   const [busyId, setBusyId] = useState(null);
   const [sortOpen, setSortOpen] = useState(false);
   const [cutoff, setCutoff] = useState(getCutoffHour);
@@ -354,16 +355,14 @@ export default function IncompleteOrdersPage() {
       {/* The list */}
       <div className="overflow-hidden rounded-xl border border-dash-line bg-dash-card shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1200px] text-sm">
+          <table className="w-full min-w-[1000px] text-sm">
             <thead className="bg-dash-soft text-left text-[11px] font-semibold uppercase tracking-wide text-dash-mute">
               <tr>
                 <th className="w-10 px-3 py-2.5">#</th>
                 <th className="px-3 py-2.5">শেষ এসেছে</th>
                 <th className="px-3 py-2.5">নাম</th>
                 <th className="px-3 py-2.5">মোবাইল / WhatsApp</th>
-                <th className="px-3 py-2.5">ইমেইল</th>
                 <th className="px-3 py-2.5">মেডিকেল কলেজ</th>
-                <th className="px-3 py-2.5">ঠিকানা</th>
                 <th className="px-3 py-2.5 text-center">বই</th>
                 <th className="px-3 py-2.5">পেমেন্ট</th>
                 <th className="px-3 py-2.5 text-center">কয়বার</th>
@@ -373,12 +372,13 @@ export default function IncompleteOrdersPage() {
             </thead>
             <tbody className="divide-y divide-dash-line/60">
               {loading && !data ? (
-                <tr><td colSpan={12} className="py-14 text-center"><FiLoader className="inline animate-spin text-xl text-brand" /></td></tr>
+                <tr><td colSpan={10} className="py-14 text-center"><FiLoader className="inline animate-spin text-xl text-brand" /></td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={12} className="py-14 text-center text-sm text-dash-mute">এই ফিল্টারে কেউ নেই।</td></tr>
+                <tr><td colSpan={10} className="py-14 text-center text-sm text-dash-mute">এই ফিল্টারে কেউ নেই।</td></tr>
               ) : (
                 rows.map((r, i) => (
-                  <tr key={r._id} className={`align-top transition-colors hover:bg-dash-soft/60 ${r.status === 'ordered' ? 'bg-emerald-50/50' : r.contacted ? 'bg-dash-soft/30' : ''}`}>
+                  <React.Fragment key={r._id}>
+                  <tr className={`align-top transition-colors hover:bg-dash-soft/60 ${r.status === 'ordered' ? 'bg-emerald-50/50' : r.contacted ? 'bg-dash-soft/30' : ''}`}>
                     <td className="px-3 py-3 text-xs tabular-nums text-dash-mute2">{i + 1}</td>
                     <td className="whitespace-nowrap px-3 py-3">
                       <p className="text-dash-ink3">{fmtDate(r.lastSeenAt)}, {fmtTime(r.lastSeenAt)}</p>
@@ -404,9 +404,7 @@ export default function IncompleteOrdersPage() {
                         <Dash />
                       )}
                     </td>
-                    <td className="min-w-[170px] max-w-[220px] px-3 py-3 text-dash-ink3 [overflow-wrap:anywhere]">{r.email || <Dash />}</td>
-                    <td className="max-w-[200px] px-3 py-3 text-dash-ink3">{r.collegeName || <Dash />}</td>
-                    <td className="max-w-[220px] px-3 py-3 text-dash-ink3">{r.address || <Dash />}</td>
+                    <td className="max-w-[220px] px-3 py-3 text-dash-ink3">{r.collegeName || <Dash />}</td>
                     <td className="px-3 py-3 text-center tabular-nums text-dash-ink3">{r.quantity || 1}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-xs">
                       {r.payMode ? (
@@ -452,12 +450,35 @@ export default function IncompleteOrdersPage() {
                       )}
                       </div>
                     </td>
-                    <td className="px-2 py-3">
-                      {role === 'superAdmin' && (
-                        <button onClick={() => remove(r)} className="rounded-md p-1.5 text-red-400 hover:bg-red-50" aria-label="Delete"><FiTrash2 /></button>
-                      )}
+                    <td className="whitespace-nowrap px-2 py-3">
+                      <div className="flex items-center gap-1">
+                        {/* Email, address and the rest live behind this (24 Oct 2026). */}
+                        <button onClick={() => setOpenId(openId === r._id ? null : r._id)}
+                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${openId === r._id ? 'border-brand bg-brand-soft text-brand' : 'border-dash-line text-dash-ink3 hover:border-brand hover:text-brand'}`}>
+                          Details <FiChevronDown className={openId === r._id ? 'rotate-180' : ''} />
+                        </button>
+                        {role === 'superAdmin' && (
+                          <button onClick={() => remove(r)} className="rounded-md p-1.5 text-red-400 hover:bg-red-50" aria-label="Delete"><FiTrash2 /></button>
+                        )}
+                      </div>
                     </td>
                   </tr>
+                  {openId === r._id && (
+                    <tr className="bg-dash-soft/40">
+                      <td />
+                      <td colSpan={9} className="px-3 pb-3 pt-1">
+                        <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-xs sm:grid-cols-2 lg:grid-cols-3">
+                          <Detail label="ইমেইল">{r.email}</Detail>
+                          <Detail label="ঠিকানা">{r.address}</Detail>
+                          <Detail label="মেডিকেল কলেজ">{r.collegeName}</Detail>
+                          <Detail label="কুপন">{r.couponCode}</Detail>
+                          <Detail label="প্রথম এসেছে">{r.firstSeenAt ? `${fmtDate(r.firstSeenAt)}, ${fmtTime(r.firstSeenAt)}` : ''}</Detail>
+                          <Detail label="অর্ডার নম্বর">{r.orderNumber}</Detail>
+                        </dl>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
@@ -471,6 +492,15 @@ export default function IncompleteOrdersPage() {
 
 function Segmented({ children }) {
   return <div className="inline-flex flex-wrap rounded-lg border border-dash-line bg-dash-soft p-0.5">{children}</div>;
+}
+
+function Detail({ label, children }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="shrink-0 text-dash-mute">{label}:</dt>
+      <dd className="min-w-0 text-dash-ink3 [overflow-wrap:anywhere]">{children || <Dash />}</dd>
+    </div>
+  );
 }
 
 function Chip({ on, onClick, children }) {

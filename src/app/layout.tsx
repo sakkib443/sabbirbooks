@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Outfit, Sora, Hind_Siliguri } from "next/font/google";
+import { Poppins, Outfit, Sora, Anek_Bangla } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import SiteChrome from "@/components/shared/SiteChrome";
@@ -40,13 +40,14 @@ const sora = Sora({
   weight: ["600", "700", "800"],
   variable: "--font-sora",
 });
-// Hind Siliguri renders Bangla (Bengali) text cleanly.
-// Bengali is the whole site's reading face, and a Bengali weight is a big file
-// — the glyph set is large. Four weights, not five.
-const hindSiliguri = Hind_Siliguri({
+// The Bangla face (24 Oct 2026: the shop asked for something other than Hind
+// Siliguri). Anek Bangla is a variable font — one file covers every weight —
+// free on Google Fonts. The CSS class is still .hind-siliguri (used all over);
+// it simply points here now.
+const bangla = Anek_Bangla({
   subsets: ["bengali", "latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-hind-siliguri",
+  variable: "--font-bangla",
+  display: "swap",
 });
 
 // Meta Business domain verification: Meta's crawler reads this tag on the home
@@ -117,7 +118,7 @@ export default function RootLayout({
     <html
       lang="bn"
       suppressHydrationWarning
-      className={`${poppins.variable} ${outfit.variable} ${sora.variable} ${hindSiliguri.variable} h-full antialiased`}
+      className={`${poppins.variable} ${outfit.variable} ${sora.variable} ${bangla.variable} h-full antialiased`}
     >
       <head>
         <ThemeScript />

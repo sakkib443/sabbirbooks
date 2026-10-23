@@ -122,6 +122,8 @@ const orderKeyHeader = (orderId?: string): Record<string, string> => {
 export interface OrderCollegeInput {
   medicalCollege?: string;
   medicalCollegeName?: string;
+  /** The buyer's academic session, '24-25' (24 Oct 2026). Rides with the college. */
+  session?: string;
 }
 
 async function readJson(res: Response): Promise<Record<string, unknown>> {
