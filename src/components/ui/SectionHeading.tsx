@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "./cn";
 
 // Consistent eyebrow + title + subtitle block for section tops.
-// Pass `bengali` to switch to the Bangla face (Anek Bangla) for Bangla copy.
+// Pass `bengali` to switch to the Bangla face (Noto Serif Bengali) for Bangla copy.
 export function SectionHeading({
   eyebrow,
   title,

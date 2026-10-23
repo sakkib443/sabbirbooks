@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Outfit, Sora, Anek_Bangla } from "next/font/google";
+import { Poppins, Outfit, Sora, Noto_Serif_Bengali } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import SiteChrome from "@/components/shared/SiteChrome";
@@ -41,10 +41,11 @@ const sora = Sora({
   variable: "--font-sora",
 });
 // The Bangla face (24 Oct 2026: the shop asked for something other than Hind
-// Siliguri). Anek Bangla is a variable font — one file covers every weight —
+// Siliguri; the shop picked Noto Serif Bengali the same day). A variable font —
+// one file covers every weight —
 // free on Google Fonts. The CSS class is still .hind-siliguri (used all over);
 // it simply points here now.
-const bangla = Anek_Bangla({
+const bangla = Noto_Serif_Bengali({
   subsets: ["bengali", "latin"],
   variable: "--font-bangla",
   display: "swap",

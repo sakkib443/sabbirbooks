@@ -516,7 +516,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    /* Bangla glyphs anywhere (the admin panel too) fall through to Anek Bangla. */
+    /* Bangla glyphs anywhere (the admin panel too) fall through to the Bangla face (Noto Serif Bengali). */
     font-family: var(--font-poppins), var(--font-bangla), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -578,17 +578,17 @@
    declaration invalid. */
 .work { font-family: var(--font-poppins), system-ui, sans-serif; }
 
-/* The Bangla face (Anek Bangla since 24 Oct 2026; the class name is historical)
+/* The Bangla face (Noto Serif Bengali since 24 Oct 2026; the class name is historical)
    — font-weight inherits so headings stay bold */
 .hind-siliguri {
-  font-family: var(--font-bangla), "Anek Bangla", sans-serif;
+  font-family: var(--font-bangla), "Noto Serif Bengali", serif;
 }
 
 /* Sora display face for hero titles. Latin glyphs render in Sora; the browser
    falls through per-glyph to the Bangla face for any Bengali, so a mixed headline
    stays consistent. */
 .font-display {
-  font-family: var(--font-sora), var(--font-bangla), "Anek Bangla", sans-serif;
+  font-family: var(--font-sora), var(--font-bangla), "Noto Serif Bengali", serif;
 }
 
 /* ============================================================
@@ -767,6 +767,7 @@
 /* Content written while Hind Siliguri was the editor's Bangla choice carries it
    inline; it is not loaded any more, so that text uses the current Bangla face. */
 [style*="Hind Siliguri"],
-[style*="Anek Bangla"] {
-  font-family: var(--font-bangla), "Anek Bangla", sans-serif !important;
+[style*="Anek Bangla"],
+[style*="Noto Serif Bengali"] {
+  font-family: var(--font-bangla), "Noto Serif Bengali", serif !important;
 }
