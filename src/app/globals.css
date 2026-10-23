@@ -488,7 +488,7 @@
 
   --font-sans: var(--font-poppins);
   --font-heading: var(--font-outfit);
-  --font-bengali: var(--font-hind-siliguri);
+  --font-bengali: var(--font-bangla);
 
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 0.25rem);
@@ -516,7 +516,8 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-poppins), system-ui, -apple-system, sans-serif;
+    /* Bangla glyphs anywhere (the admin panel too) fall through to Anek Bangla. */
+    font-family: var(--font-poppins), var(--font-bangla), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     /* clip, NOT hidden.
@@ -533,7 +534,7 @@
     scrollbar-gutter: stable;
   }
   h1, h2, h3, h4, h5 {
-    font-family: var(--font-outfit), var(--font-poppins), sans-serif;
+    font-family: var(--font-outfit), var(--font-poppins), var(--font-bangla), sans-serif;
     letter-spacing: -0.01em;
   }
   ::selection {
@@ -577,16 +578,17 @@
    declaration invalid. */
 .work { font-family: var(--font-poppins), system-ui, sans-serif; }
 
-/* Hind Siliguri for Bengali text — font-weight inherits so headings stay bold */
+/* The Bangla face (Anek Bangla since 24 Oct 2026; the class name is historical)
+   — font-weight inherits so headings stay bold */
 .hind-siliguri {
-  font-family: var(--font-hind-siliguri), "Hind Siliguri", sans-serif;
+  font-family: var(--font-bangla), "Anek Bangla", sans-serif;
 }
 
 /* Sora display face for hero titles. Latin glyphs render in Sora; the browser
-   falls through per-glyph to Hind Siliguri for any Bengali, so a mixed headline
+   falls through per-glyph to the Bangla face for any Bengali, so a mixed headline
    stays consistent. */
 .font-display {
-  font-family: var(--font-sora), var(--font-hind-siliguri), "Hind Siliguri", sans-serif;
+  font-family: var(--font-sora), var(--font-bangla), "Anek Bangla", sans-serif;
 }
 
 /* ============================================================
@@ -760,4 +762,11 @@
     --aqua-hover: #38a89d;
     --aqua-deep: #1f7e7a;
   }
+}
+
+/* Content written while Hind Siliguri was the editor's Bangla choice carries it
+   inline; it is not loaded any more, so that text uses the current Bangla face. */
+[style*="Hind Siliguri"],
+[style*="Anek Bangla"] {
+  font-family: var(--font-bangla), "Anek Bangla", sans-serif !important;
 }

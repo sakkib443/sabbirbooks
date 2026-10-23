@@ -118,6 +118,9 @@ const deliveryShownOf = (o) =>
   o?.deliveryType === 'digital'
     ? o?.deliveryCharge || 0
     : Math.min(o?.total || 0, Math.max(o?.deliveryCharge || 0, COURIER_COST));
+// "24-25 · 1st yr" — the buyer's academic session (24 Oct 2026).
+const SESSION_YEAR = { '24-25': '1st yr', '25-26': '2nd yr' };
+const sessionLabel = (s) => (SESSION_YEAR[s] ? `${s} · ${SESSION_YEAR[s]}` : s);
 // An order's money without the delivery charge — what its books sold for.
 const bookMoneyOf = (o) => (o?.total || 0) - deliveryShownOf(o);
 
@@ -2382,6 +2385,8 @@ export default function BookOrdersPage() {
                       {buyerOf(o).college || '—'}
                     </span>
                     <span className="block truncate text-xs text-dash-mute2">
+                      {/* The buyer's session (24 Oct 2026), then where. */}
+                      {o.session && <span className="mr-1.5 rounded bg-violet-50 px-1.5 py-px font-semibold text-violet-700">{sessionLabel(o.session)}</span>}
                       {[o.shippingAddress?.district, o.shippingAddress?.division].filter(Boolean).join(', ') || fmtDate(o.createdAt)}
                     </span>
                   </div>
@@ -2476,7 +2481,10 @@ export default function BookOrdersPage() {
                       <span className="mt-1 block font-mono text-base font-bold tracking-wide text-dash-ink2">
                         {spacedPhone(buyerOf(o).phone) || '—'}
                       </span>
-                      <span className="block truncate text-xs text-dash-mute2">{buyerOf(o).college || '—'}</span>
+                      <span className="block truncate text-xs text-dash-mute2">
+                        {o.session && <span className="mr-1.5 rounded bg-violet-50 px-1.5 py-px font-semibold text-violet-700">{sessionLabel(o.session)}</span>}
+                        {buyerOf(o).college || '—'}
+                      </span>
                       <span className="mt-1 flex flex-wrap items-center gap-2">
                         {!moneyBlind && <span className="font-bold text-dash-ink2">{bdt(o.total)}</span>}
                         <BooksChip order={o} />
@@ -2532,6 +2540,7 @@ export default function BookOrdersPage() {
                         {/* The college is snapshotted onto the order, with where it
                             is — that is what a college's own delivery rate matched. */}
                         <DetailRow icon={FiBookOpen} label="Medical college" value={buyerOf(o).college} />
+                        {o.session && <DetailRow icon={FiCalendar} label="Session" value={sessionLabel(o.session)} />}
                         {buyerOf(o).collegeArea && (
                           <DetailRow icon={FiMapPin} label="College area" value={buyerOf(o).collegeArea} />
                         )}

@@ -11,7 +11,7 @@
  *
  * Each row is one such deal. "অর্ডার তৈরি" turns it into a real order in Book
  * Orders (stock, packing list and sales run through that), and "কুরিয়ারে
- * পাঠান" hands that order to Steadfast. "কলেজ ও সিনিয়র" is the phone book of
+ * পাঠান" hands that order to Steadfast. "কলেজ ও CR" is the phone book of
  * every college's senior (or the ordinary student where the senior does not
  * take the books). The money is worked out on the server (campus.service).
  */
@@ -19,7 +19,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  FiPlus, FiRefreshCw, FiLoader, FiX, FiEdit2, FiTrash2, FiTruck, FiCheckCircle, FiUsers, FiSearch, FiPhone, FiMapPin, FiGift,
+  FiPlus, FiRefreshCw, FiLoader, FiX, FiChevronDown, FiEdit2, FiTrash2, FiTruck, FiCheckCircle, FiUsers, FiSearch, FiPhone, FiMapPin, FiGift,
 } from 'react-icons/fi';
 import API_BASE_URL from '@/config/api';
 import { useToast } from '@/components/shared/Toast';
@@ -45,7 +45,7 @@ const tk = (n) => `৳${Math.round(Number(n) || 0).toLocaleString('en-US')}`;
 const fmtDay = (d) => (d ? new Date(`${d}T00:00:00+06:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dhaka' }) : '—');
 const daysBetween = (a, b) => Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000);
 
-const ROLE_LABEL = { senior: 'সিনিয়র', student: 'সাধারণ স্টুডেন্ট', other: 'অন্য' };
+const ROLE_LABEL = { senior: 'CR', student: 'সাধারণ স্টুডেন্ট', other: 'অন্য' };
 const ROLE_STYLE = {
   senior: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   student: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -98,6 +98,7 @@ export default function CampusOrdersPage() {
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [bookOpen, setBookOpen] = useState(false);
+  const [openId, setOpenId] = useState(null); // the deal whose Details are open
   const today = bdDate(new Date());
 
   const load = useCallback(async () => {
@@ -250,18 +251,15 @@ export default function CampusOrdersPage() {
       {confirmNode}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold text-dash-ink2">
-            <FiUsers className="text-brand" /> Campus Orders
-          </h1>
-          <p className="mt-0.5 text-sm text-dash-mute">সিনিয়রের মাধ্যমে ব্যাচের অর্ডার — ছাড়, ফ্রি বই, তারিখ আর কুরিয়ার এক জায়গায়।</p>
-        </div>
+        <h1 className="flex items-center gap-2.5 text-2xl font-bold text-dash-ink2">
+          <FiUsers className="text-brand" /> Campus Orders
+        </h1>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => { setLoading(true); load(); }} className="flex items-center gap-2 rounded-lg border border-dash-line px-3 py-2 text-sm text-dash-ink4 hover:bg-dash-soft">
             <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
           <button onClick={() => setBookOpen(true)} className="flex items-center gap-2 rounded-lg border border-brand/40 px-3 py-2 text-sm font-semibold text-brand hover:bg-brand-soft">
-            <FiPhone /> কলেজ ও সিনিয়র
+            <FiPhone /> কলেজ ও CR
           </button>
           <button onClick={() => openNew()} className="flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover">
             <FiPlus /> নতুন ক্যাম্পাস
@@ -298,11 +296,71 @@ export default function CampusOrdersPage() {
           কিছু নেই। <button onClick={() => openNew()} className="font-semibold text-brand hover:underline">নতুন ক্যাম্পাস যোগ করুন</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-          {shown.map((d) => (
-            <DealCard key={d._id} d={d} today={today} busy={busyId === d._id} isOwner={isOwner}
-              onEdit={() => openEdit(d)} onPlace={() => place(d)} onShip={() => ship(d)} onDelete={() => remove(d)} />
-          ))}
+        // One line a deal (24 Oct 2026, the shop): the college with who it goes
+        // to under it, then books, the CR's gift, the total and the ship day.
+        // Everything else — and the buttons — under "Details".
+        <div className="overflow-hidden rounded-xl border border-dash-line bg-dash-card shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="bg-dash-soft text-left text-[11px] font-semibold uppercase tracking-wide text-dash-mute">
+                <tr>
+                  <th className="w-10 px-3 py-2.5">#</th>
+                  <th className="px-3 py-2.5">কলেজ / যার কাছে যাবে</th>
+                  <th className="px-3 py-2.5 text-center">মোট বই</th>
+                  <th className="px-3 py-2.5 text-center">CR গিফট</th>
+                  <th className="px-3 py-2.5 text-right">মোট টাকা</th>
+                  <th className="px-3 py-2.5">পাঠাবো</th>
+                  <th className="w-24 px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dash-line/60">
+                {shown.map((d, i) => {
+                  const st = STAGE[stageOf(d)];
+                  const open = openId === d._id;
+                  return (
+                    <React.Fragment key={d._id}>
+                      <tr className={`align-top hover:bg-dash-soft/50 ${open ? 'bg-dash-soft/40' : ''}`}>
+                        <td className="px-3 py-3 text-xs tabular-nums text-dash-mute2">{i + 1}</td>
+                        <td className="px-3 py-3">
+                          <p className="flex flex-wrap items-center gap-2 font-semibold text-dash-ink2">
+                            {d.collegeName}
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
+                          </p>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-dash-ink3">
+                            {d.contact?.name}
+                            {d.contact?.phone && <a href={`tel:${d.contact.phone}`} className="font-mono text-[13px] font-semibold text-brand hover:underline">{d.contact.phone}</a>}
+                            <span className="text-dash-mute">{ROLE_LABEL[d.contact?.role] || ''}</span>
+                          </p>
+                        </td>
+                        <td className="px-3 py-3 text-center font-semibold tabular-nums text-dash-ink2">{d.quantity || 0}</td>
+                        <td className="px-3 py-3 text-center">
+                          {d.freeBooks > 0
+                            ? <span className="inline-flex items-center gap-1 font-bold text-emerald-600"><FiGift /> {d.freeBooks}</span>
+                            : <FiX className="inline text-red-400" aria-label="নেই" />}
+                        </td>
+                        <td className="px-3 py-3 text-right font-bold tabular-nums text-dash-ink2">{tk(d.total)}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-dash-ink3">{fmtDay(d.shipOn)}</td>
+                        <td className="px-3 py-3 text-right">
+                          <button onClick={() => setOpenId(open ? null : d._id)}
+                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${open ? 'border-brand bg-brand-soft text-brand' : 'border-dash-line text-dash-ink3 hover:border-brand hover:text-brand'}`}>
+                            Details <FiChevronDown className={open ? 'rotate-180' : ''} />
+                          </button>
+                        </td>
+                      </tr>
+                      {open && (
+                        <tr className="bg-dash-soft/30">
+                          <td colSpan={7} className="px-3 pb-3 pt-1">
+                            <DealCard d={d} today={today} busy={busyId === d._id} isOwner={isOwner} compact
+                              onEdit={() => openEdit(d)} onPlace={() => place(d)} onShip={() => ship(d)} onDelete={() => remove(d)} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -327,7 +385,7 @@ function Card({ label: l, value, note, tone = 'text-dash-ink' }) {
   );
 }
 
-function DealCard({ d, today, busy, isOwner, onEdit, onPlace, onShip, onDelete }) {
+function DealCard({ d, today, busy, isOwner, onEdit, onPlace, onShip, onDelete, compact = false }) {
   const st = STAGE[stageOf(d)];
   const left = d.deadline ? daysBetween(today, d.deadline) : null;
   const perCopy = Math.max(0, (d.unitPrice || 0) - (d.extraDiscount || 0));
@@ -335,7 +393,8 @@ function DealCard({ d, today, busy, isOwner, onEdit, onPlace, onShip, onDelete }
   const giftDue = !d.order && d.giftAbove > 0 && d.quantity > d.giftAbove && !d.freeBooks;
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-dash-line bg-dash-card p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      {/* In the list's Details the row above already says who and where. */}
+      <div className={`flex flex-wrap items-start justify-between gap-2 ${compact ? 'hidden' : ''}`}>
         <div className="min-w-0">
           <p className="font-bold text-dash-ink2">{d.collegeName}{d.batch && <span className="ml-1.5 text-xs font-medium text-dash-mute">({d.batch})</span>}</p>
           <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-dash-ink3">
@@ -350,7 +409,7 @@ function DealCard({ d, today, busy, isOwner, onEdit, onPlace, onShip, onDelete }
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[13px] sm:grid-cols-4">
         <Info k="বই" v={`${d.quantity || 0}টা`} />
         <Info k="প্রতি বইয়ে ছাড়" v={d.extraDiscount ? tk(d.extraDiscount) : '—'} sub={`বই ${tk(perCopy)}`} />
-        <Info k="সিনিয়রের ফ্রি বই" v={d.freeBooks ? `${d.freeBooks}টা` : 'নেই'} sub={d.giftAbove ? `${d.giftAbove}টার বেশি হলে` : ''} />
+        <Info k="CR-এর ফ্রি বই" v={d.freeBooks ? `${d.freeBooks}টা` : 'নেই'} sub={d.giftAbove ? `${d.giftAbove}টার বেশি হলে` : ''} />
         <Info k="ডেলিভারি" v={d.freeDelivery ? 'ফ্রি' : tk(d.deliveryCharge)} />
         <Info k="যোগাযোগ" v={fmtDay(d.contactedOn)} />
         <Info k="ছাড়ের শেষ তারিখ" v={fmtDay(d.deadline)}
@@ -360,7 +419,7 @@ function DealCard({ d, today, busy, isOwner, onEdit, onPlace, onShip, onDelete }
         <Info k="মোট" v={<span className="font-bold text-dash-ink2">{tk(d.total)}</span>} sub={d.payment === 'paid' ? 'টাকা আগেই পেয়েছি' : 'COD'} />
       </div>
 
-      {giftDue && <p className="flex items-center gap-1.5 text-xs text-amber-700"><FiGift /> {d.giftAbove}টার বেশি অর্ডার — সিনিয়রের ফ্রি বই যোগ করুন।</p>}
+      {giftDue && <p className="flex items-center gap-1.5 text-xs text-amber-700"><FiGift /> {d.giftAbove}টার বেশি অর্ডার — CR-এর ফ্রি বই যোগ করুন।</p>}
       {d.address && <p className="flex items-center gap-1.5 text-xs text-dash-mute"><FiMapPin /> {d.address}</p>}
       {d.note && <p className="rounded-lg bg-dash-soft px-3 py-2 text-xs text-dash-ink3">{d.note}</p>}
 
@@ -451,7 +510,7 @@ function DealForm({ editing, setEditing, colleges, books, saving, onSave, onClos
             <div>
               <label className={label}>কার কাছে যাচ্ছে</label>
               <select className={input} value={form.contact.role} onChange={setC('role')}>
-                <option value="senior">সিনিয়র</option>
+                <option value="senior">CR</option>
                 <option value="student">সাধারণ স্টুডেন্ট</option>
                 <option value="other">অন্য</option>
               </select>
@@ -470,8 +529,8 @@ function DealForm({ editing, setEditing, colleges, books, saving, onSave, onClos
               <div><label className={label}>কয়টা বই অর্ডার হয়েছে</label><input className={input} type="number" min="0" value={form.quantity} onChange={set('quantity')} placeholder="পরে লিখলেও হবে" /></div>
               <div><label className={label}>বইয়ের দাম (৳)</label><input className={input} type="number" min="0" value={form.unitPrice} onChange={set('unitPrice')} placeholder={String(Number(book?.offerPrice ?? book?.price) || '')} /></div>
               <div><label className={label}>প্রতি বইয়ে এক্সট্রা ছাড় (৳)</label><input className={input} type="number" min="0" value={form.extraDiscount} onChange={set('extraDiscount')} placeholder="0" /></div>
-              <div><label className={label}>কয়টার বেশি হলে সিনিয়রের ফ্রি বই</label><input className={input} type="number" min="0" value={form.giftAbove} onChange={set('giftAbove')} placeholder="নেই" /></div>
-              <div><label className={label}>সিনিয়রের ফ্রি বই (কয়টা)</label><input className={input} type="number" min="0" value={form.freeBooks} onChange={set('freeBooks')} placeholder="0" /></div>
+              <div><label className={label}>কয়টার বেশি হলে CR-এর ফ্রি বই</label><input className={input} type="number" min="0" value={form.giftAbove} onChange={set('giftAbove')} placeholder="নেই" /></div>
+              <div><label className={label}>CR-এর ফ্রি বই (কয়টা)</label><input className={input} type="number" min="0" value={form.freeBooks} onChange={set('freeBooks')} placeholder="0" /></div>
               <label className="flex items-center gap-2 self-end pb-2 text-sm text-dash-ink3">
                 <input type="checkbox" className="h-4 w-4 accent-brand" checked={!!form.freeDelivery} onChange={set('freeDelivery')} /> ডেলিভারি চার্জ ফ্রি
               </label>
@@ -487,7 +546,7 @@ function DealForm({ editing, setEditing, colleges, books, saving, onSave, onClos
             <div className="rounded-lg bg-brand-soft px-3 py-2 text-sm text-dash-ink2 sm:col-span-2">
               প্রতি বই <b>{tk(perCopy)}</b> × {qty} = {tk(perCopy * qty)}{!form.freeDelivery && Number(form.deliveryCharge) ? ` + ডেলিভারি ${tk(form.deliveryCharge)}` : ''} → মোট <b>{tk(total)}</b>
               {Number(form.freeBooks) > 0 && <span className="text-dash-mute"> · সাথে {form.freeBooks}টা ফ্রি বই</span>}
-              {giftDue && <p className="mt-1 text-xs text-amber-700">{form.giftAbove}টার বেশি — সিনিয়রের ফ্রি বই দিতে ভুলবেন না।</p>}
+              {giftDue && <p className="mt-1 text-xs text-amber-700">{form.giftAbove}টার বেশি — CR-এর ফ্রি বই দিতে ভুলবেন না।</p>}
             </div>
           </Section>
 
@@ -506,7 +565,7 @@ function DealForm({ editing, setEditing, colleges, books, saving, onSave, onClos
               </div>
             )}
             <div className="sm:col-span-2"><label className={label}>ঠিকানা (খালি রাখলে কলেজের নাম)</label><input className={input} value={form.address} onChange={set('address')} /></div>
-            <div className="sm:col-span-2"><label className={label}>নোট</label><textarea className={input} rows={2} value={form.note} onChange={set('note')} placeholder="যেমন: সিনিয়র নেয় না, সাধারণ স্টুডেন্টের কাছে যাচ্ছে" /></div>
+            <div className="sm:col-span-2"><label className={label}>নোট</label><textarea className={input} rows={2} value={form.note} onChange={set('note')} placeholder="যেমন: CR নেয় না, সাধারণ স্টুডেন্টের কাছে যাচ্ছে" /></div>
           </Section>
 
           <div className="flex justify-end gap-2">
@@ -576,7 +635,7 @@ function PhoneBook({ colleges, reload, showToast, confirm, onClose, onStart }) {
       <input className={input} placeholder="নাম *" value={draft?.name || ''} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
       <input className={input} placeholder="মোবাইল" value={draft?.phone || ''} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
       <select className={input} value={draft?.role || 'senior'} onChange={(e) => setDraft({ ...draft, role: e.target.value })}>
-        <option value="senior">সিনিয়র</option>
+        <option value="senior">CR</option>
         <option value="student">সাধারণ স্টুডেন্ট</option>
         <option value="other">অন্য</option>
       </select>
@@ -595,7 +654,7 @@ function PhoneBook({ colleges, reload, showToast, confirm, onClose, onStart }) {
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-3 sm:p-6" onClick={onClose}>
       <div className="w-full max-w-4xl rounded-2xl bg-dash-card shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-dash-line px-5 py-3">
-          <h2 className="font-bold text-dash-ink2">কলেজ ও সিনিয়র ({withCount}/{colleges.length} কলেজে নম্বর আছে)</h2>
+          <h2 className="font-bold text-dash-ink2">কলেজ ও CR ({withCount}/{colleges.length} কলেজে নম্বর আছে)</h2>
           <button onClick={onClose} className="rounded-lg p-1.5 text-dash-mute hover:bg-dash-soft" aria-label="Close"><FiX /></button>
         </div>
         <div className="space-y-3 p-5">

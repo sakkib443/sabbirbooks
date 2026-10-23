@@ -49,6 +49,7 @@ export function ShippingForm({
   bn,
   S,
   collegeSlot,
+  sessionSlot,
   deliveryHint,
 }: {
   register: UseFormRegister<ShippingFormValues>;
@@ -58,6 +59,8 @@ export function ShippingForm({
   // The medical-college picker, rendered by the parent (it owns the chosen
   // college, which prices delivery), placed above the address it can fill.
   collegeSlot?: React.ReactNode;
+  // The academic session picker (24 Oct 2026), one line under name and phone.
+  sessionSlot?: React.ReactNode;
   deliveryHint?: DeliveryHint | null;
 }) {
   return (
@@ -95,6 +98,7 @@ export function ShippingForm({
             />
           }
         />
+        {sessionSlot && <div className="col-span-2">{sessionSlot}</div>}
         {collegeSlot && <div className="col-span-2">{collegeSlot}</div>}
         {deliveryHint && (
           <p
