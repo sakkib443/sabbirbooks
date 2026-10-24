@@ -210,7 +210,10 @@ export default function RegisterPage() {
 
       if (login.ok && login.success && login.data) {
         persistSession(login.data);
-        router.push("/");
+        // Back where they came from (e.g. a course checkout) — same-origin only,
+        // as on the login page.
+        const wanted = new URLSearchParams(window.location.search).get("redirect");
+        router.push(wanted && wanted.startsWith("/") && !wanted.startsWith("//") ? wanted : "/");
         router.refresh();
         return;
       }

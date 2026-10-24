@@ -61,7 +61,8 @@ const ModuleLessonManager = ({ courseId }) => {
 
   const fetchLessons = async (moduleId) => {
     try {
-      const res = await fetch(`${API}/lessons/module/${moduleId}`);
+      // Signed in: staff get every lesson, video and all (lessonAccess on the server).
+      const res = await fetch(`${API}/lessons/module/${moduleId}`, { headers: authHeaders() });
       const data = await res.json();
       setModuleLessons(prev => ({ ...prev, [moduleId]: data.data || [] }));
     } catch (err) {
@@ -317,7 +318,7 @@ const ModuleModal = ({ courseId, module, onClose, onSave }) => {
     title: module?.title || '',
     titleBn: module?.titleBn || '',
     description: module?.description || '',
-    isPublished: module?.isPublished || false,
+    isPublished: module ? !!module.isPublished : true, // new = live (a draft is hidden from students)
   });
 
   const handleSubmit = async (e) => {
@@ -428,7 +429,7 @@ const LessonModal = ({ moduleId, lesson, onClose, onSave }) => {
     textContent: lesson?.textContent || '',
     isFree: lesson?.isFree || false,
     isLocked: lesson?.isLocked ?? true,
-    isPublished: lesson?.isPublished || false,
+    isPublished: lesson ? !!lesson.isPublished : true,
   });
 
   const handleSubmit = async (e) => {

@@ -33,6 +33,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://magicviva.
  *   /login /register         accounts
  *   /b/<code>                what a printed QR opens
  *   /dashboard/**            the admin panel and a reader's own area
+ *   /courses /courses/<id>   the recorded courses, their checkout (25 Oct 2026)
  *   /about /contact          reachable again — a payment gateway's review looks
  *                            for a real address and a real phone number, and
  *                            both were redirecting to the homepage
@@ -41,7 +42,6 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://magicviva.
  *   /privacy-policy etc.     the policy pages, for the same gateway review
  */
 export const MARKETING_ONLY_ROUTES = [
-  '/courses',
   '/books',
   '/blog',
 ];

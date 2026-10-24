@@ -10,7 +10,7 @@ import {
   FiMenu, FiX, FiLogOut, FiChevronDown, FiArrowLeft,
   FiLayers, FiShoppingCart, FiDollarSign, FiPlus,
   FiBarChart2, FiChevronLeft, FiTag,
-  FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage, FiUsers, FiUserX,
+  FiBook, FiShoppingBag, FiGrid, FiShield, FiPackage, FiUsers, FiUserX, FiPlayCircle,
 } from 'react-icons/fi';
 
 /*
@@ -24,7 +24,7 @@ import {
  * other item on this sidebar is still decided by what the server granted.
  */
 const HIDDEN_GROUPS_BY_ROLE = {
-  manager: ['Course Management'],
+  manager: ['Course Management', 'Courses'],
 };
 
 const AdminSidebar = () => {
@@ -159,6 +159,22 @@ const AdminSidebar = () => {
           submenu: [
             { title: 'All Books', href: '/dashboard/admin/books', exact: true, need: ['content.write'] },
             { title: 'Add Book', href: '/dashboard/admin/books/create', need: ['content.write'] },
+          ],
+        },
+      ],
+    },
+    // Recorded courses (25 Oct 2026) — the simple section the shop uses now.
+    // The old Course Management group below stays hidden.
+    {
+      label: 'Courses',
+      items: [
+        {
+          title: 'কোর্স', icon: FiPlayCircle, need: ['content.write', 'training.manage'],
+          submenu: [
+            { title: 'All Courses', href: '/dashboard/admin/courses', exact: true, need: ['content.write'] },
+            { title: 'Add Course', href: '/dashboard/admin/courses/add', need: ['content.write'] },
+            { title: 'Course Orders', href: '/dashboard/admin/courses/orders', need: ['training.manage'] },
+            { title: 'Course View', href: '/dashboard/admin/courses/view', need: ['content.write'] },
           ],
         },
       ],

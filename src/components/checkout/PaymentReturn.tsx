@@ -37,6 +37,9 @@ export default function PaymentReturn() {
   const outcome = normalise(params.get("status"));
   const orderId = params.get("orderId");
   const ref = params.get("ref");
+  // A recorded course paid through the gateway (25 Oct 2026): the way on is
+  // the student's course list, not a book order.
+  const isCourse = params.get("kind") === "course";
 
   // Signed in → the order page on the dashboard. Paid as a guest → the phone
   // tracker on the home page. Read after mount: the token lives in localStorage.
@@ -108,7 +111,14 @@ export default function PaymentReturn() {
             {/* A settled order is worth linking straight at; a failed one is not,
                 so the primary action there is to try again rather than to go and
                 stare at an unpaid order. */}
-            {outcome === "success" && orderId ? (
+            {isCourse ? (
+              <Link
+                href={outcome === "success" ? "/dashboard/user/courses" : "/courses"}
+                className={cn(buttonVariants({ variant: "primary" }), bn)}
+              >
+                {outcome === "success" ? (isBengali ? "আমার কোর্স" : "My courses") : L.tryAgain}
+              </Link>
+            ) : outcome === "success" && orderId ? (
               <Link
                 href={isGuest ? "/#track-order" : `/dashboard/user/orders/${orderId}`}
                 className={cn(buttonVariants({ variant: "primary" }), bn)}
@@ -120,9 +130,11 @@ export default function PaymentReturn() {
                 {L.tryAgain}
               </Link>
             )}
-            <Link href="/books" className={cn(buttonVariants({ variant: "outline" }), bn)}>
-              <LuArrowLeft /> {L.backToBooks}
-            </Link>
+            {!isCourse && (
+              <Link href="/books" className={cn(buttonVariants({ variant: "outline" }), bn)}>
+                <LuArrowLeft /> {L.backToBooks}
+              </Link>
+            )}
           </div>
         </div>
       </Container>

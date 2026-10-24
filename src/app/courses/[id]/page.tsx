@@ -1,7 +1,6 @@
-import CourseDetailView from "@/components/courses/CourseDetailView";
+import RecordedCourseDetail from "@/components/recorded/RecordedCourseDetail";
 
-// Detail reads its id via useParams inside the client view, so no Suspense
-// boundary is required here.
+// Reads its id via useParams inside the client view.
 export default function CourseDetailPage() {
-  return <CourseDetailView />;
+  return <RecordedCourseDetail />;
 }
