@@ -108,8 +108,8 @@ type MissingStep = "address" | "college" | "session" | "payment" | "consent";
  * value is what every order screen shows.
  */
 const SESSIONS = [
-  { value: "24-25", bn: "24-25 (1st year)", en: "24-25 (1st year)" },
-  { value: "25-26", bn: "25-26 (2nd year)", en: "25-26 (2nd year)" },
+  { value: "25-26", bn: "25-26 (1st year)", en: "25-26 (1st year)" },
+  { value: "24-25", bn: "24-25 (2nd year)", en: "24-25 (2nd year)" },
 ];
 
 // A Bangladeshi mobile, however it is typed — the same test the server applies
