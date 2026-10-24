@@ -231,7 +231,8 @@ export default function CourseCheckout() {
   };
 
   let body: React.ReactNode;
-  if (done === "active" || access.hasAccess) {
+  // Staff can open any course, but have not bought it — they get the staff note below.
+  if (done === "active" || (access.hasAccess && !access.staff)) {
     body = (
       <Result icon={<LuCircleCheck />} tone="ok" title={done ? L.yoursNow : L.yoursAlready}>
         <Link href={learnHref(course._id)} className={btn}><LuPlay /> {L.startWatching}</Link>
