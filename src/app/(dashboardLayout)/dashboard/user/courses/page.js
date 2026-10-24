@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
 import {
     FiBook, FiClock, FiPlay, FiSearch,
@@ -22,6 +23,9 @@ const courseDest = (enr) => {
 };
 
 export default function UserCoursesPage() {
+    // The course name in the site's language (title = English, titleBn = Bengali).
+    const { isBengali } = useLanguage();
+    const courseName = (c) => (isBengali ? c?.titleBn || c?.title : c?.title || c?.titleBn) || 'Course';
     const [searchTerm, setSearchTerm] = useState('');
     const [enrolledCourses, setEnrolledCourses] = useState([]);
     const [availableCourses, setAvailableCourses] = useState([]);
@@ -97,7 +101,7 @@ export default function UserCoursesPage() {
 
     const filteredEnrolled = enrolledCourses.filter(e => {
         const course = e.courseId || {};
-        const matchesSearch = course.title?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = courseName(course).toLowerCase().includes(searchTerm.toLowerCase());
         if (filter === 'active') return e.status === 'active' && matchesSearch;
         if (filter === 'pending') return e.status === 'pending' && matchesSearch;
         if (filter === 'completed') return (e.status === 'completed' || (courseProgress[course._id]?.overallPercent === 100)) && matchesSearch;
@@ -253,7 +257,7 @@ export default function UserCoursesPage() {
                                     {/* Thumbnail with overlay */}
                                     <div className="h-36 relative overflow-hidden">
                                         {course.image ? (
-                                            <img src={course.image} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                            <img src={course.image} alt={courseName(course)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                         ) : (
                                             <div className="w-full h-full bg-gradient-to-br from-brand to-brand-hover flex items-center justify-center">
                                                 <FiBook className="text-white/70" size={30} />
@@ -280,7 +284,7 @@ export default function UserCoursesPage() {
 
                                         <div className="absolute bottom-0 left-0 right-0 p-4">
                                             <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 drop-shadow-md">
-                                                {course.title || 'Course'}
+                                                {courseName(course)}
                                             </h3>
                                         </div>
                                     </div>

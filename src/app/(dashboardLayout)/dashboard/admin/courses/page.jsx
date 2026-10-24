@@ -111,7 +111,8 @@ export default function AllCoursesPage() {
                             {c.image ? <img src={c.image} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-dash-faint"><FiPlayCircle size={20} /></div>}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-semibold text-dash-ink2">{c.title}</p>
+                            <p className="font-semibold text-dash-ink2">{c.titleBn || c.title}</p>
+                            {c.titleBn && c.title !== c.titleBn && <p className="text-xs text-dash-mute2">{c.title}</p>}
                             <p className="text-xs text-dash-mute2">{new Date(c.createdAt).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' })}</p>
                           </div>
                         </div>

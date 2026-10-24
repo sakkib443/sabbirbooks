@@ -6,6 +6,10 @@
  * its modules and classes are added below it (ModuleLessonManager): each class
  * is a YouTube link (unlisted is best), and one can be marked free as a
  * preview. The old long form (CourseForm.jsx) is untouched for the old pages.
+ *
+ * Two languages, as the site's EN/বাং switch shows them: Bengali goes in
+ * titleBn / detailsBn / textBn, English in title / details / text. Either may
+ * be left empty — the site then shows the other one.
  */
 /* eslint-disable @next/next/no-img-element */
 import React, { useEffect, useRef, useState } from 'react';
@@ -17,17 +21,36 @@ import { useToast } from '@/components/shared/Toast';
 import ModuleLessonManager from '@/components/admin/course/ModuleLessonManager';
 import { btnGhost, btnPrimary, call, input, priceOf, taka, token } from './courseAdmin';
 
-const EMPTY = { title: '', details: '', fee: '', offerPrice: '', image: '', status: 'published', includes: '' };
+const EMPTY = {
+  titleBn: '', title: '', detailsBn: '', details: '', fee: '', offerPrice: '', image: '', status: 'published',
+  includesBn: '', includes: '', icons: [],
+};
 
-const toForm = (c) => ({
-  title: c.title || '',
-  details: c.details || '',
-  fee: c.fee ? String(c.fee) : '',
-  offerPrice: c.offerPrice ? String(c.offerPrice) : '',
-  image: c.image || '',
-  status: c.status || 'published',
-  includes: (c.courseIncludes || []).map((x) => x.text).filter(Boolean).join('\n'),
-});
+const lines = (t) => t.split('\n').map((x) => x.trim());
+// A course saved before the two languages has one title, in either language;
+// a course saved with no English has its Bengali copied into `title`.
+const hasBangla = (t) => /[\u0980-\u09FF]/.test(t || '');
+const split = (en, bn) =>
+  bn ? { bn, en: en && en !== bn ? en : '' } : hasBangla(en) ? { bn: en, en: '' } : { bn: '', en: en || '' };
+
+const toForm = (c) => {
+  const t = split(c.title, c.titleBn);
+  const d = split(c.details, c.detailsBn);
+  return {
+    titleBn: t.bn,
+    title: t.en,
+    detailsBn: d.bn,
+    details: d.en,
+    fee: c.fee ? String(c.fee) : '',
+    offerPrice: c.offerPrice ? String(c.offerPrice) : '',
+    image: c.image || '',
+    status: c.status || 'published',
+    // trimEnd, not trim: line i of each list must stay line i.
+    includesBn: (c.courseIncludes || []).map((x) => x.textBn || '').join('\n').trimEnd(),
+    includes: (c.courseIncludes || []).map((x) => x.text || '').join('\n').trimEnd(),
+    icons: (c.courseIncludes || []).map((x) => x.icon || 'check'),
+  };
+};
 
 export default function CourseEditor({ courseId }) {
   const isEdit = !!courseId;
@@ -74,19 +97,30 @@ export default function CourseEditor({ courseId }) {
 
   const save = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return showToast('error', 'কোর্সের নাম লিখুন');
+    if (!form.titleBn.trim() && !form.title.trim()) return showToast('error', 'কোর্সের নাম লিখুন (বাংলা বা English)');
     const fee = String(form.fee).replace(/[^\d]/g, '');
     const offer = String(form.offerPrice).replace(/[^\d]/g, '');
     if (offer && fee && Number(offer) >= Number(fee)) return showToast('error', 'অফার দাম আসল দামের চেয়ে কম হতে হবে');
+    // Line i of the Bengali list goes with line i of the English one.
+    const bnLines = lines(form.includesBn);
+    const enLines = lines(form.includes);
+    const courseIncludes = Array.from({ length: Math.max(bnLines.length, enLines.length) }, (_, i) => ({
+      icon: form.icons[i] || 'check',
+      text: enLines[i] || '',
+      textBn: bnLines[i] || '',
+    })).filter((x) => x.text || x.textBn);
     const body = {
-      title: form.title.trim(),
+      // `title` is required on the server: English, or the Bengali when there is none.
+      title: form.title.trim() || form.titleBn.trim(),
+      titleBn: form.titleBn.trim(),
       details: form.details.trim(),
+      detailsBn: form.detailsBn.trim(),
       fee: fee || '0',
       offerPrice: offer || '',
       image: form.image.trim(),
       status: form.status,
       type: 'Recorded',
-      courseIncludes: form.includes.split('\n').map((t) => t.trim()).filter(Boolean).map((text) => ({ icon: 'check', text })),
+      courseIncludes,
     };
     setSaving(true);
     try {
@@ -129,12 +163,25 @@ export default function CourseEditor({ courseId }) {
 
       <form onSubmit={save} className="grid gap-6 rounded-xl border border-dash-line bg-dash-card p-5 lg:grid-cols-[1fr_300px]">
         <div className="space-y-4">
-          <Field label="কোর্সের নাম *">
-            <input value={form.title} onChange={set('title')} className={input} placeholder="যেমন: অ্যানাটমি ভাইভা — রেকর্ডেড কোর্স" />
-          </Field>
-          <Field label="কোর্স সম্পর্কে" hint="কোর্সের পাতায় নামের নিচে দেখাবে">
-            <textarea value={form.details} onChange={set('details')} rows={4} className={input} />
-          </Field>
+          <p className="rounded-lg bg-dash-soft px-3 py-2 text-xs text-dash-mute2">
+            বাংলা আর English দুটোই লিখুন — সাইটের ভাষা বদলালে সেই ভাষারটা দেখাবে। একটা খালি থাকলে অন্যটা দেখাবে।
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="কোর্সের নাম (বাংলা) *">
+              <input value={form.titleBn} onChange={set('titleBn')} className={input} placeholder="যেমন: অ্যানাটমি ভাইভা — রেকর্ডেড কোর্স" />
+            </Field>
+            <Field label="Course name (English)">
+              <input value={form.title} onChange={set('title')} className={input} placeholder="e.g. Anatomy Viva — Recorded Course" />
+            </Field>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="কোর্স সম্পর্কে (বাংলা)" hint="কোর্সের পাতায় নামের নিচে দেখাবে">
+              <textarea value={form.detailsBn} onChange={set('detailsBn')} rows={4} className={input} />
+            </Field>
+            <Field label="About the course (English)">
+              <textarea value={form.details} onChange={set('details')} rows={4} className={input} />
+            </Field>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="দাম (৳)" hint="০ বা খালি = ফ্রি কোর্স">
               <input value={form.fee} onChange={set('fee')} inputMode="numeric" className={input} placeholder="999" />
@@ -144,9 +191,14 @@ export default function CourseEditor({ courseId }) {
             </Field>
           </div>
           <p className="text-sm text-dash-mute2">ক্রেতা দেবে: <b className="text-dash-ink2">{price > 0 ? taka(price) : 'ফ্রি'}</b></p>
-          <Field label="কোর্সে যা থাকছে" hint="প্রতি লাইনে একটা — যেমন: ২০টি রেকর্ড করা ক্লাস">
-            <textarea value={form.includes} onChange={set('includes')} rows={3} className={input} />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="কোর্সে যা থাকছে (বাংলা)" hint="প্রতি লাইনে একটা — যেমন: ২০টি রেকর্ড করা ক্লাস">
+              <textarea value={form.includesBn} onChange={set('includesBn')} rows={3} className={input} />
+            </Field>
+            <Field label="What's included (English)" hint="Same order, one per line — e.g. 20 recorded classes">
+              <textarea value={form.includes} onChange={set('includes')} rows={3} className={input} />
+            </Field>
+          </div>
         </div>
 
         <div className="space-y-4">

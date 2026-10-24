@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
 import {
     FiBook, FiAward, FiClock, FiArrowUpRight,
@@ -23,6 +24,9 @@ const courseDest = (enr) => {
 };
 
 export default function UserDashboard() {
+    // The course name in the site's language (title = English, titleBn = Bengali).
+    const { isBengali } = useLanguage();
+    const courseName = (c) => (isBengali ? c?.titleBn || c?.title : c?.title || c?.titleBn) || 'Course';
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -244,7 +248,7 @@ export default function UserDashboard() {
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <h4 className="text-[15px] font-semibold text-dash-ink2 truncate">{course.title || 'Course'}</h4>
+                                                    <h4 className="text-[15px] font-semibold text-dash-ink2 truncate">{courseName(course)}</h4>
                                                     <span className="hidden sm:inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-dash-mute bg-dash-soft2 px-2 py-0.5 rounded-md flex-shrink-0">
                                                         {typeLabel}
                                                     </span>
