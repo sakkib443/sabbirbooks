@@ -57,7 +57,7 @@ export default function CourseOrdersPage() {
     const s = q.trim().toLowerCase();
     if (!rows || !s) return rows;
     return rows.filter((r) =>
-      [nameOf(r.studentId), r.studentId?.email, r.studentId?.phoneNumber, r.courseId?.title, r.payment?.transactionId, r.payment?.gatewayData?.senderNumber]
+      [nameOf(r.studentId), r.studentId?.email, r.studentId?.phoneNumber, r.courseId?.title, r.courseId?.titleBn, r.payment?.transactionId, r.payment?.gatewayData?.senderNumber]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(s))
     );
@@ -79,7 +79,7 @@ export default function CourseOrdersPage() {
   const reject = async (r) => {
     const ok = await confirm({
       title: 'অর্ডারটা বাতিল করবেন?',
-      message: `${nameOf(r.studentId)} — ${r.courseId?.title || ''}. বাতিল করলে কোর্সটা খুলবে না।`,
+      message: `${nameOf(r.studentId)} — ${r.courseId?.titleBn || r.courseId?.title || ''}. বাতিল করলে কোর্সটা খুলবে না।`,
       confirmText: 'বাতিল করুন',
       cancelText: 'না',
     });
@@ -162,7 +162,7 @@ export default function CourseOrdersPage() {
                         {s?.email && <p className="text-xs text-dash-mute2">{s.email}</p>}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-dash-ink3">{r.courseId?.title || '—'}</p>
+                        <p className="font-medium text-dash-ink3">{r.courseId?.titleBn || r.courseId?.title || '—'}</p>
                         <p className="text-xs text-dash-mute2">{when(r.createdAt || r.enrolledAt)}</p>
                       </td>
                       <td className="px-4 py-3">

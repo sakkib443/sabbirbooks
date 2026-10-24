@@ -9,20 +9,24 @@ export interface RecordedCourse {
   _id: string;
   id?: number;
   slug?: string;
+  /** English; `titleBn` is the Bengali (as on modules and lessons). */
   title: string;
+  titleBn?: string;
   image?: string;
   details?: string;
+  detailsBn?: string;
   type?: string;
   status?: string;
   fee?: string | number;
   offerPrice?: string | number;
   lectures?: number;
-  courseIncludes?: { icon?: string; text?: string }[];
+  courseIncludes?: { icon?: string; text?: string; textBn?: string }[];
 }
 
 export interface RecordedLesson {
   _id: string;
   title: string;
+  titleBn?: string;
   type?: string;
   videoUrl?: string;
   videoDuration?: number;
@@ -35,6 +39,7 @@ export interface RecordedLesson {
 export interface RecordedModule {
   _id: string;
   title: string;
+  titleBn?: string;
   order?: number;
   lessons: RecordedLesson[];
 }
@@ -65,7 +70,9 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers: { "Content-Type": "application/json", ...auth(), ...(init.headers || {}) },
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok || json.success === false) throw new Error(json.message || "কিছু একটা ভুল হয়েছে, আবার চেষ্টা করুন");
+  // The server's own message, or none — each page words its fallback in the
+  // visitor's language.
+  if (!res.ok || json.success === false) throw new Error(json.message || "");
   return json.data as T;
 }
 
@@ -89,6 +96,14 @@ export const courseListPrice = (c: Pick<RecordedCourse, "fee" | "offerPrice">) =
 export const taka = (n: number) => `৳${Math.round(n).toLocaleString("en-IN")}`;
 
 export const isLoggedIn = () => !!getToken();
+
+/**
+ * The course's own words in the visitor's language (the site's EN/বাং switch),
+ * falling back to the other language when only one was written.
+ */
+export const pick = (bn: boolean, en?: string, bnText?: string) => (bn ? bnText || en : en || bnText) || "";
+export const titleOf = (bn: boolean, x: { title?: string; titleBn?: string }) => pick(bn, x.title, x.titleBn);
+
 
 /** The published recorded courses, newest first. */
 export const listRecordedCourses = () =>
@@ -130,13 +145,13 @@ export const gatewayReady = () =>
     .catch(() => false);
 
 /** The shop's Send Money numbers (Settings → Payment). */
-export async function walletNumbers(): Promise<{ id: "bkash" | "nagad" | "rocket"; label: string; number: string }[]> {
+export async function walletNumbers(): Promise<{ id: "bkash" | "nagad" | "rocket"; label: string; labelEn: string; number: string }[]> {
   try {
     const s = await call<Record<string, string>>("/settings");
     return [
-      { id: "bkash" as const, label: "বিকাশ", number: s?.paymentBkashNumber || "" },
-      { id: "nagad" as const, label: "নগদ", number: s?.paymentNagadNumber || "" },
-      { id: "rocket" as const, label: "রকেট", number: s?.paymentRocketNumber || "" },
+      { id: "bkash" as const, label: "বিকাশ", labelEn: "bKash", number: s?.paymentBkashNumber || "" },
+      { id: "nagad" as const, label: "নগদ", labelEn: "Nagad", number: s?.paymentNagadNumber || "" },
+      { id: "rocket" as const, label: "রকেট", labelEn: "Rocket", number: s?.paymentRocketNumber || "" },
     ].filter((w) => w.number);
   } catch {
     return [];
@@ -152,7 +167,7 @@ export async function startGateway(course: RecordedCourse): Promise<string> {
     method: "POST",
     body: JSON.stringify({ courseId: course._id, courseName: course.title }),
   });
-  if (!d?.GatewayPageURL) throw new Error("পেমেন্ট পেজ খোলা যায়নি, একটু পরে আবার চেষ্টা করুন");
+  if (!d?.GatewayPageURL) throw new Error("");
   return d.GatewayPageURL;
 }
 

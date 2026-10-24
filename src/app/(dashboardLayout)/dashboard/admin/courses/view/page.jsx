@@ -83,7 +83,7 @@ function CourseView() {
                 </div>
                 <div className="space-y-3 p-4">
                   <div>
-                    <p className="font-semibold leading-snug text-dash-ink2">{c.title}</p>
+                    <p className="font-semibold leading-snug text-dash-ink2">{c.titleBn || c.title}</p>
                     <p className="text-sm text-dash-mute2">{price > 0 ? taka(price) : 'ফ্রি'}</p>
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-dash-mute">

@@ -10,6 +10,53 @@ import {
     FiBook, FiClock, FiLayers, FiList, FiMaximize, FiMinimize,
 } from 'react-icons/fi';
 import { MdOutlineQuiz, MdOutlineAssignment } from 'react-icons/md';
+import { useLanguage } from '@/context/LanguageContext';
+
+// The player follows the site's EN/বাং switch (25 Oct 2026): its own words,
+// and the course's — a course, module or lesson has `title` (English) and
+// `titleBn` (Bengali), and either falls back to the other.
+const LT = {
+    bn: {
+        loading: 'কোর্স লোড হচ্ছে…',
+        noLessons: 'কোনো ক্লাস নেই',
+        noLessonsSub: 'এই কোর্সে এখনো কোনো ক্লাস যোগ হয়নি।',
+        backToCourses: 'কোর্সে ফিরে যান',
+        back: 'ফিরে যান',
+        lessons: 'টি ক্লাস',
+        hide: 'তালিকা লুকান',
+        show: 'তালিকা দেখান',
+        noContent: 'কিছু লেখা নেই।',
+        lessonOf: (i, n) => `ক্লাস ${i} / ${n}`,
+        min: (m) => `${m} মি.`,
+        overview: 'বিবরণ',
+        materials: 'ফাইল',
+        about: 'এই ক্লাস সম্পর্কে',
+        noDescription: 'এই ক্লাসের কোনো বিবরণ নেই।',
+        noMaterials: 'এই ক্লাসে কোনো ফাইল নেই।',
+        content: 'কোর্সের ক্লাসগুলো',
+        video: 'ভিডিও',
+    },
+    en: {
+        loading: 'Loading course...',
+        noLessons: 'No Lessons Available',
+        noLessonsSub: "This course doesn't have any lessons yet.",
+        backToCourses: 'Back to Courses',
+        back: 'Back',
+        lessons: ' lessons',
+        hide: 'Hide sidebar',
+        show: 'Show sidebar',
+        noContent: 'No content available.',
+        lessonOf: (i, n) => `Lesson ${i} of ${n}`,
+        min: (m) => `${m} min`,
+        overview: 'Overview',
+        materials: 'Materials',
+        about: 'About this lesson',
+        noDescription: 'No description available for this lesson.',
+        noMaterials: 'No materials available for this lesson.',
+        content: 'Course Content',
+        video: 'Video',
+    },
+};
 
 const API = ((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/api\/?$/i, '')) + '/api';
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
@@ -32,6 +79,9 @@ function getYouTubeEmbedUrl(url) {
 export default function CoursePlayerPage() {
     const { courseId } = useParams();
     const searchParams = useSearchParams();
+    const { isBengali: bn } = useLanguage();
+    const L = bn ? LT.bn : LT.en;
+    const tt = (x) => (bn ? x?.titleBn || x?.title : x?.title || x?.titleBn) || '';
     const router = useRouter();
     const videoRef = useRef(null);
     const progressTimer = useRef(null);
@@ -85,7 +135,7 @@ export default function CoursePlayerPage() {
                     // Signed in, so the enrolled student gets the videos (lessonAccess on the server).
                     const res = await fetch(`${API}/lessons/module/${mod._id}`, { headers: { Authorization: `Bearer ${token}` } });
                     const data = await res.json();
-                    return (data.data || []).map(l => ({ ...l, moduleTitle: mod.title, moduleId: mod._id }));
+                    return (data.data || []).map(l => ({ ...l, moduleTitle: mod.title, moduleTitleBn: mod.titleBn, moduleId: mod._id }));
                 });
                 const lessonResults = await Promise.all(lessonPromises);
                 const flatLessons = lessonResults.flat();
@@ -196,7 +246,7 @@ export default function CoursePlayerPage() {
                         <div className="absolute inset-0 border-[3px] border-slate-800 rounded-full" />
                         <div className="absolute inset-0 border-[3px] border-transparent border-t-brand rounded-full animate-spin" />
                     </div>
-                    <p className="text-dash-mute text-sm font-medium">Loading course...</p>
+                    <p className="text-dash-mute text-sm font-medium">{L.loading}</p>
                 </div>
             </div>
         );
@@ -206,10 +256,10 @@ export default function CoursePlayerPage() {
         return (
             <div className="min-h-screen bg-[#0f0f0f] flex flex-col items-center justify-center text-white">
                 <FiBook size={48} className="text-dash-ink3 mb-4" />
-                <h2 className="text-xl font-bold mb-2">No Lessons Available</h2>
-                <p className="text-dash-mute mb-6">This course doesn&apos;t have any lessons yet.</p>
+                <h2 className="text-xl font-bold mb-2">{L.noLessons}</h2>
+                <p className="text-dash-mute mb-6">{L.noLessonsSub}</p>
                 <Link href="/dashboard/user/courses" className="px-5 py-2.5 bg-brand-strong rounded-xl text-sm font-bold hover:bg-brand-strong transition">
-                    Back to Courses
+                    {L.backToCourses}
                 </Link>
             </div>
         );
@@ -231,14 +281,14 @@ export default function CoursePlayerPage() {
                     className="flex items-center gap-2 text-dash-mute2 hover:text-white transition text-sm font-medium"
                 >
                     <FiArrowLeft size={18} />
-                    <span className="hidden sm:inline">Back</span>
+                    <span className="hidden sm:inline">{L.back}</span>
                 </Link>
 
                 <div className="w-px h-6 bg-[#333]" />
 
                 <div className="flex-1 min-w-0 flex items-center gap-4">
                     <h1 className="text-white font-semibold text-sm truncate max-w-[300px] lg:max-w-[500px]">
-                        {course.title}
+                        {tt(course)}
                     </h1>
                 </div>
 
@@ -256,7 +306,7 @@ export default function CoursePlayerPage() {
                         </span>
                     </div>
                     <span className="text-[11px] text-dash-mute">
-                        {completedCount}/{allLessons.length} lessons
+                        {completedCount}/{allLessons.length}{L.lessons}
                     </span>
                 </div>
 
@@ -264,7 +314,7 @@ export default function CoursePlayerPage() {
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
                     className="w-9 h-9 rounded-lg flex items-center justify-center text-dash-mute2 hover:text-white hover:bg-[#282828] transition"
-                    title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+                    title={sidebarOpen ? L.hide : L.show}
                 >
                     <FiList size={18} />
                 </button>
@@ -281,7 +331,7 @@ export default function CoursePlayerPage() {
                                 <iframe
                                     key={currentLesson._id}
                                     src={youtubeUrl}
-                                    title={currentLesson.title}
+                                    title={tt(currentLesson)}
                                     className="w-full h-full"
                                     allowFullScreen
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -306,7 +356,7 @@ export default function CoursePlayerPage() {
                             <div className="bg-[#181818] p-8 lg:p-12 min-h-[40vh]">
                                 <div className="max-w-3xl mx-auto prose prose-invert">
                                     <div className="text-dash-faint text-base leading-relaxed whitespace-pre-wrap">
-                                        {currentLesson.textContent || 'No content available.'}
+                                        {currentLesson.textContent || L.noContent}
                                     </div>
                                 </div>
                             </div>
@@ -315,7 +365,7 @@ export default function CoursePlayerPage() {
                                 <div className="w-20 h-20 bg-[#282828] rounded-2xl flex items-center justify-center mb-4">
                                     <FiFileText className="text-dash-mute" size={28} />
                                 </div>
-                                <h3 className="text-white text-lg font-bold mb-1">{currentLesson?.title}</h3>
+                                <h3 className="text-white text-lg font-bold mb-1">{tt(currentLesson)}</h3>
                                 <p className="text-dash-mute text-sm">{currentLesson?.type === 'quiz' ? 'Quiz' : 'Assignment'} coming soon</p>
                             </div>
                         )}
@@ -328,9 +378,9 @@ export default function CoursePlayerPage() {
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
                                     <p className="text-brand text-xs font-semibold uppercase tracking-wider mb-1">
-                                        {currentLesson?.moduleTitle}
+                                        {bn ? currentLesson?.moduleTitleBn || currentLesson?.moduleTitle : currentLesson?.moduleTitle}
                                     </p>
-                                    <h2 className="text-white text-xl font-bold">{currentLesson?.title}</h2>
+                                    <h2 className="text-white text-xl font-bold">{tt(currentLesson)}</h2>
                                     {currentLesson?.description && (
                                         <p className="text-dash-mute2 text-sm mt-2 leading-relaxed max-w-2xl">
                                             {currentLesson.description}
@@ -358,11 +408,11 @@ export default function CoursePlayerPage() {
                             {/* Lesson Counter */}
                             <div className="mt-3 flex items-center gap-4 text-xs text-dash-mute">
                                 <span className="flex items-center gap-1.5">
-                                    <FiPlay size={11} /> Lesson {currentIndex + 1} of {allLessons.length}
+                                    <FiPlay size={11} /> {L.lessonOf(currentIndex + 1, allLessons.length)}
                                 </span>
                                 {currentLesson?.videoDuration && (
                                     <span className="flex items-center gap-1.5">
-                                        <FiClock size={11} /> {Math.round(currentLesson.videoDuration / 60)} min
+                                        <FiClock size={11} /> {L.min(Math.round(currentLesson.videoDuration / 60))}
                                     </span>
                                 )}
                             </div>
@@ -371,16 +421,16 @@ export default function CoursePlayerPage() {
                         {/* Tabs: Overview / Materials */}
                         <div className="px-5 lg:px-8 border-b border-[#1e1e1e]">
                             <div className="flex gap-0">
-                                {['Overview', 'Materials'].map(tab => (
+                                {[['overview', L.overview], ['materials', L.materials]].map(([key, label]) => (
                                     <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab.toLowerCase())}
-                                        className={`px-4 py-3 text-sm font-medium border-b-2 transition ${activeTab === tab.toLowerCase()
+                                        key={key}
+                                        onClick={() => setActiveTab(key)}
+                                        className={`px-4 py-3 text-sm font-medium border-b-2 transition ${activeTab === key
                                             ? 'text-brand-strong border-brand'
                                             : 'text-dash-mute border-transparent hover:text-dash-faint'
                                             }`}
                                     >
-                                        {tab}
+                                        {label}
                                     </button>
                                 ))}
                             </div>
@@ -390,9 +440,9 @@ export default function CoursePlayerPage() {
                         <div className="px-5 lg:px-8 py-5">
                             {activeTab === 'overview' && (
                                 <div className="max-w-3xl">
-                                    <h3 className="text-white font-semibold mb-3">About this lesson</h3>
+                                    <h3 className="text-white font-semibold mb-3">{L.about}</h3>
                                     <p className="text-dash-mute2 text-sm leading-relaxed">
-                                        {currentLesson?.description || 'No description available for this lesson.'}
+                                        {currentLesson?.description || L.noDescription}
                                     </p>
                                 </div>
                             )}
@@ -420,7 +470,7 @@ export default function CoursePlayerPage() {
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-dash-mute text-sm">No materials available for this lesson.</p>
+                                        <p className="text-dash-mute text-sm">{L.noMaterials}</p>
                                     )}
                                 </div>
                             )}
@@ -434,7 +484,7 @@ export default function CoursePlayerPage() {
                     <div className="h-14 px-4 flex items-center justify-between border-b border-[#282828] flex-shrink-0">
                         <div className="flex items-center gap-2">
                             <FiBook size={15} className="text-brand" />
-                            <h3 className="text-white font-semibold text-sm">Course Content</h3>
+                            <h3 className="text-white font-semibold text-sm">{L.content}</h3>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-[11px] text-dash-mute font-medium">
@@ -468,11 +518,11 @@ export default function CoursePlayerPage() {
                                                     {String(modIdx + 1).padStart(2, '0')}
                                                 </span>
                                                 <p className="text-[13px] text-slate-200 font-semibold truncate">
-                                                    {mod.title?.replace(/Module \d+:\s*/, '')}
+                                                    {tt(mod).replace(/Module \d+:\s*/, '')}
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-2 mt-1 ml-7">
-                                                <span className="text-[11px] text-dash-mute">{modLessons.length} lessons</span>
+                                                <span className="text-[11px] text-dash-mute">{modLessons.length}{L.lessons}</span>
                                                 {modCompleted > 0 && (
                                                     <>
                                                         <span className="text-[11px] text-dash-ink4">·</span>
@@ -520,12 +570,12 @@ export default function CoursePlayerPage() {
                                                         {/* Lesson Info */}
                                                         <div className="flex-1 min-w-0">
                                                             <p className={`text-[13px] truncate ${isActive ? 'text-white font-semibold' : isCompleted ? 'text-dash-mute' : 'text-dash-faint'}`}>
-                                                                {lesson.title}
+                                                                {tt(lesson)}
                                                             </p>
                                                             <div className="flex items-center gap-2 mt-0.5">
                                                                 <FiVideo size={10} className="text-dash-ink4" />
                                                                 <span className="text-[11px] text-dash-ink4">
-                                                                    {lesson.videoDuration ? `${Math.round(lesson.videoDuration / 60)} min` : 'Video'}
+                                                                    {lesson.videoDuration ? L.min(Math.round(lesson.videoDuration / 60)) : L.video}
                                                                 </span>
                                                             </div>
                                                         </div>
