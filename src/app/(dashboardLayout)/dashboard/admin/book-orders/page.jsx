@@ -118,8 +118,8 @@ const deliveryShownOf = (o) =>
   o?.deliveryType === 'digital'
     ? o?.deliveryCharge || 0
     : Math.min(o?.total || 0, Math.max(o?.deliveryCharge || 0, COURIER_COST));
-// "24-25 · 1st yr" — the buyer's academic session (24 Oct 2026).
-const SESSION_YEAR = { '24-25': '1st yr', '25-26': '2nd yr' };
+// "25-26 · 1st yr" — the buyer's academic session (24 Oct 2026; 25-26 is 1st year, 24-25 is 2nd).
+const SESSION_YEAR = { '25-26': '1st yr', '24-25': '2nd yr' };
 const sessionLabel = (s) => (SESSION_YEAR[s] ? `${s} · ${SESSION_YEAR[s]}` : s);
 // An order's money without the delivery charge — what its books sold for.
 const bookMoneyOf = (o) => (o?.total || 0) - deliveryShownOf(o);

@@ -46,7 +46,7 @@ const ALIASES = {
   payment: ['payment', 'paymentmethod', 'পেমেন্ট'],
   status: ['status', 'স্ট্যাটাস', 'অবস্থা'],
   note: ['note', 'notes', 'remark', 'নোট'],
-  // 24-25 (1st year) / 25-26 (2nd year)
+  // 25-26 (1st year) / 24-25 (2nd year)
   session: ['session', 'year', 'সেশন'],
 };
 const normKey = (h) => String(h || '').toLowerCase().replace(/[\s_\-().:]/g, '');
@@ -301,8 +301,8 @@ export default function AddOrderModal({ api, headers, colleges = [], onClose, on
                   <label className={label}>Session</label>
                   <select className={input} value={form.session} onChange={set('session')}>
                     <option value="">—</option>
-                    <option value="24-25">24-25 (1st year)</option>
-                    <option value="25-26">25-26 (2nd year)</option>
+                    <option value="25-26">25-26 (1st year)</option>
+                    <option value="24-25">24-25 (2nd year)</option>
                   </select>
                 </div>
                 <div><label className={label}>নোট</label><input className={input} value={form.note} onChange={set('note')} /></div>

@@ -307,9 +307,9 @@ export default function CampusOrdersPage() {
                   <th className="w-10 px-3 py-2.5">#</th>
                   <th className="px-3 py-2.5">কলেজ / যার কাছে যাবে</th>
                   <th className="px-3 py-2.5 text-center">মোট বই</th>
-                  <th className="px-3 py-2.5 text-center">CR গিফট</th>
                   <th className="px-3 py-2.5 text-right">মোট টাকা</th>
                   <th className="px-3 py-2.5">পাঠাবো</th>
+                  <th className="px-3 py-2.5">অবস্থা</th>
                   <th className="w-24 px-3 py-2.5" />
                 </tr>
               </thead>
@@ -322,24 +322,20 @@ export default function CampusOrdersPage() {
                       <tr className={`align-top hover:bg-dash-soft/50 ${open ? 'bg-dash-soft/40' : ''}`}>
                         <td className="px-3 py-3 text-xs tabular-nums text-dash-mute2">{i + 1}</td>
                         <td className="px-3 py-3">
-                          <p className="flex flex-wrap items-center gap-2 font-semibold text-dash-ink2">
-                            {d.collegeName}
-                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
-                          </p>
-                          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-dash-ink3">
-                            {d.contact?.name}
-                            {d.contact?.phone && <a href={`tel:${d.contact.phone}`} className="font-mono text-[13px] font-semibold text-brand hover:underline">{d.contact.phone}</a>}
-                            <span className="text-dash-mute">{ROLE_LABEL[d.contact?.role] || ''}</span>
+                          <p className="font-semibold text-dash-ink2">{d.collegeName}</p>
+                          {/* Name (CR / student), then the number a size up. */}
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-dash-ink3">
+                            <span>{d.contact?.name}{ROLE_LABEL[d.contact?.role] && <span className="text-dash-mute"> ({ROLE_LABEL[d.contact.role]})</span>}</span>
+                            {d.contact?.phone && <a href={`tel:${d.contact.phone}`} className="font-mono text-[15px] font-semibold text-brand hover:underline">{d.contact.phone}</a>}
                           </p>
                         </td>
-                        <td className="px-3 py-3 text-center font-semibold tabular-nums text-dash-ink2">{d.quantity || 0}</td>
-                        <td className="px-3 py-3 text-center">
-                          {d.freeBooks > 0
-                            ? <span className="inline-flex items-center gap-1 font-bold text-emerald-600"><FiGift /> {d.freeBooks}</span>
-                            : <FiX className="inline text-red-400" aria-label="নেই" />}
-                        </td>
+                        {/* Every copy that goes, the CR's free ones too (the price leaves those out). */}
+                        <td className="px-3 py-3 text-center font-semibold tabular-nums text-dash-ink2">{(d.quantity || 0) + (d.freeBooks || 0)}</td>
                         <td className="px-3 py-3 text-right font-bold tabular-nums text-dash-ink2">{tk(d.total)}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-dash-ink3">{fmtDay(d.shipOn)}</td>
+                        <td className="px-3 py-3">
+                          <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.label}</span>
+                        </td>
                         <td className="px-3 py-3 text-right">
                           <button onClick={() => setOpenId(open ? null : d._id)}
                             className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${open ? 'border-brand bg-brand-soft text-brand' : 'border-dash-line text-dash-ink3 hover:border-brand hover:text-brand'}`}>
@@ -407,7 +403,7 @@ function DealCard({ d, today, busy, isOwner, onEdit, onPlace, onShip, onDelete, 
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[13px] sm:grid-cols-4">
-        <Info k="বই" v={`${d.quantity || 0}টা`} />
+        <Info k="অর্ডার হয়েছে" v={`${d.quantity || 0}টা`} sub={d.freeBooks ? `+ CR-এর ${d.freeBooks}টা = ${(d.quantity || 0) + d.freeBooks}টা` : ''} />
         <Info k="প্রতি বইয়ে ছাড়" v={d.extraDiscount ? tk(d.extraDiscount) : '—'} sub={`বই ${tk(perCopy)}`} />
         <Info k="CR-এর ফ্রি বই" v={d.freeBooks ? `${d.freeBooks}টা` : 'নেই'} sub={d.giftAbove ? `${d.giftAbove}টার বেশি হলে` : ''} />
         <Info k="ডেলিভারি" v={d.freeDelivery ? 'ফ্রি' : tk(d.deliveryCharge)} />
@@ -522,12 +518,13 @@ function DealForm({ editing, setEditing, colleges, books, saving, onSave, onClos
             <fieldset disabled={placed} className="contents">
               <div>
                 <label className={label}>বই</label>
-                <select className={input} value={form.book || book?._id || ''} onChange={set('book')}>
+                <select className={input} value={form.book || book?._id || ''} onChange={(e) => setF({ book: e.target.value, unitPrice: '' })}>
                   {books.map((b) => <option key={b._id} value={b._id}>{b.title}</option>)}
                 </select>
               </div>
               <div><label className={label}>কয়টা বই অর্ডার হয়েছে</label><input className={input} type="number" min="0" value={form.quantity} onChange={set('quantity')} placeholder="পরে লিখলেও হবে" /></div>
-              <div><label className={label}>বইয়ের দাম (৳)</label><input className={input} type="number" min="0" value={form.unitPrice} onChange={set('unitPrice')} placeholder={String(Number(book?.offerPrice ?? book?.price) || '')} /></div>
+              {/* The book's current price fills in by itself; change it here only if this deal's base price differs — the usual cut goes in the discount box. */}
+              <div><label className={label}>বইয়ের দাম (৳)</label><input className={input} type="number" min="0" value={form.unitPrice !== '' && form.unitPrice != null ? form.unitPrice : String(Number(book?.offerPrice ?? book?.price) || '')} onChange={set('unitPrice')} /></div>
               <div><label className={label}>প্রতি বইয়ে এক্সট্রা ছাড় (৳)</label><input className={input} type="number" min="0" value={form.extraDiscount} onChange={set('extraDiscount')} placeholder="0" /></div>
               <div><label className={label}>কয়টার বেশি হলে CR-এর ফ্রি বই</label><input className={input} type="number" min="0" value={form.giftAbove} onChange={set('giftAbove')} placeholder="নেই" /></div>
               <div><label className={label}>CR-এর ফ্রি বই (কয়টা)</label><input className={input} type="number" min="0" value={form.freeBooks} onChange={set('freeBooks')} placeholder="0" /></div>
