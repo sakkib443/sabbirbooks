@@ -16,7 +16,7 @@ const courseDest = (enr) => {
     const bId = typeof enr.batchId === 'object' ? enr.batchId?._id : enr.batchId;
     const type = (course.type || '').toLowerCase();
     if (enr.status === 'pending') return { pending: true };
-    if (type === 'recorded') return { href: `/learn/${course._id}`, label: 'Continue Learning', kind: 'recorded' };
+    if (type === 'recorded') return { href: `/dashboard/user/courses/${course._id}/learn`, label: 'Continue Learning', kind: 'recorded' };
     if (bId) return { href: `/dashboard/user/materials/${bId}`, label: 'Class Materials', kind: 'class' };
     return { href: `/dashboard/user/courses/${course._id}/details`, label: 'Course Details', kind: 'details' };
 };

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import UserSidebar from '@/components/user/UserSidebar';
 import NotificationBell from '@/components/shared/NotificationBell';
 import DashboardShell from '../_components/DashboardShell';
-import { FiUser, FiCreditCard, FiHelpCircle, FiBell, FiHome, FiBookOpen, FiShoppingBag } from 'react-icons/fi';
+import { FiUser, FiCreditCard, FiHelpCircle, FiBell, FiHome, FiBookOpen, FiShoppingBag, FiPlayCircle } from 'react-icons/fi';
 
 // A buyer's whole world on a phone: where they are, the book they bought,
 // where their parcel is, and their own details.
@@ -12,6 +12,7 @@ const USER_TABS = [
   { key: 'home', href: '/dashboard/user', label: 'হোম', icon: FiHome, exact: true },
   { key: 'book', href: '/dashboard/user/my-book', label: 'আমার বই', icon: FiBookOpen },
   { key: 'orders', href: '/dashboard/user/orders', label: 'অর্ডার', icon: FiShoppingBag },
+  { key: 'courses', href: '/dashboard/user/courses', label: 'কোর্স', icon: FiPlayCircle },
   { key: 'profile', href: '/dashboard/user/profile', label: 'প্রোফাইল', icon: FiUser },
 ];
 

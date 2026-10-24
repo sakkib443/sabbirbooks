@@ -1,12 +1,9 @@
-import { Suspense } from "react";
-import CoursesBrowser, { CoursesBrowserFallback } from "@/components/courses/CoursesBrowser";
+import RecordedCourseList from "@/components/recorded/RecordedCourseList";
 
-// The browser reads ?category= / ?search= via useSearchParams, so it must sit
-// inside a Suspense boundary to keep the route prerenderable (Next.js 16).
+export const metadata = { title: "কোর্স" };
+
+// The recorded courses (25 Oct 2026). The old catalogue browser is still in
+// components/courses/CoursesBrowser for when the wider site returns.
 export default function CoursesPage() {
-  return (
-    <Suspense fallback={<CoursesBrowserFallback />}>
-      <CoursesBrowser />
-    </Suspense>
-  );
+  return <RecordedCourseList />;
 }

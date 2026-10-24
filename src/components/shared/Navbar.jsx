@@ -83,12 +83,9 @@ const Navbar = () => {
   const menu = [
     { href: "/", label: t("navbar.home") },
     { href: "/order", label: language === "bn" ? "বই অর্ডার করুন" : "Order the book" },
-    ...(PUBLIC_PAGES_ENABLED
-      ? [
-          { href: "/courses", label: t("navbar.courses") },
-          { href: "/books", label: t("navbar.books") },
-        ]
-      : []),
+    // Recorded courses (25 Oct 2026) are on the menu again, in single-page mode too.
+    { href: "/courses", label: language === "bn" ? "কোর্স" : "Courses" },
+    ...(PUBLIC_PAGES_ENABLED ? [{ href: "/books", label: t("navbar.books") }] : []),
     { href: "/about", label: t("navbar.about") },
     { href: "/contact", label: t("navbar.contact") },
   ];

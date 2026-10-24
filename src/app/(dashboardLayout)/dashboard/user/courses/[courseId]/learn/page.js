@@ -70,7 +70,8 @@ export default function CoursePlayerPage() {
                 }
 
                 const [courseRes, modRes] = await Promise.all([
-                    fetch(`${API}/courses/${courseId}`),
+                    // With the token, so staff can check a draft course too (Course View).
+                    fetch(`${API}/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
                     fetch(`${API}/modules/course/${courseId}`),
                 ]);
                 const courseData = await courseRes.json();
@@ -81,7 +82,8 @@ export default function CoursePlayerPage() {
                 setModules(mods);
 
                 const lessonPromises = mods.map(async (mod) => {
-                    const res = await fetch(`${API}/lessons/module/${mod._id}`);
+                    // Signed in, so the enrolled student gets the videos (lessonAccess on the server).
+                    const res = await fetch(`${API}/lessons/module/${mod._id}`, { headers: { Authorization: `Bearer ${token}` } });
                     const data = await res.json();
                     return (data.data || []).map(l => ({ ...l, moduleTitle: mod.title, moduleId: mod._id }));
                 });
