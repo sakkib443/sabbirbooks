@@ -47,6 +47,8 @@ export interface RecordedModule {
 export interface CourseAccess {
   hasAccess: boolean;
   pending?: boolean;
+  /** Staff can open everything — but see the public page as a buyer does. */
+  staff?: boolean;
 }
 
 export const getToken = (): string => {
