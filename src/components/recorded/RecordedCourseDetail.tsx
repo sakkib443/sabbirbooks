@@ -5,6 +5,10 @@
  * it (the free preview plays here), and one button that changes with the
  * visitor — buy, waiting for approval, or watch.
  *
+ * Staff see this page exactly as a buyer does — price, buy button, locked
+ * classes — so a paid course never looks free from the admin's own account
+ * (the shop, 25 Oct 2026). They watch everything from Course View instead.
+ *
  * Follows the site's EN/বাং switch: the page's words and the course's own
  * (title / titleBn, details / detailsBn, text / textBn).
  */
@@ -47,6 +51,8 @@ const T = {
     soon: "ক্লাসগুলো শীঘ্রই যোগ হবে।",
     min: (m: number) => `${m} মি.`,
     play: "দেখুন",
+    staffNote: "আপনি স্টাফ হিসেবে লগইন করা — ক্রেতা এভাবেই দেখবে। পুরো কোর্স দেখতে:",
+    courseView: "Course View",
   },
   en: {
     notFound: "Course not found.",
@@ -66,6 +72,8 @@ const T = {
     soon: "The classes will be added soon.",
     min: (m: number) => `${m} min`,
     play: "Watch",
+    staffNote: "You're signed in as staff — this is what a buyer sees. To watch the whole course:",
+    courseView: "Course View",
   },
 };
 
@@ -119,6 +127,9 @@ export default function RecordedCourseDetail() {
     );
   }
 
+  // A buyer's view for staff too: only a real enrollment counts as owning it.
+  const owned = access.hasAccess && !access.staff;
+  const canPlayLesson = (l: RecordedLesson) => !l.locked && !!l.videoUrl && (owned || !!l.isFree);
   const title = titleOf(bn, course);
   const details = pick(bn, course.details, course.detailsBn);
   const price = coursePrice(course);
@@ -127,14 +138,14 @@ export default function RecordedCourseDetail() {
   // videoDuration is in seconds.
   const minutes = Math.round(modules.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (l.videoDuration || 0), 0), 0) / 60);
   const checkoutHref = `/courses/${course.slug || course._id}/checkout`;
-  const firstFree = modules.flatMap((m) => m.lessons).find((l) => !l.locked && l.videoUrl);
+  const firstFree = owned ? undefined : modules.flatMap((m) => m.lessons).find((l) => l.isFree && canPlayLesson(l));
   const embed = youtubeEmbed(preview?.videoUrl);
   const play = (l: RecordedLesson) => {
     setPreview(l);
     setTimeout(() => document.getElementById("course-preview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
-  const cta = access.hasAccess ? (
+  const cta = owned ? (
     <Link href={learnHref(course._id)} className={btn}>
       <LuPlay /> {L.watch}
     </Link>
@@ -148,6 +159,12 @@ export default function RecordedCourseDetail() {
       {price > 0 ? L.buy : L.startFree}
     </Link>
   );
+  const staffNote = access.staff ? (
+    <p className="rounded-xl bg-muted p-3 text-xs text-muted-foreground">
+      {L.staffNote}{" "}
+      <Link href={`/dashboard/admin/courses/view?course=${course._id}`} className="font-semibold text-primary hover:underline">{L.courseView}</Link>
+    </p>
+  ) : null;
 
   return (
     <main className={cn("bg-surface-soft pb-16", font)}>
@@ -190,7 +207,8 @@ export default function RecordedCourseDetail() {
                 )}
               </div>
               {cta}
-              {!access.hasAccess && firstFree && (
+              {staffNote}
+              {firstFree && (
                 <button type="button" onClick={() => play(firstFree)} className="w-full text-sm font-semibold text-primary hover:underline">
                   {L.previewOne}
                 </button>
@@ -255,17 +273,17 @@ export default function RecordedCourseDetail() {
                   {open[m._id] && (
                     <ul className="divide-y divide-border border-t border-border">
                       {m.lessons.map((l) => {
-                        const canPlay = !l.locked && !!l.videoUrl;
+                        const canPlay = canPlayLesson(l);
                         return (
                           <li key={l._id} className="flex items-center gap-3 px-5 py-3 text-sm">
                             {canPlay ? <LuPlay className="shrink-0 text-primary" /> : <LuLock className="shrink-0 text-muted-foreground" />}
                             <span className="flex-1 text-foreground">{titleOf(bn, l)}</span>
-                            {l.isFree && !access.hasAccess && (
+                            {l.isFree && !owned && (
                               <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">{L.free}</span>
                             )}
                             {!!l.videoDuration && <span className="text-muted-foreground">{L.min(Math.max(1, Math.round(l.videoDuration / 60)))}</span>}
                             {canPlay && (
-                              access.hasAccess ? (
+                              owned ? (
                                 <Link href={`${learnHref(course._id)}?lesson=${l._id}`} className="font-semibold text-primary hover:underline">{L.play}</Link>
                               ) : (
                                 <button type="button" onClick={() => play(l)} className="font-semibold text-primary hover:underline">
