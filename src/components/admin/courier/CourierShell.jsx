@@ -43,16 +43,28 @@ export function CourierHeader({ subtitle }) {
             <FiTruck size={18} />
           </div>
           <div>
-            <h1 className="text-base font-bold text-dash-ink outfit">Courier · Steadfast</h1>
+            <h1 className="text-base font-bold text-dash-ink outfit">Courier · Steadfast{st?.pathao?.configured ? ' + Pathao' : ''}</h1>
             <p className="text-xs text-dash-mute2">{subtitle}</p>
           </div>
         </div>
-        <div className="text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {/* Pathao (1 Nov 2026): is its login working? */}
+          {st?.pathao?.configured && (
+            st.pathao.error ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 font-semibold text-red-600" title={st.pathao.error}>
+                <FiAlertTriangle /> Pathao login failed
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700">
+                <FiCheckCircle /> Pathao connected
+              </span>
+            )
+          )}
           {!st ? (
             <span className="text-dash-mute2">Checking connection…</span>
           ) : !st.configured ? (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 font-semibold text-amber-700">
-              <FiAlertTriangle /> Not connected — add the API keys on the server
+              <FiAlertTriangle /> Steadfast not connected — add the API keys on the server
             </span>
           ) : st.error ? (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 font-semibold text-red-600" title={st.error}>
@@ -60,7 +72,7 @@ export function CourierHeader({ subtitle }) {
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700">
-              <FiCheckCircle /> Connected{st.balance != null && <> · Steadfast balance {tk(st.balance)}</>}
+              <FiCheckCircle /> Steadfast connected{st.balance != null && <> · balance {tk(st.balance)}</>}
             </span>
           )}
         </div>

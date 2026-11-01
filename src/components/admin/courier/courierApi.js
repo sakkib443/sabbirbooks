@@ -25,7 +25,8 @@ export const listConsignments = (params) => get('/consignments', params);
 export const courierSummary = (params) => get('/summary', params);
 export const courierDashboard = () => get('/dashboard');
 export const listCourierPayments = (params) => get('/payments', params);
-export const sendToCourier = (orderIds) => post('/send', { orderIds });
+// provider: 'steadfast' (the default) or 'pathao' (1 Nov 2026).
+export const sendToCourier = (orderIds, provider) => post('/send', { orderIds, ...(provider ? { provider } : {}) });
 export const syncCourier = (orderIds) => post('/sync', orderIds ? { orderIds } : {});
 export const syncCourierPayments = () => post('/payments/sync');
 

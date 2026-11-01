@@ -26,6 +26,7 @@ import { useToast } from '@/components/shared/Toast';
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { getStoredUser } from '@/lib/permissions';
 import { sendToCourier } from '@/components/admin/courier/courierApi';
+import { confirmCourier, useCouriers } from '@/components/admin/courier/CourierChoice';
 import { bdDate } from '@/lib/shopDay';
 
 const token = () => (typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '');
@@ -212,16 +213,16 @@ export default function CampusOrdersPage() {
     }
   };
 
+  const couriers = useCouriers();
   const ship = async (d) => {
-    const ok = await confirm({
-      title: 'Steadfast-এ পাঠাবেন?',
+    const provider = await confirmCourier(confirm, couriers, {
+      title: 'কুরিয়ারে পাঠাবেন?',
       message: `${d.collegeName} — ${d.contact?.name}, COD ${d.payment === 'paid' ? '৳0 (আগেই পেয়েছি)' : tk(d.order?.total)}`,
-      confirmText: 'কুরিয়ারে পাঠান',
     });
-    if (!ok) return;
+    if (!provider) return;
     setBusyId(d._id);
     try {
-      const r = await sendToCourier([d.order._id]);
+      const r = await sendToCourier([d.order._id], provider);
       const fail = (Array.isArray(r) ? r : r?.results || []).find((x) => !x.ok);
       if (fail) throw new Error(fail.error || 'পাঠানো যায়নি');
       showToast('success', 'কুরিয়ারে পাঠানো হয়েছে');
@@ -423,7 +424,7 @@ function DealCard({ d, today, busy, isOwner, onEdit, onPlace, onShip, onDelete, 
         <p className="flex flex-wrap items-center gap-2 text-xs text-dash-mute">
           <Link href="/dashboard/admin/book-orders" className="font-semibold text-brand hover:underline">অর্ডার #{d.order.orderSeq}</Link>
           {code && <a href={`/t/${code}`} target="_blank" rel="noreferrer" className="font-mono text-brand hover:underline">ট্র্যাকিং {code}</a>}
-          {d.order.courier?.status && <span>Steadfast: {d.order.courier.status}</span>}
+          {d.order.courier?.status && <span>{d.order.courier.provider === 'pathao' ? 'Pathao' : 'Steadfast'}: {d.order.courier.status}</span>}
         </p>
       )}
 

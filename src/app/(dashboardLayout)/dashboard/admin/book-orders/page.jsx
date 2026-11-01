@@ -25,6 +25,7 @@ import AddOrderModal from '@/components/admin/orders/AddOrderModal';
 import { useBrand } from '@/components/shared/Brand';
 import { can, getStoredUser } from '@/lib/permissions';
 import { sendToCourier, STATUS_LABEL as COURIER_STATUS } from '@/components/admin/courier/courierApi';
+import { confirmCourier, useCouriers } from '@/components/admin/courier/CourierChoice';
 import { buildOrderListPdf, downloadBlob } from '@/lib/orderListPdf';
 import { DeliveryToggle, useDeliveryMode } from '@/components/admin/stats/OrderStats';
 import { addDays, bdDate, dayOf, dayWindow, getCutoffHour, hourLabel, pastCutoff, setCutoffHour } from '@/lib/shopDay';
@@ -280,7 +281,7 @@ const FULFILLMENT_HELP = {
   processing: 'Order confirmed — stock reserved and the buyer can open this book’s QR content',
   shipped: 'Handed to the courier',
   delivered: 'Book received by the buyer — cash-on-delivery orders are marked paid here',
-  returned: 'The courier brought the parcel back — its books go back in stock (set by itself when Steadfast reports a return)',
+  returned: 'The courier brought the parcel back — its books go back in stock (set by itself when the courier reports a return)',
   cancelled: 'Order cancelled — reserved stock goes back on the shelf',
 };
 
@@ -1102,24 +1103,23 @@ export default function BookOrdersPage() {
     if (ok) setEditingId(null);
   };
 
-  // ── Send the ticked orders to Steadfast ────────────────────────────────────
+  // ── Send the ticked orders to the courier (Steadfast or Pathao) ───────────
   // The server decides what may go (confirmed, printed, not sent yet, a valid
   // phone) and says why for each one it refuses.
+  const couriers = useCouriers();
   const sendSelectedToCourier = async () => {
     const ids = [...selected];
     if (!ids.length) return;
-    const ok = await confirm({
-      title: `${ids.length}টি অর্ডার Steadfast কুরিয়ারে পাঠাবেন?`,
+    const provider = await confirmCourier(confirm, couriers, {
+      title: `${ids.length}টি অর্ডার কুরিয়ারে পাঠাবেন?`,
       message:
         'শুধু কনফার্ম করা অর্ডার যাবে (Pending গেলে না)। পাঠানোর পর অর্ডারগুলো "Shipped" হবে আর ক্রেতা ট্র্যাকিং লিংকসহ SMS পাবেন। যেগুলো যাবে না, কারণসহ নিচে দেখাবে।',
-      confirmText: 'কুরিয়ারে পাঠান',
-      danger: false,
     });
-    if (!ok) return;
+    if (!provider) return;
     setBulkBusy(true);
     setCourierResults(null);
     try {
-      const results = (await sendToCourier(ids)) || [];
+      const results = (await sendToCourier(ids, provider)) || [];
       const sent = results.filter((r) => r.ok).length;
       setCourierResults(results);
       showToast(sent ? 'success' : 'error', `${sent}টি কুরিয়ারে গেছে${results.length - sent ? `, ${results.length - sent}টি যায়নি` : ''}`);
@@ -2625,7 +2625,7 @@ export default function BookOrdersPage() {
                           <DetailRow
                             icon={FiPackage}
                             label="Parcel"
-                            value={`${COURIER_STATUS[o.courier.status] || o.courier.status || '—'} · #${o.courier.consignmentId}${o.courier.statusUpdatedAt ? ` · ${fmtDate(o.courier.statusUpdatedAt)}` : ''}`}
+                            value={`${o.courier.provider === 'pathao' ? 'Pathao · ' : ''}${COURIER_STATUS[o.courier.status] || o.courier.status || '—'} · #${o.courier.consignmentId}${o.courier.statusUpdatedAt ? ` · ${fmtDate(o.courier.statusUpdatedAt)}` : ''}`}
                           />
                         )}
                         {o.trackingCode && <DetailRow icon={FiHash} label="Tracking" value={o.trackingCode} mono />}

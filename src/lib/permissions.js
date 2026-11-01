@@ -85,7 +85,7 @@ export const CAPABILITIES = [
     key: 'courier.manage',
     label: 'Courier — send & follow parcels',
     group: 'Business data',
-    description: 'Send orders to Steadfast and follow the parcels.',
+    description: 'Send orders to the courier (Steadfast / Pathao) and follow the parcels.',
   },
   {
     key: 'coupons.write',

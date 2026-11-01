@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Send to courier — confirmed orders not yet handed to Steadfast.
+ * Send to courier — confirmed orders not yet handed to the courier
+ * (Steadfast or Pathao, picked when sending — CourierChoice).
  *
  * Filter down to a batch (a day, a college, a district), tick, send. Each
  * order that goes through gets its consignment and tracking link and moves to
@@ -14,12 +15,14 @@ import { FiCheckCircle, FiLoader, FiRefreshCw, FiSend, FiXCircle } from 'react-i
 import { useConfirm } from '@/components/shared/ConfirmModal';
 import { CourierFilters, CourierHeader, EMPTY_FILTERS, filterQuery, isSuperAdmin } from '@/components/admin/courier/CourierShell';
 import { listReady, sendToCourier, spacedPhone, tk } from '@/components/admin/courier/courierApi';
+import { confirmCourier, useCouriers } from '@/components/admin/courier/CourierChoice';
 
 const fmt = (d) =>
   d ? new Date(d).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
 
 export default function CourierSendPage() {
   const { confirm, confirmNode } = useConfirm();
+  const couriers = useCouriers();
   // Opens on today's orders — the batch going out now; any other day is a click away.
   const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, preset: 'today' }));
   // Each parcel's COD is shown to whoever sends it; the COD of the ticked
@@ -63,17 +66,16 @@ export default function CourierSendPage() {
 
   const send = async () => {
     if (!picked.length) return;
-    const ok = await confirm({
-      title: `${picked.length}টি অর্ডার Steadfast-এ পাঠাবেন?`,
+    const provider = await confirmCourier(confirm, couriers, {
+      title: `${picked.length}টি অর্ডার কুরিয়ারে পাঠাবেন?`,
       message: `${showSums ? `মোট COD ${tk(pickedCod)}। ` : ''}পাঠানোর পর অর্ডারগুলো "Shipped" হবে আর ক্রেতা ট্র্যাকিং লিংকসহ SMS পাবেন।`,
       confirmText: 'পাঠান',
-      danger: false,
     });
-    if (!ok) return;
+    if (!provider) return;
     setSending(true);
     setResults(null);
     try {
-      const r = await sendToCourier(picked.map((p) => p._id));
+      const r = await sendToCourier(picked.map((p) => p._id), provider);
       setResults(r);
       await load();
     } catch (e) {
@@ -147,7 +149,7 @@ export default function CourierSendPage() {
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-40"
             >
               {sending ? <FiLoader className="animate-spin" /> : <FiSend />}
-              Send {selected.size || ''} to Steadfast
+              Send {selected.size || ''} to courier
             </button>
           </div>
         </div>
