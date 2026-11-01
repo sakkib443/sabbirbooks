@@ -76,7 +76,7 @@ export default function CourierParcelsPage() {
 
   return (
     <div className="space-y-4">
-      <CourierHeader subtitle="Every parcel at Steadfast — where it is, and what it is worth." />
+      <CourierHeader subtitle="Every parcel at the courier (Steadfast / Pathao) — where it is, and what it is worth." />
 
       <CourierFilters
         value={filters}
@@ -115,7 +115,7 @@ export default function CourierParcelsPage() {
         <div className="flex items-center gap-2">
           {syncNote && <span className="text-xs text-dash-mute">{syncNote}</span>}
           <button onClick={sync} disabled={syncing} className="inline-flex items-center gap-1.5 rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-xs font-semibold text-dash-ink3 hover:bg-dash-soft disabled:opacity-50">
-            <FiRefreshCw className={syncing ? 'animate-spin' : ''} /> Update statuses from Steadfast
+            <FiRefreshCw className={syncing ? 'animate-spin' : ''} /> Update statuses from the courier
           </button>
         </div>
       </div>
@@ -161,9 +161,12 @@ export default function CourierParcelsPage() {
                         <div className="text-dash-mute2">{r.shippingAddress?.district}</div>
                       </td>
                       <td className="px-2 py-2.5 text-xs">
-                        <div className="font-mono text-dash-ink2">{c.consignmentId}</div>
+                        <div className="font-mono text-dash-ink2">
+                          {c.provider === 'pathao' && <span className="mr-1.5 rounded bg-red-50 px-1.5 py-0.5 font-sans text-[10px] font-bold text-red-600">Pathao</span>}
+                          {c.consignmentId}
+                        </div>
                         {c.trackingCode && (
-                          <a href={`https://steadfast.com.bd/t/${c.trackingCode}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-brand hover:underline">
+                          <a href={`/t/${c.trackingCode}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-brand hover:underline">
                             {c.trackingCode} <FiExternalLink size={11} />
                           </a>
                         )}

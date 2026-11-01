@@ -148,7 +148,7 @@ export default function TrackParcelPage() {
               )}
               {c.consignmentId && (
                 <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Steadfast কনসাইনমেন্ট</span>
+                  <span className="text-muted-foreground">{c.name || 'Steadfast'} কনসাইনমেন্ট</span>
                   <span className="font-mono text-foreground">{c.consignmentId}</span>
                 </div>
               )}
