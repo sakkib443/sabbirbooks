@@ -15,6 +15,9 @@ export interface RecordedCourse {
   image?: string;
   details?: string;
   detailsBn?: string;
+  /** The one or two lines at the top of the page; `details` is the overview. */
+  summary?: string;
+  summaryBn?: string;
   type?: string;
   status?: string;
   fee?: string | number;

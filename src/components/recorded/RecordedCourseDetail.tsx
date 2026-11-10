@@ -8,6 +8,10 @@
  * from the course itself (title/titleBn, details/detailsBn, modules, classes,
  * includes) and follow the site's EN/বাং switch.
  *
+ * Nothing said twice (the shop, 11 Nov 2026): the top shows the short
+ * description (summary), the overview the full text (details); "what you
+ * get" is listed once, in the overview.
+ *
  * The button changes with the visitor — buy, waiting for approval, or watch.
  * Staff see the page as a buyer does (so a paid course never looks free from
  * the admin's own account) with a link to Course View.
@@ -17,7 +21,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  LuPlay, LuLock, LuVideo, LuClock, LuSmartphone, LuChevronDown, LuCircleCheck, LuHourglass,
+  LuPlay, LuLock, LuVideo, LuClock, LuChevronDown, LuCircleCheck, LuHourglass,
   LuLayers, LuInfinity, LuPhone, LuX, LuShoppingCart, LuCreditCard, LuBadgeCheck, LuChevronRight,
 } from "react-icons/lu";
 import { Container, cn } from "@/components/ui";
@@ -27,12 +31,6 @@ import {
   checkAccess, coursePrice, courseListPrice, getCourse, getCurriculum, learnHref, pick, taka, titleOf, youtubeEmbed,
   type CourseAccess, type RecordedCourse, type RecordedLesson, type RecordedModule,
 } from "./recordedApi";
-
-const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  video: LuVideo,
-  clock: LuClock,
-  device: LuSmartphone,
-};
 
 const T = {
   bn: {
@@ -152,6 +150,7 @@ export default function RecordedCourseDetail() {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [preview, setPreview] = useState<RecordedLesson | null>(null);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
+  const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -199,6 +198,10 @@ export default function RecordedCourseDetail() {
   const canPlayLesson = (l: RecordedLesson) => !l.locked && !!l.videoUrl && (owned || !!l.isFree);
   const title = titleOf(bn, course);
   const details = pick(bn, course.details, course.detailsBn);
+  // The top: the short description, or — for a course without one — the
+  // overview's first sentence or two, never the whole of it again.
+  const summary = pick(bn, course.summary, course.summaryBn) || shorten(details);
+  const overview = details && details !== summary ? details : "";
   const price = coursePrice(course);
   const list = courseListPrice(course);
   const offPct = list > 0 ? Math.round(((list - price) / list) * 100) : 0;
@@ -258,7 +261,7 @@ export default function RecordedCourseDetail() {
               <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-emerald-300">{L.lifetime}</span>
             </div>
             <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl lg:text-[2.75rem]">{title}</h1>
-            {details && <p className="mt-4 max-w-2xl whitespace-pre-line text-[15px] leading-relaxed text-white/70 line-clamp-5">{details}</p>}
+            {summary && <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/70">{summary}</p>}
             <div className="mt-7 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
               {stats.map((s) => (
                 <div key={s.label} className={cn("rounded-xl border px-4 py-3", s.hot ? "border-emerald-400/40 bg-emerald-400/10" : "border-white/10 bg-white/5")}>
@@ -279,8 +282,8 @@ export default function RecordedCourseDetail() {
               className="group relative block aspect-video w-full overflow-hidden rounded-xl bg-white/5"
               aria-label={title}
             >
-              {course.image ? (
-                <img src={course.image} alt={title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+              {course.image && !imgFailed ? (
+                <img src={course.image} alt={title} onError={() => setImgFailed(true)} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
               ) : (
                 <div className="h-full w-full bg-gradient-to-br from-emerald-600 to-teal-800" />
               )}
@@ -289,21 +292,6 @@ export default function RecordedCourseDetail() {
                 <LuPlay className="ml-1 h-7 w-7" />
               </span>
             </button>
-            {includes.length > 0 && (
-              <div className="mt-3 px-1">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">{L.youGet}</p>
-                <div className="flex flex-wrap gap-2">
-                  {includes.map((x, i) => {
-                    const Icon = ICONS[x.icon || ""] || LuCircleCheck;
-                    return (
-                      <span key={i} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs text-white/85">
-                        <Icon className="h-3.5 w-3.5 text-emerald-300" /> {x.text}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
             {/* Buying is the price card's job (one buy button on the page,
                 the shop asked 11 Nov 2026); the hero only offers to talk. */}
             <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl bg-rose-500 text-sm font-bold text-white transition hover:bg-rose-600">
@@ -327,7 +315,7 @@ export default function RecordedCourseDetail() {
           <section id="sec-overview" className="scroll-mt-36">
             <SectionLabel>{L.overviewLabel}</SectionLabel>
             <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl">{L.overviewTitle}</h2>
-            {details && <p className="mt-4 whitespace-pre-line leading-relaxed text-muted-foreground">{details}</p>}
+            {(overview || details) && <p className="mt-4 whitespace-pre-line leading-relaxed text-muted-foreground">{overview || details}</p>}
             {modules.length > 0 && (
               <>
                 <h3 className="mb-3 mt-7 font-bold text-foreground">{L.learn}</h3>
@@ -452,7 +440,7 @@ export default function RecordedCourseDetail() {
               <LuPhone /> {L.call}: {SUPPORT_PHONE}
             </a>
             <ul className="space-y-2 border-t border-border pt-4 text-sm text-muted-foreground">
-              {[...new Set([...includes.map((x) => x.text), ...L.perkList.slice(0, 2)])].map((t, i) => (
+              {L.perkList.slice(0, 3).map((t, i) => (
                 <li key={i} className="flex items-center gap-2"><LuBadgeCheck className="h-4 w-4 shrink-0 text-emerald-500" /> {t}</li>
               ))}
               <li className="flex items-center gap-2"><LuCreditCard className="h-4 w-4 shrink-0 text-emerald-500" /> bKash · Nagad · Card</li>
@@ -494,6 +482,15 @@ export default function RecordedCourseDetail() {
       )}
     </main>
   );
+}
+
+/** The first sentence or two of a long text, for the top of the page. */
+function shorten(text: string, max = 180): string {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const stop = Math.max(cut.lastIndexOf("।"), cut.lastIndexOf(". "), cut.lastIndexOf("!"), cut.lastIndexOf("?"));
+  return stop > 60 ? cut.slice(0, stop + 1) : `${cut.slice(0, cut.lastIndexOf(" ") > 60 ? cut.lastIndexOf(" ") : max)}…`;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
