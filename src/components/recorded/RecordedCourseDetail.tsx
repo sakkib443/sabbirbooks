@@ -18,7 +18,7 @@
  * Staff see the page as a buyer does, with a link to Course View.
  */
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -42,7 +42,7 @@ const T = {
     modules: "মডিউল", classes: "ক্লাস", totalTime: "মোট সময়", access: "অ্যাক্সেস", forever: "আজীবন",
     hours: (m: number) => (m >= 60 ? `${Math.round((m / 60) * 10) / 10} ঘণ্টা` : `${m} মিনিট`),
     watch: "কোর্স দেখুন", buy: "এখনই কিনুন", startFree: "ফ্রি তে শুরু করুন",
-    contact: "যোগাযোগ করুন", whatsapp: "WhatsApp-এ কথা বলুন",
+    contact: "যোগাযোগ করুন", contactShort: "যোগাযোগ", whatsapp: "WhatsApp-এ কথা বলুন",
     pendingTitle: "আপনার অর্ডার যাচাই হচ্ছে", pendingSub: "পেমেন্ট মিলিয়ে অ্যাডমিন অনুমোদন দিলেই কোর্সটা খুলে যাবে।",
     moduleCount: (n: number) => `${n}টি মডিউল`,
     soonModule: "ক্লাস শীঘ্রই যোগ হবে",
@@ -57,7 +57,7 @@ const T = {
     modules: "Modules", classes: "Classes", totalTime: "Total time", access: "Access", forever: "Lifetime",
     hours: (m: number) => (m >= 60 ? `${Math.round((m / 60) * 10) / 10} hrs` : `${m} min`),
     watch: "Watch the course", buy: "Buy now", startFree: "Start for free",
-    contact: "Contact us", whatsapp: "Chat on WhatsApp",
+    contact: "Contact us", contactShort: "Contact", whatsapp: "Chat on WhatsApp",
     pendingTitle: "Your order is being checked", pendingSub: "The course opens as soon as an admin matches the payment and approves it.",
     moduleCount: (n: number) => `${n} ${n === 1 ? "module" : "modules"}`,
     soonModule: "Classes coming soon",
@@ -96,6 +96,17 @@ export default function RecordedCourseDetail() {
   const [preview, setPreview] = useState<{ title: string; url?: string } | null>(null);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [imgFailed, setImgFailed] = useState(false);
+  // The phone's bottom buy bar shows only once the hero's buttons are out of
+  // sight — never two buy buttons on screen at once.
+  const heroButtonsRef = useRef<HTMLDivElement | null>(null);
+  const [heroButtonsSeen, setHeroButtonsSeen] = useState(true);
+  useEffect(() => {
+    const el = heroButtonsRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setHeroButtonsSeen(e.isIntersecting), { rootMargin: "0px 0px -60px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [state]);
 
   useEffect(() => {
     let alive = true;
@@ -190,12 +201,12 @@ export default function RecordedCourseDetail() {
       <Link href={learnHref(course._id)} className={className}><LuPlay /> {L.watch}</Link>
     ) : access.pending ? null : (
       <Link href={checkoutHref} className={className}>
-        <LuShoppingCart className="shrink-0" />
+        <LuShoppingCart className="hidden shrink-0 sm:block" />
         {price > 0 ? (
           <>
             {L.buy}
             <span className="rounded-lg bg-white/20 px-2 py-0.5 text-[0.95em] font-extrabold">{priceText}</span>
-            {offPct > 0 && <span className="text-xs font-semibold line-through opacity-70">{taka(list)}</span>}
+            {offPct > 0 && <span className="hidden text-xs font-semibold line-through opacity-70 sm:inline">{taka(list)}</span>}
           </>
         ) : (
           L.startFree
@@ -242,21 +253,25 @@ export default function RecordedCourseDetail() {
         <div className="pointer-events-none absolute -left-40 -top-24 h-[28rem] w-[28rem] rounded-full bg-emerald-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -right-32 bottom-[-6rem] h-96 w-96 rounded-full bg-rose-500/15 blur-3xl" />
 
-        <Container className="relative grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:py-16">
-          {/* Left */}
-          <div>
-            <nav className="mb-5 flex flex-wrap items-center gap-1 text-xs text-white/50">
+        {/* Phone (the shop, 11 Nov 2026): name → one line of description →
+            video → the two buttons side by side. Computer: name, description
+            and buttons on the left, the video on the right. */}
+        <Container className="relative grid gap-x-10 gap-y-5 py-7 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:py-16">
+          {/* Name + short description */}
+          <div className="lg:col-start-1 lg:row-start-1 lg:self-end">
+            <nav className="mb-5 hidden flex-wrap items-center gap-1 text-xs text-white/50 sm:flex">
               <Link href="/" className="hover:text-white">{L.home}</Link>
               <LuChevronRight className="h-3 w-3" />
               <Link href="/courses" className="hover:text-white">{L.courses}</Link>
               <LuChevronRight className="h-3 w-3" />
               <span className="line-clamp-1 text-white/80">{title}</span>
             </nav>
-            <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white/85">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white/85 sm:mb-4">
               <LuVideo className="h-3.5 w-3.5" /> {L.recorded}
             </span>
-            <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-[2.75rem]">{title}</h1>
-            {summary && <p className="mt-4 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">{summary}</p>}
+            <h1 className="text-[1.65rem] font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-[2.75rem]">{title}</h1>
+            {/* One line on a phone; two at most on a computer. */}
+            {summary && <p className="mt-2 line-clamp-1 max-w-xl text-[15px] leading-relaxed text-white/70 sm:mt-4 sm:text-lg lg:line-clamp-2">{summary}</p>}
 
             {onlyTime ? (
               <div className="mt-7 inline-flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3">
@@ -279,23 +294,11 @@ export default function RecordedCourseDetail() {
               </div>
             )}
 
-            {/* The two buttons, on the left under the description (the shop,
-                11 Nov 2026): buy (the price on it) and WhatsApp (a switch). */}
-            <div className={cn("mt-8 flex max-w-xl flex-col gap-3 sm:flex-row", !on("contact") && "sm:max-w-sm")}>
-              {actionButton("flex h-14 flex-[1.4] items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 text-base font-extrabold text-white shadow-[0_12px_30px_-10px_rgba(16,185,129,0.7)] ring-1 ring-white/20 transition hover:-translate-y-0.5 hover:from-emerald-400 hover:to-teal-400") || (
-                <span className="flex h-14 flex-[1.4] items-center justify-center rounded-2xl bg-amber-400/15 px-4 text-center text-sm font-semibold text-amber-200">{L.pendingTitle}</span>
-              )}
-              {on("contact") && (
-                <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex h-14 flex-1 items-center justify-center gap-2.5 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#25D366]/20">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white"><FaWhatsapp className="h-4 w-4" /></span> {L.contact}
-                </a>
-              )}
-            </div>
           </div>
 
-          {/* Right: the video */}
-          <div className="rounded-[1.4rem] bg-gradient-to-br from-white/25 via-white/5 to-white/15 p-px shadow-[0_40px_100px_-30px_rgba(0,0,0,0.9)]">
-            <div className="rounded-[1.35rem] bg-[#0d1322] p-3 sm:p-4">
+          {/* The video — right on a computer, under the description on a phone */}
+          <div className="rounded-[1.4rem] bg-gradient-to-br from-white/25 via-white/5 to-white/15 p-px shadow-[0_40px_100px_-30px_rgba(0,0,0,0.9)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
+            <div className="rounded-[1.35rem] bg-[#0d1322] p-2 sm:p-4">
               <button type="button" onClick={playHero} className="group relative block aspect-video w-full overflow-hidden rounded-2xl bg-white/5" aria-label={title}>
                 {picture ? (
                   <img src={picture} alt={title} onError={() => setImgFailed(true)} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
@@ -305,11 +308,27 @@ export default function RecordedCourseDetail() {
                   <div className="h-full w-full bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900" />
                 )}
                 <span className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
-                <span className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500 text-white shadow-2xl ring-[12px] ring-rose-500/25 transition duration-300 group-hover:scale-110 group-hover:ring-rose-500/35">
-                  <LuPlay className="ml-1 h-9 w-9" />
+                <span className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500 text-white shadow-2xl ring-[10px] ring-rose-500/25 transition duration-300 group-hover:scale-110 group-hover:ring-rose-500/35 sm:h-20 sm:w-20 sm:ring-[12px]">
+                  <LuPlay className="ml-1 h-7 w-7 sm:h-9 sm:w-9" />
                 </span>
               </button>
             </div>
+          </div>
+
+          {/* The two buttons, side by side: buy (the price on it) and WhatsApp
+              (a switch) — under the video on a phone, under the description
+              on a computer. */}
+          <div ref={heroButtonsRef} className={cn("flex gap-2.5 sm:gap-3 lg:col-start-1 lg:row-start-2 lg:max-w-xl lg:self-start", !on("contact") && "lg:max-w-sm")}>
+            {actionButton("flex h-[52px] min-w-0 flex-[1.35] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 text-[15px] font-extrabold text-white shadow-[0_12px_30px_-10px_rgba(16,185,129,0.7)] ring-1 ring-white/20 transition hover:-translate-y-0.5 hover:from-emerald-400 hover:to-teal-400 sm:h-14 sm:gap-2.5 sm:px-6 sm:text-base") || (
+              <span className="flex h-[52px] min-w-0 flex-[1.35] items-center justify-center rounded-2xl bg-amber-400/15 px-3 text-center text-xs font-semibold text-amber-200 sm:h-14 sm:text-sm">{L.pendingTitle}</span>
+            )}
+            {on("contact") && (
+              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 px-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#25D366]/20 sm:h-14 sm:gap-2.5 sm:px-5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white sm:h-8 sm:w-8"><FaWhatsapp className="h-4 w-4" /></span>
+                <span className="truncate sm:hidden">{L.contactShort}</span>
+                <span className="hidden truncate sm:inline">{L.contact}</span>
+              </a>
+            )}
           </div>
         </Container>
       </section>
@@ -456,7 +475,12 @@ export default function RecordedCourseDetail() {
 
       {/* ── Phone: price + button stay at the bottom, just above the site's own
           bottom menu (BottomNav, ~60px + the iPhone safe area). ── */}
-      <div className="fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom))] z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom))] z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur transition duration-300 lg:hidden",
+          heroButtonsSeen && "pointer-events-none translate-y-full opacity-0"
+        )}
+      >
         <div className="mx-auto max-w-xl">
           {actionButton(btnGreen) || <span className="block text-center text-sm font-semibold text-amber-700">{L.pendingTitle}</span>}
         </div>
