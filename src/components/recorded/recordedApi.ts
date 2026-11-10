@@ -18,6 +18,10 @@ export interface RecordedCourse {
   /** The one or two lines at the top of the page; `details` is the overview. */
   summary?: string;
   summaryBn?: string;
+  /** The hero's intro video (YouTube); empty = the picture only. */
+  promoVideo?: string;
+  benefits?: { text?: string; textBn?: string }[];
+  faqs?: { q?: string; qBn?: string; a?: string; aBn?: string }[];
   type?: string;
   status?: string;
   fee?: string | number;
