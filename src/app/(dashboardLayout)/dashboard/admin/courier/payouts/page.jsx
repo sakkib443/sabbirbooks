@@ -8,6 +8,9 @@
  * what it still owes. Below, every payout Steadfast has made, each opening to
  * the parcels it settled. "Sync payouts" copies new payouts from Steadfast
  * (the server also does this every 30 minutes).
+ *
+ * Pathao (11 Nov 2026) has no payouts API: its parcels are marked paid by its
+ * webhook, or by hand in the Pathao payouts section (PathaoPayouts).
  */
 
 import { Fragment, useCallback, useEffect, useState } from 'react';
@@ -15,6 +18,8 @@ import { FiChevronDown, FiLoader, FiRefreshCw } from 'react-icons/fi';
 import { CourierFilters, CourierHeader, EMPTY_FILTERS, filterQuery } from '@/components/admin/courier/CourierShell';
 import { courierSummary, listCourierPayments, syncCourierPayments, tk } from '@/components/admin/courier/courierApi';
 import CourierDashboard from '@/components/admin/courier/CourierDashboard';
+import PathaoPayouts from '@/components/admin/courier/PathaoPayouts';
+import { useCouriers } from '@/components/admin/courier/CourierChoice';
 
 const fmtDay = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
@@ -37,6 +42,9 @@ export default function CourierPayoutsPage() {
   const [syncing, setSyncing] = useState(false);
   const [note, setNote] = useState('');
   const [open, setOpen] = useState(null);
+  const couriers = useCouriers();
+  // Re-drawn after Pathao parcels are marked paid, so its numbers follow.
+  const [dashKey, setDashKey] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,7 +86,9 @@ export default function CourierPayoutsPage() {
       <CourierHeader subtitle="What the courier collected, charged, paid and still owes." />
 
       {/* The dashboard (Steadfast's layout), then the accounts by date below it. */}
-      <CourierDashboard onSyncPayouts={sync} syncing={syncing} />
+      <CourierDashboard key={dashKey} onSyncPayouts={sync} syncing={syncing} />
+
+      {couriers.includes('pathao') && <PathaoPayouts onMarked={() => { setDashKey((k) => k + 1); load(); }} />}
 
       <h2 className="pt-2 text-base font-bold text-dash-ink2 outfit">Accounts by date</h2>
 
@@ -150,6 +160,7 @@ export default function CourierPayoutsPage() {
         </>
       )}
 
+      {filters.provider !== 'pathao' && (
       <div className="rounded-xl border border-dash-line/60 bg-dash-card shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dash-line px-4 py-3">
           <h2 className="text-sm font-semibold text-dash-ink2">Payouts from Steadfast</h2>
@@ -225,6 +236,7 @@ export default function CourierPayoutsPage() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

@@ -13,12 +13,19 @@ import { courierStatus } from './courierApi';
 export const COURIER_NAMES = { steadfast: 'Steadfast', pathao: 'Pathao' };
 const LAST_KEY = 'mv-courier';
 
+// One status call per page load, shared by every part of the page that asks.
+let statusOnce = null;
+export const loadStatus = () => {
+  if (!statusOnce) statusOnce = courierStatus().catch((e) => { statusOnce = null; throw e; });
+  return statusOnce;
+};
+
 /** The couriers set up on the server, Steadfast first. */
 export function useCouriers() {
   const [list, setList] = useState(['steadfast']);
   useEffect(() => {
     let alive = true;
-    courierStatus()
+    loadStatus()
       .then((st) => {
         const l = [];
         if (st?.configured) l.push('steadfast');
