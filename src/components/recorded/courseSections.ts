@@ -32,6 +32,33 @@ export const DEFAULT_FAQ: Record<"bn" | "en", [string, string][]> = {
 
 /** "How to buy" — the same for every course (the shop's payment process). */
 export const HOW_TO_BUY = {
-  bn: ["“এখনই ভর্তি হন” চাপুন, লগইন করুন", "অনলাইনে বা বিকাশ/নগদে পেমেন্ট করুন", "পেমেন্ট মিললেই কোর্স খুলে যাবে"],
-  en: ["Press “Enroll now” and log in", "Pay online, or by bKash/Nagad", "The course opens once paid"],
+  bn: ["“এখনই কিনুন” চাপুন, নাম-ফোন দিন", "অনলাইনে বা বিকাশ/নগদে পেমেন্ট করুন", "পেমেন্ট মিললেই কোর্স খুলে যাবে"],
+  en: ["Press “Buy now” and fill in your details", "Pay online, or by bKash/Nagad", "The course opens once paid"],
 };
+
+/**
+ * Which parts of the page show (11 Nov 2026) — the admin's on/off switches,
+ * stored per course in `display`. Unset = these defaults, which are what the
+ * shop asked for: nothing under the short description (no numbers), two
+ * buttons under the video (Buy + WhatsApp), the curriculum and "what you
+ * get" on; the rest off until switched on.
+ */
+export type DisplayKey = "time" | "modules" | "classes" | "access" | "contact" | "curriculum" | "includes" | "benefits" | "how" | "faq";
+export const DEFAULT_DISPLAY: Record<DisplayKey, boolean> = {
+  time: false,
+  modules: false,
+  classes: false,
+  access: false,
+  contact: true,
+  curriculum: true,
+  includes: true,
+  benefits: false,
+  how: false,
+  faq: false,
+};
+export const shows = (display: Partial<Record<DisplayKey, boolean>> | undefined, key: DisplayKey) =>
+  typeof display?.[key] === "boolean" ? (display[key] as boolean) : DEFAULT_DISPLAY[key];
+
+/** A video link: YouTube, or a video file (an upload, or any .mp4/.webm link). */
+export const isVideoFile = (url?: string) => /\.(mp4|webm|mov|m4v|ogg)(\?|#|$)/i.test(String(url || ""));
+export const isYouTube = (url?: string) => /(^|\/\/|\.)(youtube\.com|youtu\.be)\//i.test(String(url || ""));

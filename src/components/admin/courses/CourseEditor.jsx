@@ -14,6 +14,10 @@
  *   ৮ প্রশ্নোত্তর          list (empty = the site's standard questions)
  *   ৯ প্রকাশ
  *
+ * Every part after the overview — and the hero's numbers and Contact
+ * button — has a "পাতায় দেখাবে" switch (course.display); off by default
+ * where the shop asked for less (DEFAULT_DISPLAY).
+ *
  * Section names come from components/recorded/courseSections, which the
  * course page uses too. Each thing is written once — the short description
  * is the top, the overview the long text. Bengali and English side by side;
@@ -26,10 +30,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiCheck, FiCheckCircle, FiExternalLink, FiEye, FiImage, FiLoader, FiPlay, FiPlus, FiSave, FiTrash2, FiUpload, FiYoutube } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiExternalLink, FiEye, FiFilm, FiImage, FiLoader, FiPlay, FiPlus, FiSave, FiTrash2, FiUpload, FiYoutube } from 'react-icons/fi';
 import API_BASE_URL from '@/config/api';
 import { useToast } from '@/components/shared/Toast';
-import { COURSE_SECTIONS, DEFAULT_BENEFITS, DEFAULT_FAQ, HOW_TO_BUY } from '@/components/recorded/courseSections';
+import { COURSE_SECTIONS, DEFAULT_BENEFITS, DEFAULT_DISPLAY, DEFAULT_FAQ, HOW_TO_BUY, isVideoFile, isYouTube } from '@/components/recorded/courseSections';
 import CurriculumEditor, { youtubeId } from './CurriculumEditor';
 import { btnGhost, btnPrimary, call, input, priceOf, taka, token } from './courseAdmin';
 
@@ -52,6 +56,7 @@ const EMPTY = {
   includes: [{ bn: '', en: '' }],
   benefits: [],
   faqs: [],
+  display: { ...DEFAULT_DISPLAY },
 };
 
 const toForm = (c) => {
@@ -64,8 +69,10 @@ const toForm = (c) => {
     detailsBn: d.bn, details: d.en,
     fee: c.fee && c.fee !== '0' ? String(c.fee) : '',
     offerPrice: c.offerPrice ? String(c.offerPrice) : '',
-    image: c.image || '',
-    promoVideo: c.promoVideo || '',
+    // A video link once put in the picture's place goes to the video field.
+    image: isYouTube(c.image) || isVideoFile(c.image) ? '' : c.image || '',
+    promoVideo: c.promoVideo || (isYouTube(c.image) || isVideoFile(c.image) ? c.image : ''),
+    display: { ...DEFAULT_DISPLAY, ...(c.display || {}) },
     status: c.status || 'published',
     includes: (c.courseIncludes || []).map((x) => pair(x)),
     benefits: (c.benefits || []).map((x) => pair(x)),
@@ -83,6 +90,8 @@ export default function CourseEditor({ courseId }) {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const videoRef = useRef(null);
   const [slug, setSlug] = useState('');
   const [stats, setStats] = useState({ modules: 0, classes: 0, minutes: 0 });
   const fileRef = useRef(null);
@@ -103,6 +112,28 @@ export default function CourseEditor({ courseId }) {
   const addRow = (list, row) => setForm((f) => ({ ...f, [list]: [...f[list], row] }));
   const dropRow = (list, i) => setForm((f) => ({ ...f, [list]: f[list].filter((_, k) => k !== i) }));
   const onStats = useCallback((s) => setStats(s), []);
+  const toggle = (k) => ({ checked: !!form.display[k], onChange: (v) => setForm((f) => ({ ...f, display: { ...f.display, [k]: v } })) });
+
+  // An intro video file → the public uploads (book-content/upload-public, up to 200 MB).
+  const uploadVideo = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('video/')) return showToast('error', 'শুধু ভিডিও ফাইল দেওয়া যাবে (mp4)');
+    if (file.size > 200 * 1024 * 1024) return showToast('error', 'ভিডিও ২০০MB-এর কম হতে হবে — বড় ভিডিও YouTube-এ রেখে লিংক দিন');
+    setVideoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${API_BASE_URL}/book-content/upload-public`, { method: 'POST', headers: { Authorization: `Bearer ${token()}` }, body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.data?.fileUrl) throw new Error(data.message || 'ভিডিও আপলোড হয়নি');
+      setForm((f) => ({ ...f, promoVideo: data.data.fileUrl }));
+      showToast('success', 'ভিডিও বসেছে — সেভ করতে ভুলবেন না');
+    } catch (e) {
+      showToast('error', e.message);
+    } finally {
+      setVideoUploading(false);
+    }
+  };
 
   const upload = async (file) => {
     if (!file) return;
@@ -129,7 +160,9 @@ export default function CourseEditor({ courseId }) {
     const fee = String(form.fee).replace(/[^\d]/g, '');
     const offer = String(form.offerPrice).replace(/[^\d]/g, '');
     if (offer && fee && Number(offer) >= Number(fee)) return showToast('error', 'অফার দাম আসল দামের চেয়ে কম হতে হবে');
-    if (form.promoVideo.trim() && !youtubeId(form.promoVideo)) return showToast('error', 'পরিচিতি ভিডিওর ঘরে ঠিক YouTube লিংক দিন, অথবা খালি রাখুন');
+    if (form.promoVideo.trim() && !youtubeId(form.promoVideo) && !isVideoFile(form.promoVideo) && !/^https?:\/\//.test(form.promoVideo.trim())) {
+      return showToast('error', 'ভিডিওর ঘরে YouTube লিংক বা ভিডিওর লিংক দিন, অথবা ভিডিও আপলোড করুন');
+    }
     const body = {
       // `title` is required on the server: English, or the Bengali when there is none.
       title: form.title.trim() || form.titleBn.trim(),
@@ -143,6 +176,7 @@ export default function CourseEditor({ courseId }) {
       image: form.image.trim(),
       promoVideo: form.promoVideo.trim(),
       status: form.status,
+      display: form.display,
       type: 'Recorded',
       lectures: stats.classes || undefined,
       courseIncludes: outPairs(form.includes).map((x) => ({ icon: 'check', ...x })),
@@ -181,11 +215,11 @@ export default function CourseEditor({ courseId }) {
     { id: 'step-hero', label: 'হিরো (নাম, ছোট বিবরণ, ছবি)', done: !!name && !!(form.summaryBn || form.summary) && !!form.image },
     { id: 'step-price', label: 'দাম', done: price > 0 || form.fee === '0' },
     { id: 'step-overview', label: S.overview, done: !!(form.detailsBn || form.details) },
-    { id: 'step-curriculum', label: S.curriculum, done: stats.classes > 0 },
-    { id: 'step-includes', label: S.includes, done: form.includes.some((x) => x.bn || x.en) },
-    { id: 'step-benefits', label: S.benefits, done: true, note: form.benefits.length ? '' : 'সাধারণ তালিকা' },
-    { id: 'step-how', label: S.how, done: true, note: 'সব কোর্সে একই' },
-    { id: 'step-faq', label: S.faq, done: true, note: form.faqs.length ? '' : 'সাধারণ প্রশ্ন' },
+    { id: 'step-curriculum', label: S.curriculum, done: stats.classes > 0, off: !form.display.curriculum },
+    { id: 'step-includes', label: S.includes, done: form.includes.some((x) => x.bn || x.en), off: !form.display.includes },
+    { id: 'step-benefits', label: S.benefits, done: true, off: !form.display.benefits },
+    { id: 'step-how', label: S.how, done: true, off: !form.display.how },
+    { id: 'step-faq', label: S.faq, done: true, off: !form.display.faq },
     { id: 'step-publish', label: 'প্রকাশ', done: isEdit && form.status === 'published' },
   ];
   const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -260,14 +294,39 @@ export default function CourseEditor({ courseId }) {
                   </div>
                 </div>
               </SubPart>
-              <SubPart label="ঘ" title="পরিচিতি ভিডিও (ঐচ্ছিক)" where="ছবির উপরের লাল ▶ চাপলে চলবে — কোর্সের ছোট পরিচিতি, সবাই দেখতে পারবে">
-                <div className="flex items-center gap-2">
-                  {promoId ? (
-                    <img src={`https://i.ytimg.com/vi/${promoId}/mqdefault.jpg`} alt="" className="h-10 w-16 shrink-0 rounded object-cover" />
-                  ) : (
-                    <FiYoutube className="shrink-0 text-dash-faint" size={20} />
-                  )}
-                  <input value={form.promoVideo} onChange={set('promoVideo')} className={input} placeholder="YouTube লিংক — খালি রাখলে ▶ চাপলে কারিকুলামে নিয়ে যাবে" />
+              <SubPart label="ঘ" title="ভিডিও" where="ডানের বড় ছবির উপর লাল ▶ চাপলে মাঝখানে বড় করে চলবে — সবাই দেখতে পারবে">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {promoId ? (
+                      <img src={`https://i.ytimg.com/vi/${promoId}/mqdefault.jpg`} alt="" className="h-10 w-16 shrink-0 rounded object-cover" />
+                    ) : isVideoFile(form.promoVideo) ? (
+                      <video src={`${form.promoVideo}#t=1`} muted preload="metadata" className="h-10 w-16 shrink-0 rounded bg-black object-cover" />
+                    ) : (
+                      <FiYoutube className="shrink-0 text-dash-faint" size={20} />
+                    )}
+                    <input value={form.promoVideo} onChange={set('promoVideo')} className={input} placeholder="YouTube লিংক, বা ভিডিওর লিংক (.mp4)" />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={() => videoRef.current?.click()} disabled={videoUploading} className={btnGhost}>
+                      {videoUploading ? <FiLoader className="animate-spin" /> : <FiFilm />} {videoUploading ? 'আপলোড হচ্ছে… একটু সময় লাগবে' : 'অথবা ভিডিও আপলোড করুন'}
+                    </button>
+                    <input ref={videoRef} type="file" accept="video/*" hidden onChange={(e) => uploadVideo(e.target.files?.[0])} />
+                    {form.promoVideo && <button type="button" onClick={() => setForm((f) => ({ ...f, promoVideo: '' }))} className="text-xs font-semibold text-rose-600 hover:underline">ভিডিও সরান</button>}
+                    <span className="text-xs text-dash-mute2">খালি রাখলে ▶ চাপলে কারিকুলামে নিয়ে যাবে।</span>
+                  </div>
+                </div>
+              </SubPart>
+              <SubPart label="ঙ" title="উপরে কী কী দেখাবে" where="নাম আর ছোট বিবরণের নিচের বক্স, আর কেনার বাটনের পাশে">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    ['time', 'মোট সময়'],
+                    ['modules', 'মডিউলের সংখ্যা'],
+                    ['classes', 'ক্লাসের সংখ্যা'],
+                    ['access', 'আজীবন অ্যাক্সেস'],
+                    ['contact', '“যোগাযোগ করুন” বাটন'],
+                  ].map(([k, label]) => (
+                    <Check key={k} {...toggle(k)} label={label} />
+                  ))}
                 </div>
               </SubPart>
             </div>
@@ -296,7 +355,7 @@ export default function CourseEditor({ courseId }) {
           </Step>
 
           {/* ৪ Curriculum */}
-          <Step id="step-curriculum" n="৪" title={S.curriculum} en={SE.curriculum} hint="সবচেয়ে জরুরি অংশ। আগে মডিউল (অধ্যায়) বানান, তারপর তার ভেতরে ক্লাস — প্রতিটা ক্লাস একটা YouTube ভিডিও (Unlisted রাখা ভালো)।">
+          <Step id="step-curriculum" n="৪" title={S.curriculum} en={SE.curriculum} toggle={toggle('curriculum')} hint="সবচেয়ে জরুরি অংশ। আগে মডিউল (অধ্যায়) বানান, তারপর তার ভেতরে ক্লাস — প্রতিটা ক্লাস একটা YouTube ভিডিও (Unlisted রাখা ভালো)।">
             {isEdit ? (
               <CurriculumEditor courseId={courseId} onStats={onStats} />
             ) : (
@@ -310,7 +369,7 @@ export default function CourseEditor({ courseId }) {
           </Step>
 
           {/* ৫ What you get */}
-          <Step id="step-includes" n="৫" title={S.includes} en={SE.includes} hint="কারিকুলামের নিচে, বাঁ দিকের বক্সে টিক দিয়ে দেখাবে। ছোট লাইন — যেমন: ২০টি রেকর্ড করা ক্লাস, নোট PDF।">
+          <Step id="step-includes" n="৫" title={S.includes} en={SE.includes} toggle={toggle('includes')} hint="কারিকুলামের নিচে, বাঁ দিকের বক্সে টিক দিয়ে দেখাবে। ছোট লাইন — যেমন: ২০টি রেকর্ড করা ক্লাস, নোট PDF।">
             <Rows
               rows={form.includes}
               onChange={(i, patch) => setRow('includes', i, patch)}
@@ -322,7 +381,7 @@ export default function CourseEditor({ courseId }) {
           </Step>
 
           {/* ৬ Benefits */}
-          <Step id="step-benefits" n="৬" title={S.benefits} en={SE.benefits} hint="কারিকুলামের নিচে, ডান দিকের বক্সে। খালি রাখলে নিচের সাধারণ তালিকাটা দেখাবে।">
+          <Step id="step-benefits" n="৬" title={S.benefits} en={SE.benefits} toggle={toggle('benefits')} hint="কারিকুলামের নিচে, ডান দিকের বক্সে। খালি রাখলে নিচের সাধারণ তালিকাটা দেখাবে।">
             {form.benefits.length === 0 && (
               <div className="mb-3 rounded-xl bg-dash-soft/60 p-3 text-xs text-dash-mute2">
                 <p className="mb-1 font-semibold">এখন দেখাচ্ছে (সাধারণ তালিকা):</p>
@@ -342,7 +401,7 @@ export default function CourseEditor({ courseId }) {
           </Step>
 
           {/* ৭ How to buy */}
-          <Step id="step-how" n="৭" title={S.how} en={SE.how} hint="সব কোর্সে একই — পেমেন্টের নিয়ম। এখানে কিছু লিখতে হবে না, পাতায় এভাবে দেখাবে:">
+          <Step id="step-how" n="৭" title={S.how} en={SE.how} toggle={toggle('how')} hint="সব কোর্সে একই — পেমেন্টের নিয়ম। এখানে কিছু লিখতে হবে না, পাতায় এভাবে দেখাবে:">
             <ol className="grid gap-2 sm:grid-cols-3">
               {HOW_TO_BUY.bn.map((t, i) => (
                 <li key={t} className="flex items-start gap-2 rounded-xl bg-dash-soft/60 p-3 text-sm text-dash-ink3">
@@ -353,7 +412,7 @@ export default function CourseEditor({ courseId }) {
           </Step>
 
           {/* ৮ FAQ */}
-          <Step id="step-faq" n="৮" title={S.faq} en={SE.faq} hint="পাতার শেষে। খালি রাখলে নিচের সাধারণ প্রশ্নগুলো দেখাবে।">
+          <Step id="step-faq" n="৮" title={S.faq} en={SE.faq} toggle={toggle('faq')} hint="পাতার শেষে। খালি রাখলে নিচের সাধারণ প্রশ্নগুলো দেখাবে।">
             {form.faqs.length === 0 && (
               <div className="mb-3 rounded-xl bg-dash-soft/60 p-3 text-xs text-dash-mute2">
                 <p className="mb-1 font-semibold">এখন দেখাচ্ছে (সাধারণ প্রশ্ন):</p>
@@ -412,26 +471,32 @@ export default function CourseEditor({ courseId }) {
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">হিরো — সাইটে যেমন দেখাবে</p>
             <p className="text-lg font-extrabold leading-snug">{name || 'কোর্সের নাম'}</p>
             <p className="mt-1 line-clamp-3 text-xs text-white/60">{form.summaryBn || form.summary || 'ছোট বিবরণ এখানে দেখাবে'}</p>
-            <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
+            <div className="mt-3 flex flex-wrap gap-1.5 text-center">
               {[
-                ['মডিউল', stats.modules],
-                ['ক্লাস', stats.classes],
-                ['সময়', stats.minutes >= 60 ? `${Math.round((stats.minutes / 60) * 10) / 10}ঘ` : `${stats.minutes}মি`],
-                ['অ্যাক্সেস', 'আজীবন'],
-              ].map(([l, v]) => (
-                <div key={l} className="rounded-md bg-white/5 py-1.5">
+                ['time', 'মোট সময়', stats.minutes >= 60 ? `${Math.round((stats.minutes / 60) * 10) / 10} ঘণ্টা` : `${stats.minutes} মি.`],
+                ['modules', 'মডিউল', stats.modules],
+                ['classes', 'ক্লাস', stats.classes],
+                ['access', 'অ্যাক্সেস', 'আজীবন'],
+              ].filter(([k]) => form.display[k]).map(([, l, v]) => (
+                <div key={l} className="min-w-[4.5rem] flex-1 rounded-md bg-white/5 px-2 py-1.5">
                   <p className="text-[9px] text-white/45">{l}</p>
                   <p className="text-xs font-bold">{v}</p>
                 </div>
               ))}
             </div>
             <div className="relative mt-3 aspect-video overflow-hidden rounded-xl bg-white/5">
-              {form.image ? <img src={form.image} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900" />}
+              {form.image ? (
+                <img src={form.image} alt="" className="h-full w-full object-cover" />
+              ) : promoId ? (
+                <img src={`https://i.ytimg.com/vi/${promoId}/hqdefault.jpg`} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900" />
+              )}
               <span className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500"><FiPlay className="ml-0.5" /></span>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-1.5 text-center text-[11px] font-bold">
-              <span className="rounded-lg bg-emerald-500 py-2">এখনই ভর্তি হন</span>
-              <span className="rounded-lg border border-white/15 py-2">যোগাযোগ করুন</span>
+            <div className={`mt-2 grid gap-1.5 text-center text-[11px] font-bold ${form.display.contact ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <span className="rounded-lg bg-emerald-500 py-2">এখনই কিনুন · {price > 0 ? taka(price) : 'ফ্রি'}</span>
+              {form.display.contact && <span className="rounded-lg border border-white/15 py-2">যোগাযোগ করুন</span>}
             </div>
             <div className="mt-3 flex items-baseline gap-2 rounded-xl bg-white px-3 py-2.5 text-slate-900">
               <span className="text-xl font-extrabold">{price > 0 ? taka(price) : 'ফ্রি'}</span>
@@ -450,7 +515,7 @@ export default function CourseEditor({ courseId }) {
                       {s.done ? <FiCheck /> : i + 1}
                     </span>
                     <span className={s.done ? 'text-dash-ink3' : 'text-dash-mute2'}>{s.label}</span>
-                    {s.note && <span className="ml-auto text-[10px] text-dash-faint">{s.note}</span>}
+                    {s.off && <span className="ml-auto rounded bg-dash-soft px-1.5 text-[10px] font-semibold text-dash-faint">বন্ধ</span>}
                   </button>
                 </li>
               ))}
@@ -499,18 +564,52 @@ function SubPart({ label, title, where, children }) {
   );
 }
 
-function Step({ id, n, title, en, hint, children }) {
+function Step({ id, n, title, en, hint, toggle, children }) {
+  const off = toggle && !toggle.checked;
   return (
-    <section id={id} className="scroll-mt-20 rounded-2xl border border-dash-line bg-dash-card p-5">
-      <div className="mb-4 flex items-start gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">{n}</span>
-        <div>
+    <section id={id} className={`scroll-mt-20 rounded-2xl border bg-dash-card p-5 transition ${off ? 'border-dashed border-dash-line opacity-70' : 'border-dash-line'}`}>
+      <div className={`flex items-start gap-3 ${off ? '' : 'mb-4'}`}>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${off ? 'bg-dash-faint' : 'bg-brand'}`}>{n}</span>
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold text-dash-ink2">{title} {en && <span className="text-sm font-medium text-dash-faint">· {en}</span>}</h2>
-          {hint && <p className="text-xs text-dash-mute2">{hint}</p>}
+          {hint && !off && <p className="text-xs text-dash-mute2">{hint}</p>}
+          {off && <p className="text-xs text-dash-mute2">পাতায় দেখাবে না — চালু করতে ডানের সুইচ চাপুন।</p>}
         </div>
+        {toggle && <Switch checked={toggle.checked} onChange={toggle.onChange} />}
       </div>
-      {children}
+      {!off && children}
     </section>
+  );
+}
+
+/** "পাতায় দেখাবে" on/off. */
+function Switch({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex shrink-0 items-center gap-2 rounded-full px-1 text-xs font-semibold text-dash-mute"
+    >
+      <span className={checked ? 'text-emerald-700' : 'text-dash-faint'}>{checked ? 'পাতায় দেখাবে' : 'বন্ধ'}</span>
+      <span className={`relative h-6 w-11 rounded-full transition ${checked ? 'bg-emerald-500' : 'bg-dash-line-strong'}`}>
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${checked ? 'left-[22px]' : 'left-0.5'}`} />
+      </span>
+    </button>
+  );
+}
+
+function Check({ checked, onChange, label }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${checked ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-dash-line text-dash-mute2 hover:border-brand/40'}`}
+    >
+      <span className={`flex h-4 w-4 items-center justify-center rounded ${checked ? 'bg-emerald-500 text-white' : 'border border-dash-line-strong'}`}>{checked && <FiCheck size={11} />}</span>
+      {label}
+    </button>
   );
 }
 

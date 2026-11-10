@@ -218,6 +218,8 @@ export async function apiRegister(params: {
   medicalCollege?: string;
   /** The name — either the picked college's, or what they typed if unlisted. */
   medicalCollegeName?: string;
+  /** Where they live (the course checkout asks, 11 Nov 2026). */
+  location?: string;
   password: string;
 }): Promise<ApiResult> {
   // The body is spelled out field by field on purpose: this is the one place
@@ -234,6 +236,7 @@ export async function apiRegister(params: {
       whatsappNumber: params.whatsappNumber,
       medicalCollege: params.medicalCollege || undefined,
       medicalCollegeName: params.medicalCollegeName || undefined,
+      location: params.location || undefined,
       password: params.password,
     }),
   });

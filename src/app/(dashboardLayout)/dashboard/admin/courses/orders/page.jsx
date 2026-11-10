@@ -160,6 +160,9 @@ export default function CourseOrdersPage() {
                         <p className="font-semibold text-dash-ink2">{nameOf(s)}</p>
                         {s?.phoneNumber && <p className="font-mono text-[15px] text-dash-ink3">{s.phoneNumber}</p>}
                         {s?.email && <p className="text-xs text-dash-mute2">{s.email}</p>}
+                        {(s?.medicalCollegeName || s?.location) && (
+                          <p className="text-xs text-dash-mute2">{[s.medicalCollegeName, s.location].filter(Boolean).join(' · ')}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-dash-ink3">{r.courseId?.titleBn || r.courseId?.title || '—'}</p>
