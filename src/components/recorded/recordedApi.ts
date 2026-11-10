@@ -22,6 +22,8 @@ export interface RecordedCourse {
   promoVideo?: string;
   benefits?: { text?: string; textBn?: string }[];
   faqs?: { q?: string; qBn?: string; a?: string; aBn?: string }[];
+  /** The admin's on/off switches for the page's parts (courseSections). */
+  display?: Partial<Record<string, boolean>>;
   type?: string;
   status?: string;
   fee?: string | number;
@@ -135,11 +137,12 @@ export async function getCurriculum(courseId: string): Promise<RecordedModule[]>
   }
   return (mods || [])
     .filter((m) => (m as { isPublished?: boolean }).isPublished !== false)
+    // A module with no classes yet still shows (11 Nov 2026: the shop added
+    // modules and could not see them).
     .map((m) => ({
       ...m,
       lessons: (byModule.get(m._id) || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    }))
-    .filter((m) => m.lessons.length > 0);
+    }));
 }
 
 export const checkAccess = (courseId: string) =>
@@ -205,7 +208,7 @@ export function youtubeEmbed(url?: string): string | null {
     let id: string | null = null;
     if (u.hostname.includes("youtu.be")) id = u.pathname.slice(1);
     else if (u.pathname.startsWith("/embed/")) id = u.pathname.split("/")[2];
-    else if (u.pathname.startsWith("/shorts/")) id = u.pathname.split("/")[2];
+    else if (u.pathname.startsWith("/shorts/") || u.pathname.startsWith("/live/")) id = u.pathname.split("/")[2];
     else id = u.searchParams.get("v");
     return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1` : null;
   } catch {

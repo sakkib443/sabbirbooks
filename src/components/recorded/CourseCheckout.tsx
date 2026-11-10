@@ -10,7 +10,9 @@
  *   • Send Money    → the buyer sends to the shop's number and gives the TrxID;
  *                     the order waits on Courses → Course Orders until an admin
  *                     approves it.
- * Signing in is required: the course belongs to an account.
+ * No login needed (11 Nov 2026): a visitor gives their details on the page
+ * and an account is opened for them (GuestBuyerForm) — the course belongs to
+ * an account, which they log in to later to watch.
  * Follows the site's EN/বাং switch.
  */
 /* eslint-disable @next/next/no-img-element */
@@ -21,6 +23,7 @@ import { LuLock, LuCircleCheck, LuHourglass, LuCopy, LuCheck, LuCreditCard, LuSm
 import { Container, cn } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
 import { STORAGE_KEYS } from "@/components/auth/authClient";
+import GuestBuyerForm from "./GuestBuyerForm";
 import {
   checkAccess, coursePrice, courseListPrice, enrollFree, gatewayReady, getCourse, isLoggedIn, learnHref,
   startGateway, submitSendMoney, taka, titleOf, walletNumbers,
@@ -36,7 +39,7 @@ const T = {
     allCourses: "সব কোর্স",
     back: "কোর্সে ফিরে যান",
     heading: "কোর্স চেকআউট",
-    meta: "রেকর্ডেড কোর্স · আজীবন অ্যাক্সেস",
+    meta: "রেকর্ডেড কোর্স",
     free: "ফ্রি",
     yoursNow: "কোর্সটা আপনার হয়ে গেছে!",
     yoursAlready: "কোর্সটা আপনার কেনা আছে",
@@ -78,7 +81,7 @@ const T = {
     allCourses: "All courses",
     back: "Back to the course",
     heading: "Course checkout",
-    meta: "Recorded course · lifetime access",
+    meta: "Recorded course",
     free: "Free",
     yoursNow: "The course is yours!",
     yoursAlready: "You already own this course",
@@ -252,13 +255,14 @@ export default function CourseCheckout() {
     );
   } else if (!loggedIn) {
     body = (
-      <Result icon={<LuLock />} tone="wait" title={L.loginTitle}>
-        <p className="text-muted-foreground">{L.loginSub}</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Link href={`/login?redirect=${encodeURIComponent(here)}`} className={btn}>{L.login}</Link>
-          <Link href={`/register?redirect=${encodeURIComponent(here)}`} className={cn(btn, "bg-card text-primary ring-1 ring-primary hover:bg-primary-soft")}>{L.register}</Link>
-        </div>
-      </Result>
+      <GuestBuyerForm
+        bn={bn}
+        loginHref={`/login?redirect=${encodeURIComponent(here)}`}
+        onDone={() => {
+          setLoggedIn(true);
+          setRole("student");
+        }}
+      />
     );
   } else if (!isStudent) {
     body = (

@@ -1,19 +1,18 @@
 "use client";
 
 /**
- * /courses/<id> — one recorded course (redesigned 11 Nov 2026, in the order
- * the shop set):
+ * /courses/<id> — one recorded course (11 Nov 2026, the shop's layout):
  *
- *   Hero      left: name, short description, four small numbers
- *             right: the intro video (or picture), Enroll now + Contact us
- *   Body      Course overview → Course curriculum → What you get + Benefits
- *             → How to buy → FAQ;  beside it the price card (Buy, WhatsApp)
+ *   Hero      left: name, short description, total time (other numbers are
+ *             switches)   right: the video — YouTube, a video link or an
+ *             uploaded file — and "Buy now · ৳price" (Contact is a switch)
+ *   Body      Course overview → Course curriculum → What you get (+ Benefits)
+ *             → How to buy → FAQ; the price card beside it
  *
- * Each thing is said once: the short description is the top, the long one
- * the overview. Everything comes from the course (with the site's standard
- * wording where the shop left Benefits or FAQ empty) and follows EN/বাং.
- * The course editor (admin) has the same parts, by the same names, in the
- * same order.
+ * Every part after the overview, and the hero's numbers and Contact button,
+ * has an on/off switch in the course editor (course.display); unset parts
+ * follow DEFAULT_DISPLAY, which is the shop's choice — less on the page.
+ * Each thing is said once; everything follows EN/বাং.
  *
  * The button changes with the visitor — buy, waiting for approval, or watch.
  * Staff see the page as a buyer does, with a link to Course View.
@@ -24,7 +23,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   LuPlay, LuLock, LuVideo, LuClock, LuChevronDown, LuCircleCheck, LuHourglass, LuLayers, LuInfinity,
-  LuPhone, LuX, LuShoppingCart, LuCreditCard, LuBadgeCheck, LuChevronRight, LuSparkles,
+  LuPhone, LuX, LuShoppingCart, LuCreditCard, LuBadgeCheck, LuChevronRight,
 } from "react-icons/lu";
 import { FaWhatsapp } from "react-icons/fa";
 import { Container, cn } from "@/components/ui";
@@ -34,7 +33,7 @@ import {
   checkAccess, coursePrice, courseListPrice, getCourse, getCurriculum, learnHref, pick, taka, titleOf, youtubeEmbed,
   type CourseAccess, type RecordedCourse, type RecordedLesson, type RecordedModule,
 } from "./recordedApi";
-import { COURSE_SECTIONS, DEFAULT_BENEFITS, DEFAULT_FAQ, HOW_TO_BUY } from "./courseSections";
+import { COURSE_SECTIONS, DEFAULT_BENEFITS, DEFAULT_FAQ, HOW_TO_BUY, isVideoFile, isYouTube, shows, type DisplayKey } from "./courseSections";
 
 const T = {
   bn: {
@@ -42,32 +41,32 @@ const T = {
     recorded: "রেকর্ডেড কোর্স", lifetime: "আজীবন অ্যাক্সেস",
     modules: "মডিউল", classes: "ক্লাস", totalTime: "মোট সময়", access: "অ্যাক্সেস", forever: "আজীবন",
     hours: (m: number) => (m >= 60 ? `${Math.round((m / 60) * 10) / 10} ঘণ্টা` : `${m} মিনিট`),
-    watch: "কোর্স দেখুন", enroll: "এখনই ভর্তি হন", buy: "এখনই কিনুন", startFree: "ফ্রি তে শুরু করুন",
+    watch: "কোর্স দেখুন", buy: "এখনই কিনুন", startFree: "ফ্রি তে শুরু করুন",
     contact: "যোগাযোগ করুন", whatsapp: "WhatsApp-এ কথা বলুন",
     pendingTitle: "আপনার অর্ডার যাচাই হচ্ছে", pendingSub: "পেমেন্ট মিলিয়ে অ্যাডমিন অনুমোদন দিলেই কোর্সটা খুলে যাবে।",
-    curriculumTitle: (m: number, c: number) => `${m}টি মডিউল · ${c}টি ক্লাস`,
+    moduleCount: (n: number) => `${n}টি মডিউল`,
+    soonModule: "ক্লাস শীঘ্রই যোগ হবে",
     soon: "ক্লাসগুলো শীঘ্রই যোগ হবে।", classCount: (n: number) => `${n}টি ক্লাস`, min: (m: number) => `${m} মি.`,
     play: "দেখুন", free: "ফ্রি", seats: "ভর্তি চলছে", off: (p: number) => `${p}% ছাড়`, call: "কল করুন",
     staffNote: "আপনি স্টাফ হিসেবে লগইন করা — ক্রেতা এভাবেই দেখবে। পুরো কোর্স দেখতে:", courseView: "Course View",
-    close: "বন্ধ করুন", previewNone: "এই কোর্সের ক্লাসগুলো কেনার পর খুলবে।", introVideo: "পরিচিতি ভিডিও দেখুন",
+    close: "বন্ধ করুন", previewNone: "এই কোর্সের ক্লাসগুলো কেনার পর খুলবে।",
   },
   en: {
     home: "Home", courses: "Courses", notFound: "Course not found.", allCourses: "All courses",
     recorded: "Recorded course", lifetime: "Lifetime access",
     modules: "Modules", classes: "Classes", totalTime: "Total time", access: "Access", forever: "Lifetime",
     hours: (m: number) => (m >= 60 ? `${Math.round((m / 60) * 10) / 10} hrs` : `${m} min`),
-    watch: "Watch the course", enroll: "Enroll now", buy: "Buy now", startFree: "Start for free",
+    watch: "Watch the course", buy: "Buy now", startFree: "Start for free",
     contact: "Contact us", whatsapp: "Chat on WhatsApp",
     pendingTitle: "Your order is being checked", pendingSub: "The course opens as soon as an admin matches the payment and approves it.",
-    curriculumTitle: (m: number, c: number) => `${m} ${m === 1 ? "module" : "modules"} · ${c} ${c === 1 ? "class" : "classes"}`,
+    moduleCount: (n: number) => `${n} ${n === 1 ? "module" : "modules"}`,
+    soonModule: "Classes coming soon",
     soon: "The classes will be added soon.", classCount: (n: number) => `${n} ${n === 1 ? "class" : "classes"}`, min: (m: number) => `${m} min`,
     play: "Watch", free: "Free", seats: "Enrolment open", off: (p: number) => `${p}% off`, call: "Call",
     staffNote: "You're signed in as staff — this is what a buyer sees. To watch the whole course:", courseView: "Course View",
-    close: "Close", previewNone: "The classes open after you buy the course.", introVideo: "Watch the intro",
+    close: "Close", previewNone: "The classes open after you buy the course.",
   },
 };
-
-const SECTIONS = ["overview", "curriculum", "includes", "how", "faq"] as const;
 
 /** The first sentence or two of a long text, for a course with no short description. */
 function shorten(text: string, max = 180): string {
@@ -77,6 +76,12 @@ function shorten(text: string, max = 180): string {
   const stop = Math.max(cut.lastIndexOf("।"), cut.lastIndexOf(". "), cut.lastIndexOf("!"), cut.lastIndexOf("?"));
   return stop > 60 ? cut.slice(0, stop + 1) : `${cut.slice(0, cut.lastIndexOf(" ") > 60 ? cut.lastIndexOf(" ") : max)}…`;
 }
+
+/** A YouTube video's still, for when the course has no picture of its own. */
+const youtubeThumb = (url: string) => {
+  const m = youtubeEmbed(url)?.match(/embed\/([^?]+)/);
+  return m ? `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` : "";
+};
 
 export default function RecordedCourseDetail() {
   const { id } = useParams<{ id: string }>();
@@ -113,6 +118,20 @@ export default function RecordedCourseDetail() {
     };
   }, [id]);
 
+  // The player sits over the page: the page behind it does not scroll, and
+  // Esc closes it.
+  useEffect(() => {
+    if (!preview) return;
+    const before = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setPreview(null);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = before;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [preview]);
+
   const font = bn ? "hind-siliguri" : "";
 
   if (state === "loading") {
@@ -131,6 +150,7 @@ export default function RecordedCourseDetail() {
     );
   }
 
+  const on = (k: DisplayKey) => shows(course.display as Partial<Record<DisplayKey, boolean>>, k);
   // A buyer's view for staff too: only a real enrollment counts as owning it.
   const owned = access.hasAccess && !access.staff;
   const canPlayLesson = (l: RecordedLesson) => !l.locked && !!l.videoUrl && (owned || !!l.isFree);
@@ -144,30 +164,43 @@ export default function RecordedCourseDetail() {
   // videoDuration is in seconds.
   const minutes = Math.round(modules.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (l.videoDuration || 0), 0), 0) / 60);
   const checkoutHref = `/courses/${course.slug || course._id}/checkout`;
-  const promo = course.promoVideo && youtubeEmbed(course.promoVideo) ? course.promoVideo : "";
+  // The hero's video: the intro video field, or — as the shop first did — a
+  // video link put in the picture's place. YouTube, or a video file.
+  const imageIsVideo = isYouTube(course.image) || isVideoFile(course.image);
+  const heroVideo = course.promoVideo || (imageIsVideo ? course.image || "" : "");
+  const picture = course.image && !imageIsVideo && !imgFailed ? course.image : isYouTube(heroVideo) ? youtubeThumb(heroVideo) : "";
   const firstFree = owned ? undefined : modules.flatMap((m) => m.lessons).find((l) => l.isFree && canPlayLesson(l));
-  const embed = youtubeEmbed(preview?.url);
   const includes = (course.courseIncludes || []).map((x) => pick(bn, x.text, x.textBn)).filter(Boolean);
   const benefits = (course.benefits || []).map((x) => pick(bn, x.text, x.textBn)).filter(Boolean);
   const faqs: [string, string][] = (course.faqs || [])
     .map((f) => [pick(bn, f.q, f.qBn), pick(bn, f.a, f.aBn)] as [string, string])
     .filter(([q, a]) => q && a);
   const whatsapp = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(title)}`;
-  const go = (sec: string) => document.getElementById(`sec-${sec}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const priceText = price > 0 ? taka(price) : L.free;
   const playHero = () =>
-    promo
-      ? setPreview({ title, url: promo })
+    heroVideo
+      ? setPreview({ title, url: heroVideo })
       : firstFree
         ? setPreview({ title: titleOf(bn, firstFree), url: firstFree.videoUrl })
-        : go("curriculum");
+        : document.getElementById("sec-curriculum")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  /** The buy / watch button; null while an order waits for approval. */
-  const actionButton = (label: string, className: string) =>
+  /** Buy (with the price on it) / watch; null while an order waits for approval. */
+  const actionButton = (className: string) =>
     owned ? (
       <Link href={learnHref(course._id)} className={className}><LuPlay /> {L.watch}</Link>
     ) : access.pending ? null : (
-      <Link href={checkoutHref} className={className}><LuShoppingCart /> {price > 0 ? label : L.startFree}</Link>
+      <Link href={checkoutHref} className={className}>
+        <LuShoppingCart className="shrink-0" />
+        {price > 0 ? (
+          <>
+            {L.buy}
+            <span className="rounded-lg bg-white/20 px-2 py-0.5 text-[0.95em] font-extrabold">{priceText}</span>
+            {offPct > 0 && <span className="text-xs font-semibold line-through opacity-70">{taka(list)}</span>}
+          </>
+        ) : (
+          L.startFree
+        )}
+      </Link>
     );
   const pendingBox = access.pending && !owned ? (
     <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
@@ -183,24 +216,33 @@ export default function RecordedCourseDetail() {
   ) : null;
 
   const stats = [
-    { label: L.modules, value: String(modules.length), icon: LuLayers },
-    { label: L.classes, value: String(lessonCount), icon: LuVideo },
-    { label: L.totalTime, value: minutes > 0 ? L.hours(minutes) : "—", icon: LuClock },
-    { label: L.access, value: L.forever, icon: LuInfinity, hot: true },
-  ];
+    { key: "time" as const, label: L.totalTime, value: minutes > 0 ? L.hours(minutes) : "", icon: LuClock },
+    { key: "modules" as const, label: L.modules, value: String(modules.length), icon: LuLayers },
+    { key: "classes" as const, label: L.classes, value: String(lessonCount), icon: LuVideo },
+    { key: "access" as const, label: L.access, value: L.forever, icon: LuInfinity },
+  ].filter((s) => on(s.key) && s.value);
+  const onlyTime = stats.length === 1 && stats[0].key === "time";
+
+  const embed = youtubeEmbed(preview?.url);
 
   return (
     <main className={cn("bg-surface-soft pb-44 lg:pb-16", font)}>
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#070b14] text-white">
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "44px 44px" }}
+          className="pointer-events-none absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            // Faint, and fading out towards the edges (the shop found it too busy).
+            maskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%)",
+          }}
         />
         <div className="pointer-events-none absolute -left-40 -top-24 h-[28rem] w-[28rem] rounded-full bg-emerald-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -right-32 bottom-[-6rem] h-96 w-96 rounded-full bg-rose-500/15 blur-3xl" />
 
-        <Container className="relative grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-14">
+        <Container className="relative grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:py-16">
           {/* Left */}
           <div>
             <nav className="mb-5 flex flex-wrap items-center gap-1 text-xs text-white/50">
@@ -210,155 +252,172 @@ export default function RecordedCourseDetail() {
               <LuChevronRight className="h-3 w-3" />
               <span className="line-clamp-1 text-white/80">{title}</span>
             </nav>
-            <div className="mb-4 flex flex-wrap gap-2 text-xs font-semibold">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-white/85"><LuVideo className="h-3.5 w-3.5" /> {L.recorded}</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-300"><LuInfinity className="h-3.5 w-3.5" /> {L.lifetime}</span>
-            </div>
-            <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-[2.6rem]">{title}</h1>
-            {summary && <p className="mt-4 max-w-xl text-base leading-relaxed text-white/70">{summary}</p>}
-            <div className="mt-7 grid max-w-xl grid-cols-4 gap-2">
-              {stats.map((s) => (
-                <div key={s.label} className={cn("rounded-lg border px-2.5 py-2", s.hot ? "border-emerald-400/40 bg-emerald-400/10" : "border-white/10 bg-white/[0.04]")}>
-                  <p className={cn("flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide", s.hot ? "text-emerald-300" : "text-white/45")}>
-                    <s.icon className="h-3 w-3 shrink-0" /> <span className="truncate">{s.label}</span>
-                  </p>
-                  <p className="mt-0.5 text-sm font-bold sm:text-base">{s.value}</p>
+            <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white/85">
+              <LuVideo className="h-3.5 w-3.5" /> {L.recorded}
+            </span>
+            <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-[2.75rem]">{title}</h1>
+            {summary && <p className="mt-4 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">{summary}</p>}
+
+            {onlyTime ? (
+              <div className="mt-7 inline-flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/20 text-emerald-300"><LuClock className="h-5 w-5" /></span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-300/80">{L.totalTime}</p>
+                  <p className="text-2xl font-extrabold">{stats[0].value}</p>
                 </div>
-              ))}
+              </div>
+            ) : stats.length > 0 && (
+              <div className={cn("mt-7 grid max-w-xl gap-2", stats.length >= 4 ? "grid-cols-4" : stats.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
+                {stats.map((s) => (
+                  <div key={s.key} className={cn("rounded-lg border px-3 py-2", s.key === "time" ? "border-emerald-400/40 bg-emerald-400/10" : "border-white/10 bg-white/[0.04]")}>
+                    <p className={cn("flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide", s.key === "time" ? "text-emerald-300" : "text-white/45")}>
+                      <s.icon className="h-3 w-3 shrink-0" /> <span className="truncate">{s.label}</span>
+                    </p>
+                    <p className="mt-0.5 text-sm font-bold sm:text-base">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* The two buttons, on the left under the description (the shop,
+                11 Nov 2026): buy (the price on it) and WhatsApp (a switch). */}
+            <div className={cn("mt-8 flex max-w-xl flex-col gap-3 sm:flex-row", !on("contact") && "sm:max-w-sm")}>
+              {actionButton("flex h-14 flex-[1.4] items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 text-base font-extrabold text-white shadow-[0_12px_30px_-10px_rgba(16,185,129,0.7)] ring-1 ring-white/20 transition hover:-translate-y-0.5 hover:from-emerald-400 hover:to-teal-400") || (
+                <span className="flex h-14 flex-[1.4] items-center justify-center rounded-2xl bg-amber-400/15 px-4 text-center text-sm font-semibold text-amber-200">{L.pendingTitle}</span>
+              )}
+              {on("contact") && (
+                <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex h-14 flex-1 items-center justify-center gap-2.5 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#25D366]/20">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white"><FaWhatsapp className="h-4 w-4" /></span> {L.contact}
+                </a>
+              )}
             </div>
           </div>
 
-          {/* Right: video + two buttons */}
-          <div className="rounded-[1.25rem] bg-gradient-to-br from-white/20 via-white/5 to-white/10 p-px shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
-            <div className="rounded-[1.2rem] bg-[#0d1322] p-3">
-              <button type="button" onClick={playHero} className="group relative block aspect-video w-full overflow-hidden rounded-xl bg-white/5" aria-label={promo ? L.introVideo : title}>
-                {course.image && !imgFailed ? (
-                  <img src={course.image} alt={title} onError={() => setImgFailed(true)} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+          {/* Right: the video */}
+          <div className="rounded-[1.4rem] bg-gradient-to-br from-white/25 via-white/5 to-white/15 p-px shadow-[0_40px_100px_-30px_rgba(0,0,0,0.9)]">
+            <div className="rounded-[1.35rem] bg-[#0d1322] p-3 sm:p-4">
+              <button type="button" onClick={playHero} className="group relative block aspect-video w-full overflow-hidden rounded-2xl bg-white/5" aria-label={title}>
+                {picture ? (
+                  <img src={picture} alt={title} onError={() => setImgFailed(true)} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+                ) : isVideoFile(heroVideo) ? (
+                  <video src={`${heroVideo}#t=1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
                 ) : (
                   <div className="h-full w-full bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900" />
                 )}
-                <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                <span className="absolute left-1/2 top-1/2 flex h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500 text-white shadow-xl ring-[10px] ring-rose-500/25 transition group-hover:scale-110">
-                  <LuPlay className="ml-1 h-8 w-8" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
+                <span className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500 text-white shadow-2xl ring-[12px] ring-rose-500/25 transition duration-300 group-hover:scale-110 group-hover:ring-rose-500/35">
+                  <LuPlay className="ml-1 h-9 w-9" />
                 </span>
-                {promo && (
-                  <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
-                    <LuSparkles className="h-3.5 w-3.5" /> {L.introVideo}
-                  </span>
-                )}
               </button>
-              <div className="mt-3 grid grid-cols-2 gap-2.5">
-                {actionButton(L.enroll, "flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400") || (
-                  <span className="flex h-12 items-center justify-center rounded-xl bg-amber-400/15 px-2 text-center text-xs font-semibold text-amber-200">{L.pendingTitle}</span>
-                )}
-                <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">
-                  <LuPhone /> {L.contact}
-                </a>
-              </div>
             </div>
           </div>
         </Container>
       </section>
 
-      <Container className="grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <Container className="grid gap-8 pt-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-12">
-          {/* Tabs */}
-          <nav className="sticky top-[72px] z-20 flex gap-1 overflow-x-auto rounded-xl border border-border bg-card/95 p-1.5 shadow-soft backdrop-blur">
-            {SECTIONS.map((s) => (
-              <button key={s} type="button" onClick={() => go(s)} className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-primary-soft hover:text-primary">
-                {S[s]}
-              </button>
-            ))}
-          </nav>
-
           {/* ── Course overview ── */}
-          <section id="sec-overview" className="scroll-mt-36">
-            <SectionHead label={S.overview} />
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
-              <p className="whitespace-pre-line text-[15px] leading-[1.85] text-muted-foreground">{details || summary}</p>
-            </div>
-          </section>
+          {(details || summary) && (
+            <section id="sec-overview" className="scroll-mt-28">
+              <SectionHead label={S.overview} />
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-7">
+                <p className="whitespace-pre-line text-[15px] leading-[1.9] text-muted-foreground">{details || summary}</p>
+              </div>
+            </section>
+          )}
 
           {/* ── Course curriculum ── */}
-          <section id="sec-curriculum" className="scroll-mt-36">
-            <SectionHead label={S.curriculum} title={L.curriculumTitle(modules.length, lessonCount)} />
-            {modules.length === 0 ? (
-              <p className="rounded-2xl bg-card p-6 text-muted-foreground">{L.soon}</p>
-            ) : (
+          {on("curriculum") && (
+            <section id="sec-curriculum" className="scroll-mt-28">
+              <SectionHead label={S.curriculum} title={[L.moduleCount(modules.length), lessonCount ? L.classCount(lessonCount) : "", minutes ? L.hours(minutes) : ""].filter(Boolean).join(" · ")} />
+              {modules.length === 0 ? (
+                <p className="rounded-2xl bg-card p-6 text-muted-foreground">{L.soon}</p>
+              ) : (
+                <div className="space-y-3">
+                  {modules.map((m, mi) => (
+                    <div key={m._id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+                      <button
+                        type="button"
+                        onClick={() => m.lessons.length && setOpen((o) => ({ ...o, [m._id]: !o[m._id] }))}
+                        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+                      >
+                        <span className="flex items-center gap-3 font-semibold text-foreground">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">{String(mi + 1).padStart(2, "0")}</span>
+                          {titleOf(bn, m)}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+                          {m.lessons.length ? L.classCount(m.lessons.length) : L.soonModule}
+                          {m.lessons.length > 0 && <LuChevronDown className={cn("transition", open[m._id] && "rotate-180")} />}
+                        </span>
+                      </button>
+                      {open[m._id] && m.lessons.length > 0 && (
+                        <ul className="divide-y divide-border border-t border-border bg-surface-soft/40">
+                          {m.lessons.map((l, li) => {
+                            const canPlay = canPlayLesson(l);
+                            return (
+                              <li key={l._id} className="flex items-center gap-3 px-5 py-3 text-sm">
+                                <span className="w-6 shrink-0 text-xs font-semibold text-muted-foreground">{li + 1}.</span>
+                                {canPlay ? <LuPlay className="shrink-0 text-primary" /> : <LuLock className="shrink-0 text-muted-foreground" />}
+                                <span className="flex-1 text-foreground">{titleOf(bn, l)}</span>
+                                {l.isFree && !owned && <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">{L.free}</span>}
+                                {!!l.videoDuration && <span className="text-muted-foreground">{L.min(Math.max(1, Math.round(l.videoDuration / 60)))}</span>}
+                                {canPlay && (owned ? (
+                                  <Link href={`${learnHref(course._id)}?lesson=${l._id}`} className="font-semibold text-primary hover:underline">{L.play}</Link>
+                                ) : (
+                                  <button type="button" onClick={() => setPreview({ title: titleOf(bn, l), url: l.videoUrl })} className="font-semibold text-primary hover:underline">{L.play}</button>
+                                ))}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ── What you get (+ Benefits) ── */}
+          {((on("includes") && includes.length > 0) || on("benefits")) && (
+            <section id="sec-includes" className={cn("grid scroll-mt-28 gap-4", on("includes") && includes.length > 0 && on("benefits") && "sm:grid-cols-2")}>
+              {on("includes") && includes.length > 0 && <InfoList title={S.includes} items={includes} tone="emerald" />}
+              {on("benefits") && <InfoList title={S.benefits} items={benefits.length ? benefits : bn ? DEFAULT_BENEFITS.bn : DEFAULT_BENEFITS.en} tone="sky" />}
+            </section>
+          )}
+
+          {/* ── How to buy ── */}
+          {on("how") && (
+            <section id="sec-how" className="scroll-mt-28">
+              <SectionHead label={S.how} />
+              <ol className="grid gap-3 sm:grid-cols-3">
+                {(bn ? HOW_TO_BUY.bn : HOW_TO_BUY.en).map((s, i) => (
+                  <li key={i} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+                    <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-rose-500 text-sm font-bold text-white">{i + 1}</span>
+                    <p className="text-sm font-medium text-foreground">{s}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* ── FAQ ── */}
+          {on("faq") && (
+            <section id="sec-faq" className="scroll-mt-28">
+              <SectionHead label={S.faq} />
               <div className="space-y-3">
-                {modules.map((m, mi) => (
-                  <div key={m._id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-                    <button type="button" onClick={() => setOpen((o) => ({ ...o, [m._id]: !o[m._id] }))} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left">
-                      <span className="flex items-center gap-3 font-semibold text-foreground">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">{String(mi + 1).padStart(2, "0")}</span>
-                        {titleOf(bn, m)}
-                      </span>
-                      <span className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-                        {L.classCount(m.lessons.length)}
-                        <LuChevronDown className={cn("transition", open[m._id] && "rotate-180")} />
-                      </span>
+                {(faqs.length ? faqs : bn ? DEFAULT_FAQ.bn : DEFAULT_FAQ.en).map(([q, a], i) => (
+                  <div key={i} className="overflow-hidden rounded-2xl border border-border bg-card">
+                    <button type="button" onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left font-semibold text-foreground">
+                      {q}
+                      <LuChevronDown className={cn("shrink-0 transition", faqOpen === i && "rotate-180")} />
                     </button>
-                    {open[m._id] && (
-                      <ul className="divide-y divide-border border-t border-border bg-surface-soft/40">
-                        {m.lessons.map((l, li) => {
-                          const canPlay = canPlayLesson(l);
-                          return (
-                            <li key={l._id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                              <span className="w-6 shrink-0 text-xs font-semibold text-muted-foreground">{li + 1}.</span>
-                              {canPlay ? <LuPlay className="shrink-0 text-primary" /> : <LuLock className="shrink-0 text-muted-foreground" />}
-                              <span className="flex-1 text-foreground">{titleOf(bn, l)}</span>
-                              {l.isFree && !owned && <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">{L.free}</span>}
-                              {!!l.videoDuration && <span className="text-muted-foreground">{L.min(Math.max(1, Math.round(l.videoDuration / 60)))}</span>}
-                              {canPlay && (owned ? (
-                                <Link href={`${learnHref(course._id)}?lesson=${l._id}`} className="font-semibold text-primary hover:underline">{L.play}</Link>
-                              ) : (
-                                <button type="button" onClick={() => setPreview({ title: titleOf(bn, l), url: l.videoUrl })} className="font-semibold text-primary hover:underline">{L.play}</button>
-                              ))}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
+                    {faqOpen === i && <p className="whitespace-pre-line border-t border-border px-5 py-4 text-sm leading-relaxed text-muted-foreground">{a}</p>}
                   </div>
                 ))}
               </div>
-            )}
-          </section>
-
-          {/* ── What you get + Benefits ── */}
-          <section id="sec-includes" className="grid scroll-mt-36 gap-4 sm:grid-cols-2">
-            <InfoList title={S.includes} items={includes.length ? includes : [L.classCount(lessonCount)]} tone="emerald" />
-            <InfoList title={S.benefits} items={benefits.length ? benefits : bn ? DEFAULT_BENEFITS.bn : DEFAULT_BENEFITS.en} tone="sky" />
-          </section>
-
-          {/* ── How to buy ── */}
-          <section id="sec-how" className="scroll-mt-36">
-            <SectionHead label={S.how} />
-            <ol className="grid gap-3 sm:grid-cols-3">
-              {(bn ? HOW_TO_BUY.bn : HOW_TO_BUY.en).map((s, i) => (
-                <li key={i} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-                  <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-rose-500 text-sm font-bold text-white">{i + 1}</span>
-                  <p className="text-sm font-medium text-foreground">{s}</p>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          {/* ── FAQ ── */}
-          <section id="sec-faq" className="scroll-mt-36">
-            <SectionHead label={S.faq} />
-            <div className="space-y-3">
-              {(faqs.length ? faqs : bn ? DEFAULT_FAQ.bn : DEFAULT_FAQ.en).map(([q, a], i) => (
-                <div key={i} className="overflow-hidden rounded-2xl border border-border bg-card">
-                  <button type="button" onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left font-semibold text-foreground">
-                    {q}
-                    <LuChevronDown className={cn("shrink-0 transition", faqOpen === i && "rotate-180")} />
-                  </button>
-                  {faqOpen === i && <p className="whitespace-pre-line border-t border-border px-5 py-4 text-sm leading-relaxed text-muted-foreground">{a}</p>}
-                </div>
-              ))}
-            </div>
-          </section>
+            </section>
+          )}
         </div>
 
         {/* ── Price card ── */}
@@ -367,24 +426,27 @@ export default function RecordedCourseDetail() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> {L.seats}
             </span>
-            <div className="rounded-xl border-2 border-primary/30 bg-primary-soft/40 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{L.recorded}</p>
-              <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-foreground">{priceText}</span>
-                {list > 0 && <span className="text-sm text-muted-foreground line-through">{taka(list)}</span>}
+            <div>
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="text-4xl font-extrabold text-foreground">{priceText}</span>
+                {list > 0 && <span className="text-base text-muted-foreground line-through">{taka(list)}</span>}
                 {offPct > 0 && <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold text-white">{L.off(offPct)}</span>}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{L.lifetime} · {L.classCount(lessonCount)}</p>
+              {on("time") && minutes > 0 && <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground"><LuClock className="h-4 w-4" /> {L.totalTime}: {L.hours(minutes)}</p>}
             </div>
-            {actionButton(L.buy, btnGreen)}
+            {actionButton(btnGreen)}
             {pendingBox}
             {staffNote}
-            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#25D366] text-sm font-bold text-white transition hover:brightness-95">
-              <FaWhatsapp className="h-4 w-4" /> {L.whatsapp}
-            </a>
-            <a href={`tel:${SUPPORT_PHONE}`} className="flex items-center justify-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
-              <LuPhone className="h-4 w-4" /> {L.call}: {SUPPORT_PHONE}
-            </a>
+            {on("contact") && (
+              <>
+                <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#25D366] text-sm font-bold text-white transition hover:brightness-95">
+                  <FaWhatsapp className="h-4 w-4" /> {L.whatsapp}
+                </a>
+                <a href={`tel:${SUPPORT_PHONE}`} className="flex items-center justify-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+                  <LuPhone className="h-4 w-4" /> {L.call}: {SUPPORT_PHONE}
+                </a>
+              </>
+            )}
             <p className="flex items-center justify-center gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
               <LuCreditCard className="h-4 w-4 text-emerald-500" /> bKash · Nagad · Card
             </p>
@@ -395,31 +457,29 @@ export default function RecordedCourseDetail() {
       {/* ── Phone: price + button stay at the bottom, just above the site's own
           bottom menu (BottomNav, ~60px + the iPhone safe area). ── */}
       <div className="fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom))] z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-xl items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-lg font-extrabold leading-none text-foreground">{priceText}</p>
-            {list > 0 && <p className="text-xs text-muted-foreground line-through">{taka(list)}</p>}
-          </div>
-          <div className="w-44">{actionButton(L.buy, btnGreen) || <span className="block text-right text-xs font-semibold text-amber-700">{L.pendingTitle}</span>}</div>
+        <div className="mx-auto max-w-xl">
+          {actionButton(btnGreen) || <span className="block text-center text-sm font-semibold text-amber-700">{L.pendingTitle}</span>}
         </div>
         {(access.staff || access.pending) && <div className="mx-auto mt-2 max-w-xl">{staffNote || pendingBox}</div>}
       </div>
 
-      {/* ── Video player ── */}
+      {/* ── Video player: over the page, centred ── */}
       {preview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreview(null)}>
-          <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-black" onClick={(e) => e.stopPropagation()}>
-            {embed ? (
-              <iframe src={embed} title={preview.title} className="aspect-video w-full" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-            ) : preview.url ? (
-              <video src={preview.url} controls className="aspect-video w-full" />
-            ) : (
-              <p className="p-10 text-center text-white/70">{L.previewNone}</p>
-            )}
-            <div className="flex items-center justify-between gap-3 bg-card px-4 py-3">
-              <p className="font-semibold text-foreground">{preview.title}</p>
-              <button type="button" onClick={() => setPreview(null)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><LuX /> {L.close}</button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-3 backdrop-blur-sm sm:p-8" onClick={() => setPreview(null)}>
+          <div className="relative w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setPreview(null)} className="absolute -top-11 right-0 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/20">
+              <LuX /> {L.close}
+            </button>
+            <div className="overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10">
+              {embed ? (
+                <iframe src={`${embed}&autoplay=1`} title={preview.title} className="aspect-video w-full" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
+              ) : preview.url ? (
+                <video src={preview.url} controls autoPlay playsInline className="aspect-video w-full bg-black" />
+              ) : (
+                <p className="p-10 text-center text-white/70">{L.previewNone}</p>
+              )}
             </div>
+            <p className="mt-3 text-center text-sm font-semibold text-white/80">{preview.title}</p>
           </div>
         </div>
       )}
