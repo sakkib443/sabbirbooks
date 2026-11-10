@@ -1,53 +1,57 @@
 'use client';
 
 /**
- * Add / Edit a recorded course — laid out like the course page itself
- * (11 Nov 2026), so the shop fills it in the order a buyer reads it:
+ * Add / Edit a recorded course — the same parts, by the same names and in
+ * the same order as the course page (11 Nov 2026, the shop's layout):
  *
- *   ১ Name, short description (the top) and overview (lower down) — each
- *     said once, never the same words twice (the shop, 11 Nov 2026)
- *   ২ Picture         → the video card
- *   ৩ Price           → the price card (the discount works itself out)
- *   ৪ What you get    → the list on the video and price cards
- *   ৫ Classes         → the curriculum (modules → YouTube classes)
- *   ৬ Publish
+ *   ১ হিরো (উপরের অংশ)   name, short description, picture, intro video
+ *   ২ দাম                the price card
+ *   ৩ কোর্স ওভারভিউ       the long description
+ *   ৪ কোর্স কারিকুলাম     modules → classes (YouTube)
+ *   ৫ কোর্সে যা পাবেন     list
+ *   ৬ সুবিধা              list (empty = the site's standard list)
+ *   ৭ কীভাবে কিনবেন       the same for every course — shown, not edited
+ *   ৮ প্রশ্নোত্তর          list (empty = the site's standard questions)
+ *   ৯ প্রকাশ
  *
- * A live preview on the right shows the top of the page as it is typed, and
- * the step list says what is still missing. Bengali and English side by side
- * (title/titleBn …); either may be left empty and the site shows the other.
- * Classes need the course saved first: on a new course, saving moves to its
- * edit page with step ৫ open.
+ * Section names come from components/recorded/courseSections, which the
+ * course page uses too. Each thing is written once — the short description
+ * is the top, the overview the long text. Bengali and English side by side;
+ * either may be left empty and the site shows the other. A live preview of
+ * the top of the page sits on the right with a list of what is still
+ * missing. Classes need the course saved first: saving a new course moves
+ * to its edit page at the curriculum.
  */
 /* eslint-disable @next/next/no-img-element */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiCheck, FiCheckCircle, FiExternalLink, FiEye, FiImage, FiLoader, FiPlay, FiPlus, FiSave, FiTrash2, FiUpload } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiExternalLink, FiEye, FiImage, FiLoader, FiPlay, FiPlus, FiSave, FiTrash2, FiUpload, FiYoutube } from 'react-icons/fi';
 import API_BASE_URL from '@/config/api';
 import { useToast } from '@/components/shared/Toast';
-import CurriculumEditor from './CurriculumEditor';
+import { COURSE_SECTIONS, DEFAULT_BENEFITS, DEFAULT_FAQ, HOW_TO_BUY } from '@/components/recorded/courseSections';
+import CurriculumEditor, { youtubeId } from './CurriculumEditor';
 import { btnGhost, btnPrimary, call, input, priceOf, taka, token } from './courseAdmin';
 
-const ICON_CHOICES = [
-  { id: 'video', label: '🎬 ভিডিও' },
-  { id: 'clock', label: '⏰ সময়' },
-  { id: 'device', label: '📱 ডিভাইস' },
-  { id: 'check', label: '✔️ অন্য' },
-];
+const S = COURSE_SECTIONS.bn;
+const SE = COURSE_SECTIONS.en;
 
 // A course saved before the two languages has one title, in either language;
 // a course saved with no English has its Bengali copied into `title`.
 const hasBangla = (t) => /[ঀ-৿]/.test(t || '');
 const split = (en, bn) =>
   bn ? { bn, en: en && en !== bn ? en : '' } : hasBangla(en) ? { bn: en, en: '' } : { bn: '', en: en || '' };
+const pair = (x, en = 'text', bnKey = 'textBn') => {
+  const s = split(x?.[en], x?.[bnKey]);
+  return { bn: s.bn, en: s.en };
+};
 
 const EMPTY = {
-  titleBn: '', title: '', summaryBn: '', summary: '', detailsBn: '', details: '', fee: '', offerPrice: '', image: '', status: 'published',
-  includes: [
-    { icon: 'video', textBn: '', text: '' },
-    { icon: 'clock', textBn: 'যেকোনো সময় দেখা যায়', text: 'Watch any time' },
-    { icon: 'device', textBn: 'মোবাইল ও কম্পিউটারে', text: 'On mobile and computer' },
-  ],
+  titleBn: '', title: '', summaryBn: '', summary: '', detailsBn: '', details: '',
+  fee: '', offerPrice: '', image: '', promoVideo: '', status: 'published',
+  includes: [{ bn: '', en: '' }],
+  benefits: [],
+  faqs: [],
 };
 
 const toForm = (c) => {
@@ -55,19 +59,21 @@ const toForm = (c) => {
   const d = split(c.details, c.detailsBn);
   const s = split(c.summary, c.summaryBn);
   return {
-    titleBn: t.bn,
-    title: t.en,
-    summaryBn: s.bn,
-    summary: s.en,
-    detailsBn: d.bn,
-    details: d.en,
+    titleBn: t.bn, title: t.en,
+    summaryBn: s.bn, summary: s.en,
+    detailsBn: d.bn, details: d.en,
     fee: c.fee && c.fee !== '0' ? String(c.fee) : '',
     offerPrice: c.offerPrice ? String(c.offerPrice) : '',
     image: c.image || '',
+    promoVideo: c.promoVideo || '',
     status: c.status || 'published',
-    includes: (c.courseIncludes || []).map((x) => ({ icon: x.icon || 'check', textBn: x.textBn || (hasBangla(x.text) ? x.text : ''), text: hasBangla(x.text) && !x.textBn ? '' : x.text || '' })),
+    includes: (c.courseIncludes || []).map((x) => pair(x)),
+    benefits: (c.benefits || []).map((x) => pair(x)),
+    faqs: (c.faqs || []).map((f) => ({ q: pair(f, 'q', 'qBn'), a: pair(f, 'a', 'aBn') })),
   };
 };
+// Out of the form: English falls back to the Bengali, empty rows dropped.
+const outPairs = (rows) => rows.map((r) => ({ text: r.en.trim(), textBn: r.bn.trim() })).filter((r) => r.text || r.textBn);
 
 export default function CourseEditor({ courseId }) {
   const isEdit = !!courseId;
@@ -93,7 +99,9 @@ export default function CourseEditor({ courseId }) {
   }, [isEdit, courseId, showToast]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const setInclude = (i, patch) => setForm((f) => ({ ...f, includes: f.includes.map((x, k) => (k === i ? { ...x, ...patch } : x)) }));
+  const setRow = (list, i, patch) => setForm((f) => ({ ...f, [list]: f[list].map((x, k) => (k === i ? { ...x, ...patch } : x)) }));
+  const addRow = (list, row) => setForm((f) => ({ ...f, [list]: [...f[list], row] }));
+  const dropRow = (list, i) => setForm((f) => ({ ...f, [list]: f[list].filter((_, k) => k !== i) }));
   const onStats = useCallback((s) => setStats(s), []);
 
   const upload = async (file) => {
@@ -121,6 +129,7 @@ export default function CourseEditor({ courseId }) {
     const fee = String(form.fee).replace(/[^\d]/g, '');
     const offer = String(form.offerPrice).replace(/[^\d]/g, '');
     if (offer && fee && Number(offer) >= Number(fee)) return showToast('error', 'অফার দাম আসল দামের চেয়ে কম হতে হবে');
+    if (form.promoVideo.trim() && !youtubeId(form.promoVideo)) return showToast('error', 'পরিচিতি ভিডিওর ঘরে ঠিক YouTube লিংক দিন, অথবা খালি রাখুন');
     const body = {
       // `title` is required on the server: English, or the Bengali when there is none.
       title: form.title.trim() || form.titleBn.trim(),
@@ -132,12 +141,15 @@ export default function CourseEditor({ courseId }) {
       fee: fee || '0',
       offerPrice: offer || '',
       image: form.image.trim(),
+      promoVideo: form.promoVideo.trim(),
       status: form.status,
       type: 'Recorded',
       lectures: stats.classes || undefined,
-      courseIncludes: form.includes
-        .map((x) => ({ icon: x.icon || 'check', text: x.text.trim(), textBn: x.textBn.trim() }))
-        .filter((x) => x.text || x.textBn),
+      courseIncludes: outPairs(form.includes).map((x) => ({ icon: 'check', ...x })),
+      benefits: outPairs(form.benefits),
+      faqs: form.faqs
+        .map((f) => ({ q: f.q.en.trim(), qBn: f.q.bn.trim(), a: f.a.en.trim(), aBn: f.a.bn.trim() }))
+        .filter((f) => (f.q || f.qBn) && (f.a || f.aBn)),
     };
     setSaving(true);
     try {
@@ -146,8 +158,8 @@ export default function CourseEditor({ courseId }) {
         showToast('success', 'সেভ হয়েছে ✓');
       } else {
         const j = await call('/courses/create-course', 'POST', body);
-        showToast('success', 'কোর্স তৈরি হয়েছে — এবার ৫ নম্বর ধাপে ক্লাসগুলো যোগ করুন');
-        router.push(`/dashboard/admin/courses/${j.data._id}#step-classes`);
+        showToast('success', `কোর্স তৈরি হয়েছে — এবার "${S.curriculum}"-এ ক্লাসগুলো যোগ করুন`);
+        router.push(`/dashboard/admin/courses/${j.data._id}#step-curriculum`);
       }
     } catch (err) {
       showToast('error', err.message);
@@ -164,12 +176,16 @@ export default function CourseEditor({ courseId }) {
   const list = Number(String(form.fee).replace(/[^\d]/g, '')) || 0;
   const offPct = price > 0 && price < list ? Math.round(((list - price) / list) * 100) : 0;
   const name = form.titleBn || form.title;
+  const promoId = youtubeId(form.promoVideo);
   const steps = [
-    { id: 'step-name', label: 'নাম ও বিবরণ', done: !!name && !!(form.summaryBn || form.summary) && !!(form.detailsBn || form.details) },
-    { id: 'step-image', label: 'ছবি', done: !!form.image },
+    { id: 'step-hero', label: 'হিরো (নাম, ছোট বিবরণ, ছবি)', done: !!name && !!(form.summaryBn || form.summary) && !!form.image },
     { id: 'step-price', label: 'দাম', done: price > 0 || form.fee === '0' },
-    { id: 'step-includes', label: 'কোর্সে যা পাবেন', done: form.includes.some((x) => x.text || x.textBn) },
-    { id: 'step-classes', label: 'ক্লাসগুলো', done: stats.classes > 0 },
+    { id: 'step-overview', label: S.overview, done: !!(form.detailsBn || form.details) },
+    { id: 'step-curriculum', label: S.curriculum, done: stats.classes > 0 },
+    { id: 'step-includes', label: S.includes, done: form.includes.some((x) => x.bn || x.en) },
+    { id: 'step-benefits', label: S.benefits, done: true, note: form.benefits.length ? '' : 'সাধারণ তালিকা' },
+    { id: 'step-how', label: S.how, done: true, note: 'সব কোর্সে একই' },
+    { id: 'step-faq', label: S.faq, done: true, note: form.faqs.length ? '' : 'সাধারণ প্রশ্ন' },
     { id: 'step-publish', label: 'প্রকাশ', done: isEdit && form.status === 'published' },
   ];
   const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -183,7 +199,7 @@ export default function CourseEditor({ courseId }) {
         <div>
           <Link href="/dashboard/admin/courses" className="mb-1 inline-flex items-center gap-1 text-sm text-dash-mute2 hover:text-brand"><FiArrowLeft /> All Courses</Link>
           <h1 className="text-2xl font-bold text-dash-ink2">{isEdit ? 'কোর্স এডিট' : 'নতুন কোর্স'}</h1>
-          <p className="text-sm text-dash-mute2">উপর থেকে নিচে ধাপগুলো পূরণ করুন — ডানে সাথে সাথে দেখাবে সাইটে কেমন লাগবে।</p>
+          <p className="text-sm text-dash-mute2">কোর্সের পাতা যে ক্রমে সাজানো, ঠিক সেই ক্রমে ধাপগুলো — উপর থেকে নিচে পূরণ করুন।</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {isEdit && <Link href={`/dashboard/admin/courses/view?course=${courseId}`} className={btnGhost}><FiEye /> ছাত্রের মতো দেখুন</Link>}
@@ -198,64 +214,67 @@ export default function CourseEditor({ courseId }) {
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-5">
-          {/* ১ Name & about */}
-          <Step id="step-name" n="১" title="কোর্সের নাম ও বিবরণ" hint="তিনটা আলাদা জিনিস, প্রতিটা একবারই লিখুন — একই কথা দুই জায়গায় লেখার দরকার নেই।">
+          {/* ১ Hero */}
+          <Step id="step-hero" n="১" title="হিরো (উপরের অংশ)" en="Hero" hint="কোর্সের পাতার একদম উপরের অংশ — বাঁয়ে নাম আর ছোট বিবরণ, ডানে ছবি/ভিডিও।">
             <div className="space-y-5">
-              <SubPart label="ক" title="কোর্সের নাম" where="পাতার একদম উপরে, বড় করে">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <input value={form.titleBn} onChange={set('titleBn')} className={input} placeholder="বাংলা — যেমন: হিস্টো-এমব্রায়ো ভাইভা রেডি কোর্স" />
-                  <input value={form.title} onChange={set('title')} className={input} placeholder="English — e.g. Histo-Embryo Viva Ready Course" />
+              <SubPart label="ক" title="কোর্সের নাম" where="উপরে, বড় করে">
+                <Pair
+                  bn={form.titleBn} en={form.title}
+                  onBn={set('titleBn')} onEn={set('title')}
+                  phBn="যেমন: হিস্টো-এমব্রায়ো ভাইভা রেডি কোর্স" phEn="e.g. Histo-Embryo Viva Ready Course"
+                />
+              </SubPart>
+              <SubPart label="খ" title="ছোট বিবরণ" where="নামের ঠিক নিচে — ১–২ লাইনে কোর্সটা কী">
+                <Pair
+                  area rows={2} max={400}
+                  bn={form.summaryBn} en={form.summary}
+                  onBn={set('summaryBn')} onEn={set('summary')}
+                  phBn="যেমন: মাত্র ৬ ঘণ্টায় হিস্টোলজি, এমব্রায়োলজি ও স্পেশাল ফিগার — ভাইভার জন্য পুরো রেডি।" phEn="One or two lines"
+                />
+              </SubPart>
+              <SubPart label="গ" title="ছবি" where="ডানে ভিডিওর জায়গায়, আর কোর্সের তালিকায় — চওড়া ছবি (১২৮০×৭২০) সবচেয়ে ভালো">
+                <div className="grid gap-4 sm:grid-cols-[240px_1fr] sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => !uploading && fileRef.current?.click()}
+                    className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-dash-line bg-dash-soft text-dash-mute2 transition hover:border-brand"
+                  >
+                    {form.image ? (
+                      <img src={form.image} alt="" className="h-full w-full object-cover" />
+                    ) : uploading ? (
+                      <FiLoader className="animate-spin" size={22} />
+                    ) : (
+                      <span className="flex flex-col items-center gap-1 text-sm"><FiUpload size={22} /> ছবি বাছাই করুন</span>
+                    )}
+                  </button>
+                  <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
+                  <div className="space-y-2">
+                    <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className={btnGhost}>
+                      {uploading ? <FiLoader className="animate-spin" /> : <FiUpload />} {form.image ? 'অন্য ছবি দিন' : 'কম্পিউটার/মোবাইল থেকে ছবি দিন'}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <FiImage className="shrink-0 text-dash-faint" />
+                      <input value={form.image} onChange={set('image')} className={input} placeholder="অথবা ছবির লিংক পেস্ট করুন" />
+                    </div>
+                    {form.image && <button type="button" onClick={() => setForm((f) => ({ ...f, image: '' }))} className="text-xs font-semibold text-rose-600 hover:underline">ছবি সরান</button>}
+                  </div>
                 </div>
               </SubPart>
-              <SubPart label="খ" title="ছোট বিবরণ" where="নামের ঠিক নিচে — ১–২ লাইন, এক নজরে কোর্সটা কী">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <textarea value={form.summaryBn} onChange={set('summaryBn')} rows={2} maxLength={400} className={input} placeholder="বাংলা — যেমন: মাত্র ৬ ঘণ্টায় হিস্টোলজি, এমব্রায়োলজি ও স্পেশাল ফিগার — ভাইভার জন্য পুরো রেডি।" />
-                  <textarea value={form.summary} onChange={set('summary')} rows={2} maxLength={400} className={input} placeholder="English — one or two lines" />
-                </div>
-              </SubPart>
-              <SubPart label="গ" title="কোর্স ওভারভিউ" where="নিচে &ldquo;কোর্স ওভারভিউ&rdquo; অংশে — বিস্তারিত যা বলতে চান">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <textarea value={form.detailsBn} onChange={set('detailsBn')} rows={7} className={input} placeholder="বাংলা — কোর্সটা কাদের জন্য, কেন দরকার, কী কী শেখানো হবে" />
-                  <textarea value={form.details} onChange={set('details')} rows={7} className={input} placeholder="English" />
-                </div>
-              </SubPart>
-            </div>
-          </Step>
-
-          {/* ২ Picture */}
-          <Step id="step-image" n="২" title="কোর্সের ছবি" hint="ভিডিও কার্ডে আর কোর্সের তালিকায় দেখাবে। ১২৮০×৭২০ (চওড়া) ছবি সবচেয়ে ভালো।">
-            <div className="grid gap-4 sm:grid-cols-[260px_1fr] sm:items-center">
-              <button
-                type="button"
-                onClick={() => !uploading && fileRef.current?.click()}
-                className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-dash-line bg-dash-soft text-dash-mute2 transition hover:border-brand"
-              >
-                {form.image ? (
-                  <img src={form.image} alt="" className="h-full w-full object-cover" />
-                ) : uploading ? (
-                  <FiLoader className="animate-spin" size={22} />
-                ) : (
-                  <span className="flex flex-col items-center gap-1 text-sm"><FiUpload size={22} /> ছবি বাছাই করুন</span>
-                )}
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
-              <div className="space-y-2">
-                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className={btnGhost}>
-                  {uploading ? <FiLoader className="animate-spin" /> : <FiUpload />} {form.image ? 'অন্য ছবি দিন' : 'কম্পিউটার/মোবাইল থেকে ছবি দিন'}
-                </button>
+              <SubPart label="ঘ" title="পরিচিতি ভিডিও (ঐচ্ছিক)" where="ছবির উপরের লাল ▶ চাপলে চলবে — কোর্সের ছোট পরিচিতি, সবাই দেখতে পারবে">
                 <div className="flex items-center gap-2">
-                  <FiImage className="shrink-0 text-dash-faint" />
-                  <input value={form.image} onChange={set('image')} className={input} placeholder="অথবা ছবির লিংক পেস্ট করুন" />
+                  {promoId ? (
+                    <img src={`https://i.ytimg.com/vi/${promoId}/mqdefault.jpg`} alt="" className="h-10 w-16 shrink-0 rounded object-cover" />
+                  ) : (
+                    <FiYoutube className="shrink-0 text-dash-faint" size={20} />
+                  )}
+                  <input value={form.promoVideo} onChange={set('promoVideo')} className={input} placeholder="YouTube লিংক — খালি রাখলে ▶ চাপলে কারিকুলামে নিয়ে যাবে" />
                 </div>
-                {form.image && (
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, image: '' }))} className="text-xs font-semibold text-rose-600 hover:underline">ছবি সরান</button>
-                )}
-              </div>
+              </SubPart>
             </div>
           </Step>
 
-          {/* ৩ Price */}
-          <Step id="step-price" n="৩" title="দাম" hint="অফার দাম দিলে আসল দামটা কেটে দেখাবে, আর কত % ছাড় সেটা নিজেই হিসাব হবে।">
+          {/* ২ Price */}
+          <Step id="step-price" n="২" title="দাম" en="Price" hint="ডানের দামের কার্ডে দেখাবে। অফার দাম দিলে আসল দাম কেটে দেখাবে, কত % ছাড় সেটা নিজেই হিসাব হবে।">
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="আসল দাম (৳)" hint="খালি বা ০ = ফ্রি কোর্স">
                 <input value={form.fee} onChange={set('fee')} inputMode="numeric" className={input} placeholder="999" />
@@ -271,27 +290,13 @@ export default function CourseEditor({ courseId }) {
             </div>
           </Step>
 
-          {/* ৪ What you get */}
-          <Step id="step-includes" n="৪" title="কোর্সে যা পাবেন" hint="ওভারভিউয়ের নিচে একবারই টিক দিয়ে দেখাবে। ছোট ছোট লাইন — যেমন: ২০টি রেকর্ড করা ক্লাস, নোট PDF।">
-            <div className="space-y-2">
-              {form.includes.map((x, i) => (
-                <div key={i} className="grid gap-2 sm:grid-cols-[130px_1fr_1fr_auto]">
-                  <select value={x.icon} onChange={(e) => setInclude(i, { icon: e.target.value })} className={input}>
-                    {ICON_CHOICES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                  </select>
-                  <input value={x.textBn} onChange={(e) => setInclude(i, { textBn: e.target.value })} placeholder={i === 0 && stats.classes ? `${stats.classes}টি রেকর্ড করা ক্লাস` : 'বাংলা'} className={input} />
-                  <input value={x.text} onChange={(e) => setInclude(i, { text: e.target.value })} placeholder={i === 0 && stats.classes ? `${stats.classes} recorded classes` : 'English'} className={input} />
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, includes: f.includes.filter((_, k) => k !== i) }))} className={`${btnGhost} text-rose-600`} title="সরান"><FiTrash2 /></button>
-                </div>
-              ))}
-              <button type="button" onClick={() => setForm((f) => ({ ...f, includes: [...f.includes, { icon: 'check', textBn: '', text: '' }] }))} className={btnGhost}>
-                <FiPlus /> আরেকটা যোগ করুন
-              </button>
-            </div>
+          {/* ৩ Overview */}
+          <Step id="step-overview" n="৩" title={S.overview} en={SE.overview} hint="হিরোর নিচের প্রথম অংশ — কোর্সটা কাদের জন্য, কেন দরকার, কী কী শেখানো হবে। বিস্তারিত লিখুন।">
+            <Pair area rows={8} bn={form.detailsBn} en={form.details} onBn={set('detailsBn')} onEn={set('details')} phBn="বাংলা — বিস্তারিত বিবরণ" phEn="English — the full description" />
           </Step>
 
-          {/* ৫ Classes */}
-          <Step id="step-classes" n="৫" title="মডিউল ও ক্লাস" hint="আগে একটা মডিউল (অধ্যায়) বানান, তারপর তার ভেতরে ক্লাস — প্রতিটা ক্লাস একটা YouTube ভিডিও (Unlisted রাখা ভালো)।">
+          {/* ৪ Curriculum */}
+          <Step id="step-curriculum" n="৪" title={S.curriculum} en={SE.curriculum} hint="সবচেয়ে জরুরি অংশ। আগে মডিউল (অধ্যায়) বানান, তারপর তার ভেতরে ক্লাস — প্রতিটা ক্লাস একটা YouTube ভিডিও (Unlisted রাখা ভালো)।">
             {isEdit ? (
               <CurriculumEditor courseId={courseId} onStats={onStats} />
             ) : (
@@ -304,8 +309,81 @@ export default function CourseEditor({ courseId }) {
             )}
           </Step>
 
-          {/* ৬ Publish */}
-          <Step id="step-publish" n="৬" title="প্রকাশ" hint="চালু করলে সাইটের কোর্স পাতায় দেখাবে। খসড়া রাখলে শুধু অ্যাডমিন দেখবে।">
+          {/* ৫ What you get */}
+          <Step id="step-includes" n="৫" title={S.includes} en={SE.includes} hint="কারিকুলামের নিচে, বাঁ দিকের বক্সে টিক দিয়ে দেখাবে। ছোট লাইন — যেমন: ২০টি রেকর্ড করা ক্লাস, নোট PDF।">
+            <Rows
+              rows={form.includes}
+              onChange={(i, patch) => setRow('includes', i, patch)}
+              onDrop={(i) => dropRow('includes', i)}
+              onAdd={() => addRow('includes', { bn: '', en: '' })}
+              phBn={stats.classes ? `যেমন: ${stats.classes}টি রেকর্ড করা ক্লাস` : 'যেমন: ২০টি রেকর্ড করা ক্লাস'}
+              phEn="English"
+            />
+          </Step>
+
+          {/* ৬ Benefits */}
+          <Step id="step-benefits" n="৬" title={S.benefits} en={SE.benefits} hint="কারিকুলামের নিচে, ডান দিকের বক্সে। খালি রাখলে নিচের সাধারণ তালিকাটা দেখাবে।">
+            {form.benefits.length === 0 && (
+              <div className="mb-3 rounded-xl bg-dash-soft/60 p-3 text-xs text-dash-mute2">
+                <p className="mb-1 font-semibold">এখন দেখাচ্ছে (সাধারণ তালিকা):</p>
+                <ul className="list-inside list-disc">{DEFAULT_BENEFITS.bn.map((t) => <li key={t}>{t}</li>)}</ul>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, benefits: DEFAULT_BENEFITS.bn.map((bn, i) => ({ bn, en: DEFAULT_BENEFITS.en[i] })) }))}
+                  className="mt-2 font-semibold text-brand hover:underline"
+                >
+                  এটা নিয়ে নিজের মতো বদলান
+                </button>
+              </div>
+            )}
+            {form.benefits.length > 0 && (
+              <Rows rows={form.benefits} onChange={(i, patch) => setRow('benefits', i, patch)} onDrop={(i) => dropRow('benefits', i)} onAdd={() => addRow('benefits', { bn: '', en: '' })} phBn="বাংলা" phEn="English" />
+            )}
+          </Step>
+
+          {/* ৭ How to buy */}
+          <Step id="step-how" n="৭" title={S.how} en={SE.how} hint="সব কোর্সে একই — পেমেন্টের নিয়ম। এখানে কিছু লিখতে হবে না, পাতায় এভাবে দেখাবে:">
+            <ol className="grid gap-2 sm:grid-cols-3">
+              {HOW_TO_BUY.bn.map((t, i) => (
+                <li key={t} className="flex items-start gap-2 rounded-xl bg-dash-soft/60 p-3 text-sm text-dash-ink3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">{i + 1}</span> {t}
+                </li>
+              ))}
+            </ol>
+          </Step>
+
+          {/* ৮ FAQ */}
+          <Step id="step-faq" n="৮" title={S.faq} en={SE.faq} hint="পাতার শেষে। খালি রাখলে নিচের সাধারণ প্রশ্নগুলো দেখাবে।">
+            {form.faqs.length === 0 && (
+              <div className="mb-3 rounded-xl bg-dash-soft/60 p-3 text-xs text-dash-mute2">
+                <p className="mb-1 font-semibold">এখন দেখাচ্ছে (সাধারণ প্রশ্ন):</p>
+                <ul className="list-inside list-disc">{DEFAULT_FAQ.bn.map(([q]) => <li key={q}>{q}</li>)}</ul>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, faqs: DEFAULT_FAQ.bn.map(([q, a], i) => ({ q: { bn: q, en: DEFAULT_FAQ.en[i][0] }, a: { bn: a, en: DEFAULT_FAQ.en[i][1] } })) }))}
+                  className="mt-2 font-semibold text-brand hover:underline"
+                >
+                  এগুলো নিয়ে নিজের মতো বদলান
+                </button>
+              </div>
+            )}
+            <div className="space-y-3">
+              {form.faqs.map((f, i) => (
+                <div key={i} className="space-y-2 rounded-xl border border-dash-line p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-dash-mute">প্রশ্ন {i + 1}</span>
+                    <button type="button" onClick={() => dropRow('faqs', i)} className="text-xs font-semibold text-rose-600 hover:underline">মুছুন</button>
+                  </div>
+                  <Pair bn={f.q.bn} en={f.q.en} onBn={(e) => setRow('faqs', i, { q: { ...f.q, bn: e.target.value } })} onEn={(e) => setRow('faqs', i, { q: { ...f.q, en: e.target.value } })} phBn="প্রশ্ন (বাংলা)" phEn="Question (English)" />
+                  <Pair area rows={2} bn={f.a.bn} en={f.a.en} onBn={(e) => setRow('faqs', i, { a: { ...f.a, bn: e.target.value } })} onEn={(e) => setRow('faqs', i, { a: { ...f.a, en: e.target.value } })} phBn="উত্তর (বাংলা)" phEn="Answer (English)" />
+                </div>
+              ))}
+              <button type="button" onClick={() => addRow('faqs', { q: { bn: '', en: '' }, a: { bn: '', en: '' } })} className={btnGhost}><FiPlus /> প্রশ্ন যোগ করুন</button>
+            </div>
+          </Step>
+
+          {/* ৯ Publish */}
+          <Step id="step-publish" n="৯" title="প্রকাশ" en="Publish" hint="চালু করলে সাইটের কোর্স পাতায় দেখাবে। খসড়া রাখলে শুধু অ্যাডমিন দেখবে।">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 { v: 'published', t: 'চালু', d: 'সাইটে দেখাবে, সবাই কিনতে পারবে' },
@@ -330,25 +408,30 @@ export default function CourseEditor({ courseId }) {
 
         {/* Live preview + steps */}
         <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
-          <div className="overflow-hidden rounded-2xl bg-[#0b1220] p-4 text-white shadow-lg">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">সাইটে যেমন দেখাবে</p>
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-white/5">
-              {form.image ? <img src={form.image} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-emerald-600 to-teal-800" />}
-              <span className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500"><FiPlay className="ml-0.5" /></span>
-            </div>
-            <p className="mt-3 text-lg font-extrabold leading-snug">{name || 'কোর্সের নাম'}</p>
-            {(form.summaryBn || form.summary) && <p className="mt-1 line-clamp-3 text-xs text-white/60">{form.summaryBn || form.summary}</p>}
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <div className="overflow-hidden rounded-2xl bg-[#070b14] p-4 text-white shadow-lg">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">হিরো — সাইটে যেমন দেখাবে</p>
+            <p className="text-lg font-extrabold leading-snug">{name || 'কোর্সের নাম'}</p>
+            <p className="mt-1 line-clamp-3 text-xs text-white/60">{form.summaryBn || form.summary || 'ছোট বিবরণ এখানে দেখাবে'}</p>
+            <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
               {[
                 ['মডিউল', stats.modules],
                 ['ক্লাস', stats.classes],
-                ['সময়', stats.minutes >= 60 ? `${Math.round((stats.minutes / 60) * 10) / 10} ঘ.` : `${stats.minutes} মি.`],
+                ['সময়', stats.minutes >= 60 ? `${Math.round((stats.minutes / 60) * 10) / 10}ঘ` : `${stats.minutes}মি`],
+                ['অ্যাক্সেস', 'আজীবন'],
               ].map(([l, v]) => (
-                <div key={l} className="rounded-lg bg-white/5 py-2">
-                  <p className="text-[10px] text-white/50">{l}</p>
-                  <p className="text-sm font-bold">{v}</p>
+                <div key={l} className="rounded-md bg-white/5 py-1.5">
+                  <p className="text-[9px] text-white/45">{l}</p>
+                  <p className="text-xs font-bold">{v}</p>
                 </div>
               ))}
+            </div>
+            <div className="relative mt-3 aspect-video overflow-hidden rounded-xl bg-white/5">
+              {form.image ? <img src={form.image} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900" />}
+              <span className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500"><FiPlay className="ml-0.5" /></span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-1.5 text-center text-[11px] font-bold">
+              <span className="rounded-lg bg-emerald-500 py-2">এখনই ভর্তি হন</span>
+              <span className="rounded-lg border border-white/15 py-2">যোগাযোগ করুন</span>
             </div>
             <div className="mt-3 flex items-baseline gap-2 rounded-xl bg-white px-3 py-2.5 text-slate-900">
               <span className="text-xl font-extrabold">{price > 0 ? taka(price) : 'ফ্রি'}</span>
@@ -358,8 +441,8 @@ export default function CourseEditor({ courseId }) {
           </div>
 
           <div className="rounded-2xl border border-dash-line bg-dash-card p-4">
-            <p className="mb-2 text-sm font-bold text-dash-ink2">ধাপগুলো</p>
-            <ul className="space-y-1">
+            <p className="mb-2 text-sm font-bold text-dash-ink2">ধাপগুলো (পাতার ক্রমে)</p>
+            <ul className="space-y-0.5">
               {steps.map((s, i) => (
                 <li key={s.id}>
                   <button type="button" onClick={() => go(s.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-dash-soft">
@@ -367,6 +450,7 @@ export default function CourseEditor({ courseId }) {
                       {s.done ? <FiCheck /> : i + 1}
                     </span>
                     <span className={s.done ? 'text-dash-ink3' : 'text-dash-mute2'}>{s.label}</span>
+                    {s.note && <span className="ml-auto text-[10px] text-dash-faint">{s.note}</span>}
                   </button>
                 </li>
               ))}
@@ -374,6 +458,31 @@ export default function CourseEditor({ courseId }) {
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function Pair({ bn, en, onBn, onEn, phBn, phEn, area, rows = 2, max }) {
+  const El = area ? 'textarea' : 'input';
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <El value={bn} onChange={onBn} rows={area ? rows : undefined} maxLength={max} className={input} placeholder={`বাংলা — ${phBn}`.replace('বাংলা — বাংলা', 'বাংলা')} />
+      <El value={en} onChange={onEn} rows={area ? rows : undefined} maxLength={max} className={input} placeholder={phEn} />
+    </div>
+  );
+}
+
+function Rows({ rows, onChange, onDrop, onAdd, phBn, phEn }) {
+  return (
+    <div className="space-y-2">
+      {rows.map((r, i) => (
+        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          <input value={r.bn} onChange={(e) => onChange(i, { bn: e.target.value })} placeholder={phBn} className={input} />
+          <input value={r.en} onChange={(e) => onChange(i, { en: e.target.value })} placeholder={phEn} className={input} />
+          <button type="button" onClick={() => onDrop(i)} className={`${btnGhost} text-rose-600`} title="সরান"><FiTrash2 /></button>
+        </div>
+      ))}
+      <button type="button" onClick={onAdd} className={btnGhost}><FiPlus /> আরেকটা যোগ করুন</button>
     </div>
   );
 }
@@ -390,13 +499,13 @@ function SubPart({ label, title, where, children }) {
   );
 }
 
-function Step({ id, n, title, hint, children }) {
+function Step({ id, n, title, en, hint, children }) {
   return (
     <section id={id} className="scroll-mt-20 rounded-2xl border border-dash-line bg-dash-card p-5">
       <div className="mb-4 flex items-start gap-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">{n}</span>
         <div>
-          <h2 className="text-lg font-bold text-dash-ink2">{title}</h2>
+          <h2 className="text-lg font-bold text-dash-ink2">{title} {en && <span className="text-sm font-medium text-dash-faint">· {en}</span>}</h2>
           {hint && <p className="text-xs text-dash-mute2">{hint}</p>}
         </div>
       </div>
