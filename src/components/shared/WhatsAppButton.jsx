@@ -13,6 +13,7 @@
  * support button nobody uses.
  */
 
+import { usePathname } from 'next/navigation';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useLanguage } from '@/context/LanguageContext';
 import { WHATSAPP_NUMBER } from '@/config/business';
@@ -34,6 +35,9 @@ export default function WhatsAppButton() {
   const { isBengali } = useLanguage();
   const t = isBengali ? TEXT.bn : TEXT.en;
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(t.message)}`;
+  // A course page (11 Nov 2026) has its own buy bar above the tab bar on
+  // phones; the button rises above that too, so it never covers "Buy now".
+  const onCoursePage = /^\/courses\/[^/]+/.test(usePathname() || '');
 
   return (
     <a
@@ -43,7 +47,7 @@ export default function WhatsAppButton() {
       aria-label={t.label}
       title={t.label}
       // bottom-20 on phones clears the tab bar; bottom-6 once that bar is gone.
-      className="group fixed bottom-20 right-4 z-40 flex items-center gap-2.5 rounded-full bg-[#25D366] py-3 pl-3.5 pr-4 text-white shadow-lg transition-all hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#25D366]/40 sm:right-6 lg:bottom-6"
+      className={`group fixed ${onCoursePage ? 'bottom-40' : 'bottom-20'} right-4 z-40 flex items-center gap-2.5 rounded-full bg-[#25D366] py-3 pl-3.5 pr-4 text-white shadow-lg transition-all hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#25D366]/40 sm:right-6 lg:bottom-6`}
       style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
     >
       <FaWhatsapp className="shrink-0 text-2xl" />
