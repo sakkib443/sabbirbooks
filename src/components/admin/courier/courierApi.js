@@ -23,7 +23,10 @@ export const courierFilters = () => get('/filters');
 export const listReady = (params) => get('/ready', params);
 export const listConsignments = (params) => get('/consignments', params);
 export const courierSummary = (params) => get('/summary', params);
-export const courierDashboard = () => get('/dashboard');
+// provider: '' (both), 'steadfast' or 'pathao' (11 Nov 2026).
+export const courierDashboard = (provider) => get('/dashboard', provider ? { provider } : undefined);
+// Pathao paid the shop for these parcels — marked by hand (Super Admin).
+export const markPathaoPaid = (orderIds, reference) => post('/pathao/mark-paid', { orderIds, reference });
 export const listCourierPayments = (params) => get('/payments', params);
 // provider: 'steadfast' (the default) or 'pathao' (1 Nov 2026).
 export const sendToCourier = (orderIds, provider) => post('/send', { orderIds, ...(provider ? { provider } : {}) });

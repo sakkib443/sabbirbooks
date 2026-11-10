@@ -9,6 +9,11 @@
  * latest parcels, the last payout and what the courier still owes. Super
  * Admin only — the API refuses anyone else.
  *
+ * Steadfast + Pathao (11 Nov 2026): a switch shows both or one courier, and
+ * a strip shows what each courier owes. Steadfast's balance and payouts come
+ * from its API; Pathao's money comes from its webhook or the "Pathao payouts"
+ * section of the Payouts page.
+ *
  * Colours follow Steadfast's: delivered green, in progress amber, partly
  * delivered blue, returned red (and the Parcels chips use the same).
  */
@@ -20,6 +25,7 @@ import {
   FiCreditCard, FiDollarSign, FiLoader, FiPackage, FiRefreshCw, FiSend, FiTruck,
 } from 'react-icons/fi';
 import { courierDashboard, STATUS_LABEL, tk } from './courierApi';
+import { COURIER_NAMES, useCouriers } from './CourierChoice';
 
 const SERIES = [
   { key: 'delivered', label: 'Delivered', bar: 'bg-emerald-500', dot: 'bg-emerald-500' },
@@ -188,15 +194,17 @@ function DailyChart({ daily }) {
 export default function CourierDashboard({ onSyncPayouts, syncing }) {
   const [d, setD] = useState(null);
   const [error, setError] = useState('');
+  const couriers = useCouriers();
+  const [provider, setProvider] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setD(await courierDashboard());
+      setD(await courierDashboard(provider));
       setError('');
     } catch (e) {
       setError(e.message);
     }
-  }, []);
+  }, [provider]);
   useEffect(() => {
     const t = setTimeout(load, 0);
     return () => clearTimeout(t);
@@ -219,8 +227,42 @@ export default function CourierDashboard({ onSyncPayouts, syncing }) {
     return <div className="flex justify-center p-10"><FiLoader className="animate-spin text-brand" size={22} /></div>;
   }
 
+  const onlyPathao = provider === 'pathao';
+  const both = couriers.length > 1;
+
   return (
     <div className="space-y-4">
+      {/* Which courier, and what each one owes (11 Nov 2026). */}
+      {both && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-dash-line/60 bg-dash-card p-4 shadow-sm lg:flex-row lg:items-center">
+          <div className="flex gap-1.5">
+            {[['', 'Both couriers'], ...couriers.map((c) => [c, COURIER_NAMES[c]])].map(([k, label]) => (
+              <button
+                key={k || 'all'}
+                type="button"
+                onClick={() => setProvider(k)}
+                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${provider === k ? 'bg-brand text-white shadow-sm' : 'border border-dash-line text-dash-ink3 hover:border-brand/40'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+            {['steadfast', 'pathao'].map((c) => {
+              const b = d.byCourier?.[c];
+              if (!b) return null;
+              return (
+                <div key={c} className="rounded-xl bg-amber-50 px-4 py-2.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">{COURIER_NAMES[c]} owes you</p>
+                  <p className="text-lg font-extrabold tabular-nums text-amber-700 outfit">{tk(b.receivable)}</p>
+                  <p className="text-[11px] text-amber-700/80">{b.receivableParcels} delivered parcels not paid yet · {b.transit} on the way</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Right now + quick actions */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <Panel
@@ -249,13 +291,21 @@ export default function CourierDashboard({ onSyncPayouts, syncing }) {
                 <a.icon className={a.tone} size={20} /> {a.label}
               </Link>
             ))}
-            <button onClick={onSyncPayouts} disabled={syncing} className="flex flex-col items-center gap-2 rounded-xl border border-dash-line/60 bg-dash-soft/40 px-3 py-5 text-sm font-semibold text-dash-ink3 transition hover:border-brand/40 hover:bg-dash-soft disabled:opacity-50">
-              <FiRefreshCw className={`text-sky-600 ${syncing ? 'animate-spin' : ''}`} size={20} /> Sync payouts
-            </button>
-            <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dash-line/60 bg-dash-soft/40 px-3 py-4 text-center">
-              <span className="text-xs font-semibold text-dash-mute">Steadfast balance</span>
-              <span className="text-lg font-bold tabular-nums text-dash-ink2 outfit">{d.balance == null ? '—' : tk(d.balance)}</span>
-            </div>
+            {onlyPathao ? (
+              <a href="#pathao-payouts" className="col-span-2 flex flex-col items-center gap-2 rounded-xl border border-dash-line/60 bg-dash-soft/40 px-3 py-5 text-sm font-semibold text-dash-ink3 transition hover:border-brand/40 hover:bg-dash-soft">
+                <FiCreditCard className="text-sky-600" size={20} /> Pathao paid you? Mark it below
+              </a>
+            ) : (
+              <>
+                <button onClick={onSyncPayouts} disabled={syncing} className="flex flex-col items-center gap-2 rounded-xl border border-dash-line/60 bg-dash-soft/40 px-3 py-5 text-sm font-semibold text-dash-ink3 transition hover:border-brand/40 hover:bg-dash-soft disabled:opacity-50">
+                  <FiRefreshCw className={`text-sky-600 ${syncing ? 'animate-spin' : ''}`} size={20} /> Sync Steadfast payouts
+                </button>
+                <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dash-line/60 bg-dash-soft/40 px-3 py-4 text-center">
+                  <span className="text-xs font-semibold text-dash-mute">Steadfast balance</span>
+                  <span className="text-lg font-bold tabular-nums text-dash-ink2 outfit">{d.balance == null ? '—' : tk(d.balance)}</span>
+                </div>
+              </>
+            )}
           </div>
         </Panel>
       </div>
@@ -319,7 +369,10 @@ export default function CourierDashboard({ onSyncPayouts, syncing }) {
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><FiBox size={15} /></span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-dash-ink2">{p.name || '—'}</p>
-                    <p className="text-[11px] text-dash-mute2">#{p.orderSeq ?? '—'} · {p.consignmentId} · {when(p.sentAt)}</p>
+                    <p className="text-[11px] text-dash-mute2">
+                      {p.provider === 'pathao' && <span className="mr-1 rounded bg-red-50 px-1 font-bold text-red-600">Pathao</span>}
+                      #{p.orderSeq ?? '—'} · {p.consignmentId} · {when(p.sentAt)}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold tabular-nums text-dash-ink2">{tk(p.cod)}</p>
@@ -333,8 +386,12 @@ export default function CourierDashboard({ onSyncPayouts, syncing }) {
           )}
         </Panel>
 
-        <Panel title="Last payment" icon={FiCreditCard}>
-          {d.lastPayment ? (
+        <Panel title={onlyPathao ? 'Pathao payments' : provider === 'steadfast' ? 'Last Steadfast payment' : 'Last payment'} icon={FiCreditCard}>
+          {onlyPathao ? (
+            <p className="text-sm text-dash-mute">
+              Pathao-র টাকা আসার খবর আসে webhook থেকে (Pathao প্যানেলে বসানো থাকলে), অথবা নিচের <b>Pathao payouts</b> অংশে পার্সেল টিক দিয়ে হাতে চিহ্ন দিলে।
+            </p>
+          ) : d.lastPayment ? (
             <>
               <p className="text-3xl font-extrabold tabular-nums text-emerald-600 outfit">{tk(d.lastPayment.amount)}</p>
               <p className="mt-1 text-xs text-dash-mute">
@@ -342,7 +399,7 @@ export default function CourierDashboard({ onSyncPayouts, syncing }) {
               </p>
             </>
           ) : (
-            <p className="text-sm text-dash-mute">এখনো কোনো পেআউট আসেনি। &ldquo;Sync payouts&rdquo; চাপুন।</p>
+            <p className="text-sm text-dash-mute">এখনো কোনো Steadfast পেআউট আসেনি। &ldquo;Sync Steadfast payouts&rdquo; চাপুন।</p>
           )}
           <div className="mt-4 grid grid-cols-2 gap-3 border-t border-dash-line/60 pt-4 text-sm">
             <div>

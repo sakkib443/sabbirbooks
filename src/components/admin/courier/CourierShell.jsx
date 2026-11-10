@@ -9,7 +9,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FiAlertTriangle, FiCheckCircle, FiSearch, FiTruck, FiX } from 'react-icons/fi';
-import { courierFilters, courierStatus, customWindow, DATE_PRESETS, presetWindow, tk } from './courierApi';
+import { loadStatus, useCouriers, COURIER_NAMES } from './CourierChoice';
+import { courierFilters, customWindow, DATE_PRESETS, presetWindow, tk } from './courierApi';
 
 const TABS = [
   { href: '/dashboard/admin/courier/send', label: 'Send to courier' },
@@ -32,7 +33,7 @@ export function CourierHeader({ subtitle }) {
   // Read once: the admin pages render only in the browser, after sign-in.
   const [tabs] = useState(() => (isSuperAdmin() ? TABS : TABS.filter((t) => !t.superOnly)));
   useEffect(() => {
-    courierStatus().then(setSt).catch((e) => setSt({ configured: false, error: e.message }));
+    loadStatus().then(setSt).catch((e) => setSt({ configured: false, error: e.message }));
   }, []);
 
   return (
@@ -105,6 +106,8 @@ export function CourierHeader({ subtitle }) {
 export function CourierFilters({ value, onChange, dateLabel = 'Date', extra = null }) {
   const [choices, setChoices] = useState({ colleges: [], districts: [] });
   const [text, setText] = useState(value.q || '');
+  // The courier choice shows only when both are set up (11 Nov 2026).
+  const couriers = useCouriers();
   useEffect(() => {
     courierFilters().then(setChoices).catch(() => {});
   }, []);
@@ -118,7 +121,7 @@ export function CourierFilters({ value, onChange, dateLabel = 'Date', extra = nu
 
   const set = (patch) => onChange({ ...value, ...patch });
   const sel = 'rounded-lg border border-dash-line bg-dash-card px-3 py-2 text-sm text-dash-ink3 outline-none focus:border-brand';
-  const active = value.preset !== 'all' || value.college || value.district || value.q || Object.values(value.extra || {}).some(Boolean);
+  const active = value.preset !== 'all' || value.college || value.district || value.q || value.provider || Object.values(value.extra || {}).some(Boolean);
 
   return (
     <div className="space-y-3 rounded-xl border border-dash-line/60 bg-dash-card p-3 shadow-sm">
@@ -167,15 +170,23 @@ export function CourierFilters({ value, onChange, dateLabel = 'Date', extra = nu
         </select>
       </div>
 
-      {(extra || active) && (
+      {(extra || active || couriers.length > 1) && (
         <div className="flex flex-wrap items-center gap-2">
+          {couriers.length > 1 && (
+            <select value={value.provider || ''} onChange={(e) => set({ provider: e.target.value })} className="rounded-lg border border-dash-line bg-dash-card px-3 py-1.5 text-xs font-semibold text-dash-ink3">
+              <option value="">All couriers</option>
+              {couriers.map((c) => (
+                <option key={c} value={c}>{COURIER_NAMES[c]} only</option>
+              ))}
+            </select>
+          )}
           {extra}
           {active && (
             <button
               type="button"
               onClick={() => {
                 setText('');
-                onChange({ preset: 'all', fromDay: '', toDay: '', college: '', district: '', q: '', extra: {} });
+                onChange({ preset: 'all', fromDay: '', toDay: '', college: '', district: '', q: '', provider: '', extra: {} });
               }}
               className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-dash-mute hover:bg-dash-soft"
             >
@@ -188,10 +199,10 @@ export function CourierFilters({ value, onChange, dateLabel = 'Date', extra = nu
   );
 }
 
-export const EMPTY_FILTERS = { preset: 'all', fromDay: '', toDay: '', college: '', district: '', q: '', extra: {} };
+export const EMPTY_FILTERS = { preset: 'all', fromDay: '', toDay: '', college: '', district: '', q: '', provider: '', extra: {} };
 
 /** The filters as the API's query string values. */
 export function filterQuery(f) {
   const win = f.preset === 'custom' ? customWindow(f.fromDay, f.toDay) : presetWindow(f.preset);
-  return { ...win, college: f.college, district: f.district, q: f.q, ...(f.extra || {}) };
+  return { ...win, college: f.college, district: f.district, q: f.q, provider: f.provider, ...(f.extra || {}) };
 }
