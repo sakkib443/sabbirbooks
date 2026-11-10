@@ -3,7 +3,7 @@
 /**
  * /courses/<id> — one recorded course. Redesigned 11 Nov 2026 after the
  * shop's reference (a diploma-course page): a dark hero with the numbers and
- * a video card, a sticky tab bar, the overview with what the course covers, a
+ * a video card, tabs above the content, the overview with what the course covers, a
  * sticky price card, the curriculum, and common questions. All the words come
  * from the course itself (title/titleBn, details/detailsBn, modules, classes,
  * includes) and follow the site's EN/বাং switch.
@@ -56,7 +56,6 @@ const T = {
     pendingTitle: "আপনার অর্ডার যাচাই হচ্ছে",
     pendingSub: "পেমেন্ট মিলিয়ে অ্যাডমিন অনুমোদন দিলেই কোর্সটা খুলে যাবে।",
     tabs: { overview: "বিবরণ", curriculum: "কারিকুলাম", how: "কীভাবে কিনবেন", faq: "প্রশ্নোত্তর" },
-    enroll: "ভর্তি হন",
     overviewLabel: "ওভারভিউ",
     overviewTitle: "কোর্স ওভারভিউ",
     learn: "এই কোর্সে যা শিখবেন",
@@ -108,7 +107,6 @@ const T = {
     pendingTitle: "Your order is being checked",
     pendingSub: "The course opens as soon as an admin matches the payment and approves it.",
     tabs: { overview: "Overview", curriculum: "Curriculum", how: "How to buy", faq: "FAQ" },
-    enroll: "Enroll",
     overviewLabel: "Overview",
     overviewTitle: "Course overview",
     learn: "What you will learn",
@@ -306,36 +304,25 @@ export default function RecordedCourseDetail() {
                 </div>
               </div>
             )}
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {mainButton || <span className="flex items-center justify-center rounded-xl bg-amber-400/15 px-3 text-center text-xs font-semibold text-amber-200">{L.pendingTitle}</span>}
-              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-rose-500 text-sm font-bold text-white transition hover:bg-rose-600">
-                <LuPhone /> {L.contact}
-              </a>
-            </div>
+            {/* Buying is the price card's job (one buy button on the page,
+                the shop asked 11 Nov 2026); the hero only offers to talk. */}
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl bg-rose-500 text-sm font-bold text-white transition hover:bg-rose-600">
+              <LuPhone /> {L.contact}
+            </a>
           </div>
         </Container>
       </section>
 
-      {/* ── Tab bar ─────────────────────────────────────────── */}
-      <div className="sticky top-[72px] z-30 border-b border-border bg-background/95 backdrop-blur">
-        <Container className="flex items-center justify-between gap-3">
-          <div className="flex gap-1 overflow-x-auto">
+      <Container className="grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-14">
+          {/* ── Tabs: part of the content below the hero, beside the price card ── */}
+          <nav className="sticky top-[72px] z-20 flex gap-1 overflow-x-auto rounded-xl border border-border bg-card/95 p-1.5 shadow-soft backdrop-blur">
             {SECTIONS.map((s) => (
-              <button key={s} type="button" onClick={() => go(s)} className="whitespace-nowrap border-b-2 border-transparent px-3 py-3.5 text-sm font-semibold text-muted-foreground transition hover:border-primary hover:text-foreground">
+              <button key={s} type="button" onClick={() => go(s)} className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-primary-soft hover:text-primary">
                 {L.tabs[s]}
               </button>
             ))}
-          </div>
-          {!owned && !access.pending && (
-            <Link href={checkoutHref} className="hidden shrink-0 items-center gap-2 rounded-lg bg-rose-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-600 sm:inline-flex">
-              {L.enroll}: {priceText}
-            </Link>
-          )}
-        </Container>
-      </div>
-
-      <Container className="grid gap-8 pt-10 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0 space-y-14">
+          </nav>
           {/* ── Overview ── */}
           <section id="sec-overview" className="scroll-mt-36">
             <SectionLabel>{L.overviewLabel}</SectionLabel>
@@ -445,7 +432,7 @@ export default function RecordedCourseDetail() {
 
         {/* ── Price card ── */}
         <aside className="hidden lg:block">
-          <div className="sticky top-[140px] space-y-4 rounded-2xl border border-border bg-card p-5 shadow-glow">
+          <div className="sticky top-[92px] space-y-4 rounded-2xl border border-border bg-card p-5 shadow-glow">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> {L.seats}
             </span>
