@@ -19,6 +19,7 @@ import { CourierFilters, CourierHeader, EMPTY_FILTERS, filterQuery } from '@/com
 import { courierSummary, listCourierPayments, syncCourierPayments, tk } from '@/components/admin/courier/courierApi';
 import CourierDashboard from '@/components/admin/courier/CourierDashboard';
 import PathaoPayouts from '@/components/admin/courier/PathaoPayouts';
+import PathaoItemType from '@/components/admin/courier/PathaoItemType';
 import { useCouriers } from '@/components/admin/courier/CourierChoice';
 
 const fmtDay = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'short', year: 'numeric' }) : '—');
@@ -87,6 +88,9 @@ export default function CourierPayoutsPage() {
 
       {/* The dashboard (Steadfast's layout), then the accounts by date below it. */}
       <CourierDashboard key={dashKey} onSyncPayouts={sync} syncing={syncing} />
+
+      {/* Pathao bills by item type (15 Nov 2026): the shop picks the book rate here. */}
+      {couriers.includes('pathao') && <PathaoItemType />}
 
       {couriers.includes('pathao') && <PathaoPayouts onMarked={() => { setDashKey((k) => k + 1); load(); }} />}
 

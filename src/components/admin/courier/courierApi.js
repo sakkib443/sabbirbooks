@@ -28,6 +28,10 @@ export const courierDashboard = (provider) => get('/dashboard', provider ? { pro
 // Pathao paid the shop for these parcels — marked by hand (Super Admin).
 export const markPathaoPaid = (orderIds, reference) => post('/pathao/mark-paid', { orderIds, reference });
 export const listCourierPayments = (params) => get('/payments', params);
+// Pathao's price for one book under each item type, and the one parcels are
+// sent as (15 Nov 2026, Super Admin). Asking books nothing.
+export const pathaoItemTypes = () => get('/pathao/item-types');
+export const setPathaoItemType = (itemType) => post('/pathao/item-type', { itemType });
 // provider: 'steadfast' (the default) or 'pathao' (1 Nov 2026).
 export const sendToCourier = (orderIds, provider) => post('/send', { orderIds, ...(provider ? { provider } : {}) });
 export const syncCourier = (orderIds) => post('/sync', orderIds ? { orderIds } : {});

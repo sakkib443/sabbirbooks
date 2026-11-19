@@ -180,7 +180,6 @@ export default function RecordedCourseDetail() {
   const imageIsVideo = isYouTube(course.image) || isVideoFile(course.image);
   const heroVideo = course.promoVideo || (imageIsVideo ? course.image || "" : "");
   const picture = course.image && !imageIsVideo && !imgFailed ? course.image : isYouTube(heroVideo) ? youtubeThumb(heroVideo) : "";
-  const firstFree = owned ? undefined : modules.flatMap((m) => m.lessons).find((l) => l.isFree && canPlayLesson(l));
   const includes = (course.courseIncludes || []).map((x) => pick(bn, x.text, x.textBn)).filter(Boolean);
   const benefits = (course.benefits || []).map((x) => pick(bn, x.text, x.textBn)).filter(Boolean);
   const faqs: [string, string][] = (course.faqs || [])
@@ -188,12 +187,10 @@ export default function RecordedCourseDetail() {
     .filter(([q, a]) => q && a);
   const whatsapp = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(title)}`;
   const priceText = price > 0 ? taka(price) : L.free;
-  const playHero = () =>
-    heroVideo
-      ? setPreview({ title, url: heroVideo })
-      : firstFree
-        ? setPreview({ title: titleOf(bn, firstFree), url: firstFree.videoUrl })
-        : document.getElementById("sec-curriculum")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // The hero plays only a real video (the shop, 11 Nov 2026): no video = a
+  // plain picture, no play button, nothing happens on a click.
+  const heroVideoUrl = heroVideo.trim();
+  const playHero = () => heroVideoUrl && setPreview({ title, url: heroVideoUrl });
 
   /** Buy (with the price on it) / watch; null while an order waits for approval. */
   const actionButton = (className: string) =>
@@ -299,7 +296,13 @@ export default function RecordedCourseDetail() {
           {/* The video — right on a computer, under the description on a phone */}
           <div className="rounded-[1.4rem] bg-gradient-to-br from-white/25 via-white/5 to-white/15 p-px shadow-[0_40px_100px_-30px_rgba(0,0,0,0.9)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
             <div className="rounded-[1.35rem] bg-[#0d1322] p-2 sm:p-4">
-              <button type="button" onClick={playHero} className="group relative block aspect-video w-full overflow-hidden rounded-2xl bg-white/5" aria-label={title}>
+              <button
+                type="button"
+                onClick={playHero}
+                disabled={!heroVideoUrl}
+                className={cn("group relative block aspect-video w-full overflow-hidden rounded-2xl bg-white/5", !heroVideoUrl && "cursor-default")}
+                aria-label={title}
+              >
                 {picture ? (
                   <img src={picture} alt={title} onError={() => setImgFailed(true)} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
                 ) : isVideoFile(heroVideo) ? (
@@ -307,10 +310,12 @@ export default function RecordedCourseDetail() {
                 ) : (
                   <div className="h-full w-full bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900" />
                 )}
-                <span className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
+                {heroVideoUrl && <span className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />}
+                {heroVideoUrl && (
                 <span className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-rose-500 text-white shadow-2xl ring-[10px] ring-rose-500/25 transition duration-300 group-hover:scale-110 group-hover:ring-rose-500/35 sm:h-20 sm:w-20 sm:ring-[12px]">
                   <LuPlay className="ml-1 h-7 w-7 sm:h-9 sm:w-9" />
                 </span>
+                )}
               </button>
             </div>
           </div>
