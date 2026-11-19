@@ -97,6 +97,14 @@ export default function CollegePicker({
 
   const total = groups.reduce((n, g) => n + g.items.length, 0);
 
+  // Typing a college the list does not have (20 Nov 2026: the shop's buyers
+  // could not find how) — from the empty search, or the link under the box.
+  const typeOwn = (name = '') => {
+    setCustom(true);
+    setOpen(false);
+    onChange(null, String(name).trim());
+  };
+
   const pick = (college) => {
     onChange(college, '');
     setOpen(false);
@@ -198,9 +206,18 @@ export default function CollegePicker({
             )}
 
             {colleges !== null && total === 0 && (
-              <p className={`px-4 py-6 text-center text-sm text-muted-foreground ${bn}`}>
-                {t('No college matched', 'কোনো কলেজ মেলেনি')}
-              </p>
+              <div className={`px-4 py-5 text-center ${bn}`}>
+                <p className="text-sm text-muted-foreground">{t('No college matched', 'কোনো কলেজ মেলেনি')}</p>
+                {query.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => typeOwn(query)}
+                    className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+                  >
+                    <span className="truncate">“{query.trim()}”</span> — {t('use this name', 'এই নামেই নিন')}
+                  </button>
+                )}
+              </div>
             )}
 
             {groups.map((g) => (
@@ -235,18 +252,19 @@ export default function CollegePicker({
 
           <button
             type="button"
-            onClick={() => {
-              setCustom(true);
-              setOpen(false);
-              onChange(null, query.trim());
-            }}
-            className={`w-full border-t border-border px-4 py-2.5 text-left text-sm text-primary hover:bg-primary-soft/40 ${bn}`}
+            onClick={() => typeOwn(query)}
+            className={`w-full border-t border-border bg-primary-soft/40 px-4 py-3 text-left text-sm font-semibold text-primary hover:bg-primary-soft ${bn}`}
           >
-            {t('My college is not listed', 'আমার কলেজ তালিকায় নেই')}
+            ✏️ {t('My college is not listed — type its name', 'আমার কলেজ তালিকায় নেই — নাম লিখে দিই')}
           </button>
         </div>
       )}
 
+      {!open && !value && (
+        <button type="button" onClick={() => typeOwn('')} className={`mt-1.5 text-xs font-medium text-primary hover:underline ${bn}`}>
+          {t('College not in the list? Type its name', 'কলেজ তালিকায় নেই? নাম লিখে দিন')}
+        </button>
+      )}
       {error && <span className={`mt-1 block text-xs text-coral ${bn}`}>{error}</span>}
     </div>
   );

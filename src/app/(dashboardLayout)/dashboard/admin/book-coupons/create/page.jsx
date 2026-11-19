@@ -46,7 +46,11 @@ const fromLocalInput = (v) => {
 
 const EMPTY = {
   code: '', name: '',
-  discountType: 'percent', discountValue: '', fixedPer: 'order', isActive: true,
+  // A taka amount by default (the shop, 20 Nov 2026); percent is one click away.
+  discountType: 'fixed', discountValue: '', fixedPer: 'order', isActive: true,
+  // The website's "today's coupon" pop-up — set here with the rest of the
+  // coupon (20 Nov 2026), not from the list. One coupon at a time (server).
+  showInPopup: false,
   // Every limit off by default, which is what a coupon with none of these
   // fields already behaves like. Empty string rather than 0 so the boxes
   // read as blank instead of pre-filled with a limit nobody asked for.
@@ -111,6 +115,7 @@ function CouponForm() {
           discountValue: c.discountValue ?? '',
           fixedPer: c.fixedPer === 'book' ? 'book' : 'order',
           isActive: c.isActive !== false,
+          showInPopup: !!c.showInPopup,
           maxDiscount: c.maxDiscount || '',
           freeDelivery: !!c.freeDelivery,
           // <input type="date"> only accepts yyyy-mm-dd; an ISO instant with
@@ -155,6 +160,7 @@ function CouponForm() {
         discountValue: val,
         fixedPer: form.fixedPer === 'book' ? 'book' : 'order',
         isActive: !!form.isActive,
+        showInPopup: !!form.showInPopup,
         // Blank means "no limit", and the server reads 0 and null that way.
         maxDiscount: Number(form.maxDiscount) || 0,
         freeDelivery: !!form.freeDelivery,
@@ -247,8 +253,8 @@ function CouponForm() {
             <span className="text-xs font-semibold text-dash-mute">Discount type</span>
             <div className="mt-1.5 grid grid-cols-2 gap-2 rounded-xl bg-dash-soft p-1">
               {[
-                { id: 'percent', label: 'Percent', hint: '%' },
                 { id: 'fixed', label: 'Fixed amount', hint: '৳' },
+                { id: 'percent', label: 'Percent', hint: '%' },
               ].map((t) => {
                 const on = form.discountType === t.id;
                 return (
@@ -330,6 +336,17 @@ function CouponForm() {
             <span>
               <span className="block text-sm font-semibold text-dash-ink3">Active</span>
               <span className="block text-[11px] text-dash-mute2">Buyers can use this code at checkout right now.</span>
+            </span>
+          </label>
+
+          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+            <input type="checkbox" checked={form.showInPopup} onChange={(e) => set('showInPopup', e.target.checked)} className="mt-0.5 h-5 w-5 rounded border-dash-line-strong text-amber-600 focus:ring-amber-500" />
+            <span>
+              <span className="block text-sm font-semibold text-dash-ink3">ওয়েবসাইটের পপআপে দেখান</span>
+              <span className="block text-[11px] text-dash-mute2">
+                ওয়েবসাইটে ঢুকলে &ldquo;আজকের কুপন&rdquo; পপআপে এই কোডটা দেখাবে। একবারে একটা কুপনই পপআপে থাকে — এটা চালু করলে অন্যটা নিজে থেকে বন্ধ হবে।
+                {form.showInPopup && !form.isActive && <b className="block text-amber-700">কুপন Active না থাকলে পপআপে দেখাবে না।</b>}
+              </span>
             </span>
           </label>
         </Section>

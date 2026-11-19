@@ -266,6 +266,8 @@ const AdminSidebar = () => {
             {
               title: 'Users', need: ['users.read', 'staff.manage'],
               submenu: [
+                // A buyer who forgot their password (20 Nov 2026): find, set, send.
+                { title: 'পাসওয়ার্ড রিসেট', href: '/dashboard/admin/user/password-reset', need: ['users.write'] },
                 // Staff accounts and their permissions: the Super Admin's alone (18 Oct 2026).
                 { title: 'Team / Staff', href: '/dashboard/admin/user/staff', need: ['staff.manage'], superOnly: true },
                 { title: 'Permissions', href: '/dashboard/admin/user/permissions', need: ['staff.manage'], superOnly: true },
