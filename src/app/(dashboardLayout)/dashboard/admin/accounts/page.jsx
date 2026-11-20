@@ -168,9 +168,20 @@ export default function AccountsPage() {
       const { id, ...body } = form;
       if (id) await call(`/${id}`, 'PATCH', body);
       else await call('', 'POST', { ...body, ...(isOwner ? { book } : {}) });
-      showToast('success', 'সেভ হয়েছে');
       setForm(null);
-      load();
+      // An entry dated outside the days on screen used to save but not show —
+      // it looked unsaved. Widen the view to take its day in (20 Nov 2026).
+      if (body.day && (body.day < range[0] || body.day > range[1])) {
+        showToast('success', `সেভ হয়েছে — ${fmtDay(body.day)}-এর হিসাবে`);
+        setLoading(true);
+        setDayFilter('');
+        setCustom({ from: body.day < range[0] ? body.day : range[0], to: body.day > range[1] ? body.day : range[1] });
+        setPreset('custom');
+      } else {
+        showToast('success', 'সেভ হয়েছে');
+        if (dayFilter && body.day && body.day !== dayFilter) setDayFilter('');
+        load();
+      }
     } catch (e) {
       showToast('error', e.message);
     } finally {
